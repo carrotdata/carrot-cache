@@ -3,12 +3,10 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.bigbase</groupId>
     <artifactId>carrot-cache</artifactId>
-    <packaging>pom</packaging>
+    <packaging>jar</packaging>
     <name>Carrot Cache</name>
     <version>1.0.0</version>
     <url>http://www.server.com</url>
-    <modules>
-    </modules>
     <build>
         <plugins>
             <plugin>
@@ -53,13 +51,14 @@
      </plugin>
         </plugins>
     </build>
-    <dependencyManagement>
+    <!--dependencyManagement-->
         <dependencies>
-       <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>1.2.12</version>
-        </dependency>
+	<dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-core</artifactId>
+                <version>2.14.1</version>
+		<!--type>pom</type-->
+       </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -67,7 +66,7 @@
             <scope>test</scope>
         </dependency>
         </dependencies>
-    </dependencyManagement>
+    <!--/dependencyManagement-->
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>

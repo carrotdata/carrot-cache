@@ -1,0 +1,688 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ *
+ * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * <p>Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.carrot.cache.util;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.util.Random;
+
+import sun.misc.Unsafe;
+
+public class Utils {
+
+  public static final int SIZEOF_LONG = 8;
+  public static final int SIZEOF_DOUBLE = 8;
+
+  public static final int SIZEOF_INT = 4;
+  public static final int SIZEOF_FLOAT = 4;
+
+  public static final int SIZEOF_SHORT = 2;
+  public static final int SIZEOF_BYTE = 1;
+
+  public static final int BITS_PER_BYTE = 8;
+
+  /**
+   * Returns true if x1 is less than x2, when both values are treated as unsigned long. Both values
+   * are passed as is read by Unsafe. When platform is Little Endian, have to convert to
+   * corresponding Big Endian value and then do compare. We do all writes in Big Endian format.
+   */
+  static boolean lessThanUnsignedLong(long x1, long x2) {
+    if (UnsafeAccess.littleEndian) {
+      x1 = Long.reverseBytes(x1);
+      x2 = Long.reverseBytes(x2);
+    }
+    return (x1 + Long.MIN_VALUE) < (x2 + Long.MIN_VALUE);
+  }
+
+  /**
+   * Returns true if x1 is less than x2, when both values are treated as unsigned int. Both values
+   * are passed as is read by Unsafe. When platform is Little Endian, have to convert to
+   * corresponding Big Endian value and then do compare. We do all writes in Big Endian format.
+   */
+  static boolean lessThanUnsignedInt(int x1, int x2) {
+    if (UnsafeAccess.littleEndian) {
+      x1 = Integer.reverseBytes(x1);
+      x2 = Integer.reverseBytes(x2);
+    }
+    return (x1 & 0xffffffffL) < (x2 & 0xffffffffL);
+  }
+
+  /**
+   * Returns true if x1 is less than x2, when both values are treated as unsigned short. Both values
+   * are passed as is read by Unsafe. When platform is Little Endian, have to convert to
+   * corresponding Big Endian value and then do compare. We do all writes in Big Endian format.
+   */
+  static boolean lessThanUnsignedShort(short x1, short x2) {
+    if (UnsafeAccess.littleEndian) {
+      x1 = Short.reverseBytes(x1);
+      x2 = Short.reverseBytes(x2);
+    }
+    return (x1 & 0xffff) < (x2 & 0xffff);
+  }
+
+  /**
+   * Lexicographically compares byte buffer and array 
+   * @param buffer byte buffer
+   * @param len length
+   * @param buffer2 array
+   * @param bufOffset2 offset
+   * @param len2 length
+   * @return  0 if equal, < 0 if left is less than right, etc.
+   */
+  public static int compareTo(ByteBuffer buffer, int len, byte[] buffer2, int bufOffset2, int len2) {
+    int off = buffer.position();
+    if (buffer.hasArray()) {
+      byte[] arr = buffer.array();
+      return compareTo(arr, off, len, buffer2, bufOffset2, len2);
+    } else {
+      long address = UnsafeAccess.address(buffer);
+      return -compareTo(buffer2, bufOffset2, len2, address + off, len);
+    }
+  }
+  
+  /**
+   * Lexicographically compares byte buffer and memory 
+   * @param buffer byte buffer
+   * @param len length
+   * @param ptr memory address
+   * @param len2 length
+   * @return  0 if equal, < 0 if left is less than right, etc.
+   */
+  public static int compareTo(ByteBuffer buffer, int len, long ptr,  int len2) {
+    int off = buffer.position();
+    if (buffer.hasArray()) {
+      byte[] arr = buffer.array();
+      return compareTo(arr, off, len, ptr, len2);
+    } else {
+      long address = UnsafeAccess.address(buffer);
+      return compareTo(address + off, len, ptr, len2);
+    }
+  }
+  
+  /**
+   * Lexicographically compare two arrays.
+   *
+   * @param buffer1 left operand
+   * @param buffer2 right operand
+   * @param offset1 Where to start comparing in the left buffer
+   * @param offset2 Where to start comparing in the right buffer
+   * @param length1 How much to compare from the left buffer
+   * @param length2 How much to compare from the right buffer
+   * @return 0 if equal, < 0 if left is less than right, etc.
+   */
+  public static int compareTo(
+      byte[] buffer1, int offset1, int length1, byte[] buffer2, int offset2, int length2) {
+
+    Unsafe theUnsafe = UnsafeAccess.theUnsafe;
+    // Short circuit equal case
+    if (buffer1 == buffer2 && offset1 == offset2 && length1 == length2) {
+      return 0;
+    }
+    final int minLength = Math.min(length1, length2);
+    final int minWords = minLength / SIZEOF_LONG;
+    final long offset1Adj = offset1 + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+    final long offset2Adj = offset2 + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+
+    /*
+     * Compare 8 bytes at a time. Benchmarking shows comparing 8 bytes at a time is no slower than
+     * comparing 4 bytes at a time even on 32-bit. On the other hand, it is substantially faster on
+     * 64-bit.
+     */
+    // This is the end offset of long parts.
+    int j = minWords << 3; // Same as minWords * SIZEOF_LONG
+    for (int i = 0; i < j; i += SIZEOF_LONG) {
+      long lw = theUnsafe.getLong(buffer1, offset1Adj + (long) i);
+      long rw = theUnsafe.getLong(buffer2, offset2Adj + (long) i);
+      long diff = lw ^ rw;
+      if (diff != 0) {
+        return lessThanUnsignedLong(lw, rw) ? -1 : 1;
+      }
+    }
+    int offset = j;
+
+    if (minLength - offset >= SIZEOF_INT) {
+      int il = theUnsafe.getInt(buffer1, offset1Adj + offset);
+      int ir = theUnsafe.getInt(buffer2, offset2Adj + offset);
+      if (il != ir) {
+        return lessThanUnsignedInt(il, ir) ? -1 : 1;
+      }
+      offset += SIZEOF_INT;
+    }
+    if (minLength - offset >= SIZEOF_SHORT) {
+      short sl = theUnsafe.getShort(buffer1, offset1Adj + offset);
+      short sr = theUnsafe.getShort(buffer2, offset2Adj + offset);
+      if (sl != sr) {
+        return lessThanUnsignedShort(sl, sr) ? -1 : 1;
+      }
+      offset += SIZEOF_SHORT;
+    }
+    if (minLength - offset == 1) {
+      int a = (buffer1[(int) (offset1 + offset)] & 0xff);
+      int b = (buffer2[(int) (offset2 + offset)] & 0xff);
+      if (a != b) {
+        return a - b;
+      }
+    }
+    return length1 - length2;
+  }
+
+  /**
+   * Lexicographically compare array and native memory.
+   *
+   * @param buffer1 left operand
+   * @param address right operand - native
+   * @param offset1 Where to start comparing in the left buffer
+   * @param length1 How much to compare from the left buffer
+   * @param length2 How much to compare from the right buffer
+   * @return 0 if equal, < 0 if left is less than right, etc.
+   */
+  public static int compareTo(byte[] buffer1, int offset1, int length1, long address, int length2) {
+
+    UnsafeAccess.mallocStats.checkAllocation(address, length2);
+    Unsafe theUnsafe = UnsafeAccess.theUnsafe;
+
+    final int minLength = Math.min(length1, length2);
+    final int minWords = minLength / SIZEOF_LONG;
+    final long offset1Adj = offset1 + UnsafeAccess.BYTE_ARRAY_BASE_OFFSET;
+
+    /*
+     * Compare 8 bytes at a time. Benchmarking shows comparing 8 bytes at a time is no slower than
+     * comparing 4 bytes at a time even on 32-bit. On the other hand, it is substantially faster on
+     * 64-bit.
+     */
+    // This is the end offset of long parts.
+    int j = minWords << 3; // Same as minWords * SIZEOF_LONG
+    for (int i = 0; i < j; i += SIZEOF_LONG) {
+      long lw = theUnsafe.getLong(buffer1, offset1Adj + (long) i);
+      long rw = theUnsafe.getLong(address + (long) i);
+      long diff = lw ^ rw;
+      if (diff != 0) {
+        return lessThanUnsignedLong(lw, rw) ? -1 : 1;
+      }
+    }
+    int offset = j;
+
+    if (minLength - offset >= SIZEOF_INT) {
+      int il = theUnsafe.getInt(buffer1, offset1Adj + offset);
+      int ir = theUnsafe.getInt(address + offset);
+      if (il != ir) {
+        return lessThanUnsignedInt(il, ir) ? -1 : 1;
+      }
+      offset += SIZEOF_INT;
+    }
+    if (minLength - offset >= SIZEOF_SHORT) {
+      short sl = theUnsafe.getShort(buffer1, offset1Adj + offset);
+      short sr = theUnsafe.getShort(address + offset);
+      if (sl != sr) {
+        return lessThanUnsignedShort(sl, sr) ? -1 : 1;
+      }
+      offset += SIZEOF_SHORT;
+    }
+    if (minLength - offset == 1) {
+      int a = (buffer1[(int) (offset1 + offset)] & 0xff);
+      int b = theUnsafe.getByte(address + offset) & 0xff;
+      if (a != b) {
+        return a - b;
+      }
+    }
+    return length1 - length2;
+  }
+
+  /**
+   * Lexicographically compare two native memory pointers.
+   *
+   * @param buffer1 left operand
+   * @param address right operand - native
+   * @param offset1 Where to start comparing in the left buffer
+   * @param length1 How much to compare from the left buffer
+   * @param length2 How much to compare from the right buffer
+   * @return 0 if equal, < 0 if left is less than right, etc.
+   */
+  public static int compareTo(long address1, int length1, long address2, int length2) {
+    UnsafeAccess.mallocStats.checkAllocation(address1, length1);
+    UnsafeAccess.mallocStats.checkAllocation(address2, length2);
+
+    Unsafe theUnsafe = UnsafeAccess.theUnsafe;
+
+    final int minLength = Math.min(length1, length2);
+    final int minWords = minLength / SIZEOF_LONG;
+
+    /*
+     * Compare 8 bytes at a time. Benchmarking shows comparing 8 bytes at a time is no slower than
+     * comparing 4 bytes at a time even on 32-bit. On the other hand, it is substantially faster on
+     * 64-bit.
+     */
+    // This is the end offset of long parts.
+    int j = minWords << 3; // Same as minWords * SIZEOF_LONG
+    for (int i = 0; i < j; i += SIZEOF_LONG) {
+      long lw = theUnsafe.getLong(address1 + (long) i);
+      long rw = theUnsafe.getLong(address2 + (long) i);
+      long diff = lw ^ rw;
+      if (diff != 0) {
+        return lessThanUnsignedLong(lw, rw) ? -1 : 1;
+      }
+    }
+    int offset = j;
+
+    if (minLength - offset >= SIZEOF_INT) {
+      int il = theUnsafe.getInt(address1 + offset);
+      int ir = theUnsafe.getInt(address2 + offset);
+      if (il != ir) {
+        return lessThanUnsignedInt(il, ir) ? -1 : 1;
+      }
+      offset += SIZEOF_INT;
+    }
+    if (minLength - offset >= SIZEOF_SHORT) {
+      short sl = theUnsafe.getShort(address1 + offset);
+      short sr = theUnsafe.getShort(address2 + offset);
+      if (sl != sr) {
+        return lessThanUnsignedShort(sl, sr) ? -1 : 1;
+      }
+      offset += SIZEOF_SHORT;
+    }
+    if (minLength - offset == 1) {
+      int a = theUnsafe.getByte(address1 + offset) & 0xff;
+      int b = theUnsafe.getByte(address2 + offset) & 0xff;
+      if (a != b) {
+        return a - b;
+      }
+    }
+    return length1 - length2;
+  }
+
+  /**
+   * TODO: THIS METHOD IS UNSAFE??? CHECK IT Read unsigned VarInt
+   *
+   * @param ptr address to read from
+   * @return int value
+   */
+  public static int readUVInt(long ptr) {
+    int v1 = UnsafeAccess.toByte(ptr) & 0xff;
+
+    int cont = v1 >>> 7; // either 0 or 1
+    ptr += cont;
+    v1 &= 0x7f; // set 8th bit 0
+    int v2 = (byte) (UnsafeAccess.toByte(ptr) * cont) & 0xff;
+    cont = v2 >>> 7;
+    ptr += cont;
+    v2 &= 0x7f;
+    int v3 = (byte) (UnsafeAccess.toByte(ptr) * cont) & 0xff;
+    cont = v3 >>> 7;
+    ptr += cont;
+    v3 &= 0x7f;
+    int v4 = (byte) (UnsafeAccess.toByte(ptr) * cont) & 0xff;
+    v4 &= 0x7f;
+    return v1 + (v2 << 7) + (v3 << 14) + (v4 << 21);
+  }
+
+  /**
+   * Read unsigned VarInt from a byte buffer
+   * @param buf byte buffer
+   * @param off offset
+   * @return value
+   */
+  public static int readUVInt(byte[] buf, int off) {
+    int v1 = buf[off] & 0xff;
+    int cont = v1 >>> 7; // either 0 or 1
+    off += cont;
+    v1 &= 0x7f; // set 8th bit 0
+    int v2 = (byte) (buf[off] * cont) & 0xff;
+    cont = v2 >>> 7;
+    off += cont;
+    v2 &= 0x7f;
+    int v3 = (byte) (buf[off] * cont) & 0xff;
+    cont = v3 >>> 7;
+    off += cont;
+    v3 &= 0x7f;
+    int v4 = (byte) (buf[off] * cont) & 0xff;
+    v4 &= 0x7f;
+    return v1 + (v2 << 7) + (v3 << 14) + (v4 << 21);
+  }
+  
+  /**
+   * Read unsigned VarInt from a byte buffer
+   * @param buf byte buffer
+   * @param off offset
+   * @return value
+   */
+  public static int readUVInt(ByteBuffer buf) {
+    int off = buf.position();
+    int v1 = buf.get(off) & 0xff;
+    int cont = v1 >>> 7; // either 0 or 1
+    off += cont;
+    v1 &= 0x7f; // set 8th bit 0
+    int v2 = (byte) (buf.get(off) * cont) & 0xff;
+    cont = v2 >>> 7;
+    off += cont;
+    v2 &= 0x7f;
+    int v3 = (byte) (buf.get(off) * cont) & 0xff;
+    cont = v3 >>> 7;
+    off += cont;
+    v3 &= 0x7f;
+    int v4 = (byte) (buf.get(off) * cont) & 0xff;
+    v4 &= 0x7f;
+    return v1 + (v2 << 7) + (v3 << 14) + (v4 << 21);
+  }
+  
+  /**
+   * Returns size of unsigned variable integer in bytes
+   *
+   * @param value
+   * @return size in bytes
+   */
+  public static int sizeUVInt(int value) {
+    if (value < v1) {
+      return 1;
+    } else if (value < v2) {
+      return 2;
+    } else if (value < v3) {
+      return 3;
+    } else if (value < v4) {
+      return 4;
+    }
+    return 0;
+  }
+
+  static final int v1 = 1 << 7;
+  static final int v2 = 1 << 14;
+  static final int v3 = 1 << 21;
+  static final int v4 = 1 << 28;
+  /**
+   * Writes unsigned variable integer
+   *
+   * @param ptr address to write to
+   * @param value
+   * @return number of bytes written
+   */
+  public static int writeUVInt(long ptr, int value) {
+
+    if (value < v1) {
+      UnsafeAccess.putByte(ptr, (byte) value);
+      return 1;
+    } else if (value < v2) {
+      UnsafeAccess.putByte(ptr, (byte) ((value & 0xff) | 0x80));
+      UnsafeAccess.putByte(ptr + 1, (byte) (value >>> 7));
+      return 2;
+    } else if (value < v3) {
+      UnsafeAccess.putByte(ptr, (byte) ((value & 0xff) | 0x80));
+      UnsafeAccess.putByte(ptr + 1, (byte) ((value >>> 7) | 0x80));
+      UnsafeAccess.putByte(ptr + 2, (byte) (value >>> 14));
+      return 3;
+    } else if (value < v4) {
+      UnsafeAccess.putByte(ptr, (byte) ((value & 0xff) | 0x80));
+      UnsafeAccess.putByte(ptr + 1, (byte) ((value >>> 7) | 0x80));
+      UnsafeAccess.putByte(ptr + 2, (byte) ((value >>> 14) | 0x80));
+      UnsafeAccess.putByte(ptr + 3, (byte) (value >>> 21));
+      return 4;
+    }
+    return 0;
+  }
+
+
+  /**
+   * Murmur3hash implementation with native pointer.
+   *
+   * @param ptr the address of memory
+   * @param len the length of memory
+   * @param seed the seed
+   * @return hash value
+   */
+  public static int murmurHash(long ptr, int len, int seed) {
+    Unsafe unsafe = UnsafeAccess.theUnsafe;
+
+    final int m = 0x5bd1e995;
+    final int r = 24;
+    final int length = len;
+    int h = seed ^ length;
+
+    final int len_4 = length >> 2;
+    for (int i = 0; i < len_4; i++) {
+      int i_4 = i << 2;
+      int k = unsafe.getByte(ptr + i_4 + 3) & 0xff;
+      k = k << 8;
+      k = k | (unsafe.getByte(ptr + i_4 + 2) & 0xff);
+      k = k << 8;
+      k = k | (unsafe.getByte(ptr + i_4 + 1) & 0xff);
+      k = k << 8;
+      k = k | (unsafe.getByte(ptr + i_4) & 0xff);
+      k *= m;
+      k ^= k >>> r;
+      k *= m;
+      h *= m;
+      h ^= k;
+    }
+    // avoid calculating modulo
+    int len_m = len_4 << 2;
+    int left = length - len_m;
+
+    if (left != 0) {
+      if (left >= 3) {
+        h ^= (unsafe.getByte(ptr + length - 3) & 0xff) << 16;
+      }
+      if (left >= 2) {
+        h ^= (unsafe.getByte(ptr + length - 2) & 0xff) << 8;
+      }
+      if (left >= 1) {
+        h ^= (unsafe.getByte(ptr + length - 1) & 0xff);
+      }
+
+      h *= m;
+    }
+
+    h ^= h >>> 13;
+    h *= m;
+    h ^= h >>> 15;
+
+    // This is a stupid thinh I have ever stuck upon
+    if (h == Integer.MIN_VALUE) h = -(Integer.MIN_VALUE + 1);
+    return h;
+  }
+
+  /**
+   * Murmur3hash implementation with native pointer.
+   *
+   * @param ptr the address of memory
+   * @param len the length of memory
+   * @param seed the seed
+   * @return hash value
+   */
+  public static int murmurHash(byte[] buf, int off, int len, int seed) {
+
+    final int m = 0x5bd1e995;
+    final int r = 24;
+    final int length = len;
+    int h = seed ^ length;
+
+    final int len_4 = length >> 2;
+    for (int i = 0; i < len_4; i++) {
+      int i_4 = i << 2;
+      int k = buf[off + i_4 + 3] & 0xff;
+      k = k << 8;
+      k = k | (buf[off + i_4 + 2] & 0xff);
+      k = k << 8;
+      k = k | (buf[off + i_4 + 1] & 0xff);
+      k = k << 8;
+      k = k | (buf[off + i_4] & 0xff);
+      k *= m;
+      k ^= k >>> r;
+      k *= m;
+      h *= m;
+      h ^= k;
+    }
+    // avoid calculating modulo
+    int len_m = len_4 << 2;
+    int left = length - len_m;
+
+    if (left != 0) {
+      if (left >= 3) {
+        h ^= (buf[off + length - 3] & 0xff) << 16;
+      }
+      if (left >= 2) {
+        h ^= (buf[off + length - 2] & 0xff) << 8;
+      }
+      if (left >= 1) {
+        h ^= (buf[off + length - 1] & 0xff);
+      }
+
+      h *= m;
+    }
+
+    h ^= h >>> 13;
+    h *= m;
+    h ^= h >>> 15;
+
+    // This is a most stupid thing I have ever stuck upon
+    if (h == Integer.MIN_VALUE) h = -(Integer.MIN_VALUE + 1);
+    return h;
+  }
+
+  /**
+   * Not sure if it is truly random
+   *
+   * @param ptr pointer
+   * @param len length
+   * @param buffer buffer
+   */
+  public static void random16(long ptr, int len, long buffer) {
+    UnsafeAccess.putInt(buffer, murmurHash(ptr, len, 1));
+    UnsafeAccess.putInt(buffer + SIZEOF_INT, murmurHash(ptr, len, 2));
+    UnsafeAccess.putInt(buffer + 2 * SIZEOF_INT, murmurHash(ptr, len, 3));
+    UnsafeAccess.putInt(buffer + 3 * SIZEOF_INT, murmurHash(ptr, len, 4));
+  }
+
+  /**
+   * Hash 8 bytes hash
+   *
+   * @param buf buffer
+   * @param off offset
+   * @param len length
+   * @return hash number as a long
+   */
+  public static long hash8(byte[] buf, int off, int len) {
+    long h1 = murmurHash(buf, off, len, 1) & 0xffffffff;
+    h1 = h1 << 32;
+    long h2 = murmurHash(buf, off, len, 11) & 0xffffffff;
+    return h1 | h2;
+  }
+
+  /**
+   * Hash 8 bytes hash
+   *
+   * @param ptr pointer
+   * @param len length
+   * @return hash number as a long
+   */
+  public static long hash8(long ptr, int len) {
+    long h1 = murmurHash(ptr, len, 1) & 0xffffffff;
+    h1 = h1 << 32;
+    long h2 = murmurHash(ptr, len, 11) & 0xffffffff;
+    return h1 | h2;
+  }
+
+  /**
+   * Read memory as byte array
+   *
+   * @param ptr address
+   * @param size size of a memory
+   * @return byte array
+   */
+  public static byte[] toBytes(long ptr, int size) {
+    byte[] buf = new byte[size];
+    UnsafeAccess.copy(ptr, buf, 0, size);
+    return buf;
+  }
+
+  /**
+   * Generates random alphanumeric string
+   *
+   * @param r random generator
+   * @param size size of a string to generate
+   * @return string
+   */
+  public static String getRandomStr(Random r, int size) {
+    int start = 'A';
+    int stop = 'Z';
+    StringBuffer sb = new StringBuffer(size);
+    for (int i = 0; i < size; i++) {
+      int v = r.nextInt(stop - start) + start;
+      sb.append((char) v);
+    }
+    return sb.toString();
+  }
+
+ 
+  /**
+   * Fills memory area with random data
+   *
+   * @param ptr pointer
+   * @param size size of a memory area
+   */
+  public static void fillRandom(long ptr, int size) {
+    byte[] arr = new byte[size];
+    Random r = new Random();
+    r.nextBytes(arr);
+    UnsafeAccess.copy(arr, size, ptr, size);
+  }
+
+ 
+  public static String toString(double d, int afterDecimalPoint) {
+    String s = Double.toString(d);
+    int index = s.indexOf('.');
+    if (index < 0) return s;
+    if (index + 3 >= s.length()) return s;
+    return s.substring(0, index + afterDecimalPoint + 1);
+  }
+
+
+  public static String format(String s, int wide) {
+    if (s.length() >= wide) return s;
+    for (int i = 0; i < wide - s.length(); i++) {
+      s = "0" + s;
+    }
+    return s;
+  }
+  
+  /* The total size of a K-V pair in the storage */
+  public static int kvSize(int keySize, int valSize) {
+    return keySize + valSize + 8 /* timestamp */ + Utils.sizeUVInt(valSize) + Utils.sizeUVInt(keySize);
+  }
+  
+  /**
+   * Converts output stream to data output stream
+   * @param os output stream
+   * @return data output stream
+   */
+  public static DataOutputStream toDataOutputStream(OutputStream os) {
+    if (os instanceof DataOutputStream) {
+      return (DataOutputStream) os;
+    }
+    return new DataOutputStream(os);
+  }
+  
+  /**
+   * Converts input stream to data input stream
+   * @param is input stream
+   * @return data input stream
+   */
+  public static DataInputStream toDataInputStream(InputStream is) {
+    if (is instanceof DataInputStream) {
+      return (DataInputStream) is;
+    }
+    return new DataInputStream(is);
+  }
+}
