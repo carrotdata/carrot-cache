@@ -83,4 +83,12 @@ public interface AdmissionController extends Persistent{
    * @return new rank
    */
   public int adjustRank(int rank, long expire);
+  
+  /**
+   * During compaction process, scavenger calls this method to update
+   * segment's life-time statistics.
+   * @param rank segment's rank
+   * @param ttl segment's life-time in ms
+   */
+  public void registerSegmentTTL(int rank, long ttl);
 }

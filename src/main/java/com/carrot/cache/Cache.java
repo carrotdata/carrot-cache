@@ -252,6 +252,12 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
       // Basic ping-pong
       return rank;
     }
+
+    @Override
+    public void registerSegmentTTL(int rank, long ttl) {
+      // TODO nothing yet
+      
+    }
   }
   /*
    * Total allocated memory (bytes)
@@ -902,7 +908,8 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
   
   // Scavenger.Listener
   @Override
-  public void evicted(byte[] key, int keyOffset, int keySize, byte[] value, int valueOffset, int valueSize) {
+  public void evicted(byte[] key, int keyOffset, int keySize, 
+      byte[] value, int valueOffset, int valueSize, long expire) {
     if (this.admissionController != null) {
       AdmissionController.Type type = this.admissionController.readmit(key, keyOffset, keySize);
       if (type == AdmissionController.Type.AQ) {

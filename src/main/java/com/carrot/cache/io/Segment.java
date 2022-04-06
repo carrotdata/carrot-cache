@@ -67,7 +67,7 @@ public class Segment implements Persistent {
    *  
    *  
    */
-  static class Info implements Persistent {
+  public static class Info implements Persistent {
     
     /* Is segment sealed */
     private volatile boolean sealed;

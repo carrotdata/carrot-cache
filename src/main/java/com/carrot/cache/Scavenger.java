@@ -42,7 +42,8 @@ public class Scavenger extends Thread {
      * @param valueOffset value offset
      * @param valueSize
      */
-    public void evicted(byte[] key, int keyOffset, int keySize, byte[] value, int valueOffset, int valueSize);
+    public void evicted(byte[] key, int keyOffset, int keySize, byte[] value, 
+        int valueOffset, int valueSize, long expirationTime);
     
     /**
      * Reports expired key
@@ -197,6 +198,8 @@ public class Scavenger extends Thread {
         LOG.error(Thread.currentThread().getName()+": empty segment");
         return;
       }
+      long creationTime = s.getInfo().getCreationTime();
+      int rank = s.getInfo().getRank();
       try {
         finished = cleanSegment(s);
         // Release segment
@@ -206,6 +209,8 @@ public class Scavenger extends Thread {
         LOG.error(e);
         return;
       }
+      // Update admission controller statistics 
+      cache.getAdmissionController().registerSegmentTTL(rank, System.currentTimeMillis() - creationTime);
     }
     long runEnd = System.currentTimeMillis();
     // Update stats
@@ -265,12 +270,14 @@ public class Scavenger extends Thread {
         val = checkBuffer(val, valSize);
         sc.getValue(val);
         // Return Item back to AQ
+        //TODO: fix this code. We need to move data to a victim cache on 
+        // memory index eviction.
         if (aListener != null) {
           if (p > 0.0) {
-            aListener.evicted(key, 0, keySize, val, 0, valSize);
+            aListener.evicted(key, 0, keySize, val, 0, valSize, expire);
           } else {
             // p == 0.0 means, that item was previously evicted from the index
-            aListener.evicted(key, 0, keySize, null, 0, 0);
+            aListener.evicted(key, 0, keySize, null, 0, 0, expire);
           }
         }
         // Delete from the index
