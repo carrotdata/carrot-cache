@@ -10,7 +10,7 @@ In-Out-Process Java cache (L1/L2 off-heap, scalable, ZeroGC) with full SSD suppo
 - Very low meta overhead in RAM.
 - Scan resistent Segmented LRU eviction algorithm.  
 - Scalable in both RAM and disk. Multiple TBs of storage is supported (up to 16TB in a optimized mode with 8 bytes per cached item in RAM overhead).
-- Efficient hadnling of expired cached items.
+- Efficient eviction of expired cached items.
 - Warm restart and periodic cache backup. 
 - Memchached API compatible (TBI)
 - Rolling restart in cluster mode (TBI)
