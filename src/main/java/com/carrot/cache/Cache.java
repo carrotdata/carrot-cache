@@ -35,9 +35,12 @@ import org.apache.logging.log4j.Logger;
 import com.carrot.cache.controllers.AdmissionController;
 import com.carrot.cache.controllers.BaseThroughputController;
 import com.carrot.cache.controllers.ThroughputController;
+import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MemoryIndex;
 import com.carrot.cache.io.FileIOEngine;
 import com.carrot.cache.io.IOEngine;
+import com.carrot.cache.io.OffheapIOEngine;
+import com.carrot.cache.io.Segment;
 import com.carrot.cache.io.IOEngine.IOEngineEvent;
 import com.carrot.cache.util.CacheConfig;
 import com.carrot.cache.util.Utils;
@@ -161,6 +164,9 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
   /** Logger */
   private static final Logger LOG = LogManager.getLogger(Cache.class);
   
+  public static enum Type {
+    MEMORY, DISK
+  }
   /**
    * Basic cache admission controller. For newly admitted items it always
    * directs them to the Admission queue. For evicted and re-admitted items 
@@ -406,6 +412,18 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
   }
 
   /**
+   * Get cache type
+   * @return cache type
+   */
+  public Type getCacheType() {
+    if (this.engine instanceof OffheapIOEngine) {
+      return Type.MEMORY;
+    } else {
+      return Type.DISK;
+    }
+  }
+  
+  /**
    * Get cache name
    * @return cache name
    */
@@ -589,7 +607,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
   public void put(long keyPtr, int keySize, long valPtr, int valSize, long expire)
     throws IOException {    
     int rank = conf.getSLRUInsertionPoint(this.cacheName);
-    put(keyPtr, keySize, valPtr, valSize, expire, rank);
+    put(keyPtr, keySize, valPtr, valSize, expire, rank, false);
   }
 
   /**
@@ -599,12 +617,14 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
    * @param keySize key size
    * @param valPtr value address
    * @param valSize value size
-   * @param expire - expiration (0 - no expire)
-   * @param rank  - rank of the item
+   * @param expire expiration (0 - no expire)
+   * @param rank rank of the item
+   * @param force if true - bypass admission controller
    */
-  public void put(long keyPtr, int keySize, long valPtr, int valSize, 
-      long expire, int rank) throws IOException {
-    
+  public void put(
+      long keyPtr, int keySize, long valPtr, int valSize, long expire, int rank, boolean force)
+      throws IOException {
+
     if (rejectWrite()) {
       this.totalRejectedWrites.incrementAndGet();
       return;
@@ -612,28 +632,32 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
     this.totalWrites.incrementAndGet();
     // Check rank
     checkRank(rank);
-    AdmissionController.Type type = AdmissionController.Type.AQ;
-    if (admissionController != null) {
-      // Adjust rank taking into account item's expiration time
-      rank = this.admissionController.adjustRank(rank, expire);
-      type = admissionController.admit(keyPtr, keySize);
-    }
+
     boolean result = false;
-    if (type == AdmissionController.Type.AQ) {
-      // Add to the AQ
-      result = admissionQueue.addIfAbsentRemoveIfPresent(keyPtr, keySize);
-      if (result) {
-        return;
+
+    if (!force) {
+      AdmissionController.Type type = AdmissionController.Type.AQ;
+      if (admissionController != null) {
+        // Adjust rank taking into account item's expiration time
+        rank = this.admissionController.adjustRank(rank, expire);
+        type = admissionController.admit(keyPtr, keySize);
+      }
+      if (type == AdmissionController.Type.AQ) {
+        // Add to the AQ
+        result = admissionQueue.addIfAbsentRemoveIfPresent(keyPtr, keySize);
+        if (result) {
+          return;
+        }
       }
     }
     if (!result) {
       // Add to the cache
       engine.put(keyPtr, keySize, valPtr, valSize, expire, rank);
     }
-    //TODO: update stats
+    // TODO: update stats
     reportUsed(keySize, valSize);
   }
-  
+
   private void checkRank(int rank) {
     int maxRank = this.engine.getNumberOfRanks();
     if (rank < 0 || rank >= maxRank) {
@@ -651,6 +675,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
    * @param valOffset value offset
    * @param valSize value size
    * @param expire - expiration (0 - no expire)
+   * @param force if true - bypass admission controller
    */
   public void put(
       byte[] key,
@@ -660,7 +685,9 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
       int valOffset,
       int valSize,
       long expire,
-      int rank) throws IOException {
+      int rank,
+      boolean force)
+      throws IOException {
     if (rejectWrite()) {
       this.totalRejectedWrites.incrementAndGet();
       return;
@@ -668,26 +695,28 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
     this.totalWrites.incrementAndGet();
     // Check rank
     checkRank(rank);
-    
-    AdmissionController.Type type = AdmissionController.Type.AQ;
-    if (admissionController != null) {
-      // Adjust rank
-      rank = this.admissionController.adjustRank(rank, expire);
-      type = admissionController.admit(key, keyOffset, keySize);
-    }
     boolean result = false;
-    if (type == AdmissionController.Type.AQ) {
-      // Add to the AQ
-      result = admissionQueue.addIfAbsentRemoveIfPresent(key, keyOffset, keySize);
-      if (result) {
-        return;
+
+    if (!force) {
+      AdmissionController.Type type = AdmissionController.Type.AQ;
+      if (admissionController != null) {
+        // Adjust rank
+        rank = this.admissionController.adjustRank(rank, expire);
+        type = admissionController.admit(key, keyOffset, keySize);
+      }
+      if (type == AdmissionController.Type.AQ) {
+        // Add to the AQ
+        result = admissionQueue.addIfAbsentRemoveIfPresent(key, keyOffset, keySize);
+        if (result) {
+          return;
+        }
       }
     }
     if (!result) {
       // Add to the cache
       engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank);
     }
-    //TODO: update stats
+    // TODO: update stats
     reportUsed(keySize, valSize);
   }
 
@@ -700,7 +729,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
    */
   public void put(byte[] key, byte[] value, long expire) throws IOException {
     int rank = conf.getSLRUInsertionPoint(this.cacheName);
-    put(key, 0, key.length, value, 0, value.length, expire, rank);
+    put(key, 0, key.length, value, 0, value.length, expire, rank, false);
   }
 
   /* Get API*/
@@ -903,7 +932,50 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
    * @param c victim cache
    */
   public void setVictimCache(Cache c) {
+    if (getCacheType() == Type.DISK) {
+      throw new IllegalArgumentException("Victim cache is not supported for DISK type cache");
+    }
     this.victimCache = c;
+  }
+  
+  /**
+   * Transfer cached item to a victim cache
+   * @param ibPtr index block pointer
+   * @param indexPtr item pointer
+   * @throws IOException 
+   */
+  public void transfer(long ibPtr, long indexPtr) throws IOException {
+    if (getCacheType() == Type.DISK) {
+      LOG.error("Attempt to transfer cached item from cache type = DISK");
+      throw new IllegalArgumentException("Victim cache is not supported for DISK type cache");
+    }
+    if (this.victimCache == null) {
+      LOG.error("Attempt to transfer cached item when victim cache is null");
+      return;
+    }
+    // Cache is off-heap 
+    IndexFormat format = this.engine.getMemoryIndex().getIndexFormat(); 
+    long expire = format.getExpire(ibPtr, indexPtr);
+    int rank = conf.getSLRUInsertionPoint(this.victimCache.getName());
+    int sid = (int) format.getSegmentId(indexPtr);
+    long offset = format.getOffset(indexPtr); 
+    
+    Segment s = this.engine.getSegmentById(sid);
+    //TODO : check segment
+    try {
+      s.readLock();
+      long ptr = s.getAddress();
+      ptr += offset;
+      int keySize = Utils.readUVInt(ptr);
+      int kSizeSize = Utils.sizeUVInt(keySize);
+      ptr += kSizeSize;
+      int valueSize = Utils.readUVInt(ptr);
+      int vSizeSize = Utils.sizeUVInt(valueSize);
+      ptr += vSizeSize;
+      this.victimCache.put(ptr, keySize, ptr + keySize, valueSize, expire, rank, true);
+    } finally {
+      s.readUnlock();
+    }
   }
   
   // Scavenger.Listener

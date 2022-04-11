@@ -1274,6 +1274,7 @@ public class MemoryIndex implements Persistent {
    * @param hash hash of a key
    * @param indexPtr index data pointer (not used for AQ, 12 bytes for MQ)
    * @return new index block pointer
+   * @throws  
    */
   private long insert0(long ptr, long hash, long indexPtr, int indexSize) {
     if (isEvictionEnabled()) {
@@ -1301,8 +1302,9 @@ public class MemoryIndex implements Persistent {
    * TODO: eviction by size
    * Perform eviction
    * @param slotPtr index-data-block address
+   * @throws IOException 
    */
-  private void doEviction(long slotPtr) {
+  private void doEviction(long slotPtr) { 
     int numEntries = numEntries(slotPtr);
     int toEvict = evictionPolicy.getEvictionCandidateIndex(slotPtr, numEntries);
     // report eviction
@@ -1315,15 +1317,20 @@ public class MemoryIndex implements Persistent {
   }
   
   /**
-   * Delete entry by index
+   * Delete entry by index (used only for eviction)
    * @param ptr index segment address 
    * @param num index to delete
+   * @throws IOException 
    */
   private void deleteEntry(long ptr, int num) {
     int numEntries = numEntries(ptr);
     int off = offsetFor(ptr, num);
     long $ptr = ptr + off;
     int toDelete = this.indexFormat.fullEntrySize($ptr);
+    
+    // TODO: send evicted item to a victim cache
+    evictToVictimCache(ptr, $ptr);
+    
     if (num != numEntries - 1) {
       int toMove = dataSize(ptr) + this.indexBlockHeaderSize - off;
       UnsafeAccess.copy($ptr + toDelete, $ptr, toMove);
@@ -1337,7 +1344,42 @@ public class MemoryIndex implements Persistent {
     // Update stats
     cache.getEngine().updateStats(sid1, -1, -(numSegments - rank));
   }
-  
+
+  private void evictToVictimCache(long ptr, long $ptr) {
+    Cache victim = cache.getVictimCache();
+    if (victim == null) {
+      return;
+    }
+
+    int size = this.indexFormat.fullEntrySize($ptr);
+    long expire = this.indexFormat.getExpire(ptr, $ptr);
+    try {
+      // Check embedded mode
+      if (this.cacheConfig.isIndexDataEmbeddedSupported()) {
+        if (size <= this.cacheConfig.getIndexDataEmbeddedSize()) {
+          int off = this.indexFormat.getEmbeddedOffset();
+          $ptr += off;
+          int kSize = Utils.readUVInt($ptr);
+          int kSizeSize = Utils.sizeUVInt(kSize);
+          $ptr += kSizeSize;
+          int vSize = Utils.readUVInt($ptr);
+          int vSizeSize = Utils.sizeUVInt(vSize);
+          $ptr += vSizeSize;
+          int rank = this.cacheConfig.getSLRUInsertionPoint(victim.getName());
+
+          victim.put($ptr, kSize, $ptr + kSize, vSize, expire, rank, true);
+          return;
+        }
+      }
+      // else - not embedded
+      // transfer item to victim cache
+      cache.transfer(ptr, $ptr);
+
+    } catch (IOException e) {
+      LOG.error(e);
+    }
+  }
+
   /**
    * Insert hash - value entry
    *

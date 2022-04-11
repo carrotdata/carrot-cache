@@ -245,6 +245,16 @@ public abstract class IOEngine implements Persistent {
   }
   
   /**
+   * Get segment by segment id
+   * @param sid segment id
+   * @return segment
+   */
+  public Segment getSegmentById(int sid) {
+    //TODO: checkId(sid);
+    return this.dataSegments[sid];
+  }
+  
+  /**
    * TODO: test
    * Converts popularity value to a the rank
    *
