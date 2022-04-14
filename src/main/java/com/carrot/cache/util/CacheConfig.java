@@ -309,7 +309,7 @@ public class CacheConfig {
     this.props = props;
   }
 
-  private double getDoubleProperty(String name, double defValue) {
+  public double getDoubleProperty(String name, double defValue) {
     String value = props.getProperty(name);
     if (value == null) return defValue;
     try {
@@ -321,7 +321,7 @@ public class CacheConfig {
     return defValue;
   }
 
-  private long getLongProperty(String name, long defValue) {
+  public long getLongProperty(String name, long defValue) {
     String value = props.getProperty(name);
     if (value == null) return defValue;
     try {
@@ -333,7 +333,13 @@ public class CacheConfig {
     return defValue;
   }
 
-  private boolean getBooleanProperty(String name, boolean defValue) {
+  public String getProperty(String name, String defValue) {
+    String value = props.getProperty(name);
+    if (value == null) return defValue;
+    return value;
+  }
+  
+  public boolean getBooleanProperty(String name, boolean defValue) {
     String value = props.getProperty(name);
     if (value == null) return defValue;
     try {
