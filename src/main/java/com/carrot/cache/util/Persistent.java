@@ -23,8 +23,12 @@ import java.io.OutputStream;
  */
 public interface Persistent {
   
-  public void save(OutputStream os) throws IOException;
+  public default void save(OutputStream os) throws IOException {
+    
+  }
   
-  public void load(InputStream is) throws IOException;
+  public default void load(InputStream is) throws IOException {
+    
+  }
   
 }

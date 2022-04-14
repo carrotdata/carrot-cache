@@ -1582,6 +1582,8 @@ public class MemoryIndex implements Persistent {
     try {
       // TODO: locking index?
       mainReadLock();
+      /* Index format */
+      indexFormat.save(dos);
       /* Type */
       dos.writeInt(this.indexType.ordinal());
       /* Hash table size */
@@ -1613,6 +1615,8 @@ public class MemoryIndex implements Persistent {
   @Override
   public void load(InputStream is) throws IOException {
     DataInputStream dis = Utils.toDataInputStream(is);
+    // Load index format
+    indexFormat.load(dis);
     // Read index type
     int ord = dis.readInt();
     Type type = Type.values()[ord];

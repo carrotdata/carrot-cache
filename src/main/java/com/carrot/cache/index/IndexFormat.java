@@ -17,9 +17,10 @@
  */
 package com.carrot.cache.index;
 
+import com.carrot.cache.util.Persistent;
 import com.carrot.cache.util.UnsafeAccess;
 
-public interface IndexFormat {
+public interface IndexFormat extends Persistent {
   
   /**
    * Compares current index item with a given hash
