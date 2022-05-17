@@ -28,6 +28,7 @@ import java.nio.file.Paths;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongArray;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -180,8 +181,23 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
     private Cache cache;
     private boolean fileCache = false;
     
+    /* Section for keeping data to adjust rank according item TTL */
+    
+    private long[] ttlCounts;
+    private long[] cumTtl;
+    
+    private AtomicLongArray avgTTL;
+    
+    /**
+     * Constructor
+     * @param cache
+     */
     public BaseAdmissionController(Cache cache) {
       this.cache = cache;
+      int ranks = cache.getCacheConfig().getSLRUNumberOfSegments(cache.getName());
+      this.ttlCounts= new long[ranks];
+      this.cumTtl = new long[ranks];
+      this.avgTTL = new AtomicLongArray(ranks);
       this.fileCache = cache.getEngine() instanceof FileIOEngine;
     }
     
@@ -244,25 +260,59 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
 
     @Override
     public void save(OutputStream os) throws IOException {
-      // nothing yet
-      
+      // save TTL stuff
+      DataOutputStream dos= Utils.toDataOutputStream(os);
+      int ranks = this.ttlCounts.length;
+      dos.writeInt(ranks);
+      for (int i = 0; i < ranks; i++) {
+        dos.writeLong(this.ttlCounts[i]);
+      }
+      for (int i = 0; i < ranks; i++) {
+        dos.writeLong(this.cumTtl[i]);
+      }
     }
 
     @Override
     public void load(InputStream is) throws IOException {
-      // nothing yet
-    }
-
-    @Override
-    public int adjustRank(int rank, long expire) {
-      // Basic ping-pong
-      return rank;
-    }
-
-    @Override
-    public void registerSegmentTTL(int rank, long ttl) {
-      // TODO nothing yet
+      DataInputStream dis = Utils.toDataInputStream(is);
+      int ranks = dis.readInt();
+      this.ttlCounts = new long[ranks];
+      this.cumTtl = new long[ranks];
+      for(int i = 0; i < ranks; i++) {
+        this.ttlCounts[i] = dis.readLong();
+      }
+      for(int i = 0; i < ranks; i++) {
+        this.cumTtl[i] = dis.readLong();
+      }
+      this.avgTTL = new AtomicLongArray(ranks);
       
+    }
+
+    @Override
+    public int adjustRank(int rank, long expire /* relative - not absolute in ms*/) {
+      int ranks = this.ttlCounts.length;
+      int minRank = rank;
+      long minPositive = this.avgTTL.get(rank -1) - expire;
+      if (minPositive <= 0) return minRank;
+
+      for (int i = rank; i < ranks; i++) {
+        long expDiff = this.avgTTL.get(i) - expire;
+        if (expDiff <= 0) {
+          return minRank;
+        } else if (expDiff < minPositive) {
+          minPositive = expDiff;
+          minRank = i + 1;
+        }
+      }
+      return minRank;
+    }
+
+    @Override
+    public synchronized void registerSegmentTTL(int rank, long ttl) {
+      // rank is 1 - based
+      this.ttlCounts[rank - 1] ++;
+      this.cumTtl[rank - 1] += ttl;
+      this.avgTTL.set(rank - 1, this.cumTtl[rank - 1] / this.cumTtl[rank - 1]);
     }
   }
   /*
