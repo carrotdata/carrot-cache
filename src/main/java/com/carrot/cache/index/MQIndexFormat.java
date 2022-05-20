@@ -106,9 +106,9 @@ public class MQIndexFormat implements IndexFormat {
 
   @Override
   public int getHitCount(long buffer) {
-    long ref = UnsafeAccess.toLong(buffer + Utils.SIZEOF_INT + Utils.SIZEOF_LONG);
-    // Segment id (high 2 bytes of a first 4 bytes )
-    return (int) (ref >>> 32) & 0xffff0000;   
+    int ref = UnsafeAccess.toInt(buffer + Utils.SIZEOF_INT + Utils.SIZEOF_LONG);
+    // Segment id (low 2 bytes of a first 4 bytes )
+    return  ref >>> 31;   
   }
 
   @Override
@@ -142,9 +142,9 @@ public class MQIndexFormat implements IndexFormat {
     ptr += Utils.SIZEOF_LONG;
     UnsafeAccess.putInt(ptr, dataSize);
     ptr += Utils.SIZEOF_INT;
-    UnsafeAccess.putShort(ptr, sid);
+    UnsafeAccess.putInt(ptr, sid);
     ptr += Utils.SIZEOF_INT; // Yes, 4 bytes
-    UnsafeAccess.putInt(ptr, dataSize);
+    UnsafeAccess.putInt(ptr, dataOffset);
   }
 
   @Override
@@ -163,8 +163,8 @@ public class MQIndexFormat implements IndexFormat {
     ptr += Utils.SIZEOF_LONG;
     UnsafeAccess.putInt(ptr, dataSize);
     ptr += Utils.SIZEOF_INT;
-    UnsafeAccess.putShort(ptr, sid);
+    UnsafeAccess.putInt(ptr, sid);
     ptr += Utils.SIZEOF_INT; // Yes, 4 bytes
-    UnsafeAccess.putInt(ptr, dataSize);
+    UnsafeAccess.putInt(ptr, dataOffset);
   }
 }
