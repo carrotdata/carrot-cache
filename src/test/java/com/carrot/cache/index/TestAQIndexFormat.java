@@ -35,7 +35,7 @@ public class TestAQIndexFormat {
     long buf = UnsafeAccess.malloc(ifrmt.indexEntrySize());
     byte[] key = TestUtils.randomBytes(16);
     byte[] value = TestUtils.randomBytes(16);
-    long hash = Utils.hash8(key, 0, key.length);
+    long hash = Utils.hash64(key, 0, key.length);
     
     ifrmt.writeIndex(buf, key, 0, key.length, value, 0, value.length, 
       (short)0 /* sid */, 0 /* data offset */, 0 /* data size */);
@@ -51,7 +51,7 @@ public class TestAQIndexFormat {
     long buf = UnsafeAccess.malloc(ifrmt.indexEntrySize());
     long key = TestUtils.randomMemory(16);
     long value = TestUtils.randomMemory(16);
-    long hash = Utils.hash8(key, 16);
+    long hash = Utils.hash64(key, 16);
     
     ifrmt.writeIndex(buf, key, 16, value, 16, 
       (short)0 /* sid */, 0 /* data offset */, 0 /* data size */);

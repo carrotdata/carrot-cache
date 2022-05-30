@@ -92,7 +92,7 @@ public class TestMQIndexFormat {
   public void testIndexWriteByteArrays() {
     long ptr = indexBuffer;
     for (int i = 0; i < numRecords; i++) {
-      long hash = Utils.hash8(keys[i], 0, keys[i].length);
+      long hash = Utils.hash64(keys[i], 0, keys[i].length);
       assertTrue(format.equals(ptr, hash));
       
       int size = format.getKeyValueSize(ptr);
@@ -119,7 +119,7 @@ public class TestMQIndexFormat {
     
     long ptr = indexBufferMem;
     for (int i = 0; i < numRecords; i++) {
-      long hash = Utils.hash8(mKeys[i], keySize);
+      long hash = Utils.hash64(mKeys[i], keySize);
       assertTrue(format.equals(ptr, hash));
       int size = format.getKeyValueSize(ptr);
       assertEquals(lengths[i], size);

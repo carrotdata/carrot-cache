@@ -116,7 +116,7 @@ public class AQIndexFormat implements IndexFormat {
       int dataOffset,
       int dataSize) 
   {
-    long hash = Utils.hash8(key, keyOffset, keySize);
+    long hash = Utils.hash64(key, keyOffset, keySize);
     UnsafeAccess.putLong(ptr, hash);
   }
 
@@ -131,7 +131,7 @@ public class AQIndexFormat implements IndexFormat {
       int dataOffset,
       int dataSize) 
   {
-    long hash = Utils.hash8(keyPtr, keySize);
+    long hash = Utils.hash64(keyPtr, keySize);
     UnsafeAccess.putLong(ptr, hash);
   }
 }

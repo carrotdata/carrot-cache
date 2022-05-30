@@ -14,6 +14,8 @@
  */
 package com.carrot.cache.util;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.util.Random;
 
 /**
@@ -34,6 +36,17 @@ public class TestUtils {
     return bytes;
   }
   
+  
+  /**
+   * Creates new byte array and fill it with random data
+   * @param size size of an array
+   * @return array
+   */
+  public static byte[] randomBytes(int size, Random r) {
+    byte[] bytes = new byte[size];
+    r.nextBytes(bytes);
+    return bytes;
+  }
   /**
    * Copies an array
    * @param arr array of bytes
@@ -56,6 +69,19 @@ public class TestUtils {
     UnsafeAccess.copy(bytes, 0, ptr, size);
     return ptr;
   }
+  
+  /**
+   * Allocates memory and fills it with random data
+   * @param size memory size
+   * @return pointer
+   */
+  public static long randomMemory(int size, Random r) {
+    byte[] bytes = randomBytes(size, r);
+    long ptr = UnsafeAccess.malloc(size);
+    UnsafeAccess.copy(bytes, 0, ptr, size);
+    return ptr;
+  }
+  
   /**
    * Creates copy of a memory buffer
    * @param ptr memory buffer
@@ -68,4 +94,9 @@ public class TestUtils {
     return mem;
   }
   
+  
+  public static DataOutputStream getOutputStreamForTest() {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    return new DataOutputStream(baos);
+  }
 }
