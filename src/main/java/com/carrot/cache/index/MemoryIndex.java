@@ -1072,6 +1072,16 @@ public class MemoryIndex implements Persistent {
    * @return true on success, false - otherwise
    */
   private boolean delete(long hash) {
+    return delete(hash, true);
+  }
+
+  /**
+   * Delete index for a key's hash
+   *
+   * @param hash key's hash
+   * @return true on success, false - otherwise
+   */
+  private boolean delete(long hash, boolean shrink) {
     // Get slot number
     long[] index = ref_index_base.get();
     int $slot = getSlotNumber(hash, index.length);
@@ -1080,7 +1090,7 @@ public class MemoryIndex implements Persistent {
       return false; // not found
     }
     boolean result = delete(ptr, hash);
-    if (result) {
+    if (shrink && result) {
       long nptr = shrink(ptr);
       if (nptr != ptr) {
         index[$slot] = nptr;
@@ -1088,7 +1098,8 @@ public class MemoryIndex implements Persistent {
     }
     return result;
   }
-
+  
+  
   /**
    * Delete key with a given hash from a index block
    *
@@ -1442,6 +1453,8 @@ public class MemoryIndex implements Persistent {
    * @param indexPtr index data pointer (not relevant for AQ, for MQ - 12 byte data)
    */
   private void insertEntry(long ptr, long hash, long indexPtr, int indexSize) {
+    // Check if it exists already - update
+    delete(ptr, hash);
     int numEntries = numEntries(ptr);
     int insertIndex = evictionPolicy.getInsertIndex(ptr, numEntries);
     // TODO: entry size can be variable
@@ -1466,8 +1479,7 @@ public class MemoryIndex implements Persistent {
     //TODO: make it a separate method
     //Update stats
     //TODO: is rank 1- based?
-    //int numSegments = this.cacheConfig.getSLRUNumberOfSegments(this.cacheName);
-    int rank = this.cacheConfig.getSLRUInsertionPoint(this.cacheName);//this.evictionPolicy.getSegmentForIndex(numSegments, insertIndex, numEntries);
+    int rank = this.cacheConfig.getSLRUInsertionPoint(this.cacheName);
     int sid1 = this.indexFormat.getSegmentId(indexPtr);
     
     updateStats(ptr, sid1, rank, numEntries);
@@ -1475,13 +1487,12 @@ public class MemoryIndex implements Persistent {
   }
 
   private void updateStats(long ptr, int sid1, int rank, int numEntries) {
-    int numSegments = this.cacheConfig.getSLRUNumberOfSegments(this.cacheName);
-    
-    // Update stats
-    if (this.cache != null) {
-      this.cache.getEngine().updateStats(sid1, 1, (numSegments - rank));
+    if (this.cache == null) {
+      return;
     }
-   
+    int numSegments = this.cacheConfig.getSLRUNumberOfSegments(this.cacheName);
+    // Update stats
+    this.cache.getEngine().updateStats(sid1, 1, (numSegments - rank));
     if (numEntries >= numSegments) {
       int prev = -1;
       for (int r = rank + 1; r < numSegments; r++) {
@@ -1489,10 +1500,8 @@ public class MemoryIndex implements Persistent {
         if (idx == prev) continue;
         prev = idx;
         int sid = getSegmentIdForEntry(ptr, idx);
-        if (this.cache != null) {
           // decrement by total data segment rank by 1 
           this.cache.getEngine().updateStats(sid, 0, -1);
-        }
       }
     }
   }
