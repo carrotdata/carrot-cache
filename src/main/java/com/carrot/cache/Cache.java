@@ -194,7 +194,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
      */
     public BaseAdmissionController(Cache cache) {
       this.cache = cache;
-      int ranks = cache.getCacheConfig().getSLRUNumberOfSegments(cache.getName());
+      int ranks = cache.getCacheConfig().getNumberOfRanks(cache.getName());
       this.ttlCounts= new long[ranks];
       this.cumTtl = new long[ranks];
       this.avgTTL = new AtomicLongArray(ranks);

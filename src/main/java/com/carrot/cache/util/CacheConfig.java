@@ -95,8 +95,8 @@ public class CacheConfig {
   /* Discard cached entry if it in this lower percentile - stop value (maximum) */
   public static final String SCAVENGER_DUMP_ENTRY_BELOW_STOP_KEY = "scavenger.dump.entry.below.stop";
   
-  /* Number of segments in S-LRU */
-  public static final String SLRU_CACHE_SEGMENTS_KEY = "slru.cache.segments";
+  /* Number of ranks ( 0-7) */
+  public static final String SLRU_NUMBER_RANKS_KEY = "slru.cache.number.ranks";
   
   /* New item insertion point for SLRU (segment number 1- based)*/
   public static final String SLRU_CACHE_INSERT_POINT_KEY = "slru.cache.insert.point";
@@ -195,7 +195,7 @@ public class CacheConfig {
   public static final double DEFAULT_WRITES_LIMIT_RATIO = 0.9;
 
   /** Number of segments in segmented-LRU cache */
-  public static final int DEFAULT_SLRU_CACHE_SEGMENTS = 8;
+  public static final int DEFAULT_CACHE_NUMBER_RANKS = 8;
 
   /** Number of segments in segmented-LRU cache */
   public static final int DEFAULT_SLRU_CACHE_INSERT_POINT = 5;
@@ -438,12 +438,12 @@ public class CacheConfig {
    * @param cacheName cache name
    * @return SLRU number of segments
    */
-  public int getSLRUNumberOfSegments(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ SLRU_CACHE_SEGMENTS_KEY);
+  public int getNumberOfRanks(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ SLRU_NUMBER_RANKS_KEY);
     if (value != null) {
       return (int) Long.parseLong(value);
     }
-    return (int) getLongProperty(SLRU_CACHE_SEGMENTS_KEY, DEFAULT_SLRU_CACHE_SEGMENTS);
+    return (int) getLongProperty(SLRU_NUMBER_RANKS_KEY, DEFAULT_CACHE_NUMBER_RANKS);
   }
   
   /**
@@ -479,7 +479,7 @@ public class CacheConfig {
    * @return eviction policy for a cache
    */
   public EvictionPolicy getCacheEvictionPolicy(String cacheName) {
-    int segNumber = getSLRUNumberOfSegments(cacheName);
+    int segNumber = getNumberOfRanks(cacheName);
     int insertPoint = getSLRUInsertionPoint(cacheName);
     return new SLRUEvictionPolicy(segNumber, insertPoint);
   }

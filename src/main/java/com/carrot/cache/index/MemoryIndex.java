@@ -891,7 +891,7 @@ public class MemoryIndex implements Persistent {
           if (this.cache != null) {
             this.cache.getEngine().updateStats(sid0, 0, 1);
           }
-          int numSegments = this.cacheConfig.getSLRUNumberOfSegments(this.cacheName); 
+          int numSegments = this.cacheConfig.getNumberOfRanks(this.cacheName); 
           int rank = this.evictionPolicy.getSegmentForIndex(numSegments, count, numEntries);
           int idx = this.evictionPolicy.getStartIndexForSegment(numSegments, rank + 1, numEntries);
           int sid1 = getSegmentIdForEntry(ptr, idx);
@@ -1122,7 +1122,7 @@ public class MemoryIndex implements Persistent {
         incrNumEntries(ptr, -1);
         // Update stats
         //TODO: separate method
-        int numSegments = this.cacheConfig.getSLRUNumberOfSegments(this.cacheName);  
+        int numSegments = this.cacheConfig.getNumberOfRanks(this.cacheName);  
         int rank = this.evictionPolicy.getSegmentForIndex(numSegments, count, numEntries);
         int sid1 = getSegmentIdForEntry(ptr, count);
         // Update stats
@@ -1221,25 +1221,48 @@ public class MemoryIndex implements Persistent {
   }
 
   /**
+   * Insert new index entry with a rank
+   *
+   * @param key item key
+   * @param keyOff item's key offset
+   * @param keySize item key size
+   * @param indexPtr item index data pointer (relevant only for MQ)
+   * @param rank item's rank
+   */
+  public void insertWithRank(byte[] key, int keyOff, int keySize, long indexPtr, int indexSize, int rank) {
+    if (isRehashingInProgress()) {
+      // No insert operations during rehashing
+      return;
+    }
+    try {
+      writeLock(key, keyOff, keySize);
+      long hash = Utils.hash64(key, keyOff, keySize);
+      insertInternal(hash, indexPtr, indexSize, rank);
+    } finally {
+      writeUnlock(key, keyOff, keySize);
+    }
+  }
+  
+  /**
    * Insert new index entry
    *
    * @param key item key
    * @param indexPtr item index data pointer
    */
   public void insert(byte[] key, long indexPtr, int indexSize) {
-    if (isRehashingInProgress()) {
-      // No insert operations during rehashing
-      return;
-    }
-    try {
-      writeLock(key, 0, key.length);
-      long hash = Utils.hash64(key, 0, key.length);
-      insertInternal(hash, indexPtr, indexSize);
-    } finally {
-      writeUnlock(key, 0, key.length);
-    }
+    insert(key, 0, key.length, indexPtr, indexSize);
   }
 
+  /**
+   * Insert new index entry with a rank
+   *
+   * @param key item key
+   * @param indexPtr item index data pointer
+   */
+  public void insertWithRank(byte[] key, long indexPtr, int indexSize, int rank) {
+    insertWithRank(key, 0, key.length, indexPtr, indexSize, rank);
+  }
+  
   /**
    * Insert new index entry
    *
@@ -1262,6 +1285,29 @@ public class MemoryIndex implements Persistent {
     }
   }
 
+  /**
+   * Insert new index entry with a rank
+   *
+   * @param ptr key address
+   * @param size key size
+   * @param index data pointer (not used for AQ, for MQ - its 12 bytes value)
+   * @param rank item's rank
+   */
+  public void insertWithRank(long ptr, int size, long indexPtr, int indexSize, int rank) {
+    if (isRehashingInProgress()) {
+      // No insert operations during rehashing
+      return;
+    }
+    // get hashed key value
+    try {
+      writeLock(ptr, size);
+      long hash = Utils.hash64(ptr, size);
+      insertInternal(hash, indexPtr, indexSize, rank);
+    } finally {
+      writeUnlock(ptr, size);
+    }
+  }
+  
   /**
    * Insert hash - value into index
    *
@@ -1293,6 +1339,38 @@ public class MemoryIndex implements Persistent {
     } 
   }
 
+  /**
+   * Insert hash - value into index
+   *
+   * @param hash hash
+   * @param indexPtr value
+   * @param rank item's rank
+   */
+  private void insertInternal(long hash, long indexPtr, int indexSize, int rank) {
+    // Get slot number
+    long[] index = ref_index_base.get();
+    int $slot = getSlotNumber(hash, index.length);
+    long ptr = 0;
+    ptr = index[$slot];
+    if (ptr == 0) {
+      ptr = UnsafeAccess.mallocZeroed(getMinimumBlockSize());
+      index[$slot] = ptr;
+    }
+    long $ptr = insert0(ptr, hash, indexPtr, indexSize, rank);
+    
+    if ($ptr != ptr && $ptr > 0) {
+      // Possible block expansion or rehash (0)
+      // update index segment address
+      index[$slot] = $ptr;
+    } else if ($ptr == FULL_REHASH_REQUEST) {
+      // full rehash is required
+      writeUnlock($slot);
+      rehashAll();
+      // repeat call
+      insertInternal(hash, indexPtr, indexSize);
+    } 
+  }
+  
   /**
    * Blocked index rehashing
    */
@@ -1361,6 +1439,38 @@ public class MemoryIndex implements Persistent {
   }
 
   /**
+   * Insert hash - value into a given index block with a rank
+   *
+   * @param ptr index block address
+   * @param hash hash of a key
+   * @param indexPtr index data pointer (not used for AQ, 12 bytes for MQ)
+   * @param rank item's rank
+   * @return new index block pointer
+   * @throws  
+   */
+  private long insert0(long ptr, long hash, long indexPtr, int indexSize, int rank) {
+    if (isEvictionEnabled()) {
+      doEviction(ptr); // TODO: take into account size of a new item
+    }
+    // If indexPtr == 0, then insert hash only (for AQ)
+    boolean isAQ = indexPtr == 0;
+    int blockSize = blockSize(ptr);
+    int dataSize = dataSize(ptr);
+    int requiredSize = dataSize + this.indexBlockHeaderSize + (isAQ? Utils.SIZEOF_LONG: indexSize); 
+    long $ptr = 0;
+    if (requiredSize > blockSize) {
+      // Try to expand
+      $ptr = expand(ptr, requiredSize);
+      if ($ptr < 0) {
+        return FULL_REHASH_REQUEST;// request full rehash
+      }
+      ptr = $ptr;
+    }
+    insertEntry(ptr, hash, indexPtr, indexSize, rank);
+    return ptr;
+  }
+  
+  /**
    * TODO: eviction by size
    * Perform eviction
    * @param slotPtr index-data-block address
@@ -1401,7 +1511,7 @@ public class MemoryIndex implements Persistent {
     incrNumEntries(ptr, -1);
     // decrease total number of index entries
     //TODO: this works only if we promote item by +1 rank
-    int numSegments = this.cacheConfig.getSLRUNumberOfSegments(this.cacheName);
+    int numSegments = this.cacheConfig.getNumberOfRanks(this.cacheName);
     int rank = this.evictionPolicy.getSegmentForIndex(numSegments, num, numEntries);
     int sid1 = getSegmentIdForEntry(ptr, num);
     // Update stats
@@ -1446,17 +1556,18 @@ public class MemoryIndex implements Persistent {
   }
 
   /**
-   * Insert hash - value entry
+   * Insert hash - value entry with a rank
    * TODO: insert by rank
    * @param ptr index block address
    * @param hash hash
    * @param indexPtr index data pointer (not relevant for AQ, for MQ - 12 byte data)
    */
-  private void insertEntry(long ptr, long hash, long indexPtr, int indexSize) {
+  private void insertEntry(long ptr, long hash, long indexPtr, int indexSize, int rank) {
     // Check if it exists already - update
     delete(ptr, hash);
     int numEntries = numEntries(ptr);
-    int insertIndex = evictionPolicy.getInsertIndex(ptr, numEntries);
+    int numRanks = this.cacheConfig.getNumberOfRanks(this.cacheName);
+    int insertIndex = evictionPolicy.getStartIndexForSegment(numRanks, rank, numEntries);
     // TODO: entry size can be variable
     int off = offsetFor(ptr, insertIndex);
     int toMove = dataSize(ptr) + this.indexBlockHeaderSize - off;
@@ -1479,18 +1590,30 @@ public class MemoryIndex implements Persistent {
     //TODO: make it a separate method
     //Update stats
     //TODO: is rank 1- based?
-    int rank = this.cacheConfig.getSLRUInsertionPoint(this.cacheName);
+    
     int sid1 = this.indexFormat.getSegmentId(indexPtr);
     
     updateStats(ptr, sid1, rank, numEntries);
   
   }
 
+  /**
+   * Insert hash - value entry
+   * TODO: insert by rank
+   * @param ptr index block address
+   * @param hash hash
+   * @param indexPtr index data pointer (not relevant for AQ, for MQ - 12 byte data)
+   */
+  private void insertEntry(long ptr, long hash, long indexPtr, int indexSize) {
+    int rank = this.cacheConfig.getSLRUInsertionPoint(this.cacheName);
+    insertEntry(ptr, hash, indexPtr, indexSize, rank);
+  }
+
   private void updateStats(long ptr, int sid1, int rank, int numEntries) {
     if (this.cache == null) {
       return;
     }
-    int numSegments = this.cacheConfig.getSLRUNumberOfSegments(this.cacheName);
+    int numSegments = this.cacheConfig.getNumberOfRanks(this.cacheName);
     // Update stats
     this.cache.getEngine().updateStats(sid1, 1, (numSegments - rank));
     if (numEntries >= numSegments) {

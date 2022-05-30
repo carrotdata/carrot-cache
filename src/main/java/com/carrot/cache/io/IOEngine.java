@@ -158,7 +158,7 @@ public abstract class IOEngine implements Persistent {
     this.segmentSize = this.config.getCacheSegmentSize(this.cacheName);
     this.maxStorageSize = this.config.getCacheMaximumSize(this.cacheName);
     this.numSegments = (int) (this.maxStorageSize / this.segmentSize + 1);
-    int num = this.config.getSLRUNumberOfSegments(this.cacheName);
+    int num = this.config.getNumberOfRanks(this.cacheName);
     ramBuffers = new Segment[num];
     this.dataSegments = new Segment[this.numSegments];
     this.index = new MemoryIndex(this.parent, MemoryIndex.Type.MQ);
@@ -996,7 +996,7 @@ public abstract class IOEngine implements Persistent {
       format.writeIndex(iptr, key, keyOff, keyLength, value, valueOff, valueLength, 
           (short) s.getId(), (int) offset, dataSize); 
       
-      this.index.insert(key, keyOff, keyLength, iptr, size);
+      this.index.insertWithRank(key, keyOff, keyLength, iptr, size, rank);
     } finally {
       this.rbLocks[rank].writeLock().unlock();
       UnsafeAccess.free(iptr);
@@ -1064,7 +1064,7 @@ public abstract class IOEngine implements Persistent {
             
       format.writeIndex(iptr, keyPtr, keyLength, valuePtr,  valueLength, 
           (short) s.getId(), (int) offset, dataSize); 
-      this.index.insert(keyPtr, keyLength, iptr, size);
+      this.index.insertWithRank(keyPtr, keyLength, iptr, size, rank);
       
     } finally {
       this.rbLocks[rank].writeLock().unlock();
