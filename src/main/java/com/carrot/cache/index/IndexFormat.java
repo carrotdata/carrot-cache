@@ -21,7 +21,14 @@ import com.carrot.cache.util.Persistent;
 import com.carrot.cache.util.UnsafeAccess;
 
 public interface IndexFormat extends Persistent {
-  
+    
+  /**
+   * Cache name for this index format
+   * @param cacheName
+   */
+  public default void setCacheName(String cacheName) {
+    
+  }
   /**
    * Compares current index item with a given hash
    * @param ptr current index item address

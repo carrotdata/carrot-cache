@@ -16,10 +16,14 @@ package com.carrot.cache.util;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.util.Properties;
 
 import com.carrot.cache.eviction.EvictionPolicy;
 import com.carrot.cache.eviction.SLRUEvictionPolicy;
+import com.carrot.cache.index.AQIndexFormat;
+import com.carrot.cache.index.IndexFormat;
+import com.carrot.cache.index.MQIndexFormat;
 
 public class CacheConfig {
 
@@ -163,6 +167,12 @@ public class CacheConfig {
    **/
   public static final String INDEX_DATA_EMBEDDED_SIZE_KEY = "index.data.embedded.size";
   
+  /* Class name for main queue index format implementation */
+  public static final String INDEX_FORMAT_MAIN_QUEUE_IMPL_KEY = "index.format.main.queue.impl";
+  
+  /* Class name for admission queue index format implementation */
+  public static final String INDEX_FORMAT_ADMISSION_QUEUE_IMPL_KEY = "index.format.admission.queue.impl";
+
   /* Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 256 * 1024 * 1024;
@@ -681,7 +691,54 @@ public class CacheConfig {
    * @return data embedded size
    */
   public int getIndexDataEmbeddedSize() {
-    return (int )getLongProperty(INDEX_DATA_EMBEDDED_SIZE_KEY, DEFAULT_INDEX_DATA_EMBEDDED_SIZE);
+    return (int)getLongProperty(INDEX_DATA_EMBEDDED_SIZE_KEY, DEFAULT_INDEX_DATA_EMBEDDED_SIZE);
+  }
+
+  /**
+   * Get admission queue index format implementation
+   *
+   * @throws ClassNotFoundException
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   */
+  public IndexFormat getAdmissionQueueIndexFormat(String cacheName)
+      throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+    String value = props.getProperty(cacheName + "." + INDEX_FORMAT_ADMISSION_QUEUE_IMPL_KEY);
+    if (value == null) {
+      value = props.getProperty(INDEX_FORMAT_ADMISSION_QUEUE_IMPL_KEY);
+    }
+    if (value == null) {
+      // default implementation;
+      return new AQIndexFormat();
+    }
+    @SuppressWarnings("unchecked")
+    Class<IndexFormat> clz = (Class<IndexFormat>) Class.forName(value);
+    IndexFormat instance = clz.newInstance();
+    instance.setCacheName(cacheName);
+    return instance;
   }
   
+  /**
+   * Get main queue index format implementation
+   *
+   * @throws ClassNotFoundException
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   */
+  public IndexFormat getMainQueueIndexFormat(String cacheName)
+      throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+    String value = props.getProperty(cacheName + "." + INDEX_FORMAT_MAIN_QUEUE_IMPL_KEY);
+    if (value == null) {
+      value = props.getProperty(INDEX_FORMAT_MAIN_QUEUE_IMPL_KEY);
+    }
+    if (value == null) {
+      // default implementation;
+      return new MQIndexFormat();
+    }
+    @SuppressWarnings("unchecked")
+    Class<IndexFormat> clz = (Class<IndexFormat>) Class.forName(value);
+    IndexFormat instance = clz.newInstance();
+    instance.setCacheName(cacheName);
+    return instance;
+  }
 }

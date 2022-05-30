@@ -368,25 +368,36 @@ public class MemoryIndex implements Persistent {
   public boolean isEvictionEnabled() {
     return this.evictionEnabled;
   }
-  
+
   /**
    * Set type of an index - either AdmissionQueue index or Main Queue
+   *
    * @param type
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   * @throws ClassNotFoundException
    */
   public void setType(Type type) {
     this.indexType = type;
-    if (type == Type.AQ) { // Admission queue
-      setEvictionPolicy(new FIFOEvictionPolicy());
-      setIndexFormat(new AQIndexFormat());
-    } else { // Main queue
-      EvictionPolicy policy = cacheConfig.getCacheEvictionPolicy(this.cacheName);
-      setEvictionPolicy(policy);
-      setIndexFormat(new MQIndexFormat());
+    IndexFormat format;
+    try {
+      if (type == Type.AQ) { // Admission queue
+        setEvictionPolicy(new FIFOEvictionPolicy());
+        format = cacheConfig.getMainQueueIndexFormat(cacheName);
+      } else { // Main queue
+        EvictionPolicy policy = cacheConfig.getCacheEvictionPolicy(this.cacheName);
+        setEvictionPolicy(policy);
+        format = cacheConfig.getMainQueueIndexFormat(cacheName);
+      }
+      setIndexFormat(format);      
+      this.indexSize = this.indexFormat.indexEntrySize();
+      this.indexBlockHeaderSize = this.indexFormat.getIndexBlockHeaderSize();
+    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+      LOG.error(e);
+      throw new RuntimeException(e);
     }
-    this.indexSize = this.indexFormat.indexEntrySize();
-    this.indexBlockHeaderSize = this.indexFormat.getIndexBlockHeaderSize();
   }
-  
+
   /**
    * Get index type
    * @return index type
