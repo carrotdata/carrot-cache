@@ -176,7 +176,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
    * It does nothing on item access.
    *
    */
-  static class BaseAdmissionController implements AdmissionController {
+  public static class BaseAdmissionController implements AdmissionController {
     
     private Cache cache;
     private boolean fileCache = false;
@@ -187,6 +187,10 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
     private long[] cumTtl;
     
     private AtomicLongArray avgTTL;
+    
+    public BaseAdmissionController() {
+      
+    }
     
     /**
      * Constructor
@@ -201,6 +205,15 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
       this.fileCache = cache.getEngine() instanceof FileIOEngine;
     }
     
+    @Override
+    public void setCache(Cache cache) {
+      this.cache = cache;
+      int ranks = cache.getCacheConfig().getNumberOfRanks(cache.getName());
+      this.ttlCounts= new long[ranks];
+      this.cumTtl = new long[ranks];
+      this.avgTTL = new AtomicLongArray(ranks);
+      this.fileCache = cache.getEngine() instanceof FileIOEngine;
+    }
     /**
      * New items are always submitted to the Admission Queue
      */
@@ -428,8 +441,14 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
    * @throws IOException
    */
   private void initAdmissionController() throws IOException {
-    //TODO: custom controller class
-    this.admissionController = new BaseAdmissionController(this);
+    try {
+      this.admissionController = this.conf.getAdmissionController(cacheName);
+    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+      LOG.error(e);
+      throw new RuntimeException(e);
+    }
+    this.admissionController.setCache(this);
+    
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
     String file = CacheConfig.ADMISSION_CONTROLLER_SNAPSHOT_NAME;
     Path p = Paths.get(snapshotDir, file);

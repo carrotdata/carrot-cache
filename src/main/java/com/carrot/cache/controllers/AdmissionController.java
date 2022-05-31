@@ -14,6 +14,7 @@
  */
 package com.carrot.cache.controllers;
 
+import com.carrot.cache.Cache;
 import com.carrot.cache.util.Persistent;
 
 /**
@@ -23,6 +24,10 @@ import com.carrot.cache.util.Persistent;
 public interface AdmissionController extends Persistent{
   static enum Type {
     AQ, MQ, DUMP
+  }
+  
+  public default void setCache(Cache cache) {
+    
   }
   
   /**

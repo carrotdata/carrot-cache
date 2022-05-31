@@ -18,6 +18,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 
+import com.carrot.cache.Cache;
+import com.carrot.cache.controllers.AdmissionController;
 import com.carrot.cache.eviction.EvictionPolicy;
 import com.carrot.cache.eviction.SLRUEvictionPolicy;
 import com.carrot.cache.index.AQIndexFormat;
@@ -174,6 +176,9 @@ public class CacheConfig {
 
   /* Class name for cache eviction policy implementation */
   public static final String CACHE_EVICTION_POLICY_IMPL_KEY = "cache.eviction.policy.impl";
+  
+  /* Class name for cache admission controller implementation */
+  public static final String CACHE_ADMISSION_CONTROLLER_IMPL_KEY = "cache.admission.controller.impl";
   
   /* Defaults section */
   
@@ -735,7 +740,7 @@ public class CacheConfig {
   }
   
   /**
-   * Get main queue index format implementation
+   * Get cache eviction policy implementation by cache name
    *
    * @throws ClassNotFoundException
    * @throws IllegalAccessException
@@ -757,6 +762,30 @@ public class CacheConfig {
     Class<EvictionPolicy> clz = (Class<EvictionPolicy>) Class.forName(value);
     EvictionPolicy instance = clz.newInstance();
     instance.setCacheName(cacheName);
+    return instance;
+  }
+  
+  /**
+   * Get cache admission controller implementation by cache name
+   *
+   * @throws ClassNotFoundException
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   */
+  public AdmissionController getAdmissionController(String cacheName)
+      throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+    String value = props.getProperty(cacheName + "." + CACHE_ADMISSION_CONTROLLER_IMPL_KEY);
+    if (value == null) {
+      value = props.getProperty(CACHE_ADMISSION_CONTROLLER_IMPL_KEY);
+    }
+    if (value == null) {
+      // default implementation;
+      AdmissionController controller = new Cache.BaseAdmissionController();
+      return controller;
+    }
+    @SuppressWarnings("unchecked")
+    Class<AdmissionController> clz = (Class<AdmissionController>) Class.forName(value);
+    AdmissionController instance = clz.newInstance();
     return instance;
   }
 }
