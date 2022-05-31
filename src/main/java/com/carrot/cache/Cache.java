@@ -464,8 +464,14 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
    * @throws IOException
    */
   private void initThroughputController() throws IOException {
-    //TODO: custom controller class
-    this.throughputController = new BaseThroughputController(this);
+    try {
+      this.throughputController = this.conf.getThroughputController(cacheName);
+    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+      LOG.error(e);
+      throw new RuntimeException(e);
+    }
+    this.throughputController.setCache(this);
+    
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
     String file = CacheConfig.THROUGHPUT_CONTROLLER_SNAPSHOT_NAME;
     Path p = Paths.get(snapshotDir, file);

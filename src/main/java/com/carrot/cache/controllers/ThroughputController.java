@@ -17,6 +17,7 @@ package com.carrot.cache.controllers;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.carrot.cache.Cache;
 import com.carrot.cache.util.Persistent;
 
 /**
@@ -28,6 +29,10 @@ import com.carrot.cache.util.Persistent;
 public interface ThroughputController extends Persistent{
   
   public static final Logger LOG = LogManager.getLogger(ThroughputController.class);
+  
+  public default void setCache(Cache cache) {
+    
+  }
   
   /**
    * Record number of bytes written

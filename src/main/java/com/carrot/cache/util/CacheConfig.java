@@ -20,6 +20,8 @@ import java.util.Properties;
 
 import com.carrot.cache.Cache;
 import com.carrot.cache.controllers.AdmissionController;
+import com.carrot.cache.controllers.BaseThroughputController;
+import com.carrot.cache.controllers.ThroughputController;
 import com.carrot.cache.eviction.EvictionPolicy;
 import com.carrot.cache.eviction.SLRUEvictionPolicy;
 import com.carrot.cache.index.AQIndexFormat;
@@ -179,6 +181,9 @@ public class CacheConfig {
   
   /* Class name for cache admission controller implementation */
   public static final String CACHE_ADMISSION_CONTROLLER_IMPL_KEY = "cache.admission.controller.impl";
+  
+  /* Class name for cache admission controller implementation */
+  public static final String CACHE_THROUGHPUT_CONTROLLER_IMPL_KEY = "cache.throughput.controller.impl";
   
   /* Defaults section */
   
@@ -786,6 +791,30 @@ public class CacheConfig {
     @SuppressWarnings("unchecked")
     Class<AdmissionController> clz = (Class<AdmissionController>) Class.forName(value);
     AdmissionController instance = clz.newInstance();
+    return instance;
+  }
+  
+  /**
+   * Get cache throughput controller implementation by cache name
+   *
+   * @throws ClassNotFoundException
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   */
+  public ThroughputController getThroughputController(String cacheName)
+      throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+    String value = props.getProperty(cacheName + "." + CACHE_THROUGHPUT_CONTROLLER_IMPL_KEY);
+    if (value == null) {
+      value = props.getProperty(CACHE_THROUGHPUT_CONTROLLER_IMPL_KEY);
+    }
+    if (value == null) {
+      // default implementation;
+      ThroughputController controller = new BaseThroughputController();
+      return controller;
+    }
+    @SuppressWarnings("unchecked")
+    Class<ThroughputController> clz = (Class<ThroughputController>) Class.forName(value);
+    ThroughputController instance = clz.newInstance();
     return instance;
   }
 }

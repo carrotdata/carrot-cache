@@ -87,6 +87,14 @@ public class BaseThroughputController implements ThroughputController {
    * Constructor
    */
   public BaseThroughputController(Cache parent) {
+    setCache(cache);
+  }
+  
+  public BaseThroughputController() {
+    // TODO Auto-generated constructor stub
+  }
+
+  public void setCache(Cache parent) {
     this.cache = parent;
     this.cacheName = parent.getName();
     this.startTime = System.currentTimeMillis();
