@@ -17,6 +17,8 @@ package com.carrot.cache.eviction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.carrot.cache.util.CacheConfig;
+
 public class SLRUEvictionPolicy implements EvictionPolicy {
   /** Logger */
   @SuppressWarnings("unused")
@@ -26,15 +28,15 @@ public class SLRUEvictionPolicy implements EvictionPolicy {
   
   public final static int DEFAULT_INSERT_POINT = 5;
   
-  private final int numSegments;
+  private int numRanks;
   
-  private final int insertPoint;
+  private int insertPoint;
   
   /**
    * Default constructor
    */
   public SLRUEvictionPolicy() {
-    this.numSegments = 8;
+    this.numRanks = 8;
     this.insertPoint = 5;
   }
   
@@ -44,15 +46,22 @@ public class SLRUEvictionPolicy implements EvictionPolicy {
    * @param ip insert point
    */
   public SLRUEvictionPolicy(int ns, int ip) {
-    this.numSegments = ns;
+    this.numRanks = ns;
     this.insertPoint = ip;
   }
   
   @Override
+  public void setCacheName(String cacheName) {
+    CacheConfig config = CacheConfig.getInstance();
+    this.numRanks = config.getNumberOfRanks(cacheName);
+    this.insertPoint = config.getSLRUInsertionPoint(cacheName);
+  }
+  
+  @Override
   public int getPromotionIndex(long cacheItemPtr, int cacheItemIndex, int totalItems) {
-    int num = getSegmentForIndex(numSegments, cacheItemIndex, totalItems);
+    int num = getSegmentForIndex(numRanks, cacheItemIndex, totalItems);
     if (num == 0) return 0;
-    return getStartIndexForSegment(numSegments, num - 1, totalItems);
+    return getStartIndexForSegment(numRanks, num - 1, totalItems);
   }
   
   
@@ -64,6 +73,6 @@ public class SLRUEvictionPolicy implements EvictionPolicy {
   @Override
   public int getInsertIndex(long idbPtr, int totalItems) {
     // insert point is 0- based, 
-    return getStartIndexForSegment(numSegments, insertPoint - 1, totalItems);
+    return getStartIndexForSegment(numRanks, insertPoint - 1, totalItems);
   }
 }

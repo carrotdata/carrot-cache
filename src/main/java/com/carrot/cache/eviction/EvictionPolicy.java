@@ -18,6 +18,10 @@ public interface EvictionPolicy {
   static enum Action {
     PROMOTE, DELETE
   }
+  
+  public default void setCacheName(String cacheName) {
+    
+  }
   /**
    * Get new index for item being promoted
    * @param cacheItemPtr current item address

@@ -16,7 +16,6 @@ package com.carrot.cache.util;
 
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.util.Properties;
 
 import com.carrot.cache.eviction.EvictionPolicy;
@@ -173,6 +172,9 @@ public class CacheConfig {
   /* Class name for admission queue index format implementation */
   public static final String INDEX_FORMAT_ADMISSION_QUEUE_IMPL_KEY = "index.format.admission.queue.impl";
 
+  /* Class name for cache eviction policy implementation */
+  public static final String CACHE_EVICTION_POLICY_IMPL_KEY = "cache.eviction.policy.impl";
+  
   /* Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 256 * 1024 * 1024;
@@ -483,17 +485,7 @@ public class CacheConfig {
     return getBooleanProperty(SPARSE_FILES_SUPPORT_KEY, DEFAULT_SPARSE_FILES_SUPPORT);
   }
   
-  /**
-   * Returns cache eviction policy (currently, only SLRU is supported)
-   * @param cacheName cache name
-   * @return eviction policy for a cache
-   */
-  public EvictionPolicy getCacheEvictionPolicy(String cacheName) {
-    int segNumber = getNumberOfRanks(cacheName);
-    int insertPoint = getSLRUInsertionPoint(cacheName);
-    return new SLRUEvictionPolicy(segNumber, insertPoint);
-  }
-  
+ 
   /**
    * Get start index size for a cache
    * @param cacheName cache name
@@ -738,6 +730,32 @@ public class CacheConfig {
     @SuppressWarnings("unchecked")
     Class<IndexFormat> clz = (Class<IndexFormat>) Class.forName(value);
     IndexFormat instance = clz.newInstance();
+    instance.setCacheName(cacheName);
+    return instance;
+  }
+  
+  /**
+   * Get main queue index format implementation
+   *
+   * @throws ClassNotFoundException
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   */
+  public EvictionPolicy getCacheEvictionPolicy(String cacheName)
+      throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+    String value = props.getProperty(cacheName + "." + CACHE_EVICTION_POLICY_IMPL_KEY);
+    if (value == null) {
+      value = props.getProperty(CACHE_EVICTION_POLICY_IMPL_KEY);
+    }
+    if (value == null) {
+      // default implementation;
+      EvictionPolicy policy = new SLRUEvictionPolicy();
+      policy.setCacheName(cacheName);
+      return policy;
+    }
+    @SuppressWarnings("unchecked")
+    Class<EvictionPolicy> clz = (Class<EvictionPolicy>) Class.forName(value);
+    EvictionPolicy instance = clz.newInstance();
     instance.setCacheName(cacheName);
     return instance;
   }
