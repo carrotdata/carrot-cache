@@ -124,12 +124,21 @@ public interface IndexFormat extends Persistent {
   }
   
   /**
+   * Is expiration supported by this index format
+   * @return true/ false
+   */
+  public default boolean isExpirationSupported() {
+    return false;
+  }
+  /**
    * Get expiration time
    * @param ibPtr index block address
    * @param buffer buffer contains entry data
    * @return expiration time (0 - no expire)
    */
-  public long getExpire(long ibPtr, long buffer);
+  public default long getExpire(long ibPtr, long buffer) {
+    return 0;
+  }
   
   
   /**

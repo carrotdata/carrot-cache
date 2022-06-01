@@ -903,8 +903,8 @@ public class MemoryIndex implements Persistent {
             this.cache.getEngine().updateStats(sid0, 0, 1);
           }
           int numSegments = this.cacheConfig.getNumberOfRanks(this.cacheName); 
-          int rank = this.evictionPolicy.getSegmentForIndex(numSegments, count, numEntries);
-          int idx = this.evictionPolicy.getStartIndexForSegment(numSegments, rank + 1, numEntries);
+          int rank = this.evictionPolicy.getRankForIndex(numSegments, count, numEntries);
+          int idx = this.evictionPolicy.getStartIndexForRank(numSegments, rank + 1, numEntries);
           int sid1 = getSegmentIdForEntry(ptr, idx);
           // Update stats
           if (this.cache != null) {
@@ -1134,7 +1134,7 @@ public class MemoryIndex implements Persistent {
         // Update stats
         //TODO: separate method
         int numSegments = this.cacheConfig.getNumberOfRanks(this.cacheName);  
-        int rank = this.evictionPolicy.getSegmentForIndex(numSegments, count, numEntries);
+        int rank = this.evictionPolicy.getRankForIndex(numSegments, count, numEntries);
         int sid1 = getSegmentIdForEntry(ptr, count);
         // Update stats
         if (this.cache != null) {
@@ -1488,31 +1488,61 @@ public class MemoryIndex implements Persistent {
    * @throws IOException 
    */
   private void doEviction(long slotPtr) { 
-    int numEntries = numEntries(slotPtr);
-    int toEvict = evictionPolicy.getEvictionCandidateIndex(slotPtr, numEntries);
+    int toEvict = -1;
+    boolean evictToVictim  = true;
+    
+    if (this.indexFormat.isExpirationSupported()){
+      toEvict = findExpired(slotPtr);
+    }
+    
+    evictToVictim = toEvict < 0;
+
+    if (toEvict == -1) {
+      int numEntries = numEntries(slotPtr);
+      toEvict = evictionPolicy.getEvictionCandidateIndex(slotPtr, numEntries);
+    }
     // report eviction
     if (this.evictionListener != null) {
       long ptr = slotPtr + offsetFor(slotPtr, toEvict);
       int size = this.indexFormat.fullEntrySize(ptr);
       this.evictionListener.onEviction(ptr, size);
     }
-    deleteEntry(slotPtr, toEvict);
+    deleteEntry(slotPtr, toEvict, evictToVictim);
   }
   
+  private int findExpired(long slotPtr) {
+    int toEvict = -1;
+    int numEntries = numEntries(slotPtr);
+    int count = 0;
+    long ptr = slotPtr + this.indexBlockHeaderSize;
+    while(count < numEntries) {
+      long time = this.indexFormat.getExpire(slotPtr, ptr);
+      if (time > 0 && System.currentTimeMillis() > time) {
+        toEvict = count;
+        break;
+      }
+      ptr += this.indexFormat.fullEntrySize(ptr);
+      count ++;
+    }
+    return toEvict;
+  }
+
   /**
    * Delete entry by index (used only for eviction)
    * @param ptr index segment address 
    * @param num index to delete
    * @throws IOException 
    */
-  private void deleteEntry(long ptr, int num) {
+  private void deleteEntry(long ptr, int num, boolean evictToVictim) {
     int numEntries = numEntries(ptr);
     int off = offsetFor(ptr, num);
     long $ptr = ptr + off;
     int toDelete = this.indexFormat.fullEntrySize($ptr);
     
     // TODO: send evicted item to a victim cache
-    evictToVictimCache(ptr, $ptr);
+    if (evictToVictim) {
+      evictToVictimCache(ptr, $ptr);
+    }
     
     if (num != numEntries - 1) {
       int toMove = dataSize(ptr) + this.indexBlockHeaderSize - off;
@@ -1523,7 +1553,7 @@ public class MemoryIndex implements Persistent {
     // decrease total number of index entries
     //TODO: this works only if we promote item by +1 rank
     int numSegments = this.cacheConfig.getNumberOfRanks(this.cacheName);
-    int rank = this.evictionPolicy.getSegmentForIndex(numSegments, num, numEntries);
+    int rank = this.evictionPolicy.getRankForIndex(numSegments, num, numEntries);
     int sid1 = getSegmentIdForEntry(ptr, num);
     // Update stats
     if (this.cache != null) {
@@ -1578,7 +1608,7 @@ public class MemoryIndex implements Persistent {
     delete(ptr, hash);
     int numEntries = numEntries(ptr);
     int numRanks = this.cacheConfig.getNumberOfRanks(this.cacheName);
-    int insertIndex = evictionPolicy.getStartIndexForSegment(numRanks, rank, numEntries);
+    int insertIndex = evictionPolicy.getStartIndexForRank(numRanks, rank, numEntries);
     // TODO: entry size can be variable
     int off = offsetFor(ptr, insertIndex);
     int toMove = dataSize(ptr) + this.indexBlockHeaderSize - off;
@@ -1630,7 +1660,7 @@ public class MemoryIndex implements Persistent {
     if (numEntries >= numSegments) {
       int prev = -1;
       for (int r = rank + 1; r < numSegments; r++) {
-        int idx = this.evictionPolicy.getStartIndexForSegment(numSegments, r, numEntries);
+        int idx = this.evictionPolicy.getStartIndexForRank(numSegments, r, numEntries);
         if (idx == prev) continue;
         prev = idx;
         int sid = getSegmentIdForEntry(ptr, idx);

@@ -56,13 +56,13 @@ public interface EvictionPolicy {
   
   /**
    * TODO: move this code out
-   * Get segment number for a given index (0 - based)
+   * Get rank for a given index (0 - based)
    * @param numSegments total number of segments
    * @param cacheItemIndex
    * @param totalItems
    * @return segment number
    */
-  public default int getSegmentForIndex(int numSegments, int cacheItemIndex, int totalItems) {
+  public default int getRankForIndex(int numSegments, int cacheItemIndex, int totalItems) {
     return cacheItemIndex * numSegments / totalItems;
   }
   
@@ -74,7 +74,7 @@ public interface EvictionPolicy {
    * @param totalItems total items in Index-Data-Block
    * @return start index
    */
-  public default int getStartIndexForSegment(int numSegments, int segmentNum, int totalItems) {
+  public default int getStartIndexForRank(int numSegments, int segmentNum, int totalItems) {
     return segmentNum * totalItems / numSegments;
   }
 }

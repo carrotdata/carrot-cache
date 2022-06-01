@@ -59,9 +59,9 @@ public class SLRUEvictionPolicy implements EvictionPolicy {
   
   @Override
   public int getPromotionIndex(long cacheItemPtr, int cacheItemIndex, int totalItems) {
-    int num = getSegmentForIndex(numRanks, cacheItemIndex, totalItems);
+    int num = getRankForIndex(numRanks, cacheItemIndex, totalItems);
     if (num == 0) return 0;
-    return getStartIndexForSegment(numRanks, num - 1, totalItems);
+    return getStartIndexForRank(numRanks, num - 1, totalItems);
   }
   
   
@@ -73,6 +73,6 @@ public class SLRUEvictionPolicy implements EvictionPolicy {
   @Override
   public int getInsertIndex(long idbPtr, int totalItems) {
     // insert point is 0- based, 
-    return getStartIndexForSegment(numRanks, insertPoint - 1, totalItems);
+    return getStartIndexForRank(numRanks, insertPoint - 1, totalItems);
   }
 }
