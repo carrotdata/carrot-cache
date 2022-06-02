@@ -407,7 +407,7 @@ public class Segment implements Persistent {
   private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
   
   /* Segment info */
-  private Info info;
+  volatile private Info info;
   
   /**
    * 
@@ -438,6 +438,30 @@ public class Segment implements Persistent {
     this.info = new Info(id, rank, creationTime);
   }
   
+  /**
+   * Vacate segment for reuse
+   */
+  public void vacate() {
+    this.info = null;
+  }
+  
+  /**
+   * Reuse segment - for off-heap only
+   * @param id
+   * @param rank
+   * @param creationTime
+   */
+  public void reuse(int id, int rank, long creationTime) {
+    this.info = new Info(id, rank, creationTime);
+  }
+  
+  /**
+   * Is segment vacated (can be reused)?
+   * @return true / false
+   */
+  public boolean isVacated() {
+    return this.info == null;
+  }
   
   /**
    * Create new segment

@@ -833,7 +833,11 @@ public abstract class IOEngine implements Persistent {
    * @param id data segment id
    */
   public synchronized void releaseSegmentId(Segment seg) {
-    dataSegments[seg.getId()] = null;
+    if (seg.isOffheap()) {
+      seg.vacate();
+    } else {
+      dataSegments[seg.getId()] = null;
+    }
     if (this.aListener != null) {
       aListener.onEvent(this, IOEngineEvent.DATA_SIZE_CHANGED);
     }
@@ -878,7 +882,7 @@ public abstract class IOEngine implements Persistent {
    */
   public synchronized int getAvailableId() {
     for (int i = 0; i < dataSegments.length; i++) {
-      if (dataSegments[i] == null) {
+      if (dataSegments[i] == null || dataSegments[i].isVacated()) {
         return i;
       }
     }
@@ -1075,13 +1079,25 @@ public abstract class IOEngine implements Persistent {
   private Segment getRAMSegmentByRank(int rank) {
     Segment s = this.ramBuffers[rank];
     if (s == null) {
-      int id = getAvailableId();
-      if (id < 0) {
-        return null;
+      synchronized(this.ramBuffers) {
+        s = this.ramBuffers[rank];
+        if (s != null) {
+          return s;
+        }
+        int id = getAvailableId();
+        if (id < 0) {
+          return null;
+        }
+        if (this.dataSegments[id] == null) {
+          s = Segment.newSegment((int) this.segmentSize, id, rank, System.currentTimeMillis());
+          this.dataSegments[id] = s;
+
+        } else {
+          s = this.dataSegments[id];
+          s.reuse(id, rank, System.currentTimeMillis());
+        }
+        this.ramBuffers[rank] = s;
       }
-      s = Segment.newSegment((int) this.segmentSize, id, rank, System.currentTimeMillis());
-      this.ramBuffers[rank] = s;
-      this.dataSegments[id] = s;
     }
     return s;
   }
