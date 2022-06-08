@@ -32,22 +32,23 @@ import com.carrot.cache.util.Utils;
  * 
  *  Test cases for Memory Index of Admission Queue (AQ) 
  */
-public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreadedBase{
+public class TestMemoryIndexAQMultithreadedStress extends TestMemoryIndexMultithreadedBase{
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(TestMemoryIndexAQMultithreaded.class);
+  private static final Logger LOG = LogManager.getLogger(TestMemoryIndexAQMultithreadedStress.class);
   
   @Before
   public void setUp() {
     UnsafeAccess.debug = false;
     UnsafeAccess.mallocStats.clear();
     memoryIndex = new MemoryIndex("default", MemoryIndex.Type.AQ);
-    memoryIndex.setMaximumSize(10000000);
+    //memoryIndex.setMaximumSize(10000000);
     numThreads = 4;
   }
   
   private int loadIndexBytes() {
     int failed = 0;
     byte[][] keys = keysTL.get(); 
+    long start = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
       MutationResult result = forceAarp(keys[i], 0, keySize);
       if (result == MutationResult.FAILED) {
@@ -57,7 +58,10 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
       }
     }
     assertEquals(0, failed);
-
+    
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " loaded "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
     return failed;
   }
   
@@ -66,7 +70,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
     int entrySize = memoryIndex.getIndexFormat().indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     byte[][] keys = keysTL.get(); 
-
+    long start = System.currentTimeMillis();
     for (int i = 0; i < numRecords; i++) {
       long hash = Utils.hash64(keys[i], 0, keySize);
       int result = (int) memoryIndex.find(keys[i], 0, keySize, false, buf, entrySize);
@@ -79,6 +83,9 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
     }
     assertEquals(0, failed);
 
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " verified "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
     UnsafeAccess.free(buf);
     return failed;
   }
@@ -86,6 +93,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   private int loadIndexBytesNot() {
     int failed = 0;
     byte[][] keys = keysTL.get(); 
+    long start = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
       MutationResult result = forceAarpNot(keys[i], 0, keySize);
       if (result != MutationResult.DELETED) {
@@ -94,12 +102,16 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
     }
     assertEquals(0, failed);
 
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " loaded NOT "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
     return failed;
   }
     
   private int loadIndexMemory() {
     int failed = 0;
     long[] mKeys = mKeysTL.get();
+    long start = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
       MutationResult result = forceAarp(mKeys[i], keySize);
       if (result != MutationResult.INSERTED) {
@@ -108,6 +120,9 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
     }
     assertEquals(0, failed);
 
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " loaded "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
     return failed;
   }
     
@@ -116,7 +131,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
     int entrySize = memoryIndex.getIndexFormat().indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     long[] mKeys = mKeysTL.get();
-
+    long start = System.currentTimeMillis();
     for (int i = 0; i < numRecords; i++) {
       long hash = Utils.hash64(mKeys[i], keySize);
       int result = (int) memoryIndex.find(mKeys[i], keySize, false, buf, entrySize);
@@ -128,6 +143,10 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
       }
     }
     assertEquals(0, failed);
+
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " verified "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
     UnsafeAccess.free(buf);
     return failed;
   }
@@ -135,6 +154,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   private int loadIndexMemoryNot() {
     int failed = 0;
     long[] mKeys = mKeysTL.get();
+    long start = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
       MutationResult result = forceAarpNot(mKeys[i], keySize);
       if (result != MutationResult.DELETED) {
@@ -142,146 +162,56 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
       }
     }
     assertEquals(0, failed);
+
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " loaded NOT "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
     return failed;
   }
   
-  @Test
-  public void testLoadReadNoRehashBytesMT(){
-    /*DEBUG*/ System.out.println("testLoadReadNoRehashBytesMT");
-    Runnable r = () -> testLoadReadNoRehashBytes();
-    Thread[] workers = startAll(r);    
-    joinAll(workers);
-  }
-  
-  private void testLoadReadNoRehashBytes() {
-    LOG.info(Thread.currentThread().getName() + ": Test load and read no rehash bytes");
-    loadReadBytes(100000);
-    clearData();
-  }
   
   @Test
-  public void testLoadReadNoRehashMemoryMT(){
-    /*DEBUG*/ System.out.println("testLoadReadNoRehashMemoryMT");
+  public void testLoadReadWithRehashBytesMTLarge() {
+    /*DEBUG*/ System.out.println("testLoadReadWithRehashBytesMTLarge");
 
-    Runnable r = () -> testLoadReadNoRehashMemory();
+    Runnable r = () -> testLoadReadWithRehashBytesLarge();
     Thread[] workers = startAll(r);    
     joinAll(workers);
   }
   
-  private void testLoadReadNoRehashMemory() {
-    LOG.info("Test load and read no rehash memory");
-    loadReadMemory(100000);
-    clearData();
-  }
-  
-  @Test
-  public void testLoadReadDeleteNoRehashBytesMT() {
-    /*DEBUG*/ System.out.println("testLoadReadDeleteNoRehashBytesMT");
-    Runnable r = () -> testLoadReadDeleteNoRehashBytes();
-    Thread[] workers = startAll(r);    
-    joinAll(workers);
-  }
-
-  private void testLoadReadDeleteNoRehashBytes() {
-    LOG.info("Test load and read-delete no rehash bytes");
-    int failed = loadReadBytes(100000);
-    int undeleted = deleteIndexBytes();
-    assertEquals(failed, undeleted);
-    int unverified = verifyIndexBytesNot();
-    assertEquals(0, unverified);
-    clearData();
-  }
-  
-  @Test
-  public void testLoadReadDeleteNoRehashMemoryMT() {
-    /*DEBUG*/ System.out.println("testLoadReadDeleteNoRehashMemoryMT");
-    Runnable r = () -> testLoadReadDeleteNoRehashMemory();
-    Thread[] workers = startAll(r);    
-    joinAll(workers);
-  }
-  
-  private void testLoadReadDeleteNoRehashMemory() {
-    LOG.info("Test load and read-delete no rehash memory");
-    int failed = loadReadMemory(100000);
-    int undeleted = deleteIndexMemory();
-    assertEquals(failed, undeleted);
-    int unverified = verifyIndexMemoryNot();
-    assertEquals(0, unverified);
-    clearData();
-  }
-
-  @Test
-  public void testDoubleLoadReadNoRehashBytesMT() {
-    /*DEBUG*/ System.out.println("testDoubleLoadReadNoRehashBytesMT");
-
-    Runnable r = () -> testDoubleLoadReadNoRehashBytes();
-    Thread[] workers = startAll(r);    
-    joinAll(workers);
-  }
-  
-  private void testDoubleLoadReadNoRehashBytes() {
-    LOG.info("Test double load and read no rehash bytes");
-    doubleLoadReadBytes(100000);
-    clearData();
-  }
-  
-  @Test
-  public void testDoubleLoadReadNoRehashMemoryMT() {
-    /*DEBUG*/ System.out.println("testDoubleLoadReadNoRehashMemoryMT");
-
-    Runnable r = () -> testDoubleLoadReadNoRehashMemory();
-    Thread[] workers = startAll(r);    
-    joinAll(workers);
-  }
-  
-  private void testDoubleLoadReadNoRehashMemory() {
-    LOG.info("Test double load and read no rehash memory");
-    doubleLoadReadMemory(100000);
-    clearData();
-  }
-  
-  @Test
-  public void testLoadReadWithRehashBytesMT() {
-    /*DEBUG*/ System.out.println("testLoadReadWithRehashBytesMT");
-
-    Runnable r = () -> testLoadReadWithRehashBytes();
-    Thread[] workers = startAll(r);    
-    joinAll(workers);
-  }
-  
-  private void testLoadReadWithRehashBytes() {
+  private void testLoadReadWithRehashBytesLarge() {
     LOG.info("Test load and read with rehash bytes");
-    loadReadBytes(1000000);
+    loadReadBytes(10000000);
     clearData();
   }
   
   @Test
-  public void testLoadReadWithRehashMemoryMT() {
-    /*DEBUG*/ System.out.println("testLoadReadWithRehashMemoryMT");
+  public void testLoadReadWithRehashMemoryMTLarge() {
+    /*DEBUG*/ System.out.println("testLoadReadWithRehashMemoryMTLarge");
 
-    Runnable r = () -> testLoadReadWithRehashMemory();
+    Runnable r = () -> testLoadReadWithRehashMemoryLarge();
     Thread[] workers = startAll(r);    
     joinAll(workers);
   }
 
-  private void testLoadReadWithRehashMemory() {
+  private void testLoadReadWithRehashMemoryLarge() {
     LOG.info("Test load and read with rehash memory");
-    loadReadMemory(1000000);
+    loadReadMemory(10000000);
     clearData();
   }
   
   @Test
-  public void testLoadReadDeleteWithRehashBytesMT() {
-    /*DEBUG*/ System.out.println("testLoadReadDeleteWithRehashBytesMT");
+  public void testLoadReadDeleteWithRehashBytesMTLarge() {
+    /*DEBUG*/ System.out.println("testLoadReadDeleteWithRehashBytesMTLarge");
 
-    Runnable r = () -> testLoadReadDeleteWithRehashBytes();
+    Runnable r = () -> testLoadReadDeleteWithRehashBytesLarge();
     Thread[] workers = startAll(r);    
     joinAll(workers);
   }
   
-  private void testLoadReadDeleteWithRehashBytes() {
+  private void testLoadReadDeleteWithRehashBytesLarge() {
     LOG.info("Test load and read-delete with rehash bytes");
-    int failed = loadReadBytes(1000000);
+    int failed = loadReadBytes(10000000);
     int undeleted = deleteIndexBytes();
     assertEquals(failed, undeleted);
     int unverified = verifyIndexBytesNot();
@@ -290,17 +220,17 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   }
   
   @Test
-  public void testLoadReadDeleteWithRehashMemoryMT() {
-    /*DEBUG*/ System.out.println("testLoadReadDeleteWithRehashMemoryMT");
+  public void testLoadReadDeleteWithRehashMemoryMTLarge() {
+    /*DEBUG*/ System.out.println("testLoadReadDeleteWithRehashMemoryMTLarge");
 
-    Runnable r = () -> testLoadReadDeleteWithRehashMemory();
+    Runnable r = () -> testLoadReadDeleteWithRehashMemoryLarge();
     Thread[] workers = startAll(r);    
     joinAll(workers);
   }
   
-  private void testLoadReadDeleteWithRehashMemory() {
+  private void testLoadReadDeleteWithRehashMemoryLarge() {
     LOG.info("Test load and read with rehash memory");
-    int failed = loadReadMemory(1000000);
+    int failed = loadReadMemory(10000000);
     int undeleted = deleteIndexMemory();
     assertEquals(failed, undeleted);
     int unverified = verifyIndexMemoryNot();
@@ -309,37 +239,35 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   }
   
   @Test
-  public void testDoubleLoadReadWithRehashBytesMT() {
-    /*DEBUG*/ System.out.println("testDoubleLoadReadWithRehashBytesMT");
+  public void testDoubleLoadReadWithRehashBytesMTLarge() {
+    /*DEBUG*/ System.out.println("testDoubleLoadReadWithRehashBytesMTLarge");
 
-    Runnable r = () -> testDoubleLoadReadWithRehashBytes();
+    Runnable r = () -> testDoubleLoadReadWithRehashBytesLarge();
     Thread[] workers = startAll(r);    
     joinAll(workers);
   }
   
-  private void testDoubleLoadReadWithRehashBytes() {
+  private void testDoubleLoadReadWithRehashBytesLarge() {
     LOG.info("Test double load and read with rehash bytes");
-    doubleLoadReadBytes(1000000);
+    doubleLoadReadBytes(10000000);
     clearData();
   }
   
   @Test
-  public void testDoubleLoadReadWithRehashMemoryMT() {
-    /*DEBUG*/ System.out.println("testDoubleLoadReadWithRehashMemoryMT");
+  public void testDoubleLoadReadWithRehashMemoryMTLarge() {
+    /*DEBUG*/ System.out.println("testDoubleLoadReadWithRehashMemoryMTLarge");
 
-    Runnable r = () -> testDoubleLoadReadWithRehashMemory();
+    Runnable r = () -> testDoubleLoadReadWithRehashMemoryLarge();
     Thread[] workers = startAll(r);    
     joinAll(workers);
   }
   
-  private void testDoubleLoadReadWithRehashMemory() {
-    LOG.info("Test double load and read with rehash memory");
-    doubleLoadReadMemory(1000000);
+  private void testDoubleLoadReadWithRehashMemoryLarge() {
+    LOG.info("Test double load and read with rehash memory LARGE");
+    doubleLoadReadMemory(10000000);
     clearData();
   }
   
-  
-
   private AtomicLong evicted1 = new AtomicLong(0);
   private AtomicLong evicted2 = new AtomicLong(0);
   

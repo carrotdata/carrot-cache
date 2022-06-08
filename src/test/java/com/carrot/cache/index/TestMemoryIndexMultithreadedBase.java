@@ -14,6 +14,8 @@
  */
 package com.carrot.cache.index;
 
+import static org.junit.Assert.assertEquals;
+
 import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
@@ -117,24 +119,36 @@ public class TestMemoryIndexMultithreadedBase {
   protected int deleteIndexBytes() {
     int failed = 0;
     byte[][] keys = keysTL.get();
+    long start = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
       boolean result = forceDelete(keys[i], 0, keySize);
       if (result != true) {
         failed++;
       }
     }
+    assertEquals(0, failed);
+
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " deleted "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
     return failed;
   }
   
   protected int deleteIndexMemory() {
     int failed = 0;
     long[] mKeys = mKeysTL.get();
+    long start = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
       boolean result = memoryIndex.delete(mKeys[i], keySize);
       if (result != true) {
         failed++;
       }
     }
+    assertEquals(0, failed);
+
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " deleted "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
     return failed;
   }
   
@@ -143,12 +157,18 @@ public class TestMemoryIndexMultithreadedBase {
     byte[][] keys = keysTL.get();
     int entrySize = memoryIndex.getIndexFormat().indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
+    long start = System.currentTimeMillis();
     for (int i = 0; i < numRecords; i++) {
       int result = (int) memoryIndex.find(keys[i], 0, keySize, false, buf, entrySize);
       if (result != -1) {
         failed ++;
       }
     }
+    assertEquals(0, failed);
+
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " verify NOT "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
     UnsafeAccess.free(buf);
     return failed;
   }
@@ -158,13 +178,18 @@ public class TestMemoryIndexMultithreadedBase {
     long[] mKeys = mKeysTL.get();
     int entrySize = memoryIndex.getIndexFormat().indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
-    
+    long start = System.currentTimeMillis();
     for (int i = 0; i < numRecords; i++) {
       int result = (int) memoryIndex.find(mKeys[i], keySize, false, buf, entrySize);
       if (result != -1) {
         failed++;
       }
     }
+    assertEquals(0, failed);
+
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " verify NOT "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
     UnsafeAccess.free(buf);
     return failed;
   }

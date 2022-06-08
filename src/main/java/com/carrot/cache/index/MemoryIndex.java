@@ -170,7 +170,7 @@ public class MemoryIndex implements Persistent {
   private AtomicLong numEntries = new AtomicLong(0);
   
   /* Maximum number of entries - for AQ*/
-  private volatile long maxEntries = 0;
+  private volatile long maxEntries = 0; // 0 - means no max
   
   /* Parent cache  */
   private Cache cache;
@@ -286,6 +286,7 @@ public class MemoryIndex implements Persistent {
    */
   private void checkEviction() {
     if (this.indexType != Type.AQ) return;
+    if (this.maxEntries == 0) return; // no limit - good for testing
     if (this.numEntries.get() >= this.maxEntries && !evictionEnabled) {
       setEvictionEnabled(true);
     } else if (evictionEnabled && this.numEntries.get() < 0.95 * this.maxEntries) {

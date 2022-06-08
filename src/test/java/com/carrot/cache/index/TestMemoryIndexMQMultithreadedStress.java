@@ -25,9 +25,9 @@ import org.junit.Test;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 
-public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreadedBase{
+public class TestMemoryIndexMQMultithreadedStress extends TestMemoryIndexMultithreadedBase{
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(TestMemoryIndexMQMultithreaded.class);
+  private static final Logger LOG = LogManager.getLogger(TestMemoryIndexMQMultithreadedStress.class);
   
   @Before
   public void setUp() {
@@ -46,11 +46,15 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     short[] sids = sidsTL.get();
     int[] offsets = offsetsTL.get();
     int[] lengths = lengthsTL.get();
+    long start = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
       format.writeIndex(buf, keys[i], 0, keys[i].length, values[i], 0, values[i].length, 
         sids[i], offsets[i], lengths[i]);
       forceInsert(keys[i], 0, keySize, buf, entrySize);
     }
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " loaded "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
     UnsafeAccess.free(buf);
   }
   
@@ -84,6 +88,7 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     int[] offsets = offsetsTL.get();
     int[] lengths = lengthsTL.get();
     int failed = 0;
+    long start = System.currentTimeMillis();
     for (int i = 0; i < numRecords; i++) {
       long hash = Utils.hash64(keys[i], 0, keySize);
       int result = (int) memoryIndex.find(keys[i], 0, keySize, false, buf, entrySize);
@@ -102,10 +107,10 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     }
     UnsafeAccess.free(buf);
     assertEquals(0, failed);
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " verified "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
 
-    if (failed > 0) {
-      System.err.println(Thread.currentThread().getName() + " failed="+ failed + " numRecords = "+numRecords);
-    }
   }
   
   private void loadIndexMemory() {
@@ -117,11 +122,16 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     short[] sids = sidsTL.get();
     int[] offsets = offsetsTL.get();
     int[] lengths = lengthsTL.get();
+    
+    long start = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
       format.writeIndex(buf, mKeys[i], keySize, mValues[i], valueSize, 
         sids[i], offsets[i], lengths[i]);
       forceInsert(mKeys[i], keySize, buf, entrySize);
     }
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " loaded "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
     UnsafeAccess.free(buf);
   }
   
@@ -154,6 +164,7 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     int[] offsets = offsetsTL.get();
     int[] lengths = lengthsTL.get();
     int failed = 0;
+    long start = System.currentTimeMillis();
     for (int i = 0; i < numRecords; i++) {
       long hash = Utils.hash64(mKeys[i], keySize);
       int result = (int) memoryIndex.find(mKeys[i], keySize, false, buf, entrySize);
@@ -171,71 +182,11 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
       assertEquals(lengths[i], size);
     }
     assertEquals(0, failed);
-
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " verified "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
     UnsafeAccess.free(buf);
-    if (failed > 0) {
-      System.err.println(Thread.currentThread().getName() + " failed "+ failed +" numRecords="+ numRecords);
-    }
-  }
-  
-  @Test
-  public void testLoadReadNoRehashBytesMT() {
-    /*DEBUG*/ System.out.println("testLoadReadNoRehashBytesMT");
-    Runnable r = () -> testLoadReadNoRehashBytes();
-    Thread[] workers = startAll(r);    
-    joinAll(workers);
-  }
-  
-  private void testLoadReadNoRehashBytes() {
-    LOG.info("Test load and read no rehash bytes");
-    loadReadBytes(100000);
-    clearData();
-  }
-  
-  @Test
-  public void testLoadReadNoRehashMemoryMT() {
-    /*DEBUG*/ System.out.println("testLoadReadNoRehashMemoryMT");
-    Runnable r = () -> testLoadReadNoRehashMemory();
-    Thread[] workers = startAll(r);    
-    joinAll(workers);
-  }
-  
-  private void testLoadReadNoRehashMemory() {
-    LOG.info("Test load and read no rehash memory");
-    loadReadMemory(100000);
-    clearData();
-  }
-  
-  @Test
-  public void testLoadReadDeleteNoRehashBytesMT() {
-    /*DEBUG*/ System.out.println("testLoadReadDeleteNoRehashBytesMT");
-    Runnable r = () -> testLoadReadDeleteNoRehashBytes();
-    Thread[] workers = startAll(r);    
-    joinAll(workers);
-  }
-  
-  private void testLoadReadDeleteNoRehashBytes() {
-    LOG.info("Test load and read-delete no rehash bytes");
-    loadReadBytes(100000);
-    deleteIndexBytes();
-    verifyIndexBytesNot();
-    clearData();
-  }
-  
-  @Test
-  public void testLoadReadDeleteNoRehashMemoryMT() {
-    /*DEBUG*/ System.out.println("testLoadReadDeleteNoRehashMemoryMT");
-    Runnable r = () -> testLoadReadDeleteNoRehashMemory();
-    Thread[] workers = startAll(r);    
-    joinAll(workers);
-  }
-  
-  private void testLoadReadDeleteNoRehashMemory() {
-    LOG.info("Test load and read-delete no rehash memory");
-    loadReadMemory(100000);
-    deleteIndexMemory();
-    verifyIndexMemoryNot();
-    clearData();
+ 
   }
   
   @Test
@@ -248,13 +199,13 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
   
   private void testLoadReadWithRehashBytes() {
     LOG.info("Test load and read with rehash bytes");
-    loadReadBytes(1000000);
+    loadReadBytes(10000000);
     clearData();
   }
   
   @Test
   public void testLoadReadWithRehashMemoryMT() {
-    /*DEBUG*/ System.out.println("testLoadReadWithRehashBytesMT");
+    /*DEBUG*/ System.out.println("testLoadReadWithRehashMemoryMT");
 
     Runnable r = () -> testLoadReadWithRehashMemory();
     Thread[] workers = startAll(r);    
@@ -263,7 +214,7 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
   
   private void testLoadReadWithRehashMemory() {
     LOG.info("Test load and read with rehash memory");
-    loadReadMemory(1000000);
+    loadReadMemory(10000000);
     clearData();
   }
   
@@ -278,7 +229,7 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
   
   private void testLoadReadDeleteWithRehashBytes() {
     LOG.info("Test load and read-delete with rehash bytes");
-    loadReadBytes(1000000);
+    loadReadBytes(10000000);
     deleteIndexBytes();
     verifyIndexBytesNot();
     clearData();
@@ -295,7 +246,7 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
   
   private void testLoadReadDeleteWithRehashMemory() {
     LOG.info("Test load and read with rehash memory");
-    loadReadMemory(1000000);
+    loadReadMemory(10000000);
     deleteIndexMemory();
     verifyIndexMemoryNot();
     clearData();
