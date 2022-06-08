@@ -284,10 +284,10 @@ public abstract class IOEngine implements Persistent {
     int bSize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(bSize);
     boolean dataEmbedded = this.config.isIndexDataEmbeddedSupported();
-
+    int slot = 0;
     try {
       // Lock index for the key (slot)
-      this.index.writeLock(keyPtr, keySize);
+      slot =  this.index.readLock(keyPtr, keySize);
       long result = index.find(keyPtr, keySize, true, buf, bSize);
       if (result < 0) {
         return NOT_FOUND;
@@ -355,7 +355,7 @@ public abstract class IOEngine implements Persistent {
       }
     } finally {
       UnsafeAccess.free(buf);
-      this.index.writeUnlock(keyPtr, keySize);
+      this.index.readUnlock(slot);
     }
   }
 
@@ -379,9 +379,11 @@ public abstract class IOEngine implements Persistent {
     int bSize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(bSize);
     boolean dataEmbedded = this.config.isIndexDataEmbeddedSupported();
+    int slot = 0;
     try {
       // Lock index for the key (slot)
-      this.index.writeLock(key, keyOffset, keySize);
+      //TODO: remove locks?
+      slot = this.index.readLock(key, keyOffset, keySize);
 
       long result = index.find(key, keyOffset, keySize, true, buf, bSize);
       if (result < 0) {
@@ -450,7 +452,7 @@ public abstract class IOEngine implements Persistent {
       }
     } finally {
       UnsafeAccess.free(buf);
-      this.index.writeUnlock(key, keyOffset, keySize);
+      this.index.readUnlock(slot);
     }
   }
 
@@ -468,9 +470,10 @@ public abstract class IOEngine implements Persistent {
     int bSize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(bSize);
     boolean dataEmbedded = this.config.isIndexDataEmbeddedSupported();
-
+    int slot = 0;
     try {
-      this.index.writeLock(keyPtr, keySize);
+      //TODO: double locking?
+      slot = this.index.readLock(keyPtr, keySize);
       long result = index.find(keyPtr, keySize, true, buf, bSize);
       if (result < 0) {
         return NOT_FOUND;
@@ -542,7 +545,7 @@ public abstract class IOEngine implements Persistent {
       }
     } finally {
       UnsafeAccess.free(buf);
-      this.index.writeUnlock(keyPtr, keySize);
+      this.index.readUnlock(slot);
     }
   }
 
@@ -562,9 +565,9 @@ public abstract class IOEngine implements Persistent {
     int bSize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(bSize);
     boolean dataEmbedded = this.config.isIndexDataEmbeddedSupported();
-
+    int slot = 0;
     try {
-      this.index.writeLock(key, keyOffset, keySize);
+      slot = this.index.readLock(key, keyOffset, keySize);
       long result = index.find(key, keyOffset, keySize, true, buf, bSize);
       if (result < 0) {
         return NOT_FOUND;
@@ -635,7 +638,7 @@ public abstract class IOEngine implements Persistent {
       }
     } finally {
       UnsafeAccess.free(buf);
-      this.index.readUnlock(key, keyOffset, keySize);
+      this.index.readUnlock(slot);
     }
   }
 

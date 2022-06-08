@@ -63,6 +63,7 @@ public interface EvictionPolicy {
    * @return segment number
    */
   public default int getRankForIndex(int numSegments, int cacheItemIndex, int totalItems) {
+    if (totalItems == 0) return 0;
     return cacheItemIndex * numSegments / totalItems;
   }
   

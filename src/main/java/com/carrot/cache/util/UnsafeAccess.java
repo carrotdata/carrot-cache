@@ -39,7 +39,7 @@ public final class UnsafeAccess {
 
   public static boolean debug = false;
 
-  public static class MallocStats {
+  public static final class MallocStats {
 
     public static interface TraceFilter {
       public boolean recordAllocationStackTrace(int size);
@@ -235,9 +235,10 @@ public final class UnsafeAccess {
       if (!UnsafeAccess.debug) return;
 
       if (!allocMap.inside(address, size)) {
-        System.out.println("Memory corruption: address=" + address + " size=" + size);
+        System.out.println(Thread.currentThread().getName() + ": Memory corruption: address=" + address + " size=" + size);
         Thread.dumpStack();
-        System.exit(-1);
+        //System.exit(-1);
+        throw new RuntimeException();
       }
     }
 
@@ -276,6 +277,33 @@ public final class UnsafeAccess {
         }
       }
       System.out.println();
+    }
+    
+    public void clear() {
+      /*
+       * Number of memory allocations
+       */
+       allocEvents = new AtomicLong();
+      /*
+       * Number of memory free events
+       */
+      freeEvents = new AtomicLong();
+      /*
+       * Total allocated memory
+       */
+      allocated = new AtomicLong();
+      /** Total freed memory */
+      freed = new AtomicLong();
+      /** Allocation map */
+      allocMap = new RangeTree();
+      /** Stack trace filter */
+      filter = null;
+      /** Trace recorder maximum record number */
+      strLimit = Integer.MAX_VALUE; // default - no limit
+      /** Stack traces map (allocation address -> stack trace) */
+      stackTraceMap =
+          Collections.synchronizedMap(new HashMap<Long, String>());
+
     }
   }
 

@@ -43,7 +43,10 @@ public class TestMemoryIndexBase {
   
   @BeforeClass
   public static void enableMallocDebug() {
-    UnsafeAccess.setMallocDebugEnabled(true);
+//    UnsafeAccess.setMallocDebugEnabled(true);
+//    UnsafeAccess.setMallocDebugStackTraceEnabled(true);
+//    UnsafeAccess.setStackTraceRecordingFilter(x -> x == 1024);
+//    UnsafeAccess.setStackTraceRecordingLimit(20000);
   }
   
   @After

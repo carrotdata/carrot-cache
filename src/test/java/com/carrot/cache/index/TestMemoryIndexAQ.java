@@ -15,8 +15,6 @@
 package com.carrot.cache.index;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -29,6 +27,7 @@ import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.carrot.cache.index.MemoryIndex.MutationResult;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 
@@ -47,8 +46,8 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
   
   private void loadIndexBytes() {
     for(int i = 0; i < numRecords; i++) {
-      boolean result = memoryIndex.aarp(keys[i], 0, keySize);
-      assertTrue(result);
+      MutationResult result = memoryIndex.aarp(keys[i], 0, keySize);
+      assertEquals(MutationResult.INSERTED, result);
     }
   }
   
@@ -68,15 +67,15 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
   
   private void loadIndexBytesNot() {
     for(int i = 0; i < numRecords; i++) {
-      boolean result = memoryIndex.aarp(keys[i], 0, keySize);
-      assertFalse(result);
+      MutationResult result = memoryIndex.aarp(keys[i], 0, keySize);
+      assertEquals(MutationResult.DELETED, result);
     }
   }
     
   private void loadIndexMemory() {
     for(int i = 0; i < numRecords; i++) {
-      boolean result = memoryIndex.aarp(mKeys[i], keySize);
-      assertTrue(result);
+      MutationResult result = memoryIndex.aarp(mKeys[i], keySize);
+      assertEquals(MutationResult.INSERTED, result);
     }
   }
     
@@ -95,8 +94,8 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
   
   private void loadIndexMemoryNot() {
     for(int i = 0; i < numRecords; i++) {
-      boolean result = memoryIndex.aarp(mKeys[i], keySize);
-      assertFalse(result);
+      MutationResult result = memoryIndex.aarp(mKeys[i], keySize);
+      assertEquals(MutationResult.DELETED, result);
     }
   }
     

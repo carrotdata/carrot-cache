@@ -14,7 +14,11 @@
  */
 package com.carrot.cache;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -24,6 +28,7 @@ import com.carrot.cache.io.IOEngine;
 import com.carrot.cache.io.Segment;
 import com.carrot.cache.io.SegmentScanner;
 import com.carrot.cache.util.CacheConfig;
+import com.carrot.cache.util.Persistent;
 import com.carrot.cache.util.Utils;
 
 public class Scavenger extends Thread {
@@ -54,11 +59,14 @@ public class Scavenger extends Thread {
     public void expired(byte[] key, int off, int keySize);
     
   }
-  static class Stats {
+  static class Stats implements Persistent {
 
     /** Total times scavenger ran */
     long totalRuns;
 
+    /** Total empty segments */
+    long totalEmptySegments;
+    
     /** Total run time in ms; */
     long totalRunTimes;
 
@@ -90,6 +98,14 @@ public class Scavenger extends Thread {
       return totalRuns;
     }
 
+    /**
+     * Get total empty segments
+     * @return total number of empty segments
+     */
+    public long getTotalEmptySegments() {
+      return totalEmptySegments;
+    }
+    
     /**
      * Get total run time
      *
@@ -152,6 +168,34 @@ public class Scavenger extends Thread {
     public long getTotalBytesExpired() {
       return totalBytesExpired;
     }
+    
+    @Override
+    public void save(OutputStream os) throws IOException {
+      DataOutputStream dos = Utils.toDataOutputStream(os);
+      dos.writeLong(totalBytesExpired);
+      dos.writeLong(totalBytesFreed);
+      dos.writeLong(totalBytesScanned);
+      dos.writeLong(totalEmptySegments);
+      dos.writeLong(totalItemsExpired);
+      dos.writeLong(totalItemsFreed);
+      dos.writeLong(totalItemsScanned);
+      dos.writeLong(totalRuns);
+      dos.writeLong(totalRunTimes);
+    }
+    
+    @Override
+    public void load(InputStream is) throws IOException {
+      DataInputStream dis = Utils.toDataInputStream(is);
+      totalBytesExpired = dis.readLong();
+      totalBytesFreed = dis.readLong();
+      totalBytesScanned = dis.readLong();
+      totalEmptySegments = dis.readLong();
+      totalItemsExpired = dis.readLong();
+      totalItemsFreed = dis.readLong();
+      totalItemsScanned  = dis.readLong();
+      totalRuns = dis.readLong();
+      totalRunTimes = dis.readLong();
+    }
   }
 
   private static Stats stats = new Stats();
@@ -197,6 +241,9 @@ public class Scavenger extends Thread {
       if (s == null) {
         LOG.error(Thread.currentThread().getName()+": empty segment");
         return;
+      }
+      if (s.getInfo().getTotalItems() == 0) {
+        stats.totalEmptySegments ++;
       }
       long creationTime = s.getInfo().getCreationTime();
       int rank = s.getInfo().getRank();

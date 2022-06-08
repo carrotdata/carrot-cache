@@ -162,7 +162,7 @@ public class AdmissionQueue implements Persistent {
    */
   
   public boolean addIfAbsentRemoveIfPresent(byte[] key, int off, int len) {
-    return index.aarp(key, off, len);
+    return index.aarp(key, off, len) == MemoryIndex.MutationResult.DELETED? false: true;
   }
   
   /**
@@ -175,7 +175,7 @@ public class AdmissionQueue implements Persistent {
    */
   
   public boolean addIfAbsentRemoveIfPresent(long keyPtr, int keySize) {
-    return index.aarp(keyPtr, keySize);
+    return index.aarp(keyPtr, keySize) == MemoryIndex.MutationResult.DELETED? false: true;
   }
   
   @Override
