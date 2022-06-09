@@ -38,7 +38,7 @@ public class TestAQIndexFormat {
     long hash = Utils.hash64(key, 0, key.length);
     
     ifrmt.writeIndex(buf, key, 0, key.length, value, 0, value.length, 
-      (short)0 /* sid */, 0 /* data offset */, 0 /* data size */);
+      (short)0 /* sid */, 0 /* data offset */, 0 /* data size */, 0 /* expire */);
     assertTrue(ifrmt.equals(buf, hash));
     UnsafeAccess.free(buf);
     
@@ -54,7 +54,7 @@ public class TestAQIndexFormat {
     long hash = Utils.hash64(key, 16);
     
     ifrmt.writeIndex(buf, key, 16, value, 16, 
-      (short)0 /* sid */, 0 /* data offset */, 0 /* data size */);
+      (short)0 /* sid */, 0 /* data offset */, 0 /* data size */, 0 /* expire */);
     assertTrue(ifrmt.equals(buf, hash));
     UnsafeAccess.free(buf);
     UnsafeAccess.free(key);

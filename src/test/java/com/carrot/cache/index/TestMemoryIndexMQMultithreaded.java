@@ -46,11 +46,15 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     short[] sids = sidsTL.get();
     int[] offsets = offsetsTL.get();
     int[] lengths = lengthsTL.get();
+    long start = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
       format.writeIndex(buf, keys[i], 0, keys[i].length, values[i], 0, values[i].length, 
-        sids[i], offsets[i], lengths[i]);
+        sids[i], offsets[i], lengths[i], 0);
       forceInsert(keys[i], 0, keySize, buf, entrySize);
     }
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " loaded "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
     UnsafeAccess.free(buf);
   }
   
@@ -65,7 +69,7 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     int[] lengths = lengthsTL.get();
     for(int i = 0; i < numRecords; i++) {
       format.writeIndex(buf, keys[i], 0, keys[i].length, values[i], 0, values[i].length, 
-        sids[i], offsets[i], lengths[i]);
+        sids[i], offsets[i], lengths[i], 0);
       forceInsert(keys[i], 0, keySize, buf, entrySize);
       if (i == evictionStartFrom - 1) {
         memoryIndex.setEvictionEnabled(true);
@@ -84,6 +88,7 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     int[] offsets = offsetsTL.get();
     int[] lengths = lengthsTL.get();
     int failed = 0;
+    long start = System.currentTimeMillis();
     for (int i = 0; i < numRecords; i++) {
       long hash = Utils.hash64(keys[i], 0, keySize);
       int result = (int) memoryIndex.find(keys[i], 0, keySize, false, buf, entrySize);
@@ -102,10 +107,10 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     }
     UnsafeAccess.free(buf);
     assertEquals(0, failed);
-
-    if (failed > 0) {
-      System.err.println(Thread.currentThread().getName() + " failed="+ failed + " numRecords = "+numRecords);
-    }
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " verify "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
+    
   }
   
   private void loadIndexMemory() {
@@ -117,11 +122,15 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     short[] sids = sidsTL.get();
     int[] offsets = offsetsTL.get();
     int[] lengths = lengthsTL.get();
+    long start = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
       format.writeIndex(buf, mKeys[i], keySize, mValues[i], valueSize, 
-        sids[i], offsets[i], lengths[i]);
+        sids[i], offsets[i], lengths[i], 0);
       forceInsert(mKeys[i], keySize, buf, entrySize);
     }
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " loaded "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
     UnsafeAccess.free(buf);
   }
   
@@ -136,7 +145,7 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     int[] lengths = lengthsTL.get();
     for(int i = 0; i < numRecords; i++) {
       format.writeIndex(buf, mKeys[i], keySize, mValues[i], valueSize, 
-        sids[i], offsets[i], lengths[i]);
+        sids[i], offsets[i], lengths[i], 0);
       forceInsert(mKeys[i], keySize, buf, entrySize);
       if (i == evictionStartFrom - 1) {
         memoryIndex.setEvictionEnabled(true);
@@ -154,6 +163,7 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     int[] offsets = offsetsTL.get();
     int[] lengths = lengthsTL.get();
     int failed = 0;
+    long start = System.currentTimeMillis();
     for (int i = 0; i < numRecords; i++) {
       long hash = Utils.hash64(mKeys[i], keySize);
       int result = (int) memoryIndex.find(mKeys[i], keySize, false, buf, entrySize);
@@ -171,11 +181,11 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
       assertEquals(lengths[i], size);
     }
     assertEquals(0, failed);
-
+    long end = System.currentTimeMillis();
+    System.out.println(Thread.currentThread().getName() + " verify "+ numRecords + 
+      " RPS=" + ((long) numRecords) * 1000 / (end - start));
     UnsafeAccess.free(buf);
-    if (failed > 0) {
-      System.err.println(Thread.currentThread().getName() + " failed "+ failed +" numRecords="+ numRecords);
-    }
+    
   }
   
   @Test
@@ -254,7 +264,7 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Test
   public void testLoadReadWithRehashMemoryMT() {
-    /*DEBUG*/ System.out.println("testLoadReadWithRehashBytesMT");
+    /*DEBUG*/ System.out.println("testLoadReadWithRehashMemoryMT");
 
     Runnable r = () -> testLoadReadWithRehashMemory();
     Thread[] workers = startAll(r);    

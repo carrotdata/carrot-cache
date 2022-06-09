@@ -41,7 +41,6 @@ import com.carrot.cache.util.Utils;
  * 
  * Entry format:
  * 
- * 8 bytes - expiration time
  * VINT - key size
  * VINT - value size
  * Key
@@ -654,8 +653,8 @@ public class Segment implements Persistent {
    * @param item item itself
    * @return cached item address (-1 means segment is sealed)
    */
-  public long append(byte[] key, byte[] item, long expire) {
-    return append(key, 0, key.length, item, 0, item.length, expire);
+  public long append(byte[] key, byte[] item) {
+    return append(key, 0, key.length, item, 0, item.length);
   }
 
   /**
@@ -664,7 +663,7 @@ public class Segment implements Persistent {
    * @param item item itself
    * @return cached item offset (-1 means segment is sealed)
    */
-  public long append(byte[] key, int keyOffset, int keySize, byte[] item, int itemOffset, int itemSize, long expire) {
+  public long append(byte[] key, int keyOffset, int keySize, byte[] item, int itemOffset, int itemSize) {
     if (isSealed()) {
       //TODO: check return value
       return -1;
@@ -672,23 +671,15 @@ public class Segment implements Persistent {
     try {
       writeLock();
       int requiredSize = requiredSize(keySize, itemSize);
-      if (requiredSize + dataSize() /*+ HEADER_SIZE */> size()) {
+      if (requiredSize + dataSize() > size()) {
         seal();
         return -1;
       }
       long off = dataSize();
       long addr = this.address + dataSize() /*+ HEADER_SIZE*/;
-      // Copy data
-      // Expire
-      UnsafeAccess.putLong(addr, expire);
-      
-      incrDataSize(Utils.SIZEOF_LONG);
-      
-      addr += Utils.SIZEOF_LONG;
       // Key size
       Utils.writeUVInt(addr, keySize);
       int kSizeSize = Utils.sizeUVInt(keySize);
-
       incrDataSize(kSizeSize);
       addr += kSizeSize;
       // Value size
@@ -720,7 +711,7 @@ public class Segment implements Persistent {
    * @param expire expiration time
    * @return cached entry address or -1
    */
-  public long append(long keyPtr, int keySize, long itemPtr, int itemSize, long expire) {
+  public long append(long keyPtr, int keySize, long itemPtr, int itemSize) {
     if (isSealed()) {
       //TODO: check return value
       return -1;
@@ -728,17 +719,12 @@ public class Segment implements Persistent {
     try {
       writeLock();
       int requiredSize = requiredSize(keySize, itemSize);
-      if (requiredSize + dataSize() /*+ HEADER_SIZE*/ > size()) {
+      if (requiredSize + dataSize() > size()) {
         seal();
         return -1;
       }
       long off = dataSize();
       long addr = this.address + dataSize() /*+ HEADER_SIZE*/;
-      // Copy data
-      // Expire
-      UnsafeAccess.putLong(addr, expire);
-      incrDataSize(Utils.SIZEOF_LONG);
-      addr += Utils.SIZEOF_LONG;
       // Key size
       Utils.writeUVInt(addr, keySize);
       int kSizeSize = Utils.sizeUVInt(keySize);

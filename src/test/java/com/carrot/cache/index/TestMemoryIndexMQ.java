@@ -46,7 +46,7 @@ public class TestMemoryIndexMQ extends TestMemoryIndexBase{
     
     for(int i = 0; i < numRecords; i++) {
       format.writeIndex(buf, keys[i], 0, keys[i].length, values[i], 0, values[i].length, 
-        sids[i], offsets[i], lengths[i]);
+        sids[i], offsets[i], lengths[i], 0);
       memoryIndex.insert(keys[i], 0, keySize, buf, entrySize);
     }
     UnsafeAccess.free(buf);
@@ -60,7 +60,7 @@ public class TestMemoryIndexMQ extends TestMemoryIndexBase{
     
     for(int i = 0; i < numRecords; i++) {
       format.writeIndex(buf, keys[i], 0, keys[i].length, values[i], 0, values[i].length, 
-        sids[i], offsets[i], lengths[i]);
+        sids[i], offsets[i], lengths[i], 0);
       memoryIndex.insert(keys[i], 0, keySize, buf, entrySize);
       if (i == evictionStartFrom - 1) {
         memoryIndex.setEvictionEnabled(true);
@@ -97,7 +97,7 @@ public class TestMemoryIndexMQ extends TestMemoryIndexBase{
     
     for(int i = 0; i < numRecords; i++) {
       format.writeIndex(buf, mKeys[i], keySize, mValues[i], valueSize, 
-        sids[i], offsets[i], lengths[i]);
+        sids[i], offsets[i], lengths[i], 0);
       memoryIndex.insert(mKeys[i], keySize, buf, entrySize);
     }
     UnsafeAccess.free(buf);
@@ -110,7 +110,7 @@ public class TestMemoryIndexMQ extends TestMemoryIndexBase{
     
     for(int i = 0; i < numRecords; i++) {
       format.writeIndex(buf, mKeys[i], keySize, mValues[i], valueSize, 
-        sids[i], offsets[i], lengths[i]);
+        sids[i], offsets[i], lengths[i], 0);
       memoryIndex.insert(mKeys[i], keySize, buf, entrySize);
       if (i == evictionStartFrom - 1) {
         memoryIndex.setEvictionEnabled(true);

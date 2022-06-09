@@ -389,6 +389,7 @@ public abstract class IOEngine implements Persistent {
       if (result < 0) {
         return NOT_FOUND;
       } else if (result > bSize) {
+        
         UnsafeAccess.free(buf);
         bSize = (int) result;
         buf = UnsafeAccess.mallocZeroed(bSize);
@@ -981,7 +982,7 @@ public abstract class IOEngine implements Persistent {
         return;
       }
       // Offset must less 32bit
-      long offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength, expire);
+      long offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength);
       if (offset < 0) {
         save(s); // removes segment from RAM buffers
         this.ramBuffers[rank] = null;
@@ -991,7 +992,7 @@ public abstract class IOEngine implements Persistent {
           //TODO: update stats
           return;
         }
-        offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength, expire);
+        offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength);
       }
       
       IndexFormat format = this.index.getIndexFormat();
@@ -1001,7 +1002,7 @@ public abstract class IOEngine implements Persistent {
       int dataSize = Utils.kvSize(keyLength, valueLength);
       
       format.writeIndex(iptr, key, keyOff, keyLength, value, valueOff, valueLength, 
-          (short) s.getId(), (int) offset, dataSize); 
+          (short) s.getId(), (int) offset, dataSize, expire); 
       
       this.index.insertWithRank(key, keyOff, keyLength, iptr, size, rank);
     } finally {
@@ -1051,7 +1052,7 @@ public abstract class IOEngine implements Persistent {
         //TODO: update stats
         return;
       }
-      long offset = s.append(keyPtr, keyLength, valuePtr, valueLength, expire);
+      long offset = s.append(keyPtr, keyLength, valuePtr, valueLength);
       if (offset < 0) {
         save(s); // removes segment from RAM buffers
         ramBuffers[rank] = null;
@@ -1061,7 +1062,7 @@ public abstract class IOEngine implements Persistent {
           //TODO: update stats
           return;
         }
-        offset = s.append(keyPtr, keyLength, valuePtr, valueLength, expire);
+        offset = s.append(keyPtr, keyLength, valuePtr, valueLength);
       }
       int dataSize = Utils.kvSize(keyLength, valueLength);
       
@@ -1070,7 +1071,7 @@ public abstract class IOEngine implements Persistent {
       iptr = UnsafeAccess.malloc(size); 
             
       format.writeIndex(iptr, keyPtr, keyLength, valuePtr,  valueLength, 
-          (short) s.getId(), (int) offset, dataSize); 
+          (short) s.getId(), (int) offset, dataSize, expire); 
       this.index.insertWithRank(keyPtr, keyLength, iptr, size, rank);
       
     } finally {

@@ -182,9 +182,10 @@ public interface IndexFormat extends Persistent {
    * @param sid segment id
    * @param dataOffset offset in a block segment
    * @param dataSize data size
+   * @param expire expiration time in ms since 01/01/1970 (if supported)
    */
   public void writeIndex(long ptr, byte[] key, int keyOffset, int keySize, byte[] value, 
-      int valueOffset, int valueSize, short sid, int dataOffset, int dataSize);
+      int valueOffset, int valueSize, short sid, int dataOffset, int dataSize, long expire);
   
   /**
    * Write index in place
@@ -197,9 +198,10 @@ public interface IndexFormat extends Persistent {
    * @param sid segment id
    * @param dataOffset offset in a block segment
    * @param dataSize data size
+   * @param expire expiration time 
    */
   public void writeIndex(long ptr, long keyPtr, int keySize, long valuePtr, 
-      int valueSize, short sid, int dataOffset, int dataSize);
+      int valueSize, short sid, int dataOffset, int dataSize, long expire);
   
   
 }

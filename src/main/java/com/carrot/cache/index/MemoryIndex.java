@@ -846,6 +846,7 @@ public class MemoryIndex implements Persistent {
       if (result != bufSize) {
         return -1;
       }
+      // Check expiration
       int count = this.indexFormat.getHitCount(buf);
       return count;
     } finally {
@@ -878,6 +879,32 @@ public class MemoryIndex implements Persistent {
   }
 
   /**
+   * Delete entry from a given index block at a given address
+   * @param ptr index block address
+   * @param $ptr entry address
+   * @param count - index of an entry at this index block 0-based
+   */
+  private void deleteAt(long ptr, long $ptr, int count) {
+    // TODO: Move this to a separate method
+    int dataSize = dataSize(ptr);
+    int numEntries = numEntries(ptr);
+    // delete entry
+    int toDelete = this.indexFormat.fullEntrySize($ptr);
+    int toMove = (int) ((ptr + indexBlockHeaderSize + dataSize) - $ptr - toDelete);
+    UnsafeAccess.copy($ptr + toDelete, $ptr, toMove);
+    incrDataSize(ptr, -toDelete);
+    incrNumEntries(ptr, -1);
+    // Update stats
+    //TODO: separate method
+    int numSegments = this.cacheConfig.getNumberOfRanks(this.cacheName);  
+    int rank = this.evictionPolicy.getRankForIndex(numSegments, count, numEntries);
+    int sid1 = getSegmentIdForEntry(ptr, count);
+    // Update stats
+    if (this.cache != null) {
+      cache.getEngine().updateStats(sid1, -1, -(numSegments - rank));
+    }
+  }
+  /**
    * Finds entry in index and promote if hit == true
    *
    * @param ptr address of index block
@@ -900,6 +927,23 @@ public class MemoryIndex implements Persistent {
         indexSize = this.indexFormat.fullEntrySize($ptr);
         if (indexSize > bufSize) {
           return indexSize;
+        }
+        // Check if expired
+        long expire = this.indexFormat.getExpire(ptr, $ptr);
+        if (expire > 0) {
+          long current = System.currentTimeMillis();
+          if (current > expire) {
+            deleteAt(ptr, $ptr, count);
+            //TODO Update segment stats for expired item
+            //TOD:move this code into deleteAt method
+            int sid0 = this.indexFormat.getSegmentId($ptr);
+            int numSegments = this.cacheConfig.getNumberOfRanks(this.cacheName); 
+            int rank = this.evictionPolicy.getRankForIndex(numSegments, count, numEntries);
+            if (this.cache != null) {
+              cache.getEngine().updateStats(sid0, -1, -rank);
+            }
+            return NOT_FOUND;
+          }
         }
         // Update hits
         if (hit) {
@@ -1144,23 +1188,9 @@ public class MemoryIndex implements Persistent {
     int numEntries = numEntries(ptr);
     long $ptr = ptr + indexBlockHeaderSize;
     int count = 0;
-    int dataSize = dataSize(ptr);
     while (count < numEntries) {
       if (this.indexFormat.equals($ptr, hash)) {
-        int toDelete = this.indexFormat.fullEntrySize($ptr);
-        int toMove = (int) ((ptr + indexBlockHeaderSize + dataSize) - $ptr - toDelete);
-        UnsafeAccess.copy($ptr + toDelete, $ptr, toMove);
-        incrDataSize(ptr, -toDelete);
-        incrNumEntries(ptr, -1);
-        // Update stats
-        //TODO: separate method
-        int numSegments = this.cacheConfig.getNumberOfRanks(this.cacheName);  
-        int rank = this.evictionPolicy.getRankForIndex(numSegments, count, numEntries);
-        int sid1 = getSegmentIdForEntry(ptr, count);
-        // Update stats
-        if (this.cache != null) {
-          cache.getEngine().updateStats(sid1, -1, -(numSegments - rank));
-        }
+        deleteAt(ptr, $ptr, count);
         return true;
       }
       count++;

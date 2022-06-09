@@ -49,7 +49,7 @@ public class TestMemoryIndexMQMultithreadedStress extends TestMemoryIndexMultith
     long start = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
       format.writeIndex(buf, keys[i], 0, keys[i].length, values[i], 0, values[i].length, 
-        sids[i], offsets[i], lengths[i]);
+        sids[i], offsets[i], lengths[i], 0);
       forceInsert(keys[i], 0, keySize, buf, entrySize);
     }
     long end = System.currentTimeMillis();
@@ -69,7 +69,7 @@ public class TestMemoryIndexMQMultithreadedStress extends TestMemoryIndexMultith
     int[] lengths = lengthsTL.get();
     for(int i = 0; i < numRecords; i++) {
       format.writeIndex(buf, keys[i], 0, keys[i].length, values[i], 0, values[i].length, 
-        sids[i], offsets[i], lengths[i]);
+        sids[i], offsets[i], lengths[i], 0);
       forceInsert(keys[i], 0, keySize, buf, entrySize);
       if (i == evictionStartFrom - 1) {
         memoryIndex.setEvictionEnabled(true);
@@ -126,7 +126,7 @@ public class TestMemoryIndexMQMultithreadedStress extends TestMemoryIndexMultith
     long start = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
       format.writeIndex(buf, mKeys[i], keySize, mValues[i], valueSize, 
-        sids[i], offsets[i], lengths[i]);
+        sids[i], offsets[i], lengths[i], 0);
       forceInsert(mKeys[i], keySize, buf, entrySize);
     }
     long end = System.currentTimeMillis();
@@ -146,7 +146,7 @@ public class TestMemoryIndexMQMultithreadedStress extends TestMemoryIndexMultith
     int[] lengths = lengthsTL.get();
     for(int i = 0; i < numRecords; i++) {
       format.writeIndex(buf, mKeys[i], keySize, mValues[i], valueSize, 
-        sids[i], offsets[i], lengths[i]);
+        sids[i], offsets[i], lengths[i], 0);
       forceInsert(mKeys[i], keySize, buf, entrySize);
       if (i == evictionStartFrom - 1) {
         memoryIndex.setEvictionEnabled(true);

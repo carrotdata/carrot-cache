@@ -34,7 +34,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.carrot.cache.controllers.AdmissionController;
-import com.carrot.cache.controllers.BaseThroughputController;
 import com.carrot.cache.controllers.ThroughputController;
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MemoryIndex;

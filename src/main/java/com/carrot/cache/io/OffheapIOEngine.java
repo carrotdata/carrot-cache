@@ -214,6 +214,7 @@ public class OffheapIOEngine extends IOEngine {
 
   @Override
   protected boolean getInternal(int id, long offset, int size, byte[] buffer, int bufOffset)  {
+    //FIXME: segment read lock
     Segment s = this.dataSegments[id];
     if (s == null) {
       // TODO: error
@@ -233,6 +234,7 @@ public class OffheapIOEngine extends IOEngine {
 
   @Override
   protected boolean getInternal(int id, long offset, int size, ByteBuffer buffer) throws IOException {
+    //FIXME: segment read lock
     Segment s = this.dataSegments[id];
     if (s == null) {
       // TODO: error
