@@ -264,88 +264,95 @@ public class Scavenger extends Thread {
     stats.totalRunTimes += (runEnd - runStart);
   }
 
-  private boolean cleanSegment(Segment s) throws IOException{
+  private boolean cleanSegment(Segment s) throws IOException {
+    // Check if segment is empty on active items
     CacheConfig config = this.cache.getCacheConfig();
-    String cacheName = this.cache.getName();    
+    String cacheName = this.cache.getName();
     double stopRatio = config.getScavengerStopMemoryRatio(cacheName);
-    double dumpBelowRatio = config.getScavengerDumpEntryBelowStart(cacheName);
-    
-    IOEngine engine = cache.getEngine();
-    MemoryIndex index = engine.getMemoryIndex();
-
-    SegmentScanner sc = engine.getScanner(s);
-    
-    byte[] key = null, val = null;
-    
-    while (sc.hasNext()) {
-      long expire = sc.getExpire();
-      int keySize = sc.keyLength();
-      int valSize = sc.valueLength();
-      key = checkBuffer(key, keySize);
-     
-      int keySizeSize = Utils.sizeUVInt(keySize);
-      int valSizeSize = Utils.sizeUVInt(valSize);
-      int totalSize = keySize + valSize + keySizeSize + valSizeSize;
+    Segment.Info info = s.getInfo();
+    if (info.getTotalItems() == 0) {
+      // We can dump it completely w/o asking memory index
+      //
+      long dataSize = info.getSegmentDataSize();
+      cache.reportUsed(-dataSize);
+      totalFreedBytes += dataSize;
       // Update stats
-      stats.totalBytesScanned += totalSize;
-      // Read key
-      sc.getKey(key);
-      // Check if it was expired
-      boolean expired = expire > 0 && (System.currentTimeMillis() > expire);
-      double p = index.popularity(key, 0, keySize);
+      stats.totalBytesFreed += dataSize;
+    } else {
+      double dumpBelowRatio = config.getScavengerDumpEntryBelowStart(cacheName);
+      IOEngine engine = cache.getEngine();
+      MemoryIndex index = engine.getMemoryIndex();
+      SegmentScanner sc = engine.getScanner(s);
+      byte[] key = null, val = null;
+      while (sc.hasNext()) {
+        long expire = sc.getExpire();
+        int keySize = sc.keyLength();
+        int valSize = sc.valueLength();
+        key = checkBuffer(key, keySize);
 
-      if (expired) {
-        // Expire current item
-        cache.reportUsed(-totalSize);
-        totalFreedBytes += totalSize;
+        int keySizeSize = Utils.sizeUVInt(keySize);
+        int valSizeSize = Utils.sizeUVInt(valSize);
+        int totalSize = keySize + valSize + keySizeSize + valSizeSize;
         // Update stats
-        stats.totalBytesExpired += totalSize;
-        stats.totalBytesFreed += totalSize;
-        stats.totalItemsExpired += 1;
-        // Report expiration
-        if (aListener != null) {
-          aListener.expired(key, 0, keySize);
-        }
-        // Delete from the index
-        index.delete(key, 0, keySize);
-      } else if (p < dumpBelowRatio) {
-        // Dump current item as a low value
-        cache.reportUsed(-totalSize);
-        totalFreedBytes += totalSize;
-        // Update stats
-        stats.totalBytesFreed += totalSize;
-        val = checkBuffer(val, valSize);
-        sc.getValue(val);
-        // Return Item back to AQ
-        //TODO: fix this code. We need to move data to a victim cache on 
-        // memory index eviction.
-        if (aListener != null) {
-          if (p > 0.0) {
-            aListener.evicted(key, 0, keySize, val, 0, valSize, expire);
-          } else {
-            // p == 0.0 means, that item was previously evicted from the index
-            aListener.evicted(key, 0, keySize, null, 0, 0, expire);
+        stats.totalBytesScanned += totalSize;
+        // Read key
+        sc.getKey(key);
+        // Check if it was expired
+        boolean expired = expire > 0 && (System.currentTimeMillis() > expire);
+        double p = index.popularity(key, 0, keySize);
+
+        if (expired) {
+          // Expire current item
+          cache.reportUsed(-totalSize);
+          totalFreedBytes += totalSize;
+          // Update stats
+          stats.totalBytesExpired += totalSize;
+          stats.totalBytesFreed += totalSize;
+          stats.totalItemsExpired += 1;
+          // Report expiration
+          if (aListener != null) {
+            aListener.expired(key, 0, keySize);
           }
+          // Delete from the index
+          index.delete(key, 0, keySize);
+        } else if (p < dumpBelowRatio) {
+          // Dump current item as a low value
+          cache.reportUsed(-totalSize);
+          totalFreedBytes += totalSize;
+          // Update stats
+          stats.totalBytesFreed += totalSize;
+          val = checkBuffer(val, valSize);
+          sc.getValue(val);
+          // Return Item back to AQ
+          // TODO: fix this code. We need to move data to a victim cache on
+          // memory index eviction.
+          if (aListener != null) {
+            if (p > 0.0) {
+              aListener.evicted(key, 0, keySize, val, 0, valSize, expire);
+            } else {
+              // p == 0.0 means, that item was previously evicted from the index
+              aListener.evicted(key, 0, keySize, null, 0, 0, expire);
+            }
+          }
+          // Delete from the index
+          index.delete(key, 0, keySize);
+        } else {
+          // Read value
+          val = checkBuffer(val, valSize);
+          sc.getValue(val);
+          // Delete from the index
+          index.delete(key, 0, keySize);
+          int rank = engine.popularityToRank(p);
+          // Otherwise reinsert item back
+          engine.put(key, 0, keySize, val, 0, valSize, expire, rank);
         }
-        // Delete from the index
-        index.delete(key, 0, keySize);
-      } else {
-        // Read value
-        val = checkBuffer(val, valSize);
-        sc.getValue(val);
-        // Delete from the index
-        index.delete(key, 0, keySize);
-        int rank = engine.popularityToRank(p);
-        // Otherwise reinsert item back
-        engine.put(key, 0, keySize, val, 0, valSize, expire, rank);
+        sc.next();
       }
-      sc.next();
     }
-    
     double usage = cache.getMemoryUsedPct();
     return usage < stopRatio;
   }
-  
+
   /**
    * Check that memory is at least requiredSize
    * @param ptr memory buffer address
@@ -362,11 +369,10 @@ public class Scavenger extends Thread {
   }
 
   /**
-   * Get Scavenger rate
-   *
-   * @return rate
+   * Get current Scavenger average run rate
+   * @return run rate
    */
-  public double scavengingRate() {
-    return (double) totalFreedBytes * 1000 / (System.currentTimeMillis() - runStartTime);
+  public long getScavengerRunRateAverage() {
+    return (long) totalFreedBytes * 1000 / (System.currentTimeMillis() - runStartTime); 
   }
 }
