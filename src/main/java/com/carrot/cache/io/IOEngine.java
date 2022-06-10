@@ -35,6 +35,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.carrot.cache.Cache;
+import com.carrot.cache.controllers.RecyclingSelector;
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MemoryIndex;
 import com.carrot.cache.util.CacheConfig;
@@ -860,23 +861,13 @@ public abstract class IOEngine implements Persistent {
   }
 
   /**
-   * Get segment id with the minimum average rank (for recycling)
-   *
-   * @return segment id
+   * Get best segment for recycling 
+   * TODO: need synchronized?
+   * @return segment 
    */
-  public synchronized Segment getMinimumAvgRankSegment() {
-    int id = -1;
-    double min = Double.MAX_VALUE;
-    for (int i = 0; i < dataSegments.length; i++) {
-      if (dataSegments[i] == null || !dataSegments[i].isSealed()) {
-        continue;
-      }
-      if (dataSegments[i].getRank() < min) {
-        min = dataSegments[i].getRank();
-        id = i;
-      }
-    }
-    return id < 0 ? null : dataSegments[id];
+  public synchronized Segment getSegmentForRecycling() {
+    RecyclingSelector sel = this.parent.getRecyclingSelector(); 
+    return sel.selectForRecycling(dataSegments);
   }
 
   /**

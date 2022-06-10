@@ -237,7 +237,7 @@ public class Scavenger extends Thread {
     IOEngine engine = cache.getEngine();
     boolean finished = false;
     while (!finished) {
-      Segment s = engine.getMinimumAvgRankSegment();
+      Segment s = engine.getSegmentForRecycling();
       if (s == null) {
         LOG.error(Thread.currentThread().getName()+": empty segment");
         return;

@@ -34,6 +34,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.carrot.cache.controllers.AdmissionController;
+import com.carrot.cache.controllers.RecyclingSelector;
 import com.carrot.cache.controllers.ThroughputController;
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MemoryIndex;
@@ -359,6 +360,9 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
   /** Cache scavenger */
   Scavenger scavenger;
 
+  /** Recycling selector */
+  RecyclingSelector recyclingSelector;
+  
   /* IOEngine */
   IOEngine engine;
   
@@ -399,6 +403,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
   private void initAll() throws IOException {
 
     initAdmissionController();
+    initRecyclingSelector();
     if (this.engine instanceof FileIOEngine) {
       initAdmissionQueue();
       initThroughputController();
@@ -455,6 +460,18 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
       FileInputStream fis = new FileInputStream(p.toFile());
       this.admissionController.load(fis);
       fis.close();
+    }
+  }
+  
+  /**
+   * Initialize scaveneger's recycling selector
+   */
+  private void initRecyclingSelector() {
+    try {
+      this.recyclingSelector = this.conf.getRecyclingSelector(cacheName);
+    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+      LOG.error(e);
+      throw new RuntimeException(e);
     }
   }
   
@@ -608,6 +625,23 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
    */
   public void setAdmissionController(AdmissionController ac) {
     this.admissionController = ac;
+  }
+  
+  
+  /**
+   * Get recycling selector
+   * @return recycling selector
+   */
+  public RecyclingSelector getRecyclingSelector() {
+    return this.recyclingSelector;
+  }
+  
+  /**
+   * Set recycling selector
+   * @param sel selector
+   */
+  public void setRecyclingSelector(RecyclingSelector sel) {
+    this.recyclingSelector = sel;
   }
   
   /**
@@ -1220,6 +1254,37 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
     dos.close();
   }
   
+  
+  /**
+   * Loads recycling selector data
+   * @throws IOException
+   */
+  private void loadRecyclingSelector() throws IOException {
+    String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
+    String file = CacheConfig.RECYCLING_SELECTOR_SNAPSHOT_NAME;
+    Path p = Paths.get(snapshotDir, file);
+    if (Files.exists(p) && Files.size(p) > 0) {
+      FileInputStream fis = new FileInputStream(p.toFile());
+      DataInputStream dis = new DataInputStream(fis);
+      this.recyclingSelector.load(dis);
+      dis.close();
+    }
+  }
+  
+  /**
+   * Saves recycling selector data
+   * @throws IOException
+   */
+  private void saveRecyclingSelector() throws IOException {
+    String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
+    String file = CacheConfig.RECYCLING_SELECTOR_SNAPSHOT_NAME;
+    Path p = Paths.get(snapshotDir, file);
+    FileOutputStream fos = new FileOutputStream(p.toFile());
+    DataOutputStream dos = new DataOutputStream(fos);
+    this.recyclingSelector.save(dos);
+    dos.close();
+  }
+  
   /**
    * Loads engine data
    * @throws IOException
@@ -1261,6 +1326,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
     saveAdmissionQueue();
     saveAdmissionController();
     saveThroughputController();
+    saveRecyclingSelector();
     saveEngine();
     long endTime = System.currentTimeMillis();
     LOG.info("Cache saved in {}ms", endTime - startTime);
@@ -1276,6 +1342,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
     loadAdmissionQueue();
     loadAdmissionControlller();
     loadThroughputControlller();
+    loadRecyclingSelector();
     loadEngine();
     long endTime = System.currentTimeMillis();
     LOG.info("Cache loaded in {}ms", endTime - startTime);

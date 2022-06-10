@@ -21,6 +21,7 @@ import java.util.Properties;
 import com.carrot.cache.Cache;
 import com.carrot.cache.controllers.AdmissionController;
 import com.carrot.cache.controllers.BaseThroughputController;
+import com.carrot.cache.controllers.RecyclingSelector;
 import com.carrot.cache.controllers.ThroughputController;
 import com.carrot.cache.eviction.EvictionPolicy;
 import com.carrot.cache.eviction.SLRUEvictionPolicy;
@@ -57,6 +58,9 @@ public class CacheConfig {
   
   /* File name for throughput controller snapshot data */
   public final static String THROUGHPUT_CONTROLLER_SNAPSHOT_NAME = "tc.data";
+  
+  /* File name for recycling selector snapshot data */
+  public final static String RECYCLING_SELECTOR_SNAPSHOT_NAME = "rc.data";
   
   /* File name for admission queue snapshot data */
   public final static String ADMISSION_QUEUE_SNAPSHOT_NAME = "aq.data";
@@ -185,6 +189,9 @@ public class CacheConfig {
   /* Class name for cache admission controller implementation */
   public static final String CACHE_THROUGHPUT_CONTROLLER_IMPL_KEY = "cache.throughput.controller.impl";
   
+  /* Class name for cache admission controller implementation */
+  public static final String CACHE_RECYCLING_SELECTOR_IMPL_KEY = "cache.recycling.selector.impl";
+  
   /* Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 256 * 1024 * 1024;
@@ -269,6 +276,10 @@ public class CacheConfig {
   
   /* Default index data embedding maximum size */
   public final static int DEFAULT_INDEX_DATA_EMBEDDED_SIZE = 100;
+  
+  public final static String DEFAULT_CACHE_RECYCLING_SELECTOR_IMPL = 
+      "com.carrot.cache.controllers.LowestRankRecyclingSelector";
+
   
   // Statics
   static CacheConfig instance;
@@ -815,6 +826,26 @@ public class CacheConfig {
     @SuppressWarnings("unchecked")
     Class<ThroughputController> clz = (Class<ThroughputController>) Class.forName(value);
     ThroughputController instance = clz.newInstance();
+    return instance;
+  }
+  
+  /**
+   * Get Scavenger recycling selector implementation by cache name
+   *
+   * @throws ClassNotFoundException
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   */
+  public RecyclingSelector getRecyclingSelector(String cacheName)
+      throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+    String value = props.getProperty(cacheName + "." + CACHE_RECYCLING_SELECTOR_IMPL_KEY);
+    if (value == null) {
+      value = props.getProperty(CACHE_RECYCLING_SELECTOR_IMPL_KEY, DEFAULT_CACHE_RECYCLING_SELECTOR_IMPL);
+    }
+    
+    @SuppressWarnings("unchecked")
+    Class<RecyclingSelector> clz = (Class<RecyclingSelector>) Class.forName(value);
+    RecyclingSelector instance = clz.newInstance();
     return instance;
   }
 }
