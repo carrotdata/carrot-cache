@@ -23,8 +23,7 @@ import com.carrot.cache.io.Segment;
  */
 public class LowestRankRecyclingSelector implements RecyclingSelector {
 
-  public LowestRankRecyclingSelector() {
-    
+  public LowestRankRecyclingSelector() {   
   }
   
   @Override
@@ -36,6 +35,13 @@ public class LowestRankRecyclingSelector implements RecyclingSelector {
       if (s == null || !s.isSealed()) continue;
       Segment.Info info = s.getInfo();
       double rank = info.getAverageRank();
+      if (s.isAllExpireSegment()) {
+        long maxExpire = info.getMaxExpireAt();
+        if (System.currentTimeMillis() > maxExpire) {
+          s.allExpired();
+          rank = 0;
+        }
+      }
       if (rank < minRank) {
         minRank = rank;
         selectionIndex = i;

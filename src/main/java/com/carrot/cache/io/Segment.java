@@ -90,16 +90,19 @@ public class Segment implements Persistent {
     private AtomicInteger totalExpiredItems = new AtomicInteger(0);
     
     /* Segment's id */
-    private int id;
+    private volatile int id;
     
     /* Segment's size*/
-    private long size;
+    private volatile long size;
     
     /* Segment data size */
     private AtomicLong dataSize = new AtomicLong(0);
     
     /* Is this segment off-heap*/
-    private boolean offheap;
+    private volatile boolean offheap;
+    
+    /* Tracks maximum item expiration time - absolute in ms since 01-01-1970 Jan 1st 12am*/
+    private AtomicLong maxExpireAt = new AtomicLong(0);
     
     Info(){
     }
@@ -330,6 +333,24 @@ public class Segment implements Persistent {
      */
     public long incrementDataSize(int incr) {
       return this.dataSize.addAndGet(incr);
+    }
+    
+    /**
+     * Get maximum item expiration time
+     * @return max expiration time
+     */
+    public long getMaxExpireAt() {
+      return this.maxExpireAt.get();
+    }
+    
+    /**
+     * Set maximum expiration time
+     * @param expected expected time
+     * @param newValue new value
+     * @return true on success, false - otherwise
+     */
+    public boolean setMaxExpireAt(long expected, long newValue) {
+      return maxExpireAt.compareAndSet(expected, newValue);
     }
     
     @Override
@@ -648,28 +669,43 @@ public class Segment implements Persistent {
   }
   
   /**
+   * Signals that all items have expired and this data segment is empty now
+   */
+  public void allExpired() {
+    this.info.setTotalItems(0);
+  }
+  
+  /**
    * Append new cached item to this segment
    * @param key item key
    * @param item item itself
+   * @param expire item expiration time in ms (absolute)
    * @return cached item address (-1 means segment is sealed)
    */
-  public long append(byte[] key, byte[] item) {
-    return append(key, 0, key.length, item, 0, item.length);
+  public long append(byte[] key, byte[] item, long expire) {
+    return append(key, 0, key.length, item, 0, item.length, expire);
   }
 
   /**
    * Append new cached item to this segment
    * @param key item key
+   * @param keyOffset key offset
+   * @param keySize key size
    * @param item item itself
+   * @param itemOffset item offset
+   * @param itemSize item size
+   * @param expire expiration time
    * @return cached item offset (-1 means segment is sealed)
    */
-  public long append(byte[] key, int keyOffset, int keySize, byte[] item, int itemOffset, int itemSize) {
+  public long append(byte[] key, int keyOffset, int keySize, byte[] item, int itemOffset, 
+      int itemSize, long expire) {
     if (isSealed()) {
       //TODO: check return value
       return -1;
     }
     try {
       writeLock();
+      processExpire(expire);
       int requiredSize = requiredSize(keySize, itemSize);
       if (requiredSize + dataSize() > size()) {
         seal();
@@ -702,6 +738,41 @@ public class Segment implements Persistent {
       writeUnlock();
     }
   }
+  
+  /**
+   * Checks max expire against given expire
+   * and set max to a new value if:
+   * a. old max value > 0
+   * b. new expire is greater than old max value
+   * @param expire
+   */
+  private final void processExpire(long expire) {
+    long max = this.info.getMaxExpireAt();
+    if (max < 0) return; // do nothing
+    boolean result = false;
+    if (expire == 0) {
+      while(!result) {
+        max = this.info.getMaxExpireAt();
+        // Signals that this block has some items w/o expiration
+        result = this.info.setMaxExpireAt(max, -1);
+      }
+    } else if (max < expire) {
+      while(!result) {
+        max = this.info.getMaxExpireAt();
+        if (max > expire) return;
+        result = this.info.setMaxExpireAt(max, expire);
+      }
+    }
+  }
+  
+  /**
+   * Checks if all items have expiration in thsi segments
+   * @return true - yes, false - no
+   */
+  public boolean isAllExpireSegment() {
+    return this.info.getMaxExpireAt() > 0;
+  }
+  
   /**
    * Append new cached item to this segment
    * @param keyPtr key address
@@ -711,13 +782,14 @@ public class Segment implements Persistent {
    * @param expire expiration time
    * @return cached entry address or -1
    */
-  public long append(long keyPtr, int keySize, long itemPtr, int itemSize) {
+  public long append(long keyPtr, int keySize, long itemPtr, int itemSize, long expire) {
     if (isSealed()) {
       //TODO: check return value
       return -1;
     }
     try {
       writeLock();
+      processExpire(expire);
       int requiredSize = requiredSize(keySize, itemSize);
       if (requiredSize + dataSize() > size()) {
         seal();

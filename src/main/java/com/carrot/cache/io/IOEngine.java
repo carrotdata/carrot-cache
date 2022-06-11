@@ -948,6 +948,7 @@ public abstract class IOEngine implements Persistent {
    * @param value value buffer
    * @param valueOff value offset
    * @param valueLength value length
+   * @param expire absolute expiration time in ms, 0 - no expire
    * @param rank rank of a cache item
    * @throws IOException
    */
@@ -973,7 +974,7 @@ public abstract class IOEngine implements Persistent {
         return;
       }
       // Offset must less 32bit
-      long offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength);
+      long offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength, expire);
       if (offset < 0) {
         save(s); // removes segment from RAM buffers
         this.ramBuffers[rank] = null;
@@ -983,7 +984,7 @@ public abstract class IOEngine implements Persistent {
           //TODO: update stats
           return;
         }
-        offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength);
+        offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength, expire);
       }
       
       IndexFormat format = this.index.getIndexFormat();
@@ -1029,6 +1030,7 @@ public abstract class IOEngine implements Persistent {
    * @param valueOff value offset
    * @param valueLength value length
    * @param rank rank of a cache item
+   * @param expire absolute expiration time in ms, 0 - no expire
    * @throws IOException
    */
   public void put(long keyPtr, int keyLength, long valuePtr, int valueLength, long expire, int rank)
@@ -1043,7 +1045,7 @@ public abstract class IOEngine implements Persistent {
         //TODO: update stats
         return;
       }
-      long offset = s.append(keyPtr, keyLength, valuePtr, valueLength);
+      long offset = s.append(keyPtr, keyLength, valuePtr, valueLength, expire);
       if (offset < 0) {
         save(s); // removes segment from RAM buffers
         ramBuffers[rank] = null;
@@ -1053,7 +1055,7 @@ public abstract class IOEngine implements Persistent {
           //TODO: update stats
           return;
         }
-        offset = s.append(keyPtr, keyLength, valuePtr, valueLength);
+        offset = s.append(keyPtr, keyLength, valuePtr, valueLength, expire);
       }
       int dataSize = Utils.kvSize(keyLength, valueLength);
       

@@ -24,7 +24,6 @@ import com.carrot.cache.io.Segment;
 public class MinAliveRecyclingSelector implements RecyclingSelector {
 
   public MinAliveRecyclingSelector() {
-    
   }
   
   @Override
@@ -37,6 +36,13 @@ public class MinAliveRecyclingSelector implements RecyclingSelector {
       Segment.Info info = s.getInfo();
       //FIXME: Selector.Info API to keep initial item number and current active item number
       int active = info.getTotalItems();
+      if (s.isAllExpireSegment()) {
+        long maxExpire = info.getMaxExpireAt();
+        if (System.currentTimeMillis() > maxExpire) {
+          s.allExpired();
+          active = 0;
+        }
+      }
       if (active < minActive) {
         minActive = active;
         selectionIndex = i;
