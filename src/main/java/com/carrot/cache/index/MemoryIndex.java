@@ -928,15 +928,15 @@ public class MemoryIndex implements Persistent {
         if (indexSize > bufSize) {
           return indexSize;
         }
-        // Check if expired
+        // Check if expired - pro-active expiration check
         long expire = this.indexFormat.getExpire(ptr, $ptr);
         if (expire > 0) {
           long current = System.currentTimeMillis();
           if (current > expire) {
+            int sid0 = this.indexFormat.getSegmentId($ptr);
             deleteAt(ptr, $ptr, count);
             //TODO Update segment stats for expired item
-            //TOD:move this code into deleteAt method
-            int sid0 = this.indexFormat.getSegmentId($ptr);
+            //TODO:move this code into deleteAt method
             int numSegments = this.cacheConfig.getNumberOfRanks(this.cacheName); 
             int rank = this.evictionPolicy.getRankForIndex(numSegments, count, numEntries);
             if (this.cache != null) {

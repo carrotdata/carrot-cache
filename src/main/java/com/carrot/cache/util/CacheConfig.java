@@ -64,6 +64,9 @@ public class CacheConfig {
   
   /* File name for admission queue snapshot data */
   public final static String ADMISSION_QUEUE_SNAPSHOT_NAME = "aq.data";
+
+  /* File name for scavenger statistics snapshot data */
+  public final static String SCAVENGER_STATS_SNAPSHOT_NAME = "scav.data";
   
   /* File name for cache engine snapshot data */
   public final static String CACHE_ENGINE_SNAPSHOT_NAME = "engine.data";

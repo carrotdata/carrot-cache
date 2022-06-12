@@ -1286,6 +1286,36 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
   }
   
   /**
+   * Loads scavenger statistics data
+   * @throws IOException
+   */
+  private void loadScavengerStats() throws IOException {
+    String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
+    String file = CacheConfig.SCAVENGER_STATS_SNAPSHOT_NAME;
+    Path p = Paths.get(snapshotDir, file);
+    if (Files.exists(p) && Files.size(p) > 0) {
+      FileInputStream fis = new FileInputStream(p.toFile());
+      DataInputStream dis = new DataInputStream(fis);
+      Scavenger.stats.load(dis);
+      dis.close();
+    }
+  }
+  
+  /**
+   * Saves scavenger statistics data
+   * @throws IOException
+   */
+  private void saveScavengerStats() throws IOException {
+    String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
+    String file = CacheConfig.SCAVENGER_STATS_SNAPSHOT_NAME;
+    Path p = Paths.get(snapshotDir, file);
+    FileOutputStream fos = new FileOutputStream(p.toFile());
+    DataOutputStream dos = new DataOutputStream(fos);
+    Scavenger.stats.save(dos);
+    dos.close();
+  }
+  
+  /**
    * Loads engine data
    * @throws IOException
    */
@@ -1328,6 +1358,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
     saveThroughputController();
     saveRecyclingSelector();
     saveEngine();
+    saveScavengerStats();
     long endTime = System.currentTimeMillis();
     LOG.info("Cache saved in {}ms", endTime - startTime);
   }
@@ -1344,6 +1375,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
     loadThroughputControlller();
     loadRecyclingSelector();
     loadEngine();
+    loadScavengerStats();
     long endTime = System.currentTimeMillis();
     LOG.info("Cache loaded in {}ms", endTime - startTime);
   }

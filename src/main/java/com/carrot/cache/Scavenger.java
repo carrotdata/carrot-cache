@@ -198,7 +198,7 @@ public class Scavenger extends Thread {
     }
   }
 
-  private static Stats stats = new Stats();
+  static Stats stats = new Stats();
 
   /**
    * Get scavenger statistics
