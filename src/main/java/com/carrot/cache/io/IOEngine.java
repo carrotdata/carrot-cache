@@ -159,7 +159,7 @@ public abstract class IOEngine implements Persistent {
     this.segmentSize = this.config.getCacheSegmentSize(this.cacheName);
     this.maxStorageSize = this.config.getCacheMaximumSize(this.cacheName);
     this.numSegments = (int) (this.maxStorageSize / this.segmentSize + 1);
-    int num = this.config.getNumberOfRanks(this.cacheName);
+    int num = this.config.getNumberOfAdmissionRanks(this.cacheName);
     ramBuffers = new Segment[num];
     this.dataSegments = new Segment[this.numSegments];
     this.index = new MemoryIndex(this.parent, MemoryIndex.Type.MQ);

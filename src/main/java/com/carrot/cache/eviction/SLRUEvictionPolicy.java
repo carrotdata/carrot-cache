@@ -24,20 +24,15 @@ public class SLRUEvictionPolicy implements EvictionPolicy {
   @SuppressWarnings("unused")
   private static final Logger LOG = LogManager.getLogger(SLRUEvictionPolicy.class);
   
-  public final static int DEFAULT_NUMBER_SEGMENTS = 8;
-  
-  public final static int DEFAULT_INSERT_POINT = 5;
-  
-  private int numRanks;
-  
+  private int numSegments;
   private int insertPoint;
   
   /**
    * Default constructor
    */
   public SLRUEvictionPolicy() {
-    this.numRanks = 8;
-    this.insertPoint = 5;
+    this.numSegments = CacheConfig.DEFAULT_SLRU_NUMBER_SEGMENTS;
+    this.insertPoint = CacheConfig.DEFAULT_SLRU_CACHE_INSERT_POINT;
   }
   
   /**
@@ -46,22 +41,22 @@ public class SLRUEvictionPolicy implements EvictionPolicy {
    * @param ip insert point
    */
   public SLRUEvictionPolicy(int ns, int ip) {
-    this.numRanks = ns;
+    this.numSegments = ns;
     this.insertPoint = ip;
   }
   
   @Override
   public void setCacheName(String cacheName) {
     CacheConfig config = CacheConfig.getInstance();
-    this.numRanks = config.getNumberOfRanks(cacheName);
+    this.numSegments = config.getSLRUNumberOfSegments(cacheName);
     this.insertPoint = config.getSLRUInsertionPoint(cacheName);
   }
   
   @Override
   public int getPromotionIndex(long cacheItemPtr, int cacheItemIndex, int totalItems) {
-    int num = getRankForIndex(numRanks, cacheItemIndex, totalItems);
+    int num = getRankForIndex(numSegments, cacheItemIndex, totalItems);
     if (num == 0) return 0;
-    return getStartIndexForRank(numRanks, num - 1, totalItems);
+    return getStartIndexForRank(numSegments, num - 1, totalItems);
   }
   
   
@@ -73,6 +68,6 @@ public class SLRUEvictionPolicy implements EvictionPolicy {
   @Override
   public int getInsertIndex(long idbPtr, int totalItems) {
     // insert point is 0- based, 
-    return getStartIndexForRank(numRanks, insertPoint - 1, totalItems);
+    return getStartIndexForRank(numSegments, insertPoint - 1, totalItems);
   }
 }

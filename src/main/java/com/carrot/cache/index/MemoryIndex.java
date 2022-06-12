@@ -896,12 +896,12 @@ public class MemoryIndex implements Persistent {
     incrNumEntries(ptr, -1);
     // Update stats
     //TODO: separate method
-    int numSegments = this.cacheConfig.getNumberOfRanks(this.cacheName);  
-    int rank = this.evictionPolicy.getRankForIndex(numSegments, count, numEntries);
+    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);  
+    int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
     int sid1 = getSegmentIdForEntry(ptr, count);
     // Update stats
     if (this.cache != null) {
-      cache.getEngine().updateStats(sid1, -1, -(numSegments - rank));
+      cache.getEngine().updateStats(sid1, -1, -(numRanks - rank));
     }
   }
   /**
@@ -937,8 +937,8 @@ public class MemoryIndex implements Persistent {
             deleteAt(ptr, $ptr, count);
             //TODO Update segment stats for expired item
             //TODO:move this code into deleteAt method
-            int numSegments = this.cacheConfig.getNumberOfRanks(this.cacheName); 
-            int rank = this.evictionPolicy.getRankForIndex(numSegments, count, numEntries);
+            int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName); 
+            int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
             if (this.cache != null) {
               cache.getEngine().updateStats(sid0, -1, -rank);
             }
@@ -954,9 +954,9 @@ public class MemoryIndex implements Persistent {
           if (this.cache != null) {
             this.cache.getEngine().updateStats(sid0, 0, 1);
           }
-          int numSegments = this.cacheConfig.getNumberOfRanks(this.cacheName); 
-          int rank = this.evictionPolicy.getRankForIndex(numSegments, count, numEntries);
-          int idx = this.evictionPolicy.getStartIndexForRank(numSegments, rank + 1, numEntries);
+          int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName); 
+          int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
+          int idx = this.evictionPolicy.getStartIndexForRank(numRanks, rank + 1, numEntries);
           int sid1 = getSegmentIdForEntry(ptr, idx);
           // Update stats
           if (this.cache != null) {
@@ -1586,12 +1586,12 @@ public class MemoryIndex implements Persistent {
     incrNumEntries(ptr, -1);
     // decrease total number of index entries
     //TODO: this works only if we promote item by +1 rank
-    int numSegments = this.cacheConfig.getNumberOfRanks(this.cacheName);
-    int rank = this.evictionPolicy.getRankForIndex(numSegments, num, numEntries);
+    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
+    int rank = this.evictionPolicy.getRankForIndex(numRanks, num, numEntries);
     int sid1 = getSegmentIdForEntry(ptr, num);
     // Update stats
     if (this.cache != null) {
-      cache.getEngine().updateStats(sid1, -1, -(numSegments - rank));
+      cache.getEngine().updateStats(sid1, -1, -(numRanks - rank));
     }
   }
 
@@ -1641,7 +1641,7 @@ public class MemoryIndex implements Persistent {
     // Check if it exists already - update
     delete(ptr, hash);
     int numEntries = numEntries(ptr);
-    int numRanks = this.cacheConfig.getNumberOfRanks(this.cacheName);
+    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
     int insertIndex = indexType == Type.MQ? evictionPolicy.getStartIndexForRank(numRanks, rank, numEntries):
       evictionPolicy.getInsertIndex(ptr, numEntries);
     // TODO: entry size can be variable
@@ -1678,13 +1678,13 @@ public class MemoryIndex implements Persistent {
     if (this.cache == null) {
       return;
     }
-    int numSegments = this.cacheConfig.getNumberOfRanks(this.cacheName);
+    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
     // Update stats
-    this.cache.getEngine().updateStats(sid1, 1, (numSegments - rank));
-    if (numEntries >= numSegments) {
+    this.cache.getEngine().updateStats(sid1, 1, (numRanks - rank));
+    if (numEntries >= numRanks) {
       int prev = -1;
-      for (int r = rank + 1; r < numSegments; r++) {
-        int idx = this.evictionPolicy.getStartIndexForRank(numSegments, r, numEntries);
+      for (int r = rank + 1; r < numRanks; r++) {
+        int idx = this.evictionPolicy.getStartIndexForRank(numRanks, r, numEntries);
         if (idx == prev) continue;
         prev = idx;
         int sid = getSegmentIdForEntry(ptr, idx);

@@ -109,12 +109,18 @@ public class CacheConfig {
   /* Discard cached entry if it in this lower percentile - stop value (maximum) */
   public static final String SCAVENGER_DUMP_ENTRY_BELOW_STOP_KEY = "scavenger.dump.entry.below.stop";
   
-  /* Number of ranks ( 0-7) */
-  public static final String SLRU_NUMBER_RANKS_KEY = "slru.cache.number.ranks";
+  /* Number of admission ranks ( default - 8) */
+  public static final String CACHE_ADMISSION_NUMBER_RANKS_KEY = "cache.admission.number.ranks";
+  
+  /* Number of popularity ranks ( default - 8) */
+  public static final String CACHE_POPULARITY_NUMBER_RANKS_KEY = "cache.popularity.number.ranks";
   
   /* New item insertion point for SLRU (segment number 1- based)*/
-  public static final String SLRU_CACHE_INSERT_POINT_KEY = "slru.cache.insert.point";
+  public static final String SLRU_CACHE_INSERT_POINT_KEY = "eviction.slru.insert.point";
 
+  /* Number of segments in SLRU eviction policy */
+  public static final String SLRU_NUMBER_SEGMENTS_KEY = "eviction.slru.number.segments";
+  
   /* Admission Queue start size in fraction of a full cache size */
   public static final String ADMISSION_QUEUE_START_SIZE_KEY = "admission.queue.start.size";
   
@@ -226,11 +232,17 @@ public class CacheConfig {
    */
   public static final double DEFAULT_WRITES_LIMIT_RATIO = 0.9;
 
-  /** Number of segments in segmented-LRU cache */
-  public static final int DEFAULT_CACHE_NUMBER_RANKS = 8;
+  /** Default number of admission ranks for data segments in the cache */
+  public static final int DEFAULT_CACHE_ADMISSION_NUMBER_RANKS = 8;
 
+  /** Default number of popularity ranks for data items in the cache */
+  public static final int DEFAULT_CACHE_POPULARITY_NUMBER_RANKS = 8;
+  
   /** Number of segments in segmented-LRU cache */
-  public static final int DEFAULT_SLRU_CACHE_INSERT_POINT = 5;
+  public static final int DEFAULT_SLRU_NUMBER_SEGMENTS = 8;
+  
+  /** Default insertion point for SLRU - head of nth segments - 4*/
+  public static final int DEFAULT_SLRU_CACHE_INSERT_POINT = 4;
   
   /** Default segment size */
   public static final long DEFAULT_CACHE_DISK_SEGMENT_SIZE = 256 * 1024 * 1024; // 64MB
@@ -470,16 +482,29 @@ public class CacheConfig {
   }
 
   /**
-   * Get number of segments (Segmented LRU) for a cache
+   * Get number of admission ranks for a cache
    * @param cacheName cache name
-   * @return SLRU number of segments
+   * @return number of admission ranks
    */
-  public int getNumberOfRanks(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ SLRU_NUMBER_RANKS_KEY);
+  public int getNumberOfAdmissionRanks(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ CACHE_ADMISSION_NUMBER_RANKS_KEY);
     if (value != null) {
       return (int) Long.parseLong(value);
     }
-    return (int) getLongProperty(SLRU_NUMBER_RANKS_KEY, DEFAULT_CACHE_NUMBER_RANKS);
+    return (int) getLongProperty(CACHE_ADMISSION_NUMBER_RANKS_KEY, DEFAULT_CACHE_ADMISSION_NUMBER_RANKS);
+  }
+  
+  /**
+   * Get number of item popularity ranks for a cache
+   * @param cacheName cache name
+   * @return number of popularity ranks
+   */
+  public int getNumberOfPopularityRanks(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ CACHE_POPULARITY_NUMBER_RANKS_KEY);
+    if (value != null) {
+      return (int) Long.parseLong(value);
+    }
+    return (int) getLongProperty(CACHE_POPULARITY_NUMBER_RANKS_KEY, DEFAULT_CACHE_POPULARITY_NUMBER_RANKS);
   }
   
   /**
@@ -495,6 +520,19 @@ public class CacheConfig {
     return (int) getLongProperty(SLRU_CACHE_INSERT_POINT_KEY, DEFAULT_SLRU_CACHE_INSERT_POINT);
   }
   
+  
+  /**
+   * Get SLRU  number of segments 
+   * @param cacheName cache name
+   * @return SLRU number of segments
+   */
+  public int getSLRUNumberOfSegments(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ SLRU_NUMBER_SEGMENTS_KEY);
+    if (value != null) {
+      return (int) Long.parseLong(value);
+    }
+    return (int) getLongProperty(SLRU_NUMBER_SEGMENTS_KEY, DEFAULT_SLRU_NUMBER_SEGMENTS);
+  }
   
   /**
    * Get sparse files support for a cache (only for 'file' type caches)
