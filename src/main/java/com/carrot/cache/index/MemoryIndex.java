@@ -50,7 +50,6 @@ public class MemoryIndex implements Persistent {
   private static final Logger LOG = LogManager.getLogger(MemoryIndex.class);
   
   public static enum MutationResult{
-    //REHASH_REQUESTED,
     INSERTED, /* Operation succeeded */ 
     DELETED,  /* Operation succeeded (for AQ and MQ), but existing one was deleted in case of AQ*/
     FAILED    /* Failed due to memory index full rehashing  */
@@ -741,7 +740,9 @@ public class MemoryIndex implements Persistent {
    */
   public void readUnlock(int slot) {
     ReentrantReadWriteLock lock = locks[slot % locks.length];
-    lock.readLock().unlock();
+    if (lock.getReadHoldCount() > 0) {
+      lock.readLock().unlock();
+    }
   }
   
   /**

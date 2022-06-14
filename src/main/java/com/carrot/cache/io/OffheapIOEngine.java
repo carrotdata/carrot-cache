@@ -206,52 +206,55 @@ public class OffheapIOEngine extends IOEngine {
   /** Logger */
   @SuppressWarnings("unused")
   private static final Logger LOG = LogManager.getLogger(OffheapIOEngine.class);
-  
+    
   public OffheapIOEngine(Cache parent) {
     super(parent);
   }
 
-
   @Override
-  protected boolean getInternal(int id, long offset, int size, byte[] buffer, int bufOffset)  {
-    //FIXME: segment read lock
-    Segment s = this.dataSegments[id];
-    if (s == null) {
-      // TODO: error
-      return false; 
+  protected int getInternal(int sid, long offset, int size, byte[] key, 
+      int keyOffset, int keySize, byte[] buffer, int bufOffset)  {
+    try {
+      return this.memoryDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset);
+    } catch (IOException e) {
+      // never happens
     }
-    long ptr = s.getAddress(); 
- 
-    if ( s.dataSize() < offset + size) {
-      throw new IllegalArgumentException();
-    }
-    //TODO: offset ? HEADER_SIZE?
-    //must be > 0
-    UnsafeAccess.copy(ptr + offset /*+ Segment.HEADER_SIZE*/, buffer, bufOffset, size);
-    return true;
+    return NOT_FOUND;
   }
 
-
   @Override
-  protected boolean getInternal(int id, long offset, int size, ByteBuffer buffer) throws IOException {
-    //FIXME: segment read lock
-    Segment s = this.dataSegments[id];
-    if (s == null) {
-      // TODO: error
-      return false; 
+  protected int getInternal(int sid, long offset, int size, byte[] key, 
+      int keyOffset, int keySize, ByteBuffer buffer) throws IOException {
+    try {
+      return this.memoryDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
+    } catch (IOException e) {
+      // never happens
     }
-    long ptr = s.getAddress(); 
- 
-    if ( s.dataSize() < offset + size) {
-      throw new IllegalArgumentException();
-    }
-    //TODO: offset ? HEADER_SIZE?
-    //must be > 0
-    UnsafeAccess.copy(ptr + offset /*+ Segment.HEADER_SIZE*/, buffer,  size);
-    return true;
+    return NOT_FOUND;
   }
 
+  @Override
+  protected int getInternal(int sid, long offset, int size, long keyPtr, 
+      int keySize, byte[] buffer, int bufOffset)  {
+    try {
+      return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
+    } catch (IOException e) {
+      // never happens
+    }
+    return NOT_FOUND;
+ }
 
+  @Override
+  protected int getInternal(int sid, long offset, int size, long keyPtr, 
+      int keySize, ByteBuffer buffer) throws IOException {
+    try {
+      return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer);
+    } catch (IOException e) {
+      // never happens
+    }
+    return NOT_FOUND;
+  }
+  
   @Override
   public SegmentScanner getScanner(Segment s) throws IOException {
     return new Scanner(s);

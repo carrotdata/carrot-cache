@@ -56,7 +56,7 @@ public class FileIOEngine extends IOEngine {
     long bufAddress = UnsafeAccess.address(buf);
     
     Scanner(Segment s, FileIOEngine engine) throws IOException{
-      this.file = engine.getFileFor(s.getId());
+      this.file = engine.getOrCreateFileFor(s.getId());
       this.offset = 0;
       this.numEntries = s.getInfo().getTotalItems();
     }
@@ -210,7 +210,7 @@ public class FileIOEngine extends IOEngine {
    */
   Map<Integer, RandomAccessFile> dataFiles = new HashMap<Integer, RandomAccessFile>();
   
-  
+  protected DataReader fileDataReader;
   /**
    * Constructor
    * @param numSegments
@@ -218,6 +218,13 @@ public class FileIOEngine extends IOEngine {
    */
   public FileIOEngine(Cache parent) {
     super(parent);
+    try {
+      this.fileDataReader = this.config.getFileDataReader(this.cacheName);
+      this.fileDataReader.init(this.cacheName);
+    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+      LOG.fatal(e);
+      throw new RuntimeException(e);
+    }
   }
  
   /**
@@ -246,22 +253,53 @@ public class FileIOEngine extends IOEngine {
   }
   
   @Override
-  protected boolean getInternal(int id, long offset, int size, byte[] buffer, int bufOffset) throws IOException {
-    RandomAccessFile file = dataFiles.get(id);
-    if (file == null) {
-      return false;
+  protected int getInternal(int sid, long offset, int size, byte[] key, 
+      int keyOffset, int keySize, byte[] buffer, int bufOffset)  {
+    try {
+      return this.fileDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset);
+    } catch (IOException e) {
+      LOG.error(e);
+      // THIS IS FOR TESTING
+      return NOT_FOUND;
     }
-    
-    if (file.length() < offset + size) {
-      throw new IllegalArgumentException();
-    }
-    //TODO: can file be NULL?
-    synchronized (file) {
-      file.seek(offset);
-      file.readFully(buffer, bufOffset, size);
-    }
-    return true;
   }
+
+  @Override
+  protected int getInternal(int sid, long offset, int size, byte[] key, 
+      int keyOffset, int keySize, ByteBuffer buffer) throws IOException {
+    try {
+      return this.fileDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
+    } catch (IOException e) {
+      LOG.error(e);
+      // THIS IS FOR TESTING
+      return NOT_FOUND;
+    }
+  }
+
+  @Override
+  protected int getInternal(int sid, long offset, int size, long keyPtr, 
+      int keySize, byte[] buffer, int bufOffset)  {
+    try {
+      return this.fileDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
+    } catch (IOException e) {
+      LOG.error(e);
+      // THIS IS FOR TESTING
+      return NOT_FOUND;
+    }
+ }
+
+  @Override
+  protected int getInternal(int sid, long offset, int size, long keyPtr, 
+      int keySize, ByteBuffer buffer) throws IOException {
+    try {
+      return this.fileDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer);
+    } catch (IOException e) {
+      LOG.error(e);
+      // THIS IS FOR TESTING
+      return NOT_FOUND;
+    }
+  }
+  
   
   OutputStream getOSFor(int id) throws FileNotFoundException {
     Path p = getPathForDataSegment(id);
@@ -269,7 +307,7 @@ public class FileIOEngine extends IOEngine {
     return fos;
   }
   
-  RandomAccessFile getFileFor(int id) throws FileNotFoundException {
+  RandomAccessFile getOrCreateFileFor(int id) throws FileNotFoundException {
     RandomAccessFile file = dataFiles.get(id);
     if (file == null) {
       // open
@@ -277,6 +315,17 @@ public class FileIOEngine extends IOEngine {
       file = new RandomAccessFile(p.toFile(), "rw");
       dataFiles.put(id, file);
     }
+    return file;
+  }
+  
+  /**
+   * Get file for by segment id
+   * @param id segment id
+   * @return file
+   * @throws FileNotFoundException
+   */
+  public RandomAccessFile getFileFor(int id) {
+    RandomAccessFile file = dataFiles.get(id);
     return file;
   }
   
@@ -302,28 +351,6 @@ public class FileIOEngine extends IOEngine {
    */
   private Path getPathForDataSegment(int id) {
     return Paths.get(dataDir, getSegmentFileName(id));
-  }
-
-
-  @Override
-  protected boolean getInternal(int id, long offset, int size, ByteBuffer buffer) throws IOException {
-    RandomAccessFile file = dataFiles.get(id);
-    if (file == null) {
-      return false;
-    }
-    
-    if (file.length() < offset + size) {
-      throw new IllegalArgumentException();
-    }
-    synchronized (file) {
-      FileChannel fc = file.getChannel();
-      fc.position(offset);
-      int read = 0;
-      while(read < size) {
-        read += fc.read(buffer);
-      }
-    }
-    return true;
   }
 
   @Override

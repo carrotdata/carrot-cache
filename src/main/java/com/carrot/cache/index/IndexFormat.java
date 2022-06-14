@@ -97,7 +97,7 @@ public interface IndexFormat extends Persistent {
   /**
    * Returns key-value size 
    * @param buffer buffer contains entry data 
-   * @return size
+   * @return size or -1 if format does not store this value
    */
   public int getKeyValueSize(long buffer);
   

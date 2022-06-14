@@ -98,7 +98,7 @@ public class Segment implements Persistent {
     /* Segment data size */
     private AtomicLong dataSize = new AtomicLong(0);
     
-    /* Is this segment off-heap*/
+    /* Is this segment off-heap. Every segment starts as offheap, but FileIOEngine it will be converted to a file*/
     private volatile boolean offheap;
     
     /* Tracks maximum item expiration time - absolute in ms since 01-01-1970 Jan 1st 12am*/
@@ -429,6 +429,9 @@ public class Segment implements Persistent {
   /* Segment info */
   volatile private Info info;
   
+  /* Data appender */
+  DataAppender dataAppender;
+  
   /**
    * 
    * Default constructor
@@ -456,6 +459,14 @@ public class Segment implements Persistent {
     this.address = address;
     this.size = size;
     this.info = new Info(id, rank, creationTime);
+  }
+  
+  /**
+   * Sets data appender implementation
+   * @param da data appender
+   */
+  public void setDataAppender(DataAppender da) {
+    this.dataAppender = da;
   }
   
   /**
@@ -491,24 +502,6 @@ public class Segment implements Persistent {
   public static Segment newSegment(int size, int id, int rank, long creationTime) {
     long ptr = UnsafeAccess.malloc(size);
     return new Segment(ptr, size, id, rank, creationTime);
-  }
-  
-  /**
-   * Create new segment
-   * @param size segment size
-   * @return new segment instance
-   */
-  public static Segment newSegment(int size) {
-    long ptr = UnsafeAccess.malloc(size);
-    return new Segment(ptr, size);
-  }
-  
-  /**
-   * Create new empty segment
-   * @return new segment
-   */
-  public static Segment newSegment() {
-    return new Segment();
   }
   
   /**
@@ -706,34 +699,16 @@ public class Segment implements Persistent {
     try {
       writeLock();
       processExpire(expire);
-      int requiredSize = requiredSize(keySize, itemSize);
-      if (requiredSize + dataSize() > size()) {
+      
+      long offset = dataSize();
+      int requiredSize = (int) this.dataAppender.append(this, key, keyOffset, keySize, item, itemOffset, itemSize);
+      if (requiredSize < 0) {
         seal();
         return -1;
       }
-      long off = dataSize();
-      long addr = this.address + dataSize() /*+ HEADER_SIZE*/;
-      // Key size
-      Utils.writeUVInt(addr, keySize);
-      int kSizeSize = Utils.sizeUVInt(keySize);
-      incrDataSize(kSizeSize);
-      addr += kSizeSize;
-      // Value size
-      Utils.writeUVInt(addr, itemSize);
-      int vSizeSize = Utils.sizeUVInt(itemSize);
-      incrDataSize(vSizeSize);
-      addr += vSizeSize;
-      // Copy key
-      UnsafeAccess.copy(key, keyOffset, addr, keySize);
-      incrDataSize(keySize);
-      addr += keySize;
-      // Copy value (item)
-      UnsafeAccess.copy(item, itemOffset, addr, itemSize);
-      incrDataSize(itemSize);
-      addr += itemSize;
-      // Increment number of entries
+      incrDataSize(requiredSize);
       incrNumEntries(1);
-      return off /* offset in a segment*/;
+      return offset /* offset in a segment*/;
     } finally {
       writeUnlock();
     }
@@ -780,7 +755,7 @@ public class Segment implements Persistent {
    * @param itemPtr item address
    * @param itemSize item size
    * @param expire expiration time
-   * @return cached entry address or -1
+   * @return cached entry offset in a segment or -1
    */
   public long append(long keyPtr, int keySize, long itemPtr, int itemSize, long expire) {
     if (isSealed()) {
@@ -790,34 +765,15 @@ public class Segment implements Persistent {
     try {
       writeLock();
       processExpire(expire);
-      int requiredSize = requiredSize(keySize, itemSize);
-      if (requiredSize + dataSize() > size()) {
+      long offset = dataSize();
+      int requiredSize = (int) this.dataAppender.append(this, keyPtr, keySize, itemPtr, itemSize);
+      if (requiredSize < 0) {
         seal();
         return -1;
       }
-      long off = dataSize();
-      long addr = this.address + dataSize() /*+ HEADER_SIZE*/;
-      // Key size
-      Utils.writeUVInt(addr, keySize);
-      int kSizeSize = Utils.sizeUVInt(keySize);
-      incrDataSize(kSizeSize);
-      addr += kSizeSize;
-      // Value size
-      Utils.writeUVInt(addr, itemSize);
-      int vSizeSize = Utils.sizeUVInt(itemSize);
-      incrDataSize(vSizeSize);
-      addr += vSizeSize;
-      // Copy key
-      UnsafeAccess.copy(keyPtr, addr, keySize);
-      incrDataSize(keySize);
-      addr += keySize;
-      // Copy value (item)
-      UnsafeAccess.copy(itemPtr, addr, itemSize);
-      incrDataSize(itemSize);
-      addr += itemSize;
-      // Increment number of entries
+      incrDataSize(requiredSize);
       incrNumEntries(1);
-      return off;
+      return offset;
     } finally {
       writeUnlock();
     }
@@ -841,16 +797,6 @@ public class Segment implements Persistent {
     return this.info.getAverageRank();
   }
   
-  /**
-   * Calculate required size for a cached item
-   * @param keyLength key length
-   * @param valueLength value length
-   * @return required size
-   */
-  private int requiredSize(int keyLength, int valueLength) {
-    return Utils.SIZEOF_LONG + Utils.sizeUVInt(keyLength) + 
-        Utils.sizeUVInt(valueLength) + keyLength + valueLength;
-  }
 
   @Override
   public void save(OutputStream os) throws IOException {

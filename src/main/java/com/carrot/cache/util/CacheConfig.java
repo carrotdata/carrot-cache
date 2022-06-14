@@ -28,6 +28,8 @@ import com.carrot.cache.eviction.SLRUEvictionPolicy;
 import com.carrot.cache.index.AQIndexFormat;
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MQIndexFormat;
+import com.carrot.cache.io.DataAppender;
+import com.carrot.cache.io.DataReader;
 
 public class CacheConfig {
 
@@ -201,6 +203,15 @@ public class CacheConfig {
   /* Class name for cache admission controller implementation */
   public static final String CACHE_RECYCLING_SELECTOR_IMPL_KEY = "cache.recycling.selector.impl";
   
+  /* Class name for cache data appender implementation */
+  public static final String CACHE_DATA_APPENDER_IMPL_KEY = "cache.data.appender.impl";
+  
+  /* Class name for cache data reader implementation (RAM)*/
+  public static final String CACHE_MEMORY_DATA_READER_IMPL_KEY = "cache.memory.data.reader.impl";
+  
+  /* Class name for cache data reader implementation (File)*/
+  public static final String CACHE_FILE_DATA_READER_IMPL_KEY = "cache.file.data.reader.impl";
+  
   /* Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 256 * 1024 * 1024;
@@ -292,9 +303,20 @@ public class CacheConfig {
   /* Default index data embedding maximum size */
   public final static int DEFAULT_INDEX_DATA_EMBEDDED_SIZE = 100;
   
+  /** Default implementation class for recycling selector */
   public final static String DEFAULT_CACHE_RECYCLING_SELECTOR_IMPL = 
       "com.carrot.cache.controllers.LowestRankRecyclingSelector";
-
+  /** Default */
+  public final static String DEFAULT_CACHE_DATA_APPENDER_IMPL = 
+      "com.carrot.cache.io.BaseDataAppender";
+  
+  /** Default reader for RAM segments */
+  public final static String DEFAULT_CACHE_MEMORY_DATA_READER_IMPL = 
+      "com.carrot.cache.io.BaseMemoryDataReader";
+  
+  /** Default reader for file segments */
+  public final static String DEFAULT_CACHE_FILE_DATA_READER_IMPL = 
+      "com.carrot.cache.io.BaseFileDataReader";
   
   // Statics
   static CacheConfig instance;
@@ -887,6 +909,63 @@ public class CacheConfig {
     @SuppressWarnings("unchecked")
     Class<RecyclingSelector> clz = (Class<RecyclingSelector>) Class.forName(value);
     RecyclingSelector instance = clz.newInstance();
+    return instance;
+  }
+  
+  /**
+   * Get segment data appender implementation by cache name
+   *
+   * @throws ClassNotFoundException
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   */
+  public DataAppender getDataAppender(String cacheName)
+      throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+    String value = props.getProperty(cacheName + "." + CACHE_DATA_APPENDER_IMPL_KEY);
+    if (value == null) {
+      value = props.getProperty(CACHE_DATA_APPENDER_IMPL_KEY, DEFAULT_CACHE_DATA_APPENDER_IMPL);
+    }
+    @SuppressWarnings("unchecked")
+    Class<DataAppender> clz = (Class<DataAppender>) Class.forName(value);
+    DataAppender instance = clz.newInstance();
+    return instance;
+  }
+  
+  /**
+   * Get segment data reader implementation (Memory) by cache name
+   *
+   * @throws ClassNotFoundException
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   */
+  public DataReader getMemoryDataReader(String cacheName)
+      throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+    String value = props.getProperty(cacheName + "." + CACHE_MEMORY_DATA_READER_IMPL_KEY);
+    if (value == null) {
+      value = props.getProperty(CACHE_MEMORY_DATA_READER_IMPL_KEY, DEFAULT_CACHE_MEMORY_DATA_READER_IMPL);
+    }
+    @SuppressWarnings("unchecked")
+    Class<DataReader> clz = (Class<DataReader>) Class.forName(value);
+    DataReader instance = clz.newInstance();
+    return instance;
+  }
+  
+  /**
+   * Get segment data reader implementation (Memory) by cache name
+   *
+   * @throws ClassNotFoundException
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   */
+  public DataReader getFileDataReader(String cacheName)
+      throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+    String value = props.getProperty(cacheName + "." + CACHE_FILE_DATA_READER_IMPL_KEY);
+    if (value == null) {
+      value = props.getProperty(CACHE_FILE_DATA_READER_IMPL_KEY, DEFAULT_CACHE_FILE_DATA_READER_IMPL);
+    }
+    @SuppressWarnings("unchecked")
+    Class<DataReader> clz = (Class<DataReader>) Class.forName(value);
+    DataReader instance = clz.newInstance();
     return instance;
   }
 }

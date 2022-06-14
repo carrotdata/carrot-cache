@@ -91,7 +91,6 @@ public abstract class IOEngine implements Persistent {
 
   /*
    * RAM buffers accumulates incoming PUT's before submitting them to an IOEngine
-   * There are 'slru.cache.segments' of segments in RAM buffers
    */
 
   protected Segment[] ramBuffers;
@@ -107,6 +106,12 @@ public abstract class IOEngine implements Persistent {
 
   /* Cached data directory name */
   protected String dataDir;
+  
+  /* Segment data appender */
+  protected DataAppender dataAppender;
+  
+  /* IOEngine data reader - reads only memory based segments */
+  protected DataReader memoryDataReader;
   
   /**
    * Initialize engine for a given cache
@@ -164,7 +169,15 @@ public abstract class IOEngine implements Persistent {
     this.dataSegments = new Segment[this.numSegments];
     this.index = new MemoryIndex(this.parent, MemoryIndex.Type.MQ);
     this.dataDir = this.config.getDataDir(this.cacheName);
-
+    try {
+      this.dataAppender = this.config.getDataAppender(this.cacheName);
+      this.dataAppender.init(this.cacheName);
+      this.memoryDataReader = this.config.getMemoryDataReader(this.cacheName);
+      this.memoryDataReader.init(this.cacheName);
+    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+      LOG.fatal(e);
+      throw new RuntimeException(e);
+    }
     initLocks();
   }
 
@@ -330,29 +343,8 @@ public abstract class IOEngine implements Persistent {
         long offset = format.getOffset(buf);
         // Segment id
         int sid = (int) format.getSegmentId(buf);
-        boolean res = get(sid, offset, keyValueSize, buffer, bufOffset);
-        if (!res) {
-          return NOT_FOUND;
-        }
-        // Now buffer contains both: key and value, we need to compare keys
-        // Format of a key-value pair in a buffer: key-size, value-size, key, value
-        int kSize = Utils.readUVInt(buffer, bufOffset);
-        if (kSize != keySize) {
-          return NOT_FOUND;
-        }
-        int kSizeSize = Utils.sizeUVInt(kSize);
-        bufOffset += kSizeSize;
-        int vSize = Utils.readUVInt(buffer, bufOffset);
-        int vSizeSize = Utils.sizeUVInt(vSize);
-        bufOffset += vSizeSize;
-
-        // Now compare keys
-        if (Utils.compareTo(buffer, bufOffset, keySize, keyPtr, keySize) == 0) {
-          // If key is the same
-          return keyValueSize;
-        } else {
-          return NOT_FOUND;
-        }
+        int res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer, bufOffset);
+        return res;
       }
     } finally {
       UnsafeAccess.free(buf);
@@ -380,6 +372,7 @@ public abstract class IOEngine implements Persistent {
     int bSize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(bSize);
     boolean dataEmbedded = this.config.isIndexDataEmbeddedSupported();
+    int bufferAvail =  buffer.length - bufOffset; 
     int slot = 0;
     try {
       // Lock index for the key (slot)
@@ -399,12 +392,13 @@ public abstract class IOEngine implements Persistent {
       // First 4 bytes is a cached item size
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
-      // TODO: actually, not correct
-      if (keyValueSize > buffer.length - bufOffset) {
+      // can be negative
+      if (keyValueSize > bufferAvail) {
         return keyValueSize;
       }
       dataEmbedded = dataEmbedded && (keyValueSize < this.config.getIndexDataEmbeddedSize());
       if (dataEmbedded) {
+        // For index formats which supports embedding
         // Return embedded data
         int off = format.getEmbeddedOffset();
         int kSize = Utils.readUVInt(buf + off);
@@ -428,29 +422,8 @@ public abstract class IOEngine implements Persistent {
         long offset = format.getOffset(buf);
         // Segment id
         int sid = (int) format.getSegmentId(buf);
-        boolean res = get(sid, offset, keyValueSize, buffer, bufOffset);
-        if (!res) {
-          return NOT_FOUND;
-        }
-        // Now buffer contains both: key and value, we need to compare keys
-        // Format of a key-value pair in a buffer: key-size, value-size, key, value
-        int kSize = Utils.readUVInt(buffer, bufOffset);
-        if (kSize != keySize) {
-          return NOT_FOUND;
-        }
-        int kSizeSize = Utils.sizeUVInt(kSize);
-        bufOffset += kSizeSize;
-        int vSize = Utils.readUVInt(buffer, bufOffset);
-        int vSizeSize = Utils.sizeUVInt(vSize);
-        bufOffset += vSizeSize;
-
-        // Now compare keys
-        if (Utils.compareTo(buffer, bufOffset, keySize, key, keyOffset, keySize) == 0) {
-          // If key is the same
-          return keyValueSize;
-        } else {
-          return NOT_FOUND;
-        }
+        int res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer, bufOffset);
+        return res;
       }
     } finally {
       UnsafeAccess.free(buf);
@@ -475,8 +448,20 @@ public abstract class IOEngine implements Persistent {
     int slot = 0;
     try {
       //TODO: double locking?
+      // Index locking  that segment will not be recycled
+      // 
       slot = this.index.readLock(keyPtr, keySize);
       long result = index.find(keyPtr, keySize, true, buf, bSize);
+      // result can be negative - OK
+      // positive - OK b/c we hold read lock on key and key can't be deleted from index
+      // until we release read lock, hence data segment can't be reused until this operation finishes
+      // false positive - BAD, in this case there is no guarantee that found segment won' be reused
+      // during this operation.
+      // HOW TO HANDLE FALSE POSITIVES in MemoryIndex.find?
+      // Make sure that Utils.readUInt is stable and does not break on an arbitrary sequence of bytes
+      // It looks safe to me, therefore in case of a rare situation of a false positive and 
+      // segment ID reuse during this operation we will detect this by comparing keys
+      
       if (result < 0) {
         return NOT_FOUND;
       } else if (result > bSize) {
@@ -518,32 +503,8 @@ public abstract class IOEngine implements Persistent {
         long offset = format.getOffset(buf);
         // Segment id
         int sid = (int) format.getSegmentId(buf);
-        int off = buffer.position();
-        boolean res = get(sid, offset, keyValueSize, buffer);
-        if (!res) {
-          return NOT_FOUND;
-        }
-        buffer.position(off);
-        // Now buffer contains both: key and value, we need to compare keys
-        // Format of a key-value pair in a buffer: key-size, value-size, key, value
-        int kSize = Utils.readUVInt(buffer);
-        if (kSize != keySize) {
-          return NOT_FOUND;
-        }
-        int kSizeSize = Utils.sizeUVInt(kSize);
-        buffer.position(off + kSizeSize);
-
-        int vSize = Utils.readUVInt(buffer);
-        int vSizeSize = Utils.sizeUVInt(vSize);
-        buffer.position(off + kSizeSize + vSizeSize);
-        // Now compare keys
-        if (Utils.compareTo(buffer, keySize, keyPtr, keySize) == 0) {
-          // If key is the same
-          buffer.position(off + keyValueSize);
-          return keyValueSize;
-        } else {
-          return NOT_FOUND;
-        }
+        int res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer);
+        return res;
       }
     } finally {
       UnsafeAccess.free(buf);
@@ -611,32 +572,8 @@ public abstract class IOEngine implements Persistent {
         long offset = format.getOffset(buf);
         // Segment id
         int sid = (int) format.getSegmentId(buf);
-        int off = buffer.position();
-        boolean res = get(sid, offset, keyValueSize, buffer);
-        if (!res) {
-          return NOT_FOUND;
-        }
-        buffer.position(off);
-        // Now buffer contains both: key and value, we need to compare keys
-        // Format of a key-value pair in a buffer: key-size, value-size, key, value
-        int kSize = Utils.readUVInt(buffer);
-        if (kSize != keySize) {
-          return NOT_FOUND;
-        }
-        int kSizeSize = Utils.sizeUVInt(kSize);
-        buffer.position(off + kSizeSize);
-
-        int vSize = Utils.readUVInt(buffer);
-        int vSizeSize = Utils.sizeUVInt(vSize);
-        buffer.position(off + kSizeSize + vSizeSize);
-        // Now compare keys
-        if (Utils.compareTo(buffer, keySize, key, keyOffset, keySize) == 0) {
-          // If key is the same
-          buffer.position(off + keyValueSize);
-          return keyValueSize;
-        } else {
-          return NOT_FOUND;
-        }
+        int res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer);
+        return res;
       }
     } finally {
       UnsafeAccess.free(buf);
@@ -650,19 +587,154 @@ public abstract class IOEngine implements Persistent {
    * @param id data segment id to read from
    * @param offset data segment offset
    * @param size size of an item in bytes
+   * @param key key buffer
+   * @param keyOffset offset in a key buffer
+   * @param keySize key size
    * @param buffer memory buffer to load data to
    * @param bufOffset offset
-   * @return true - on success, false - otherwise
+   * @return size of a K-V pair or -1 (if not found)
    */
-  public boolean get(int id, long offset, int size, byte[] buffer, int bufOffset)
+  public int get(int id, long offset, int size, byte[] key, int keyOffset, int keySize,  byte[] buffer, int bufOffset)
       throws IOException {
-    if (buffer == null || (buffer.length - bufOffset) < size) {
+    if (buffer == null || size > 0 && (buffer.length - bufOffset) < size) {
       throw new IllegalArgumentException();
     }
-    if (getFromRAMBuffers(id, offset, size, buffer, bufOffset)) {
-      return true;
+    int len = getFromRAMBuffers(id, offset, size, key, keyOffset, keySize, buffer, bufOffset);
+    if (len > 0) return len;  
+    
+    return getInternal(id, offset, size, key, keyOffset, keySize, buffer, bufOffset);
+  }
+
+  
+  /**
+   * Get cached item
+   *
+   * @param id data segment id to read from
+   * @param offset data segment offset
+   * @param size size of an item in bytes
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param buffer memory buffer to load data to
+   * @param bufOffset offset
+   * @return size of a K-V pair or -1 (if not found)
+   */
+  public int get(int id, long offset, int size, long keyPtr, int keySize,  byte[] buffer, int bufOffset)
+      throws IOException {
+    if (buffer == null || size > 0 && (buffer.length - bufOffset) < size) {
+      throw new IllegalArgumentException();
     }
-    return getInternal(id, offset, size, buffer, bufOffset);
+    int len = getFromRAMBuffers(id, offset, size, keyPtr, keySize, buffer, bufOffset);
+    if (len > 0) return len;  
+    
+    return getInternal(id, offset, size, keyPtr, keySize, buffer, bufOffset);
+  }
+  
+  /**
+   * Try to get data from RAM buffers
+   *
+   * @param id segment's id
+   * @param offset offset in a segment (0 - based)
+   * @param size size of an cached item (can be negative - unknown)
+   * @param key key buffer
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @param buffer buffer to load data to
+   * @return size of a K-V pair or -1 (if not found)
+   */
+  private int getFromRAMBuffers(int sid, long offset, int size, byte[] key, int keyOffset, 
+      int keySize, byte[] buffer, int bufOffset) {
+    Segment s = getSegmentById(sid);
+    try {
+      if (s != null) {
+        s.readLock();
+        // now check s again
+        if (!s.isOffheap()) {
+          return NOT_FOUND;
+        }
+        // OK it is in memory
+        try {
+          return this.memoryDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset);
+        } catch (IOException e) {
+          // never happens
+        }
+        return NOT_FOUND;
+      }
+    } finally {
+      if (s != null) {
+        s.readUnlock();
+      }
+    }
+    return NOT_FOUND;
+  }
+
+  /**
+   * Try to get data from RAM buffers
+   *
+   * @param id segment's id
+   * @param offset offset in a segment (0 - based)
+   * @param size size of an cached item (can be negative - unknown)
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param buffer buffer to load data to
+   * @return size of a K-V pair or -1 (if not found)
+   */
+  private int getFromRAMBuffers(int sid, long offset, int size, long keyPtr,  
+      int keySize, byte[] buffer, int bufOffset) {
+    Segment s = getSegmentById(sid);
+    try {
+      if (s != null) {
+        s.readLock();
+        // now check s again
+        if (!s.isOffheap()) return NOT_FOUND;
+        // OK it is in memory
+        try {
+          return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
+        } catch (IOException e) {
+          // never happens
+        }
+        return NOT_FOUND;
+      }
+    } finally {
+      if (s != null) {
+        s.readUnlock();
+      }
+    }
+    return NOT_FOUND;
+  }
+  /**
+   * Try to get data from RAM buffers
+   *
+   * @param id segment's id
+   * @param offset offset in a segment (0 - based)
+   * @param size size of an cached item
+   * @param key key buffer
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @param buffer buffer to load data to
+   * @return full size required or -1
+   */
+  private synchronized int getFromRAMBuffers(int sid, long offset, int size,
+      byte[] key, int keyOffset, int keySize, ByteBuffer buffer) {
+    Segment s = getSegmentById(sid);
+    try {
+      if (s != null) {
+        s.readLock();
+        // now check s again
+        if (!s.isOffheap()) return NOT_FOUND;
+        // OK it is in memory
+        try {
+          return this.memoryDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
+        } catch (IOException e) {
+          // never happens
+        }
+        return NOT_FOUND;
+      }
+    } finally {
+      if (s != null) {
+        s.readUnlock();
+      }
+    }
+    return NOT_FOUND;
   }
 
   /**
@@ -671,64 +743,44 @@ public abstract class IOEngine implements Persistent {
    * @param id segment's id
    * @param offset offset in a segment (0 - based)
    * @param size size of an cached item
+   * @param keyPtr key address
+   * @param keySize key size
    * @param buffer buffer to load data to
-   * @return true - on success, false - otherwise
+   * @return full size required or -1
    */
-  private synchronized boolean getFromRAMBuffers(int id, long offset, int size, byte[] buffer, int bufOffset) {
-    Segment s = getRAMSegment(id);
+  private synchronized int getFromRAMBuffers(int sid, long offset, int size,
+      long keyPtr, int keySize, ByteBuffer buffer) {
+    Segment s = getSegmentById(sid);
     try {
       if (s != null) {
         s.readLock();
-        if (s.dataSize() < offset + size) {
-          throw new IllegalArgumentException();
+        // now check s again
+        if (!s.isOffheap()) return NOT_FOUND;
+        // OK it is in memory
+        try {
+          return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer);
+        } catch (IOException e) {
+          // never happens
         }
-        UnsafeAccess.copy(s.getAddress() + offset, buffer, bufOffset, size);
-        return true;
+        return NOT_FOUND;
       }
     } finally {
       if (s != null) {
         s.readUnlock();
       }
     }
-    return false;
+    return NOT_FOUND;
   }
 
-  /**
-   * Try to get data from RAM buffers
-   *
-   * @param id segment's id
-   * @param offset offset in a segment (0 - based)
-   * @param size size of an cached item
-   * @param buffer buffer to load data to
-   * @return true - on success, false - otherwise
-   */
-  private synchronized boolean getFromRAMBuffers(int id, long offset, int size, ByteBuffer buffer) {
-    Segment s = getRAMSegment(id);
-    try {
-      if (s != null) {
-        s.readLock();
-        if (s.dataSize() < offset + size) {
-          throw new IllegalArgumentException();
-        }
-        UnsafeAccess.copy(s.getAddress() + offset, buffer, size);
-        return true;
-      }
-    } finally {
-      if (s != null) {
-        s.readUnlock();
-      }
-    }
-    return false;
-  }
-
-  private Segment getRAMSegment(int id) {
-    for (Segment s : ramBuffers) {
-      if (s != null && s.getId() == id) {
-        return s;
-      }
-    }
-    return null;
-  }
+  
+//  private Segment getRAMSegment(int id) {
+//    for (Segment s : ramBuffers) {
+//      if (s != null && s.getId() == id) {
+//        return s;
+//      }
+//    }
+//    return null;
+//  }
 
   /**
    * Get cached item from underlying IOEngine
@@ -736,12 +788,55 @@ public abstract class IOEngine implements Persistent {
    * @param id segment id
    * @param offset offset in a segment
    * @param size size of an item
+   * @param key key buffer
+   * @param keyOffset key offset
+   * @param keySize key Size
    * @param buffer buffer to load data to
    * @param bufOffset offset
+   * @return full size required or -1
    * @throws IOException
    */
-  protected abstract boolean getInternal(
-      int id, long offset, int size, byte[] buffer, int bufOffset) throws IOException;
+  protected abstract int getInternal(
+      int id, long offset, int size, byte[] key, int keyOffset, int keySize, 
+      byte[] buffer, int bufOffset) throws IOException;
+  
+  /**
+   * Get cached item from underlying IOEngine
+   *
+   * @param id segment id
+   * @param offset offset in a segment
+   * @param size size of an item
+   * @param keyPtr key address
+   * @param keySize key Size
+   * @param buffer buffer to load data to
+   * @param bufOffset offset
+   * @return full size required or -1
+   * @throws IOException
+   */
+  protected abstract int getInternal(
+      int id, long offset, int size, long keyPtr, int keySize, 
+      byte[] buffer, int bufOffset) throws IOException;
+  
+  /**
+   * Get cached item
+   *
+   * @param id data segment id to read from
+   * @param offset data segment offset
+   * @param size size of an item in bytes
+   * @param key key buffer
+   * @param keyOffset offset in a key buffer
+   * @param keySize key size
+   * @param buffer byte buffer to load data to
+   * @return full size required or -1 
+   */
+  public int get(int id, long offset, int size, byte[] key, 
+      int keyOffset, int keySize, ByteBuffer buffer) throws IOException {
+    if (buffer == null || buffer.remaining() < size) throw new IllegalArgumentException();
+    int len = getFromRAMBuffers(id, offset, size, key, keyOffset, keySize, buffer);
+    if (len > 0) return len;
+    return getInternal(id, offset, size, key, keyOffset, keySize, buffer);
+  }
+
   /**
    * Get cached item
    *
@@ -751,24 +846,45 @@ public abstract class IOEngine implements Persistent {
    * @param buffer byte buffer to load data to
    * @return true - on success, false - otherwise
    */
-  public boolean get(int id, long offset, int size, ByteBuffer buffer) throws IOException {
+  public int get(int id, long offset, int size, long keyPtr, 
+      int keySize, ByteBuffer buffer) throws IOException {
     if (buffer == null || buffer.remaining() < size) throw new IllegalArgumentException();
-    if (getFromRAMBuffers(id, offset, size, buffer)) {
-      return true;
-    }
-    return getInternal(id, offset, size, buffer);
-  }
+    int len = getFromRAMBuffers(id, offset, size, keyPtr, keySize, buffer);
 
+    if (len > 0) return len;
+    return getInternal(id, offset, size, keyPtr, keySize, buffer);
+  }
   /**
    * Get cached item from underlying IOEngine
    *
    * @param id segment id
    * @param offset offset in a segment
    * @param size size of an item
+   * @param key key buffer
+   * @param keyOffset offset
+   * @param keySize key size
    * @param buffer buffer to load data to
+   * @return full size required or -1
    * @throws IOException
    */
-  protected abstract boolean getInternal(int id, long offset, int size, ByteBuffer buffer)
+  protected abstract int getInternal(int id, long offset, int size, byte[] key, 
+      int keyOffset, int keySize, ByteBuffer buffer)
+      throws IOException;
+  
+  /**
+   * Get cached item from underlying IOEngine
+   *
+   * @param id segment id
+   * @param offset offset in a segment
+   * @param size size of an item
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param buffer buffer to load data to
+   * @return full size required or -1
+   * @throws IOException
+   */
+  protected abstract int getInternal(int id, long offset, int size, long keyPtr, 
+       int keySize, ByteBuffer buffer)
       throws IOException;
 
   /**
@@ -777,7 +893,9 @@ public abstract class IOEngine implements Persistent {
    * @param data data segment
    */
   public void save(Segment data) throws IOException {
-    synchronized (data) {
+      
+    try {
+      data.readLock();
       if (data.isSealed()) {
         return;
       }
@@ -786,11 +904,14 @@ public abstract class IOEngine implements Persistent {
       this.dataSegments[data.getId()] = data;
       // }
       // Call IOEngine - specific (FileIOEngine overrides it)
+      // Can be costly - executed in a separate thread
       saveInternal(data);
       // Notify listener
       if (this.aListener != null) {
         aListener.onEvent(this, IOEngineEvent.DATA_SIZE_CHANGED);
       }
+    } finally {
+      
     }
   }
 
@@ -1087,6 +1208,8 @@ public abstract class IOEngine implements Persistent {
         }
         if (this.dataSegments[id] == null) {
           s = Segment.newSegment((int) this.segmentSize, id, rank, System.currentTimeMillis());
+          // Set data appender
+          s.setDataAppender(this.dataAppender);
           this.dataSegments[id] = s;
 
         } else {

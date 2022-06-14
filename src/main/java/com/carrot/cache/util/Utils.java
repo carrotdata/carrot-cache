@@ -811,4 +811,14 @@ public class Utils {
     }
     return new DataInputStream(is);
   }
+
+  /**
+   * Required size for K-V pair
+   * @param keyLength key length
+   * @param valueLength value length
+   * @return size
+   */
+  public static int requiredSize(int keyLength, int valueLength) {
+    return sizeUVInt(keyLength) + sizeUVInt(valueLength) + keyLength + valueLength;
+  }
 }
