@@ -78,7 +78,6 @@ public class BlockDataWriter implements DataWriter {
     UnsafeAccess.copy(valuePtr, addr, valueSize);   
     int requiredSize = Utils.requiredSize(keySize, valueSize);
     incrBlockDataSize(s, currentBlock, requiredSize);
-    //incrNumberBlockItems(s, currentBlock);
     
     return crossedBlockBoundary? this.blockSize: 0;
   }
@@ -146,7 +145,6 @@ public class BlockDataWriter implements DataWriter {
     int requiredSize = Utils.requiredSize(keySize, valueSize);
 
     incrBlockDataSize(s, currentBlock, requiredSize);
-    //incrNumberBlockItems(s, currentBlock);
 
     return crossedBlockBoundary ? this.blockSize : 0;
   }
@@ -162,17 +160,6 @@ public class BlockDataWriter implements DataWriter {
     int size = UnsafeAccess.toInt(ptr);
     UnsafeAccess.putInt(ptr, size + incr);
   }
-  
-  /**
-   * Increment number of block items
-   * @param s segment
-   * @param n block number (0 - based)
-   */
-//  private void incrNumberBlockItems(Segment s, int n) {
-//    long ptr = s.getAddress() + n * blockSize;
-//    int num = UnsafeAccess.toShort(ptr);
-//    UnsafeAccess.putShort(ptr, (short)(num + 1));
-//  }
   
   /**
    * Zero first 6 (actually - 8) bytes of a given block

@@ -14,7 +14,10 @@
  */
 package com.carrot.cache.util;
 
+import static com.carrot.cache.util.BlockReaderWriterSupport.META_SIZE;
+
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 /** Utility class for network and file I/O related code */
@@ -79,4 +82,43 @@ public class IOUtils {
     }
     return avail;
   }
+  /**
+   * Reads data from a file into a buffer under lock
+   * @param file file
+   * @param fileOffset offset at a file
+   * @param buffer buffer to read into
+   * @param bufOffset offset at a buffer
+   * @param len how many bytes to read
+   * @throws IOException
+   */
+  public static void readFully(RandomAccessFile file, long fileOffset, byte[] buffer, int bufOffset, int len) 
+      throws IOException {
+    synchronized (file) {
+      file.seek(fileOffset);
+      file.readFully(buffer, bufOffset, len);
+    }
+  }
+
+  /**
+   * Reads data from a file into a buffer under lock
+   *
+   * @param file file
+   * @param fileOffset offset at a file
+   * @param buffer buffer to read into
+   * @param len how many bytes to read
+   * @throws IOException
+   */
+  public static void readFully(RandomAccessFile file, long fileOffset, ByteBuffer buffer, int len)
+      throws IOException {
+    synchronized (file) {
+      FileChannel fc = file.getChannel();
+      fc.position(fileOffset);
+      int read = 0;
+      while (read < len) {
+        read += fc.read(buffer);
+      }
+    }
+  }
 }
+  
+    

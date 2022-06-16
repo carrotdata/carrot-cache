@@ -18,8 +18,8 @@ import java.nio.ByteBuffer;
 
 import com.carrot.cache.util.CacheConfig;
 import com.carrot.cache.util.UnsafeAccess;
-import com.carrot.cache.util.Utils;
 import static com.carrot.cache.util.BlockReaderWriterSupport.*;
+import static com.carrot.cache.util.Utils.getItemSize;
 
 
 public class BlockMemoryDataReader implements DataReader {
@@ -47,6 +47,10 @@ public class BlockMemoryDataReader implements DataReader {
       int bufOffset) {
     
     int avail = buffer.length - bufOffset;
+    // sanity check
+    if (size > avail) {
+      return size;
+    }
     // Segment read lock is already held by this thread
     Segment s = engine.getSegmentById(sid);
     if (s == null) {
@@ -54,7 +58,7 @@ public class BlockMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
     long dataSize = getFullDataSize(s, blockSize);
-    if (dataSize < offset + size) {
+    if (size > 0 && dataSize < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
@@ -63,11 +67,7 @@ public class BlockMemoryDataReader implements DataReader {
     if (ptr < 0) {
       return IOEngine.NOT_FOUND;
     } else {
-      int kSize = Utils.readUVInt(ptr);
-      int kSizeSize = Utils.sizeUVInt(kSize);
-      int vSize = Utils.readUVInt(ptr + kSizeSize);
-      int vSizeSize = Utils.sizeUVInt(vSize);
-      int requiredSize = kSize + kSizeSize + vSize + vSizeSize;
+      int requiredSize = getItemSize(ptr);
       if (requiredSize > avail) {
         return requiredSize;
       }
@@ -87,8 +87,11 @@ public class BlockMemoryDataReader implements DataReader {
       int size,
       ByteBuffer buffer) {
     // Segment read lock is already held by this thread
-
     int avail = buffer.remaining();
+    // Sanity check
+    if (size > avail) {
+      return size;
+    }
     // Segment read lock is already held by this thread
     Segment s = engine.getSegmentById(sid);
     if (s == null) {
@@ -96,7 +99,7 @@ public class BlockMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
     long dataSize = getFullDataSize(s, blockSize);
-    if (dataSize < offset + size) {
+    if (size > 0 && dataSize < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
@@ -105,11 +108,7 @@ public class BlockMemoryDataReader implements DataReader {
     if (ptr < 0) {
       return IOEngine.NOT_FOUND;
     } else {
-      int kSize = Utils.readUVInt(ptr);
-      int kSizeSize = Utils.sizeUVInt(kSize);
-      int vSize = Utils.readUVInt(ptr + kSizeSize);
-      int vSizeSize = Utils.sizeUVInt(vSize);
-      int requiredSize = kSize + kSizeSize + vSize + vSizeSize;
+      int requiredSize = getItemSize(ptr);
       if (requiredSize > avail) {
         return requiredSize;
       }
@@ -130,6 +129,10 @@ public class BlockMemoryDataReader implements DataReader {
       int bufOffset) {
     // Segment read lock is already held by this thread
     int avail = buffer.length - bufOffset;
+    // Sanity check
+    if (size > avail) {
+      return size;
+    }
     // Segment read lock is already held by this thread
     Segment s = engine.getSegmentById(sid);
     if (s == null) {
@@ -137,7 +140,7 @@ public class BlockMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
     long dataSize = getFullDataSize(s, blockSize);
-    if (dataSize < offset + size) {
+    if (size > 0 && dataSize < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
@@ -146,11 +149,7 @@ public class BlockMemoryDataReader implements DataReader {
     if (ptr < 0) {
       return IOEngine.NOT_FOUND;
     } else {
-      int kSize = Utils.readUVInt(ptr);
-      int kSizeSize = Utils.sizeUVInt(kSize);
-      int vSize = Utils.readUVInt(ptr + kSizeSize);
-      int vSizeSize = Utils.sizeUVInt(vSize);
-      int requiredSize = kSize + kSizeSize + vSize + vSizeSize;
+      int requiredSize = getItemSize(ptr);
       if (requiredSize > avail) {
         return requiredSize;
       }
@@ -164,6 +163,10 @@ public class BlockMemoryDataReader implements DataReader {
       IOEngine engine, long keyPtr, int keySize, int sid, long offset, int size, ByteBuffer buffer) {
     // Segment read lock is already held by this thread
     int avail = buffer.remaining();
+    // Sanity check
+    if (size > avail) {
+      return size;
+    }
     // Segment read lock is already held by this thread
     Segment s = engine.getSegmentById(sid);
     if (s == null) {
@@ -171,7 +174,7 @@ public class BlockMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
     long dataSize = getFullDataSize(s, blockSize);
-    if (dataSize < offset + size) {
+    if (size > 0 && dataSize < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
@@ -180,11 +183,7 @@ public class BlockMemoryDataReader implements DataReader {
     if (ptr < 0) {
       return IOEngine.NOT_FOUND;
     } else {
-      int kSize = Utils.readUVInt(ptr);
-      int kSizeSize = Utils.sizeUVInt(kSize);
-      int vSize = Utils.readUVInt(ptr + kSizeSize);
-      int vSizeSize = Utils.sizeUVInt(vSize);
-      int requiredSize = kSize + kSizeSize + vSize + vSizeSize;
+      int requiredSize = getItemSize(ptr);
       if (requiredSize > avail) {
         return requiredSize;
       }

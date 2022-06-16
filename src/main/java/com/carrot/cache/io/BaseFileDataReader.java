@@ -17,16 +17,18 @@ package com.carrot.cache.io;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 
 import com.carrot.cache.util.Utils;
+import static com.carrot.cache.util.Utils.getItemSize;
+import static com.carrot.cache.util.Utils.getKeyOffset;
+
+import static com.carrot.cache.util.IOUtils.readFully;
 
 public class BaseFileDataReader implements DataReader {
 
+  private final int blockSize = 4096;
   @Override
   public void init(String cacheName) {
-    // TODO Auto-generated method stub
-    
   }
 
   @Override
@@ -37,36 +39,54 @@ public class BaseFileDataReader implements DataReader {
       int keySize,
       int sid,
       long offset,
-      int size,
+      int size, // can be < 0 - unknown
       byte[] buffer,
-      int bufOffset) throws IOException {
-    //TODO prevent file from being closed/deleted
+      int bufOffset)
+      throws IOException {
+
+    int avail = buffer.length - bufOffset;
+    // sanity check
+    if (size < 0 && avail < 8) {
+      return blockSize; // just in case
+    }
+    
+    if (size > avail) {
+      return size;
+    }
+    
+    // TODO prevent file from being closed/deleted
     FileIOEngine fileEngine = (FileIOEngine) engine;
     RandomAccessFile file = fileEngine.getFileFor(sid);
     if (file == null) {
       return IOEngine.NOT_FOUND;
+    }
+    boolean loaded = false;
+    if (size < 0) {
+      int toRead = (int) Math.min(blockSize, file.length() - offset);
+      toRead = Math.min(toRead, avail);
+      readFully(file, offset, buffer, bufOffset, toRead);
+      size = getItemSize(buffer, bufOffset);
+
+      if (size > avail) {
+        return size;
+      }
+      if (size < toRead) {
+        loaded = true;
+      }
     }
     
     if (file.length() < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
-    synchronized (file) {
-      file.seek(offset);
-      file.readFully(buffer, bufOffset, size);
+    if (!loaded) {
+      readFully(file, offset, buffer, bufOffset, size);
     }
+
     // Now buffer contains both: key and value, we need to compare keys
     // Format of a key-value pair in a buffer: key-size, value-size, key, value
-    int kSize = Utils.readUVInt(buffer, bufOffset);
-    if (kSize != keySize) {
-      return IOEngine.NOT_FOUND;
-    }
-    int kSizeSize = Utils.sizeUVInt(kSize);
-    bufOffset += kSizeSize;
-    int vSize = Utils.readUVInt(buffer, bufOffset);
-    int vSizeSize = Utils.sizeUVInt(vSize);
-    bufOffset += vSizeSize;
 
+    bufOffset += getKeyOffset(buffer, bufOffset);
     // Now compare keys
     if (Utils.compareTo(buffer, bufOffset, keySize, key, keyOffset, keySize) == 0) {
       // If key is the same
@@ -85,45 +105,64 @@ public class BaseFileDataReader implements DataReader {
       int sid,
       long offset,
       int size, /* can be < 0*/
-      ByteBuffer buffer) throws IOException {
-    
+      ByteBuffer buffer)
+      throws IOException {
+
+    int avail = buffer.remaining();
+    // Sanity check
+    if (size > avail) {
+      return size;
+    }
+    if (size < 0 && avail < 8) {
+      return blockSize; // just in case
+    }
+
+    int pos = buffer.position();
+
+    // TODO prevent file from being closed/deleted
     FileIOEngine fileEngine = (FileIOEngine) engine;
     RandomAccessFile file = fileEngine.getFileFor(sid);
-    int off = buffer.position();
     if (file == null) {
       return IOEngine.NOT_FOUND;
     }
-    
+    boolean loaded = false;
+
+    if (size < 0) {
+      // Get size of an item
+      int toRead = (int) Math.min(blockSize, file.length() - offset);
+      toRead = Math.min(toRead, avail);
+      readFully(file, offset, buffer, toRead);
+      size = getItemSize(buffer);
+      if (size > avail) {
+        return size;
+      }
+      if (size < toRead) {
+        loaded = true;
+      }
+    }
+
     if (file.length() < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
-    synchronized (file) {
-      FileChannel fc = file.getChannel();
-      fc.position(offset);
-      int read = 0;
-      while(read < size) {
-        read += fc.read(buffer);
-      }
+
+    if (!loaded) {
+      buffer.position(pos);
+      readFully(file, offset, buffer, size);
     }
-    
-    buffer.position(off);
+    buffer.position(pos);
+
     // Now buffer contains both: key and value, we need to compare keys
     // Format of a key-value pair in a buffer: key-size, value-size, key, value
-    int kSize = Utils.readUVInt(buffer);
-    if (kSize != keySize) {
-      return IOEngine.NOT_FOUND;
-    }
-    int kSizeSize = Utils.sizeUVInt(kSize);
-    buffer.position(off + kSizeSize);
 
-    int vSize = Utils.readUVInt(buffer);
-    int vSizeSize = Utils.sizeUVInt(vSize);
-    buffer.position(off + kSizeSize + vSizeSize);
+    int $off = getKeyOffset(buffer);
+    buffer.position(pos + $off);
+
     // Now compare keys
     if (Utils.compareTo(buffer, keySize, key, keyOffset, keySize) == 0) {
       // If key is the same
-      buffer.position(off);
+      // TODO: position?
+      buffer.position(pos + size);
       return size;
     } else {
       return IOEngine.NOT_FOUND;
@@ -139,34 +178,48 @@ public class BaseFileDataReader implements DataReader {
       long offset,
       int size,
       byte[] buffer,
-      int bufOffset) throws IOException {
+      int bufOffset)
+      throws IOException {
+    int avail = buffer.length - bufOffset;
+    // sanity check
+    if (size < 0 && avail < 8) {
+      return blockSize; // just in case
+    }
+    if (size > avail) {
+      return size;
+    }
+    // TODO prevent file from being closed/deleted
     FileIOEngine fileEngine = (FileIOEngine) engine;
     RandomAccessFile file = fileEngine.getFileFor(sid);
     if (file == null) {
       return IOEngine.NOT_FOUND;
     }
-    
+    boolean loaded = false;
+    if (size < 0) {
+      int toRead = (int) Math.min(blockSize, file.length() - offset);
+      toRead = Math.min(toRead, avail);
+      readFully(file, offset, buffer, bufOffset, toRead);
+      if (size > avail) {
+        return size;
+      }
+      if (size < toRead) {
+        loaded = true;
+      }
+    }
     if (file.length() < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
-    //TODO: can file be NULL?
-    synchronized (file) {
-      file.seek(offset);
-      file.readFully(buffer, bufOffset, size);
+
+    if (!loaded) {
+      readFully(file, offset, buffer, bufOffset, size);
     }
+
     // Now buffer contains both: key and value, we need to compare keys
     // Format of a key-value pair in a buffer: key-size, value-size, key, value
-    int kSize = Utils.readUVInt(buffer, bufOffset);
-    if (kSize != keySize) {
-      return IOEngine.NOT_FOUND;
-    }
-    int kSizeSize = Utils.sizeUVInt(kSize);
-    bufOffset += kSizeSize;
-    int vSize = Utils.readUVInt(buffer, bufOffset);
-    int vSizeSize = Utils.sizeUVInt(vSize);
-    bufOffset += vSizeSize;
-
+    
+    bufOffset += getKeyOffset(buffer, bufOffset);
+    
     // Now compare keys
     if (Utils.compareTo(buffer, bufOffset, keySize, keyPtr, keySize) == 0) {
       // If key is the same
@@ -178,44 +231,57 @@ public class BaseFileDataReader implements DataReader {
 
   @Override
   public int read(
-      IOEngine engine, long keyPtr, int keySize, int sid, 
-      long offset, int size, ByteBuffer buffer) throws IOException {
+      IOEngine engine, long keyPtr, int keySize, int sid, long offset, int size, ByteBuffer buffer)
+      throws IOException {
+    int avail = buffer.remaining();
+    int pos = buffer.position();
+
+    // sanity check
+    if (size < 0 && avail < 8) {
+      return blockSize; // just in case
+    }
+    if (size > avail) {
+      return size;
+    }
+    // TODO prevent file from being closed/deleted
     FileIOEngine fileEngine = (FileIOEngine) engine;
     RandomAccessFile file = fileEngine.getFileFor(sid);
     if (file == null) {
       return IOEngine.NOT_FOUND;
     }
-    
+    boolean loaded = false;
+
+    if (size < 0) {
+      // Get size of an item
+      int toRead = (int) Math.min(blockSize, file.length() - offset);
+      toRead = Math.min(toRead, avail);
+      readFully(file, offset, buffer, toRead);
+      size = getItemSize(buffer);
+      if (size > avail) {
+        return size;
+      }
+      if (size < toRead) {
+        loaded = true;
+      }
+    }
+
     if (file.length() < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
-    int off = buffer.position();
 
-    synchronized (file) {
-      FileChannel fc = file.getChannel();
-      fc.position(offset);
-      int read = 0;
-      while(read < size) {
-        read += fc.read(buffer);
-      }
+    if (!loaded) {
+      buffer.position(pos);
+      readFully(file, offset, buffer, size);
     }
-    buffer.position(off);
- // Format of a key-value pair in a buffer: key-size, value-size, key, value
-    int kSize = Utils.readUVInt(buffer);
-    if (kSize != keySize) {
-      return IOEngine.NOT_FOUND;
-    }
-    int kSizeSize = Utils.sizeUVInt(kSize);
-    buffer.position(off + kSizeSize);
+    buffer.position(pos);
+    int $off = getKeyOffset(buffer);
+    buffer.position(pos + $off);
 
-    int vSize = Utils.readUVInt(buffer);
-    int vSizeSize = Utils.sizeUVInt(vSize);
-    buffer.position(off + kSizeSize + vSizeSize);
     // Now compare keys
     if (Utils.compareTo(buffer, keySize, keyPtr, keySize) == 0) {
       // If key is the same
-      buffer.position(off);
+      buffer.position(pos + size);
       return size;
     } else {
       return IOEngine.NOT_FOUND;

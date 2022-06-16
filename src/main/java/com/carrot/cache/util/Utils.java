@@ -821,4 +821,83 @@ public class Utils {
   public static int requiredSize(int keyLength, int valueLength) {
     return sizeUVInt(keyLength) + sizeUVInt(valueLength) + keyLength + valueLength;
   }
+  
+  /**
+   * Reads item size from a memory address
+   * 
+   * @param ptr memory address
+   * @return size
+   */
+  public static int getItemSize(long ptr) {
+    int kSize = Utils.readUVInt(ptr);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    int vSize = Utils.readUVInt(ptr + kSizeSize);
+    int vSizeSize = Utils.sizeUVInt(vSize);
+    return kSize + kSizeSize + vSize + vSizeSize;
+  }
+  
+  /**
+   * Reads item size from a data page
+   * 
+   * @param page data page
+   * @param off offset
+   * @return size
+   */
+  public static int getItemSize(byte[] page, int off) {
+    int kSize = Utils.readUVInt(page, off);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    int vSize = Utils.readUVInt(page, off + kSizeSize);
+    int vSizeSize = Utils.sizeUVInt(vSize);
+    return kSize + kSizeSize + vSize + vSizeSize;
+  }
+  
+  /**
+   * Get item key offset 
+   * 
+   * @param page data page
+   * @param off offset in a page
+   * @return key offset
+   */
+  public static int getKeyOffset(byte[] page, int off) {
+    int kSize = Utils.readUVInt(page, off);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    int vSize = Utils.readUVInt(page, off + kSizeSize);
+    int vSizeSize = Utils.sizeUVInt(vSize);
+    return kSizeSize + vSizeSize;
+  }
+  
+  
+  /**
+   * Reads item size from a byte buffer
+   * 
+   * @param ptr memory address
+   * @return size
+   */
+  public static int getItemSize(ByteBuffer buffer) {
+    int pos = buffer.position();
+    int kSize = Utils.readUVInt(buffer);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    buffer.position(pos + kSizeSize);
+    int vSize = Utils.readUVInt(buffer);
+    int vSizeSize = Utils.sizeUVInt(vSize);
+    buffer.position(pos);
+    return kSize + kSizeSize + vSize + vSizeSize;
+  }
+  
+  /**
+   * Reads item size from a byte buffer
+   * 
+   * @param ptr memory address
+   * @return size
+   */
+  public static int getKeyOffset(ByteBuffer buffer) {
+    int pos = buffer.position();
+    int kSize = Utils.readUVInt(buffer);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    buffer.position(pos + kSizeSize);
+    int vSize = Utils.readUVInt(buffer);
+    int vSizeSize = Utils.sizeUVInt(vSize);
+    buffer.position(pos);
+    return kSizeSize + vSizeSize;
+  }
 }
