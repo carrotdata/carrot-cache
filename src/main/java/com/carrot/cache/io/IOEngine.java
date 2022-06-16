@@ -58,7 +58,7 @@ public abstract class IOEngine implements Persistent {
   
   protected final static String FILE_NAME = "cache_";
 
-  protected static int NOT_FOUND = -1;
+  public static int NOT_FOUND = -1;
   
   public static enum IOEngineEvent {
     DATA_SIZE_CHANGED; // size of a data changed
@@ -108,7 +108,7 @@ public abstract class IOEngine implements Persistent {
   protected String dataDir;
   
   /* Segment data appender */
-  protected DataAppender dataAppender;
+  protected DataWriter dataAppender;
   
   /* IOEngine data reader - reads only memory based segments */
   protected DataReader memoryDataReader;
@@ -170,7 +170,7 @@ public abstract class IOEngine implements Persistent {
     this.index = new MemoryIndex(this.parent, MemoryIndex.Type.MQ);
     this.dataDir = this.config.getDataDir(this.cacheName);
     try {
-      this.dataAppender = this.config.getDataAppender(this.cacheName);
+      this.dataAppender = this.config.getDataWriter(this.cacheName);
       this.dataAppender.init(this.cacheName);
       this.memoryDataReader = this.config.getMemoryDataReader(this.cacheName);
       this.memoryDataReader.init(this.cacheName);

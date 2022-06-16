@@ -39,7 +39,7 @@ public class BaseMemoryDataReader implements DataReader {
       int keySize,
       int sid,
       long offset,
-      int size,
+      int size, //TODO size can be -1
       byte[] buffer,
       int bufOffset) {
     // Segment read lock is already held by this thread
@@ -55,6 +55,7 @@ public class BaseMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
     
+    //TODO: size can be unknown
     UnsafeAccess.copy(ptr + offset, buffer, bufOffset, size);
     // Now buffer contains both: key and value, we need to compare keys
     // Format of a key-value pair in a buffer: key-size, value-size, key, value

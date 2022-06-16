@@ -28,7 +28,7 @@ import com.carrot.cache.eviction.SLRUEvictionPolicy;
 import com.carrot.cache.index.AQIndexFormat;
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MQIndexFormat;
-import com.carrot.cache.io.DataAppender;
+import com.carrot.cache.io.DataWriter;
 import com.carrot.cache.io.DataReader;
 
 public class CacheConfig {
@@ -204,13 +204,16 @@ public class CacheConfig {
   public static final String CACHE_RECYCLING_SELECTOR_IMPL_KEY = "cache.recycling.selector.impl";
   
   /* Class name for cache data appender implementation */
-  public static final String CACHE_DATA_APPENDER_IMPL_KEY = "cache.data.appender.impl";
+  public static final String CACHE_DATA_WRITER_IMPL_KEY = "cache.data.writer.impl";
   
   /* Class name for cache data reader implementation (RAM)*/
   public static final String CACHE_MEMORY_DATA_READER_IMPL_KEY = "cache.memory.data.reader.impl";
   
   /* Class name for cache data reader implementation (File)*/
   public static final String CACHE_FILE_DATA_READER_IMPL_KEY = "cache.file.data.reader.impl";
+  
+  /* Block writer block size key */
+  public static final String CACHE_BLOCK_WRITER_BLOCK_SIZE_KEY = "cache.block.writer.block.size";
   
   /* Defaults section */
   
@@ -307,8 +310,8 @@ public class CacheConfig {
   public final static String DEFAULT_CACHE_RECYCLING_SELECTOR_IMPL = 
       "com.carrot.cache.controllers.LowestRankRecyclingSelector";
   /** Default */
-  public final static String DEFAULT_CACHE_DATA_APPENDER_IMPL = 
-      "com.carrot.cache.io.BaseDataAppender";
+  public final static String DEFAULT_CACHE_DATA_WRITER_IMPL = 
+      "com.carrot.cache.io.BaseDataWriter";
   
   /** Default reader for RAM segments */
   public final static String DEFAULT_CACHE_MEMORY_DATA_READER_IMPL = 
@@ -317,6 +320,9 @@ public class CacheConfig {
   /** Default reader for file segments */
   public final static String DEFAULT_CACHE_FILE_DATA_READER_IMPL = 
       "com.carrot.cache.io.BaseFileDataReader";
+  
+  /** Default block writer block size */
+  public final static int DEFAULT_CACHE_BLOCK_WRITER_BLOCK_SIZE = 4096;
   
   // Statics
   static CacheConfig instance;
@@ -772,7 +778,8 @@ public class CacheConfig {
 
   /**
    * Get admission queue index format implementation
-   *
+   * @param cacheName cache name
+   * @return index format
    * @throws ClassNotFoundException
    * @throws IllegalAccessException
    * @throws InstantiationException
@@ -796,7 +803,8 @@ public class CacheConfig {
   
   /**
    * Get main queue index format implementation
-   *
+   * @param cacheName cache name
+   * @return index format
    * @throws ClassNotFoundException
    * @throws IllegalAccessException
    * @throws InstantiationException
@@ -820,7 +828,8 @@ public class CacheConfig {
   
   /**
    * Get cache eviction policy implementation by cache name
-   *
+   * @param cacheName cache name
+   * @return eviction policy
    * @throws ClassNotFoundException
    * @throws IllegalAccessException
    * @throws InstantiationException
@@ -846,7 +855,9 @@ public class CacheConfig {
   
   /**
    * Get cache admission controller implementation by cache name
-   *
+   * 
+   * @param cacheName cache name
+   * @return admission controller
    * @throws ClassNotFoundException
    * @throws IllegalAccessException
    * @throws InstantiationException
@@ -870,7 +881,8 @@ public class CacheConfig {
   
   /**
    * Get cache throughput controller implementation by cache name
-   *
+   * @param cacheName cache name
+   * @return throughput controller
    * @throws ClassNotFoundException
    * @throws IllegalAccessException
    * @throws InstantiationException
@@ -894,7 +906,8 @@ public class CacheConfig {
   
   /**
    * Get Scavenger recycling selector implementation by cache name
-   *
+   * @param cacheName cache name
+   * @return recycling selector
    * @throws ClassNotFoundException
    * @throws IllegalAccessException
    * @throws InstantiationException
@@ -913,27 +926,32 @@ public class CacheConfig {
   }
   
   /**
-   * Get segment data appender implementation by cache name
-   *
+   * Get segment data writer (appender) implementation by cache name
+   * 
+   * @param cacheName cache name
+   * @return data writer
    * @throws ClassNotFoundException
    * @throws IllegalAccessException
    * @throws InstantiationException
    */
-  public DataAppender getDataAppender(String cacheName)
+  public DataWriter getDataWriter(String cacheName)
       throws ClassNotFoundException, InstantiationException, IllegalAccessException {
-    String value = props.getProperty(cacheName + "." + CACHE_DATA_APPENDER_IMPL_KEY);
+    String value = props.getProperty(cacheName + "." + CACHE_DATA_WRITER_IMPL_KEY);
     if (value == null) {
-      value = props.getProperty(CACHE_DATA_APPENDER_IMPL_KEY, DEFAULT_CACHE_DATA_APPENDER_IMPL);
+      value = props.getProperty(CACHE_DATA_WRITER_IMPL_KEY, DEFAULT_CACHE_DATA_WRITER_IMPL);
     }
     @SuppressWarnings("unchecked")
-    Class<DataAppender> clz = (Class<DataAppender>) Class.forName(value);
-    DataAppender instance = clz.newInstance();
+    Class<DataWriter> clz = (Class<DataWriter>) Class.forName(value);
+    DataWriter instance = clz.newInstance();
+    instance.init(cacheName);
     return instance;
   }
   
   /**
    * Get segment data reader implementation (Memory) by cache name
-   *
+   * 
+   * @param cacheName cache name
+   * @return data reader
    * @throws ClassNotFoundException
    * @throws IllegalAccessException
    * @throws InstantiationException
@@ -947,12 +965,14 @@ public class CacheConfig {
     @SuppressWarnings("unchecked")
     Class<DataReader> clz = (Class<DataReader>) Class.forName(value);
     DataReader instance = clz.newInstance();
+    instance.init(cacheName);
     return instance;
   }
   
   /**
    * Get segment data reader implementation (Memory) by cache name
    *
+   * @param cacheName cache name
    * @throws ClassNotFoundException
    * @throws IllegalAccessException
    * @throws InstantiationException
@@ -966,6 +986,21 @@ public class CacheConfig {
     @SuppressWarnings("unchecked")
     Class<DataReader> clz = (Class<DataReader>) Class.forName(value);
     DataReader instance = clz.newInstance();
+    instance.init(cacheName);
     return instance;
+  }
+  
+  /**
+   * Get block writer block size by cache name
+   * @param cacheName cache name
+   * @return block size
+   */
+  public int getBlockWriterBlockSize(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_BLOCK_WRITER_BLOCK_SIZE_KEY);
+    if (value == null) {
+      return (int) getLongProperty(CACHE_BLOCK_WRITER_BLOCK_SIZE_KEY, DEFAULT_CACHE_BLOCK_WRITER_BLOCK_SIZE);
+    } else {
+      return Integer.parseInt(value);
+    }
   }
 }

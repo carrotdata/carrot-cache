@@ -84,7 +84,7 @@ public class BaseFileDataReader implements DataReader {
       int keySize,
       int sid,
       long offset,
-      int size,
+      int size, /* can be < 0*/
       ByteBuffer buffer) throws IOException {
     
     FileIOEngine fileEngine = (FileIOEngine) engine;
@@ -123,7 +123,7 @@ public class BaseFileDataReader implements DataReader {
     // Now compare keys
     if (Utils.compareTo(buffer, keySize, key, keyOffset, keySize) == 0) {
       // If key is the same
-      buffer.position(off + size);
+      buffer.position(off);
       return size;
     } else {
       return IOEngine.NOT_FOUND;
@@ -215,7 +215,7 @@ public class BaseFileDataReader implements DataReader {
     // Now compare keys
     if (Utils.compareTo(buffer, keySize, keyPtr, keySize) == 0) {
       // If key is the same
-      buffer.position(off + size);
+      buffer.position(off);
       return size;
     } else {
       return IOEngine.NOT_FOUND;

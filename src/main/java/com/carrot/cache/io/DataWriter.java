@@ -19,7 +19,7 @@ package com.carrot.cache.io;
  * Implementation MUST be stateless hence - thread - safe
  */
 
-public interface DataAppender {
+public interface DataWriter {
   
   /**
    * Initialize after creation

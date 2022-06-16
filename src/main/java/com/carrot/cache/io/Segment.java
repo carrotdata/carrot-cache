@@ -430,7 +430,7 @@ public class Segment implements Persistent {
   volatile private Info info;
   
   /* Data appender */
-  DataAppender dataAppender;
+  DataWriter dataAppender;
   
   /**
    * 
@@ -465,7 +465,7 @@ public class Segment implements Persistent {
    * Sets data appender implementation
    * @param da data appender
    */
-  public void setDataAppender(DataAppender da) {
+  public void setDataAppender(DataWriter da) {
     this.dataAppender = da;
   }
   

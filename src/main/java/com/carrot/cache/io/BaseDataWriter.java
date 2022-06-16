@@ -17,9 +17,9 @@ package com.carrot.cache.io;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 
-public class BaseDataAppender implements DataAppender {
+public class BaseDataWriter implements DataWriter {
   
-  public BaseDataAppender() {
+  public BaseDataWriter() {
   }
   
   @Override
