@@ -14,8 +14,6 @@
  */
 package com.carrot.cache.util;
 
-import static com.carrot.cache.util.BlockReaderWriterSupport.META_SIZE;
-
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;

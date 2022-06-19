@@ -51,6 +51,16 @@ public class BlockReaderWriterSupport {
     return UnsafeAccess.toInt(block, 0);
   } 
   
+  
+  /**
+   * Get data size in block at offset
+   * @param block data block (first 4 bytes contains size)
+   * @return data size
+   */
+  public static int getBlockDataSize(byte[] buffer, int offset) {
+    return UnsafeAccess.toInt(buffer, offset);
+  } 
+  
   /**
    * Get real data size in a segment
    * @param s segment

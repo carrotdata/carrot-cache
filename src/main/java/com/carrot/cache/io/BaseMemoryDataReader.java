@@ -14,6 +14,7 @@
  */
 package com.carrot.cache.io;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import com.carrot.cache.util.UnsafeAccess;
@@ -209,6 +210,11 @@ public class BaseMemoryDataReader implements DataReader {
     } else {
       return IOEngine.NOT_FOUND;
     }
+  }
+
+  @Override
+  public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
+    return new BaseMemorySegmentScanner(s);
   }
   
 }

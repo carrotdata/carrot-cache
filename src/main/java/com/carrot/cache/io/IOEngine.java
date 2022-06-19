@@ -189,6 +189,13 @@ public abstract class IOEngine implements Persistent {
   }
 
   /**
+   * Get parent cache
+   * @return cache instance
+   */
+  public Cache getCache() {
+    return this.parent;
+  }
+  /**
    * Enables - disables eviction
    *
    * @param b

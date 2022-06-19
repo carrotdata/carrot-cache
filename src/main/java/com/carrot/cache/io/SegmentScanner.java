@@ -31,20 +31,21 @@ public interface SegmentScanner extends Closeable {
   
   /**
    * Advance to next
+   * @return true if succeeded, false - otherwise
    */
-  public void next() throws IOException;
+  public boolean next() throws IOException;
   
   /**
    * Current key length
    * @return key length
    */
-  public int keyLength();
+  public int keyLength() throws IOException;
   
   /**
    * Current value length
    * @return
    */
-  public int valueLength();
+  public int valueLength() throws IOException;
   
   /**
    * Current key address
@@ -61,6 +62,7 @@ public interface SegmentScanner extends Closeable {
   /**
    * Expiration time
    * @return expiration time
+   * @deprecated
    */
   public long getExpire();
   
@@ -80,19 +82,21 @@ public interface SegmentScanner extends Closeable {
   
   /**
    * Read key into a given buffer
-   * @param buffer memory buffer 
+   * @param buffer memory buffer
+   * @param offset buffer offset 
    * @return total byte read
    * @throws IOException
    */
-  public int getKey(byte[] buffer) throws IOException;
+  public int getKey(byte[] buffer, int offset) throws IOException;
   
   /**
    * Read value into a given buffer
    * @param buffer memory buffer
+   * @param offset buffer offset
    * @return total bytes read
    * @throws IOException
    */
-  public int getValue(byte[] buffer) throws IOException;
+  public int getValue(byte[] buffer, int offset) throws IOException;
   
   /**
    * Direct access to a key and value data (only off-heap IOEngine supports it)

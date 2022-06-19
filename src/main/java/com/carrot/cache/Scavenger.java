@@ -296,7 +296,7 @@ public class Scavenger extends Thread {
         // Update stats
         stats.totalBytesScanned += totalSize;
         // Read key
-        sc.getKey(key);
+        sc.getKey(key, 0);
         // Check if it was expired
         boolean expired = expire > 0 && (System.currentTimeMillis() > expire);
         double p = index.popularity(key, 0, keySize);
@@ -322,7 +322,7 @@ public class Scavenger extends Thread {
           // Update stats
           stats.totalBytesFreed += totalSize;
           val = checkBuffer(val, valSize);
-          sc.getValue(val);
+          sc.getValue(val, 0);
           // Return Item back to AQ
           // TODO: fix this code. We need to move data to a victim cache on
           // memory index eviction.
@@ -339,7 +339,7 @@ public class Scavenger extends Thread {
         } else {
           // Read value
           val = checkBuffer(val, valSize);
-          sc.getValue(val);
+          sc.getValue(val, 0);
           // Delete from the index
           index.delete(key, 0, keySize);
           int rank = engine.popularityToRank(p);

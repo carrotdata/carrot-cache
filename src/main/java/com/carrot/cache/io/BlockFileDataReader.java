@@ -383,4 +383,11 @@ public class BlockFileDataReader implements DataReader {
   private void releaseBuffer(byte[] buffer) {
     buffers.offer(buffer);
   }
+
+  @Override
+  public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
+    String cacheName = engine.getCache().getName();
+    int blockSize = CacheConfig.getInstance().getBlockWriterBlockSize(cacheName);
+    return new BlockFileSegmentScanner(s, (FileIOEngine) engine, blockSize);
+  }
 }

@@ -14,6 +14,7 @@
  */
 package com.carrot.cache.io;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import com.carrot.cache.util.CacheConfig;
@@ -190,5 +191,13 @@ public class BlockMemoryDataReader implements DataReader {
       UnsafeAccess.copy(ptr, buffer, requiredSize);
       return requiredSize;
     }
+  }
+
+  @Override
+  public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
+    CacheConfig config = CacheConfig.getInstance();
+    String cacheName = engine.getCache().getName();
+    int blockSize = config.getBlockWriterBlockSize(cacheName);
+    return new BlockMemorySegmentScanner(s, blockSize);
   }
 }

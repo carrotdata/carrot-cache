@@ -215,6 +215,9 @@ public class CacheConfig {
   /* Block writer block size key */
   public static final String CACHE_BLOCK_WRITER_BLOCK_SIZE_KEY = "cache.block.writer.block.size";
   
+  /* File prefetch buffer size */
+  public static final String FILE_PREFETCH_BUFFER_SIZE_KEY = "file.prefetch.buffer.size";
+  
   /* Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 256 * 1024 * 1024;
@@ -324,6 +327,8 @@ public class CacheConfig {
   /** Default block writer block size */
   public final static int DEFAULT_CACHE_BLOCK_WRITER_BLOCK_SIZE = 4096;
   
+  /** Increase this size if you want to cache items larger*/
+  public final static int DEFAULT_FILE_PREFETCH_BUFFER_SIZE = 4 * 1024 * 1024;
   // Statics
   static CacheConfig instance;
 
@@ -999,6 +1004,20 @@ public class CacheConfig {
     String value = props.getProperty(cacheName + "." + CACHE_BLOCK_WRITER_BLOCK_SIZE_KEY);
     if (value == null) {
       return (int) getLongProperty(CACHE_BLOCK_WRITER_BLOCK_SIZE_KEY, DEFAULT_CACHE_BLOCK_WRITER_BLOCK_SIZE);
+    } else {
+      return Integer.parseInt(value);
+    }
+  }
+  
+  /**
+   * Get file prefetch buffer by cache name
+   * @param cacheName cache name
+   * @return prefetch buffer size
+   */
+  public int getFilePrefetchBufferSize(String cacheName) {
+    String value = props.getProperty(cacheName + "." + FILE_PREFETCH_BUFFER_SIZE_KEY);
+    if (value == null) {
+      return (int) getLongProperty(FILE_PREFETCH_BUFFER_SIZE_KEY, DEFAULT_FILE_PREFETCH_BUFFER_SIZE);
     } else {
       return Integer.parseInt(value);
     }

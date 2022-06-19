@@ -287,4 +287,10 @@ public class BaseFileDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
   }
+
+  @Override
+  public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
+    
+    return new BaseFileSegmentScanner(s, (FileIOEngine) engine);
+  }
 }

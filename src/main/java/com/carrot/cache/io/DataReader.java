@@ -85,5 +85,12 @@ public interface DataReader {
   public int read(IOEngine engine, long keyPtr, int keySize, 
       int sid, long ofset, int size, ByteBuffer buffer) throws IOException;
 
+  /**
+   * Get segment scanner
+   * @param engine I/O engine
+   * @param s segment
+   * @return segment scanner
+   */
+  public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException;
   
 }
