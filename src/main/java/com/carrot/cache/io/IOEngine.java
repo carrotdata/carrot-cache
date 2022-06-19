@@ -308,7 +308,7 @@ public abstract class IOEngine implements Persistent {
     int slot = 0;
     try {
       // Lock index for the key (slot)
-      slot =  this.index.readLock(keyPtr, keySize);
+      slot =  this.index.lock(keyPtr, keySize);
       long result = index.find(keyPtr, keySize, true, buf, bSize);
       if (result < 0) {
         return NOT_FOUND;
@@ -355,7 +355,7 @@ public abstract class IOEngine implements Persistent {
       }
     } finally {
       UnsafeAccess.free(buf);
-      this.index.readUnlock(slot);
+      this.index.unlock(slot);
     }
   }
 
@@ -384,7 +384,7 @@ public abstract class IOEngine implements Persistent {
     try {
       // Lock index for the key (slot)
       //TODO: remove locks?
-      slot = this.index.readLock(key, keyOffset, keySize);
+      slot = this.index.lock(key, keyOffset, keySize);
 
       long result = index.find(key, keyOffset, keySize, true, buf, bSize);
       if (result < 0) {
@@ -434,7 +434,7 @@ public abstract class IOEngine implements Persistent {
       }
     } finally {
       UnsafeAccess.free(buf);
-      this.index.readUnlock(slot);
+      this.index.unlock(slot);
     }
   }
 
@@ -457,7 +457,7 @@ public abstract class IOEngine implements Persistent {
       //TODO: double locking?
       // Index locking  that segment will not be recycled
       // 
-      slot = this.index.readLock(keyPtr, keySize);
+      slot = this.index.lock(keyPtr, keySize);
       long result = index.find(keyPtr, keySize, true, buf, bSize);
       // result can be negative - OK
       // positive - OK b/c we hold read lock on key and key can't be deleted from index
@@ -515,7 +515,7 @@ public abstract class IOEngine implements Persistent {
       }
     } finally {
       UnsafeAccess.free(buf);
-      this.index.readUnlock(slot);
+      this.index.unlock(slot);
     }
   }
 
@@ -537,7 +537,7 @@ public abstract class IOEngine implements Persistent {
     boolean dataEmbedded = this.config.isIndexDataEmbeddedSupported();
     int slot = 0;
     try {
-      slot = this.index.readLock(key, keyOffset, keySize);
+      slot = this.index.lock(key, keyOffset, keySize);
       long result = index.find(key, keyOffset, keySize, true, buf, bSize);
       if (result < 0) {
         return NOT_FOUND;
@@ -584,7 +584,7 @@ public abstract class IOEngine implements Persistent {
       }
     } finally {
       UnsafeAccess.free(buf);
-      this.index.readUnlock(slot);
+      this.index.unlock(slot);
     }
   }
 

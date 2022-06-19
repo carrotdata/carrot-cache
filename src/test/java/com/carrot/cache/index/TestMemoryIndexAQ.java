@@ -53,12 +53,16 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
   
   
   private void verifyIndexBytes() {
+    verifyIndexBytes(false);
+  }
+  
+  private void verifyIndexBytes(boolean hit) {
     int entrySize = memoryIndex.getIndexFormat().indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     
     for (int i = 0; i < numRecords; i++) {
       long hash = Utils.hash64(keys[i], 0, keySize);
-      int result = (int) memoryIndex.find(keys[i], 0, keySize, false, buf, entrySize);
+      int result = (int) memoryIndex.find(keys[i], 0, keySize, hit, buf, entrySize);
       assertEquals(entrySize, result);
       assertEquals(hash, UnsafeAccess.toLong(buf));
     }
@@ -80,12 +84,16 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
   }
     
   private void verifyIndexMemory() {
+    verifyIndexMemory(false);
+  }
+  
+  private void verifyIndexMemory(boolean hit) {
     int entrySize = memoryIndex.getIndexFormat().indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     
     for (int i = 0; i < numRecords; i++) {
       long hash = Utils.hash64(mKeys[i], keySize);
-      int result = (int) memoryIndex.find(mKeys[i], keySize, false, buf, entrySize);
+      int result = (int) memoryIndex.find(mKeys[i], keySize, hit, buf, entrySize);
       assertEquals(entrySize, result);
       assertEquals(hash, UnsafeAccess.toLong(buf));
     }
@@ -109,6 +117,18 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
   public void testLoadReadNoRehashMemory() {
     LOG.info("Test load and read no rehash memory");
     loadReadMemory(100000);
+  }
+  
+  @Test
+  public void testLoadReadNoRehashBytesWithHit() {
+    LOG.info("Test load and read no rehash bytes - with hits");
+    loadReadBytesWithHit(100000);
+  }
+  
+  @Test
+  public void testLoadReadNoRehashMemoryWithHit() {
+    LOG.info("Test load and read no rehash memory - with hits");
+    loadReadMemoryWithHit(100000);
   }
   
   @Test
@@ -151,6 +171,18 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
     loadReadMemory(1000000);
   }
 
+  @Test
+  public void testLoadReadWithRehashBytesWithHits() {
+    LOG.info("Test load and read with rehash bytes - with hits");
+    loadReadBytesWithHit(1000000);
+  }
+  
+  @Test
+  public void testLoadReadWithRehashMemoryWithHit() {
+    LOG.info("Test load and read with rehash memory - with hits");
+    loadReadMemoryWithHit(1000000);
+  }
+  
   @Test
   public void testLoadReadDeleteWithRehashBytes() {
     LOG.info("Test load and read-delete with rehash bytes");
@@ -274,6 +306,12 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
     verifyIndexBytes();
   }
   
+  private void loadReadBytesWithHit(int num) {
+    loadReadBytes(num);
+    verifyIndexBytes(true);
+    verifyIndexBytesNot();
+  }
+  
   private void doubleLoadReadBytes(int num) {
     prepareData(num);
     loadIndexBytes();
@@ -292,6 +330,12 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
     long size = memoryIndex.size();
     assertEquals((long)num, size);
     verifyIndexMemory();
+  }
+  
+  private void loadReadMemoryWithHit(int num) {
+    loadReadMemory(num);
+    verifyIndexMemory(true);
+    verifyIndexMemoryNot();
   }
   
   private void doubleLoadReadMemory(int num) {

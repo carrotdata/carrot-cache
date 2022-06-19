@@ -22,7 +22,7 @@ import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -135,7 +135,7 @@ public class MemoryIndex implements Persistent {
   }
 
   /* Global locks */
-  private ReentrantReadWriteLock[] locks = new ReentrantReadWriteLock[1117];
+  private ReentrantLock[] locks = new ReentrantLock[1117];
   
   /** Index base array 
    * TODO: use native memory */
@@ -351,7 +351,7 @@ public class MemoryIndex implements Persistent {
     double ratio = ((double) this.maxEntries) / size();
     
     try {
-      writeLock(slot);
+      lock(slot);
       long ptr = index[slot];
       if (ptr == 0) {
         return false;
@@ -363,7 +363,7 @@ public class MemoryIndex implements Persistent {
       incrIndexSize(newNum - num);
       index[slot] = shrink(ptr); 
     } finally {
-      writeUnlock(slot);
+      unlock(slot);
     }
     return true;
   }
@@ -457,7 +457,7 @@ public class MemoryIndex implements Persistent {
   private void initLocks() {
     // Initialize locks
     for (int i = 0; i < locks.length; i++) {
-      locks[i] = new ReentrantReadWriteLock();
+      locks[i] = new ReentrantLock();
     }
   }
   /**
@@ -598,54 +598,22 @@ public class MemoryIndex implements Persistent {
   public final boolean isRehashingInProgress() {
     return this.rehashInProgress;
   }
-  
-  /**
-   * Read lock on a key (slot)
-   * @param keyPtr key address
-   * @param keySize key address
-   */
-  public int readLock(long keyPtr, int keySize) {
-    long[] index = ref_index_base.get();
-    long hash = Utils.hash64(keyPtr, keySize);
-    int slot = getSlotNumber(hash, index.length);
-    ReentrantReadWriteLock lock = locks[slot % locks.length];
-    lock.readLock().lock();
-    if(index[slot] == 0) {
-      // rehash is in progress
-      lock.readLock().unlock();
-      index = ref_index_base_rehash.get();
-      if (index == null) {
-        // Get main back - rare race condition
-        // when rehashing was completed during this method invocation
-        // and now main REF contains new index (2 x times bigger)
-        index = ref_index_base.get();
-      }
-      slot = getSlotNumber(hash, index.length);
-      lock = locks[slot % locks.length];
-      lock.readLock().lock();
-      // NOTES: either we lock correct slot in a main index or a
-      // correct slot in rehash index (during rehashing)
-      // In both cases we are safe
-    }
-    return slot;
-  }
-  
-  
+    
   /**
    * Write lock on a key (slot)
    * @param keyPtr key address
    * @param keySize key address
    */
-  public int writeLock(long keyPtr, int keySize) {
+  public int lock(long keyPtr, int keySize) {
     long hash = Utils.hash64(keyPtr, keySize);
     long[] index = ref_index_base.get();
     // Always != null - safe
     int slot = getSlotNumber(hash, index.length);
-    ReentrantReadWriteLock lock = locks[slot % locks.length];
-    lock.writeLock().lock();
+    ReentrantLock lock = locks[slot % locks.length];
+    lock.lock();
     if(index[slot] == 0) {
       // rehash is in progress
-      lock.writeLock().unlock();
+      lock.unlock();
       index = ref_index_base_rehash.get();
       if (index == null) {
         // Get main back - rare race condition
@@ -654,45 +622,13 @@ public class MemoryIndex implements Persistent {
       }
       slot = getSlotNumber(hash, index.length);
       lock = locks[slot % locks.length];
-      lock.writeLock().lock();
+      lock.lock();
       // NOTES: either we lock correct slot in a main index or a
       // correct slot in rehash index (during rehashing)
       // In both cases we are safe
     }
     return slot;
   }
-  
-  /**
-   * Read lock on a key (slot)
-   * @param key key buffer
-   * @param off offset
-   * @param keySize key size
-   */
-  public int readLock(byte[] key, int off, int keySize) {
-    long hash = Utils.hash64(key, off, keySize);
-    long[] index = ref_index_base.get();
-    int slot = getSlotNumber(hash, index.length);
-    ReentrantReadWriteLock lock = locks[slot % locks.length];
-    lock.readLock().lock();
-    if(index[slot] == 0) {
-      // rehash is in progress
-      lock.readLock().unlock();
-      index = ref_index_base_rehash.get();
-      if (index == null) {
-        // Get main back - rare race condition
-        // when rehashing was completed during this method invocation
-        index = ref_index_base.get();
-      }
-      slot = getSlotNumber(hash, index.length);
-      lock = locks[slot % locks.length];
-      lock.readLock().lock();
-      // NOTES: either we lock correct slot in a main index or a
-      // correct slot in rehash index (during rehashing)
-      // In both cases we are safe
-    }
-    return slot;
-  }
-
 
   /**
    * Write lock on a key
@@ -700,15 +636,15 @@ public class MemoryIndex implements Persistent {
    * @param off offset
    * @param keySize key size
    */
-  public int writeLock(byte[] key, int off, int keySize) {
+  public int lock(byte[] key, int off, int keySize) {
     long hash = Utils.hash64(key, off, keySize);
     long[] index = ref_index_base.get();
     int slot = getSlotNumber(hash, index.length);
-    ReentrantReadWriteLock lock = locks[slot % locks.length];
-    lock.writeLock().lock();
+    ReentrantLock lock = locks[slot % locks.length];
+    lock.lock();
     if(index[slot] == 0) {
       // rehash is in progress
-      lock.writeLock().unlock();
+      lock.unlock();
       index = ref_index_base_rehash.get();
       if (index == null) {
         // Get main back - rare race condition
@@ -717,51 +653,31 @@ public class MemoryIndex implements Persistent {
       }
       slot = getSlotNumber(hash, index.length);
       lock = locks[slot % locks.length];
-      lock.writeLock().lock();
+      lock.lock();
       // NOTES: either we lock correct slot in a main index or a
       // correct slot in rehash index (during rehashing)
       // In both cases we are safe
     }
     return slot;
   }
-    
-  /**
-   * Read lock on a key (slot)
-   * @param slot slot number
-   */
-  public void readLock(int slot) {
-    ReentrantReadWriteLock lock = locks[slot % locks.length];
-    lock.readLock().lock();
-  }
-  
-  /**
-   * Read unlock on a key (slot)
-   * @param slot slot number
-   */
-  public void readUnlock(int slot) {
-    ReentrantReadWriteLock lock = locks[slot % locks.length];
-    if (lock.getReadHoldCount() > 0) {
-      lock.readLock().unlock();
-    }
-  }
-  
+      
   /**
    * Write lock on a slot
    * @param slot slot number
    */
-  public void writeLock(int slot) {
-    ReentrantReadWriteLock lock = locks[slot % locks.length];
-    lock.writeLock().lock();
+  public void lock(int slot) {
+    ReentrantLock lock = locks[slot % locks.length];
+    lock.lock();
   }
   
   /**
    * Write unlock on a slot
    * @param slot slot number
    */
-  public void writeUnlock(int slot) {
-    ReentrantReadWriteLock lock = locks[slot % locks.length];
-    if (lock.isWriteLockedByCurrentThread()) {
-      lock.writeLock().unlock();
+  public void unlock(int slot) {
+    ReentrantLock lock = locks[slot % locks.length];
+    if (lock.isHeldByCurrentThread()) {
+      lock.unlock();
     }
   }
   
@@ -776,11 +692,11 @@ public class MemoryIndex implements Persistent {
   public long find(byte[] key, int off, int size, boolean hit, long buf, int bufSize) {
     int slot = 0;
     try {
-      slot = readLock(key, off, size);
+      slot = lock(key, off, size);
       long hash = Utils.hash64(key, off, size);
       return find(hash, hit, buf, bufSize);
     } finally {
-      readUnlock(slot);
+      unlock(slot);
     }
   }
 
@@ -1059,11 +975,11 @@ public class MemoryIndex implements Persistent {
   public long find(long ptr, int size, boolean hit, long buf, int bufSize) {
     int slot = 0;
     try {
-      slot = readLock(ptr, size);
+      slot = lock(ptr, size);
       long hash = Utils.hash64(ptr, size);
       return find(hash, hit, buf, bufSize);
     } finally {
-      readUnlock(slot);
+      unlock(slot);
     }
   }
 
@@ -1109,11 +1025,11 @@ public class MemoryIndex implements Persistent {
   public boolean delete(long keyPtr, int keySize) {
     int slot = 0;
     try {
-      slot = writeLock(keyPtr, keySize);
+      slot = lock(keyPtr, keySize);
       long hash = Utils.hash64(keyPtr, keySize);
       return delete(hash);
     } finally {
-      writeUnlock(slot);
+      unlock(slot);
     }
   }
 
@@ -1128,11 +1044,11 @@ public class MemoryIndex implements Persistent {
   public boolean delete(byte[] key, int keyOffset, int keySize) {
     int slot = 0;
     try {
-      slot = writeLock(key, keyOffset, keySize);
+      slot = lock(key, keyOffset, keySize);
       long hash = Utils.hash64(key, keyOffset, keySize);
       return delete(hash);
     } finally {
-      writeUnlock(slot);
+      unlock(slot);
     }
   }
 
@@ -1212,11 +1128,11 @@ public class MemoryIndex implements Persistent {
   public final double popularity(byte[] key, int off, int keySize) {
     int slot = 0;
     try {
-      slot = readLock(key, off, keySize);
+      slot = lock(key, off, keySize);
       long hash = Utils.hash64(key, off, keySize);
       return popularity(hash);
     } finally {
-      readUnlock(slot);
+      unlock(slot);
     }
   }
 
@@ -1282,12 +1198,12 @@ public class MemoryIndex implements Persistent {
   public MutationResult insert(byte[] key, int keyOff, int keySize, long indexPtr, int indexSize) {
     int slot = 0;
     try {
-      slot = writeLock(key, keyOff, keySize);
+      slot = lock(key, keyOff, keySize);
       long hash = Utils.hash64(key, keyOff, keySize);
       MutationResult result = insertInternal(hash, indexPtr, indexSize);
       return result;
     } finally {
-      writeUnlock(slot);
+      unlock(slot);
     }
   }
 
@@ -1305,11 +1221,11 @@ public class MemoryIndex implements Persistent {
   public MutationResult insertWithRank(byte[] key, int keyOff, int keySize, long indexPtr, int indexSize, int rank) {
     int slot = 0;
     try {
-      slot = writeLock(key, keyOff, keySize);
+      slot = lock(key, keyOff, keySize);
       long hash = Utils.hash64(key, keyOff, keySize);
       return insertInternal(hash, indexPtr, indexSize, rank);
     } finally {
-      writeUnlock(slot);
+      unlock(slot);
     }
   }
   
@@ -1348,12 +1264,12 @@ public class MemoryIndex implements Persistent {
   public MutationResult insert(long ptr, int size, long indexPtr, int indexSize) {
     int slot = 0;
     try {
-      slot = writeLock(ptr, size);
+      slot = lock(ptr, size);
       long hash = Utils.hash64(ptr, size);
       MutationResult result = insertInternal(hash, indexPtr, indexSize);
       return result;
     } finally {
-      writeUnlock(slot);
+      unlock(slot);
     }
   }
 
@@ -1371,11 +1287,11 @@ public class MemoryIndex implements Persistent {
     int slot = 0;
     // get hashed key value
     try {
-      slot = writeLock(ptr, size);
+      slot = lock(ptr, size);
       long hash = Utils.hash64(ptr, size);
       return insertInternal(hash, indexPtr, indexSize, rank);
     } finally {
-      writeUnlock(slot);
+      unlock(slot);
     }
   }
   
@@ -1805,13 +1721,13 @@ public class MemoryIndex implements Persistent {
     
     int slot = 0;
     try {
-      slot = writeLock(key, off, len);
+      slot = lock(key, off, len);
       // get hashed key value
       long hash = Utils.hash64(key, off, len);
       MutationResult result = aarp(hash);
       return result;
     } finally {
-      writeUnlock(slot);
+      unlock(slot);
     }
   }
 
@@ -1824,13 +1740,13 @@ public class MemoryIndex implements Persistent {
   public MutationResult aarp(long keyPtr, int keySize) {
     int slot = 0;
     try {
-      slot = writeLock(keyPtr, keySize);
+      slot = lock(keyPtr, keySize);
       // get hashed key value
       long hash = Utils.hash64(keyPtr, keySize);
       MutationResult result = aarp(hash);
       return result;
     } finally {
-      writeUnlock(slot);
+      unlock(slot);
     }
   }
 
