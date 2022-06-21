@@ -831,20 +831,19 @@ public class MemoryIndex implements Persistent {
    * @param bufSize buffer size
    * @return found index size or -1
    */
-  //TODO: check return value
+  // TODO: check return value
   private int findAndPromote(long ptr, long hash, boolean hit, long buf, int bufSize) {
     int numEntries = numEntries(ptr);
-    //TODO: this works ONLY when index size = item size (no embedded data)
-    
+    // TODO: this works ONLY when index size = item size (no embedded data)
+
     long $ptr = ptr + this.indexBlockHeaderSize;
     int count = 0;
     int indexSize = NOT_FOUND; // not found
-    while (count < numEntries) {
-      if (this.indexFormat.equals($ptr, hash)) {
-        indexSize = this.indexFormat.fullEntrySize($ptr);
-        if (indexSize > bufSize) {
-          return indexSize;
-        }
+
+    boolean fullScanRequired = this.indexFormat.begin(ptr);
+    boolean found = false;
+    try {
+      while (count < numEntries) {
         // Check if expired - pro-active expiration check
         long expire = this.indexFormat.getExpire(ptr, $ptr);
         if (expire > 0) {
@@ -852,58 +851,68 @@ public class MemoryIndex implements Persistent {
           if (current > expire) {
             int sid0 = this.indexFormat.getSegmentId($ptr);
             deleteAt(ptr, $ptr, count);
-            //TODO Update segment stats for expired item
-            //TODO:move this code into deleteAt method
-            int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName); 
+            // TODO Update segment stats for expired item
+            // TODO:move this code into deleteAt method
+            int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
             int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
             if (this.cache != null) {
               cache.getEngine().updateStats(sid0, -1, -rank);
             }
-            return NOT_FOUND;
           }
         }
-        // Update hits
-        if (hit) {
-          this.indexFormat.hit($ptr);
-          int sid0 = this.indexFormat.getSegmentId($ptr);
-          //TODO: this works only if we promote item by +1 rank
-          // Update stats
-          if (this.cache != null) {
-            this.cache.getEngine().updateStats(sid0, 0, 1);
+        if (!found && this.indexFormat.equals($ptr, hash)) {
+          indexSize = this.indexFormat.fullEntrySize($ptr);
+          found = true;
+          if (indexSize > bufSize) {
+            return indexSize;
           }
-          int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName); 
-          int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
-          int idx = this.evictionPolicy.getStartIndexForRank(numRanks, rank + 1, numEntries);
-          int sid1 = getSegmentIdForEntry(ptr, idx);
-          // Update stats
-          if (this.cache != null) {
-            cache.getEngine().updateStats(sid1, 0, -1);
+          // Update hits
+          if (hit) {
+            this.indexFormat.hit($ptr);
+            int sid0 = this.indexFormat.getSegmentId($ptr);
+            // TODO: this works only if we promote item by +1 rank
+            // Update stats
+            if (this.cache != null) {
+              this.cache.getEngine().updateStats(sid0, 0, 1);
+            }
+            int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
+            int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
+            int idx = this.evictionPolicy.getStartIndexForRank(numRanks, rank + 1, numEntries);
+            int sid1 = getSegmentIdForEntry(ptr, idx);
+            // Update stats
+            if (this.cache != null) {
+              cache.getEngine().updateStats(sid1, 0, -1);
+            }
+          }
+          // Save item size and item location to a buffer
+          UnsafeAccess.copy($ptr, buf, indexSize);
+
+          if (hit && count > 0) {
+            // ask parent where to move
+            int idx = this.evictionPolicy.getPromotionIndex(ptr, count, numEntries);
+            int off = offsetFor(ptr, idx);
+            int offc = offsetFor($ptr, count);
+            int toMove = offc - off;
+
+            // Move data between 'idx' (inclusive) and 'count' (exclusive)(count > idx must be)
+            UnsafeAccess.copy(ptr + off, ptr + off + indexSize, toMove);
+            // insert index into new place
+            UnsafeAccess.copy(buf, ptr + off, indexSize);
+          }
+          if (!fullScanRequired) {
+            break;
           }
         }
-        // Save item size and item location to a buffer
-        UnsafeAccess.copy($ptr, buf, indexSize);
-        
-        if (hit && count > 0) {
-          // ask parent where to move
-          int idx = this.evictionPolicy.getPromotionIndex(ptr, count, numEntries);
-          int off = offsetFor(ptr, idx); 
-          int offc = offsetFor($ptr, count);
-          int toMove = offc - off;
-          
-          // Move data between 'idx' (inclusive) and 'count' (exclusive)(count > idx must be)
-          UnsafeAccess.copy(ptr + off, ptr + off + indexSize, toMove);
-          // insert index into new place
-          UnsafeAccess.copy(buf, ptr + off, indexSize);
-        }
-  
-        break;
+        count++;
+        $ptr += this.indexFormat.fullEntrySize($ptr);
       }
-      count++;
-      $ptr += this.indexFormat.fullEntrySize($ptr);
+    } finally {
+      // Report end of a scan operation
+      this.indexFormat.end(ptr);
     }
     return indexSize;
   }
-  
+
   final int getSegmentIdForEntry(long ptr, int entryNumber) {
     long $ptr = ptr + this.indexBlockHeaderSize;
     int count = 0;
@@ -1370,7 +1379,6 @@ public class MemoryIndex implements Persistent {
     return insert0(ptr, hash, indexPtr, indexSize, rank);
   }
 
- 
   /**
    * Insert hash - value into a given index block with a rank
    *
@@ -1379,59 +1387,67 @@ public class MemoryIndex implements Persistent {
    * @param indexPtr index data pointer (not used for AQ, 12 bytes for MQ)
    * @param rank item's rank
    * @return new index block pointer
-   * @throws  
+   * @throws
    */
   private long insert0(long ptr, long hash, long indexPtr, int indexSize, int rank) {
-    if (isEvictionEnabled()) {
-      doEviction(ptr); // TODO: take into account size of a new item
-    }
-    // If indexPtr == 0, then insert hash only (for AQ)
-    boolean isAQ = indexPtr == 0;
-    int blockSize = blockSize(ptr);
-    int dataSize = dataSize(ptr);
-    int requiredSize = dataSize + this.indexBlockHeaderSize + (isAQ? Utils.SIZEOF_LONG: indexSize); 
-    long retPtr = ptr;
-    if (requiredSize > blockSize) {
-      long $ptr = expand(ptr, requiredSize);
-      if ($ptr > 0) {
-        ptr = $ptr;
-        retPtr = ptr;
-      } else {
-        // rehash slot
-        int $slot = getSlotNumber(hash, ref_index_base.get().length);
-        long pptr = ref_index_base.get()[$slot];
-        
-        // This is done under write lock for the slot
-        rehashSlot($slot);
-        long rehashed = rehashedSlots.incrementAndGet();
 
-        $slot = getSlotNumber(hash, ref_index_base_rehash.get().length);
-        retPtr = 0; // for rehash we return 0;
-        ptr = ref_index_base_rehash.get()[$slot];
-        
-        blockSize = blockSize(ptr);
-        requiredSize = dataSize(ptr) + this.indexBlockHeaderSize + (isAQ? Utils.SIZEOF_LONG: indexSize); 
-        if (blockSize < requiredSize) {
-          // Check on requiredSize again 
-          //TODO: optimize in shrink - we do shrink followed by expand 
-          $ptr = expand(ptr, requiredSize);
+    this.indexFormat.begin(ptr);
+    long retPtr = ptr;
+
+    try {
+      if (isEvictionEnabled()) {
+        doEviction(ptr); // TODO: take into account size of a new item
+      }
+      // If indexPtr == 0, then insert hash only (for AQ)
+      boolean isAQ = indexPtr == 0;
+      int blockSize = blockSize(ptr);
+      int dataSize = dataSize(ptr);
+      int requiredSize =
+          dataSize + this.indexBlockHeaderSize + (isAQ ? Utils.SIZEOF_LONG : indexSize);
+      if (requiredSize > blockSize) {
+        long $ptr = expand(ptr, requiredSize);
+        if ($ptr > 0) {
           ptr = $ptr;
-          ref_index_base_rehash.get()[$slot] = ptr;
-        }
-        if (rehashed == ref_index_base.get().length) {
-          // Rehash is complete
-          ref_index_base.set(ref_index_base_rehash.get());
-          //TODO: Do we really need to set this to NULL?
-          ref_index_base_rehash.set(null);
-          rehashedSlots.set(0);
-          this.rehashInProgress = false;
+          retPtr = ptr;
+        } else {
+          // rehash slot
+          int $slot = getSlotNumber(hash, ref_index_base.get().length);
+
+          // This is done under write lock for the slot
+          rehashSlot($slot);
+          long rehashed = rehashedSlots.incrementAndGet();
+
+          $slot = getSlotNumber(hash, ref_index_base_rehash.get().length);
+          retPtr = 0; // for rehash we return 0;
+          ptr = ref_index_base_rehash.get()[$slot];
+
+          blockSize = blockSize(ptr);
+          requiredSize =
+              dataSize(ptr) + this.indexBlockHeaderSize + (isAQ ? Utils.SIZEOF_LONG : indexSize);
+          if (blockSize < requiredSize) {
+            // Check on requiredSize again
+            // TODO: optimize in shrink - we do shrink followed by expand
+            $ptr = expand(ptr, requiredSize);
+            ptr = $ptr;
+            ref_index_base_rehash.get()[$slot] = ptr;
+          }
+          if (rehashed == ref_index_base.get().length) {
+            // Rehash is complete
+            ref_index_base.set(ref_index_base_rehash.get());
+            // TODO: Do we really need to set this to NULL?
+            ref_index_base_rehash.set(null);
+            rehashedSlots.set(0);
+            this.rehashInProgress = false;
+          }
         }
       }
+      insertEntry(ptr, hash, indexPtr, indexSize, rank);
+    } finally {
+      this.indexFormat.end(ptr);
     }
-    insertEntry(ptr, hash, indexPtr, indexSize, rank);
     return retPtr;
   }
-  
+
   /**
    * TODO: eviction by size
    * Perform eviction
@@ -1441,7 +1457,8 @@ public class MemoryIndex implements Persistent {
   private void doEviction(long slotPtr) { 
     int toEvict = -1;
     boolean evictToVictim  = true;
-    
+    //TODO: we can improve insert performance by 
+    // disabling search for expired items
     if (this.indexFormat.isExpirationSupported()){
       toEvict = findExpired(slotPtr);
     }

@@ -203,5 +203,16 @@ public interface IndexFormat extends Persistent {
   public void writeIndex(long ptr, long keyPtr, int keySize, long valuePtr, 
       int valueSize, short sid, int dataOffset, int dataSize, long expire);
   
+  /**
+   * Begin index block access
+   * @param ibPtr index block address
+   * @return true if full index block scan requested, false - otherwise
+   */
+  public default boolean begin(long ibPtr) { return false;}
+  /**
+   * End index block access
+   * @param ibPtr index block address
+   */
+  public default void end(long ibPtr) {}
   
 }
