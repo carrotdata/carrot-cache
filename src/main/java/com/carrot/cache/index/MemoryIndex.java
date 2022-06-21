@@ -877,7 +877,7 @@ public class MemoryIndex implements Persistent {
             }
             int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
             int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
-            int idx = this.evictionPolicy.getStartIndexForRank(numRanks, rank + 1, numEntries);
+            int idx = rank == 0? 0: this.evictionPolicy.getStartIndexForRank(numRanks, rank - 1, numEntries);
             int sid1 = getSegmentIdForEntry(ptr, idx);
             // Update stats
             if (this.cache != null) {

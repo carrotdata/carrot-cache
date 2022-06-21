@@ -56,26 +56,26 @@ public interface EvictionPolicy {
   
   /**
    * TODO: move this code out
-   * Get rank for a given index (0 - based)
-   * @param numSegments total number of segments
+   * Get rank for a given index (0 - based). 0 - maximum
+   * @param numRanks total number of ranks
    * @param cacheItemIndex
    * @param totalItems
    * @return segment number
    */
-  public default int getRankForIndex(int numSegments, int cacheItemIndex, int totalItems) {
+  public default int getRankForIndex(int numRanks, int cacheItemIndex, int totalItems) {
     if (totalItems == 0) return 0;
-    return cacheItemIndex * numSegments / totalItems;
+    return cacheItemIndex * numRanks / totalItems;
   }
   
   /**
    * TODO: move this code out
    * Get start index for a given segment
-   * @param total number of segments
-   * @param segmentNum segment number
+   * @param total number of ranks
+   * @param rank rank
    * @param totalItems total items in Index-Data-Block
    * @return start index
    */
-  public default int getStartIndexForRank(int numSegments, int segmentNum, int totalItems) {
-    return segmentNum * totalItems / numSegments;
+  public default int getStartIndexForRank(int numRanks, int rank, int totalItems) {
+    return rank * totalItems / numRanks;
   }
 }

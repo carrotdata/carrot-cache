@@ -32,6 +32,7 @@ import com.carrot.cache.util.Utils;
 
 public class TestMemoryIndexMQ extends TestMemoryIndexBase{
   /** Logger */
+  @SuppressWarnings("unused")
   private static final Logger LOG = LogManager.getLogger(TestMemoryIndexMQ.class);
   
   @Before
@@ -51,7 +52,6 @@ public class TestMemoryIndexMQ extends TestMemoryIndexBase{
     }
     UnsafeAccess.free(buf);
   }
-  
   
   private void loadIndexBytesWithEviction(int evictionStartFrom) {
     IndexFormat format = memoryIndex.getIndexFormat();
@@ -149,32 +149,32 @@ public class TestMemoryIndexMQ extends TestMemoryIndexBase{
   
   @Test
   public void testLoadReadNoRehashBytes() {
-    LOG.info("Test load and read no rehash bytes");
+    System.out.println("Test load and read no rehash bytes");
     loadReadBytes(100000);
   }
   
   @Test
   public void testLoadReadNoRehashMemory() {
-    LOG.info("Test load and read no rehash memory");
+    System.out.println("Test load and read no rehash memory");
     loadReadMemory(100000);
   }
   
   @Test
   public void testLoadReadNoRehashBytesWithHit() {
-    LOG.info("Test load and read no rehash bytes - with hit");
+    System.out.println("Test load and read no rehash bytes - with hit");
     loadReadBytesWithHit(100000);
   }
   
   @Test
   public void testLoadReadNoRehashMemoryWithHit() {
-    LOG.info("Test load and read no rehash memory - with hit");
+    System.out.println("Test load and read no rehash memory - with hit");
     loadReadMemoryWithHit(100000);
   }
   
   
   @Test
   public void testLoadReadDeleteNoRehashBytes() {
-    LOG.info("Test load and read-delete no rehash bytes");
+    System.out.println("Test load and read-delete no rehash bytes");
     loadReadBytes(100000);
     deleteIndexBytes();
     verifyIndexBytesNot();
@@ -182,7 +182,7 @@ public class TestMemoryIndexMQ extends TestMemoryIndexBase{
   
   @Test
   public void testLoadReadDeleteNoRehashMemory() {
-    LOG.info("Test load and read-delete no rehash memory");
+    System.out.println("Test load and read-delete no rehash memory");
     loadReadMemory(100000);
     deleteIndexMemory();
     verifyIndexMemoryNot();
@@ -190,31 +190,31 @@ public class TestMemoryIndexMQ extends TestMemoryIndexBase{
   
   @Test
   public void testLoadReadWithRehashBytes() {
-    LOG.info("Test load and read with rehash bytes");
+    System.out.println("Test load and read with rehash bytes");
     loadReadBytes(1000000);
   }
   
   @Test
   public void testLoadReadWithRehashMemory() {
-    LOG.info("Test load and read with rehash memory");
+    System.out.println("Test load and read with rehash memory");
     loadReadMemory(1000000);
   }
   
   @Test
   public void testLoadReadWithRehashBytesWithHit() {
-    LOG.info("Test load and read with rehash bytes - with hit");
+    System.out.println("Test load and read with rehash bytes - with hit");
     loadReadBytesWithHit(1000000);
   }
   
   @Test
   public void testLoadReadWithRehashMemoryWithHit() {
-    LOG.info("Test load and read with rehash memory - with hit");
+    System.out.println("Test load and read with rehash memory - with hit");
     loadReadMemoryWithHit(1000000);
   }
   
   @Test
   public void testLoadReadDeleteWithRehashBytes() {
-    LOG.info("Test load and read-delete with rehash bytes");
+    System.out.println("Test load and read-delete with rehash bytes");
     loadReadBytes(1000000);
     deleteIndexBytes();
     verifyIndexBytesNot();
@@ -222,7 +222,7 @@ public class TestMemoryIndexMQ extends TestMemoryIndexBase{
   
   @Test
   public void testLoadReadDeleteWithRehashMemory() {
-    LOG.info("Test load and read with rehash memory");
+    System.out.println("Test load and read with rehash memory");
     loadReadMemory(1000000);
     deleteIndexMemory();
     verifyIndexMemoryNot();
@@ -230,7 +230,7 @@ public class TestMemoryIndexMQ extends TestMemoryIndexBase{
   
   @Test
   public void testEvictionBytes() {
-    LOG.info("Test eviction bytes");
+    System.out.println("Test eviction bytes");
 
     prepareData(200000);
     loadIndexBytesWithEviction(100000);
@@ -259,7 +259,7 @@ public class TestMemoryIndexMQ extends TestMemoryIndexBase{
   
   @Test
   public void testEvictionMemory() {
-    LOG.info("Test eviction memory");
+    System.out.println("Test eviction memory");
 
     prepareData(200000);
     loadIndexMemoryWithEviction(100000);
@@ -288,7 +288,7 @@ public class TestMemoryIndexMQ extends TestMemoryIndexBase{
   
   @Test
   public void testLoadSave() throws IOException {
-    LOG.info("Test load save");
+    System.out.println("Test load save");
     prepareData(200000);
     loadIndexMemory();
     long size = memoryIndex.size();
