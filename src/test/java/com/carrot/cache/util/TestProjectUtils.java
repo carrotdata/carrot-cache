@@ -17,13 +17,17 @@ package com.carrot.cache.util;
 
 import static org.junit.Assert.assertEquals;
 
+import org.junit.Ignore;
 import org.junit.Test;
+
+import com.carrot.cache.expire.ExpireSupport;
 
 public class TestProjectUtils {
   
   /**
    * Compare hash64 for byte arrays and direct memory version
    */
+  @Ignore
   @Test
   public void testHash64() {
     int keySize = 33;
@@ -39,5 +43,157 @@ public class TestProjectUtils {
       long hash2 = Utils.hash64(mKeys[i], keySize);
       assertEquals(hash1, hash2);
     }
+  }
+  
+  @Test
+  public void testValue15() {
+    int vi = 0xffff;
+    int vs = (short) vi;
+    int vvs = (short) (0x7fff & vs);
+    System.out.printf(" %d %d %d\n", vi, vs, vvs);
+  }
+  
+  @Test
+  public void testValue14() {
+    int vi = 0xffff;
+    int vs = (short) vi;
+    int vvs = (short) (0x3fff & vs);
+    System.out.printf(" %d %d %d\n", vi, vs, vvs);
+  }
+  @Test
+  public void testValue1() {
+    int v1 = 0xffff;
+    int v2 = 0x3fff;
+    short s1 = (short) v1;
+    short s2 = (short) v2;
+    short ss1 = (short)((s1 >> 15) & 1);
+    short ss2 = (short) ((s2 >> 15) & 1);
+    
+    System.out.printf(" %d %d %d %d %d %d\n", v1, v2, s1, s2, ss1, ss2);
+
+  }
+  @Test
+  public void testValue2() {
+    int v1 = 0xffff;
+    int v2 = 0xbfff;
+    short s1 = (short) v1;
+    short s2 = (short) v2;
+    short ss1 = (short)((s1 >> 14) & 3);
+    short ss2 = (short) ((s2 >> 14) & 3);
+    
+    System.out.printf(" %d %d %d %d %d %d\n", v1, v2, s1, s2, ss1, ss2);
+
+  }
+  
+  @Test
+  public void testAllConversions() {
+    short v1 = 10000;
+    short v2 = 9999;
+    short v3 = 15197;
+    
+    // Seconds
+    short v = sec1(v1);
+    assertEquals(v1, low15(v));
+    assertEquals(ExpireSupport.TIME_IN_SECONDS, (int) high1(v1));
+    v = sec1(v2);
+    assertEquals(v2, low15(v));
+    assertEquals(ExpireSupport.TIME_IN_SECONDS, (int) high1(v));
+    v = sec1(v3);
+    assertEquals(v3, low15(v));
+    assertEquals(ExpireSupport.TIME_IN_SECONDS, (int) high1(v));
+    
+    v = sec2(v1);
+    assertEquals(v1, low14(v));
+    assertEquals(ExpireSupport.TIME_IN_SECONDS, (int) high2(v));
+    
+    v = sec2(v2);
+    assertEquals(v2, low14(v));
+    assertEquals(ExpireSupport.TIME_IN_SECONDS, (int) high2(v));
+    
+    v = sec2(v3);
+    assertEquals(v3, low14(v));
+    assertEquals(ExpireSupport.TIME_IN_SECONDS, (int) high2(v));
+    // Minutes
+    v = min1(v1);
+    assertEquals(v1, low15(v));
+    assertEquals(ExpireSupport.TIME_IN_MINUTES, (int) high1(v));
+    
+    v = min1(v2);
+    assertEquals(v2, low15(v));
+    assertEquals(ExpireSupport.TIME_IN_MINUTES, (int) high1(v));
+    
+    v = min1(v3);
+    assertEquals(v3, low15(v));
+    assertEquals(ExpireSupport.TIME_IN_MINUTES, (int) high1(v));
+    
+    v = min2(v1);
+    assertEquals(v1, low14(v));
+    assertEquals(ExpireSupport.TIME_IN_MINUTES, (int) high2(v));
+    
+    v = min2(v2);
+    assertEquals(v2, low14(v));
+    assertEquals(ExpireSupport.TIME_IN_MINUTES, (int) high2(v));
+    
+    v = min2(v3);
+    assertEquals(v3, low14(v));
+    assertEquals(ExpireSupport.TIME_IN_MINUTES, (int) high2(v));
+
+    v = hours2(v1);
+    assertEquals(v1, low14(v));
+    assertEquals(ExpireSupport.TIME_IN_HOURS, (int) high2(v));
+    
+    v = hours2(v2);
+    assertEquals(v2, low14(v));
+    assertEquals(ExpireSupport.TIME_IN_HOURS, (int) high2(v));
+    
+    v = hours2(v3);
+    assertEquals(v3, low14(v));
+    assertEquals(ExpireSupport.TIME_IN_HOURS, (int) high2(v));
+
+    int vv = 64000;
+    short ss = (short) vv;
+    
+    int vvv = ss & 0xffff;
+    
+    assertEquals(vv, vvv);
+  }
+  
+  /**
+   * Utility methods
+   */
+  private short low15 (short v) {
+    return (short)(v & 0x7fff);
+  }
+
+  private short low14 (short v) {
+    return (short)(v & 0x3fff);
+  }
+
+  private  short high1(short v) {
+    return (short)((v >> 15) & 1);
+  }
+  
+  public  short high2(short v) {
+    return (short)((v >> 14) & 3);
+  }
+  
+  public short sec1(short v) {
+    return v;
+  }
+  
+  public short sec2(short v) {
+    return v;
+  }
+  
+  public short min1(short v) {
+    return (short) (v | 0x8000);
+  }
+  
+  public short min2 (short v) {
+    return (short) (v | 0x4000);
+  }
+  
+  public short hours2(short v) {
+    return (short) (v | 0xc000);
   }
 }
