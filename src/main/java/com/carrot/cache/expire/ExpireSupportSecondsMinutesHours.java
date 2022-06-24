@@ -17,6 +17,7 @@
  */
 package com.carrot.cache.expire;
 
+import com.carrot.cache.util.Epoch;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 /**
@@ -35,8 +36,8 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
    * @param type
    * @param epochStartTime
    */
-  public ExpireSupportSecondsMinutesHours(long epochStartTime) {
-    this.epochStartTime = epochStartTime;
+  public ExpireSupportSecondsMinutesHours() {
+    this.epochStartTime = Epoch.getEpochStartTime();
   }
 
   /**
@@ -58,7 +59,7 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
    * @return meta section size in bytes
    */
   public int getExpireMetaSectionSize () {
-    return Utils.SIZEOF_LONG +  3 * Utils.SIZEOF_SHORT;
+    return ExpireSupport.super.getExpireMetaSectionSize() +  3 * Utils.SIZEOF_SHORT;
   }
   
   /**
@@ -67,13 +68,14 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
    * @param expireFieldPtr item expire field address (2 bytes are used to keep expiration time)
    * @return true if expired, false otherwise
    */
-  public final boolean updateOrExpire(long ibesPtr, long expireFieldPtr) {
+  @Override
+  public final long getExpire(long ibesPtr, long expireFieldPtr) {
     
     long accessStartTime = getAccessStartTime(ibesPtr);
     
-    long expTime = absoluteTime(ibesPtr, expireFieldPtr);
-    if (accessStartTime > expTime) {
-      return true; // expired
+    long expTime = getExpire0(ibesPtr, expireFieldPtr);
+    if (accessStartTime == 0 || accessStartTime > expTime) {
+      return expTime; // expired
     }
     // else check if we need updated expiration field
     short value = UnsafeAccess.toShort(expireFieldPtr);
@@ -86,7 +88,7 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
           int currentCounter = getCurrentSecondsEpochCounter(accessStartTime);
           int blockCounter = getSecondsEpochCounterValue(ibesPtr);
           if (currentCounter - blockCounter > 1) {
-            return true; // expired b/c at least two epochs behind
+            return expTime; // expired b/c at least two epochs behind
           } else if (currentCounter - blockCounter == 1) {
             // currentCounter = blockCounter + 1
             // Update expiration field
@@ -100,7 +102,7 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
           int currentCounter = getCurrentMinutesEpochCounter(accessStartTime);
           int blockCounter = getMinutesEpochCounterValue(ibesPtr);
           if (currentCounter - blockCounter > 1) {
-            return true; // expired b/c at least two epochs behind
+            return expTime; // expired b/c at least two epochs behind
           } else if (currentCounter - blockCounter == 1) {
             // currentCounter = blockCounter + 1
             // Update expiration field
@@ -113,7 +115,7 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
         int currentCounter = getCurrentHoursEpochCounter(accessStartTime);
         int blockCounter = getHoursEpochCounterValue(ibesPtr);
         if (currentCounter - blockCounter > 1) {
-          return true; // expired b/c at least two epochs behind
+          return expTime; // expired b/c at least two epochs behind
         } else if (currentCounter - blockCounter == 1) {
           // currentCounter = blockCounter + 1
           // Update expiration field
@@ -124,10 +126,10 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
         break;
       default:
     }
-    return false;
+    return expTime;
   }
   
-  public final long absoluteTime(long ibesPtr, long expireFieldPtr) {
+  private long getExpire0(long ibesPtr, long expireFieldPtr) {
     // check first bit
     // 1 - minutes
     // 0 - seconds
@@ -153,6 +155,65 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
     }
   }
 
+  private long getEpochTimeSeconds(long ibesPtr) {
+    int counter = getSecondsEpochCounterValue(ibesPtr);
+    return counter * EPOCH_DURATION_SEC_SMH_TYPE;
+  }
+  
+  private long getEpochTimeMinutes(long ibesPtr) {
+    int counter = getMinutesEpochCounterValue(ibesPtr);
+    return counter * EPOCH_DURATION_MIN_SMH_TYPE;
+  }
+  
+  private long getEpochTimeHours(long ibesPtr) {
+    int counter = getHoursEpochCounterValue(ibesPtr);
+    return counter * EPOCH_DURATION_HOURS_SMH_TYPE;
+  }
+  
+  private short toSeconds(short v) {
+    return v;
+  }
+  
+  private short toMinutes(short v) {
+    return (short) (v | 0x4000);
+  }
+  
+  private short toHours(short v) {
+    return (short) (v | 0xc000);
+  }
+  
+  @Override
+  public void setExpire(long ibesPtr, long expireFieldPtr, long expire) {
+    long epochSecTime = getEpochTimeSeconds(ibesPtr);
+    // Maximum expiration time in seconds we can set
+    long maxSeconds = epochSecTime + 2 * EPOCH_DURATION_SEC_SM_TYPE;
+    maxSeconds += epochStartTime;
+    epochSecTime += epochStartTime;
+    if (expire  < maxSeconds) {
+      short secs = toSeconds((short)((expire - epochSecTime) / 1000));
+      UnsafeAccess.putShort(expireFieldPtr, secs);
+      return;
+    }
+    long epochMinTime = getEpochTimeMinutes(ibesPtr);
+    long maxMinutes = epochMinTime + 2 * EPOCH_DURATION_MIN_SM_TYPE;
+    maxMinutes += epochStartTime;
+    epochMinTime += epochStartTime;
+    if (expire < maxMinutes) {
+      short mins = toMinutes((short)((expire - epochMinTime) / (60 * 1000)));
+      UnsafeAccess.putShort(expireFieldPtr, mins);  
+      return;
+    }
+    long epochHoursTime = getEpochTimeHours(ibesPtr);
+    long maxHours = epochHoursTime + 2 * EPOCH_DURATION_HOURS_SMH_TYPE;
+    maxHours += epochStartTime;
+    epochHoursTime += epochStartTime;
+    if (expire > maxHours) {
+      expire = maxHours;
+    }
+    short hours = toHours((short)((expire - epochHoursTime) / (3600 * 1000)));
+    UnsafeAccess.putShort(expireFieldPtr, hours);    
+  }
+  
   @Override
   public void updateMeta(long ibesPtr) {
     long accessStartTime = getAccessStartTime(ibesPtr);
@@ -189,5 +250,26 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
    */
   public int getCurrentHoursEpochCounter(long accessStartTime) {
     return (int)((accessStartTime - epochStartTime) / EPOCH_DURATION_HOURS_SMH_TYPE);
+  }
+
+  @Override
+  public boolean begin(long ibesPtr, boolean force) {
+    // TODO Auto-generated method stub
+    long time = System.currentTimeMillis();
+    if (force) {
+      setAccessStartTime(ibesPtr, time);
+      return true;
+    }
+    int secCounter = getSecondsEpochCounterValue(ibesPtr);
+    int minCounter = getMinutesEpochCounterValue(ibesPtr);
+    int hoursCounter = getHoursEpochCounterValue(ibesPtr);
+    
+    if (getCurrentSecondsEpochCounter(time) > secCounter || 
+        getCurrentMinutesEpochCounter(time) > minCounter ||
+        getCurrentHoursEpochCounter(time) > hoursCounter) {
+      setAccessStartTime(ibesPtr, time);
+      return true;
+    }
+    return false;
   }
 }

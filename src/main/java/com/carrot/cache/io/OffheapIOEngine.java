@@ -106,14 +106,14 @@ public class OffheapIOEngine extends IOEngine {
       if(s == null) {
         continue;
       }
-      Path filePath = Paths.get(getSegmentFileName(s.getId()));
+      Path filePath = Paths.get(dataDir, getSegmentFileName(s.getId()));
       if (Files.exists(filePath)) {
+        //FIXME: old segment? MUST be deleted when segment ID is reassigned
         continue; // we skip it
       }
       FileOutputStream fos = new FileOutputStream(filePath.toFile());
       DataOutputStream dos = new DataOutputStream(fos);
       s.save(os);
-      
       dos.close();
     }
   }

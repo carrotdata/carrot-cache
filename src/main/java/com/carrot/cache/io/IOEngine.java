@@ -1091,7 +1091,6 @@ public abstract class IOEngine implements Persistent {
       int rank)
       throws IOException {
     checkRank(rank);
-    long iptr = 0;
     try {
       //TODO: check double locking
       this.rbLocks[rank].writeLock().lock();
@@ -1115,19 +1114,11 @@ public abstract class IOEngine implements Persistent {
         offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength, expire);
       }
       
-      IndexFormat format = this.index.getIndexFormat();
-      int size = format.fullEntrySize(keyLength, valueLength);
-      iptr = UnsafeAccess.malloc(size); 
-      
-      int dataSize = Utils.kvSize(keyLength, valueLength);
-      
-      format.writeIndex(iptr, key, keyOff, keyLength, value, valueOff, valueLength, 
-          (short) s.getId(), (int) offset, dataSize, expire); 
-      
-      this.index.insertWithRank(key, keyOff, keyLength, iptr, size, rank);
+      this.index.insertWithRank(key, keyOff, keyLength, value, valueOff, valueLength, 
+        (short) s.getId(), (int) offset, rank, expire);
+
     } finally {
       this.rbLocks[rank].writeLock().unlock();
-      UnsafeAccess.free(iptr);
     }
   }
 
@@ -1164,7 +1155,6 @@ public abstract class IOEngine implements Persistent {
   public void put(long keyPtr, int keyLength, long valuePtr, int valueLength, long expire, int rank)
       throws IOException {
     checkRank(rank);
-    long iptr = 0;
     try {
       this.rbLocks[rank].writeLock().lock();
       Segment s = getRAMSegmentByRank(rank);
@@ -1185,19 +1175,10 @@ public abstract class IOEngine implements Persistent {
         }
         offset = s.append(keyPtr, keyLength, valuePtr, valueLength, expire);
       }
-      int dataSize = Utils.kvSize(keyLength, valueLength);
-      
-      IndexFormat format = this.index.getIndexFormat();
-      int size = format.fullEntrySize(keyLength, valueLength);
-      iptr = UnsafeAccess.malloc(size); 
-            
-      format.writeIndex(iptr, keyPtr, keyLength, valuePtr,  valueLength, 
-          (short) s.getId(), (int) offset, dataSize, expire); 
-      this.index.insertWithRank(keyPtr, keyLength, iptr, size, rank);
+      this.index.insertWithRank(keyPtr, keyLength, valuePtr, valueLength, (short) s.getId(), (int)offset, rank, expire);
       
     } finally {
       this.rbLocks[rank].writeLock().unlock();
-      UnsafeAccess.free(iptr);
     }
   }
 

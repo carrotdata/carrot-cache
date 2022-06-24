@@ -70,9 +70,9 @@ public class TestMQIndexFormat {
       sids[i] = (short)r.nextInt(1000);
       offsets[i] = r.nextInt(10000000);
       lengths[i] = r.nextInt(100000);
-      format.writeIndex(indexBuffer + i * entrySize, keys[i], 0, keySize, values[i], 0, valueSize,
+      format.writeIndex(0L, indexBuffer + i * entrySize, keys[i], 0, keySize, values[i], 0, valueSize,
         sids[i], offsets[i], lengths[i], 0);
-      format.writeIndex(indexBufferMem + i * entrySize, mKeys[i], keySize, mValues[i], valueSize,
+      format.writeIndex(0L, indexBufferMem + i * entrySize, mKeys[i], keySize, mValues[i], valueSize,
         sids[i], offsets[i], lengths[i], 0);
     }
     

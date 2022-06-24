@@ -821,6 +821,41 @@ public class MemoryIndex implements Persistent {
       cache.getEngine().updateStats(sid1, -1, -(numRanks - rank));
     }
   }
+  
+  /**
+   * Full scan - update of a n index block
+   * @param ptr index block address
+   */
+  private void fullScanUpdate(long ptr) {
+    int numEntries = numEntries(ptr);
+    // TODO: this works ONLY when index size = item size (no embedded data)
+
+    long $ptr = ptr + this.indexBlockHeaderSize;
+    int count = 0;
+    while (count < numEntries) {
+      // Check if expired - pro-active expiration check
+      long expire = this.indexFormat.getExpire(ptr, $ptr);
+      if (expire > 0) {
+        long current = System.currentTimeMillis();
+        if (current > expire) {
+          int sid0 = this.indexFormat.getSegmentId($ptr);
+          deleteAt(ptr, $ptr, count);
+          // TODO Update segment stats for expired item
+          // TODO:move this code into deleteAt method
+          int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
+          int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
+          if (this.cache != null) {
+            cache.getEngine().updateStats(sid0, -1, -rank);
+          }
+          numEntries --;
+          continue;
+        }
+      }
+      count++;
+      $ptr += this.indexFormat.fullEntrySize($ptr);
+    }
+  }
+  
   /**
    * Finds entry in index and promote if hit == true
    *
@@ -835,12 +870,13 @@ public class MemoryIndex implements Persistent {
   private int findAndPromote(long ptr, long hash, boolean hit, long buf, int bufSize) {
     int numEntries = numEntries(ptr);
     // TODO: this works ONLY when index size = item size (no embedded data)
-
+    //TODO: Check count when delete
+    //TODO: If deleted > 0, update number of items and size
     long $ptr = ptr + this.indexBlockHeaderSize;
     int count = 0;
     int indexSize = NOT_FOUND; // not found
 
-    boolean fullScanRequired = this.indexFormat.begin(ptr);
+    this.indexFormat.begin(ptr, true); // force scan
     boolean found = false;
     try {
       while (count < numEntries) {
@@ -858,6 +894,8 @@ public class MemoryIndex implements Persistent {
             if (this.cache != null) {
               cache.getEngine().updateStats(sid0, -1, -rank);
             }
+            numEntries --;
+            continue;
           }
         }
         if (!found && this.indexFormat.equals($ptr, hash)) {
@@ -898,9 +936,6 @@ public class MemoryIndex implements Persistent {
             UnsafeAccess.copy(ptr + off, ptr + off + indexSize, toMove);
             // insert index into new place
             UnsafeAccess.copy(buf, ptr + off, indexSize);
-          }
-          if (!fullScanRequired) {
-            break;
           }
         }
         count++;
@@ -969,7 +1004,7 @@ public class MemoryIndex implements Persistent {
   
   private int getSlotNumber(long hash, int indexSize) {
     int level = Integer.numberOfTrailingZeros(indexSize);
-    int $slot = (int) hash >>> (64 - level);
+    int $slot = (int) (hash >>> (64 - level));
     return $slot;
   }
   
@@ -1216,28 +1251,58 @@ public class MemoryIndex implements Persistent {
     }
   }
 
+  private void checkFullScanOnInsert(long ibPtr) {
+    boolean fullScanRequired = this.indexFormat.begin(ibPtr);
+    // For index formats which supports compact expiration
+    // full index block update may be required on insert operation
+    // to update items expiration to new epochs counters (seconds, minutes, hours)
+    if (fullScanRequired) {
+      fullScanUpdate(ibPtr);
+      this.indexFormat.end(ibPtr);
+    }
+  }
+  
   /**
    * Insert new index entry with a rank
    *
    * @param key item key
    * @param keyOff item's key offset
-   * @param keySize item key size
-   * @param indexPtr item index data pointer (relevant only for MQ)
-   * @param indexSize index size
+   * @param keyLength item key size
+   * @param value item value
+   * @param valueOffset item's value offset
+   * @param valueLength value size
    * @param rank item's rank
+   * @param expire expiration time
    * @return INSERTED or FAILED
    */
-  public MutationResult insertWithRank(byte[] key, int keyOff, int keySize, long indexPtr, int indexSize, int rank) {
+  
+  public MutationResult insertWithRank(byte[] key, int keyOffset, int keyLength, 
+      byte[] value, int valueOffset, int valueLength, 
+      short sid, int offset, int rank, long expire) {
     int slot = 0;
+    // get hashed key value
+    int dataSize = Utils.kvSize(keyLength, valueLength);
+    
+    IndexFormat format = this.indexFormat;
+    int indexSize = format.fullEntrySize(keyLength, valueLength);
+    long indexPtr = UnsafeAccess.malloc(indexSize); 
+
     try {
-      slot = lock(key, keyOff, keySize);
-      long hash = Utils.hash64(key, keyOff, keySize);
+      slot = lock(key, keyOffset, keyLength);
+      long ibPtr = getIndexForKey(key, keyOffset, keyLength)[slot];
+      
+      checkFullScanOnInsert(ibPtr);
+      
+      format.writeIndex(ibPtr, indexPtr, key, keyOffset, keyLength, value,  
+        valueLength, valueOffset, sid, offset, dataSize, expire); 
+      long hash = Utils.hash64(key, keyOffset, keyLength);
       return insertInternal(hash, indexPtr, indexSize, rank);
     } finally {
       unlock(slot);
+      UnsafeAccess.free(indexPtr);
     }
   }
-  
+
   /**
    * Insert new index entry
    *
@@ -1248,18 +1313,6 @@ public class MemoryIndex implements Persistent {
     return insert(key, 0, key.length, indexPtr, indexSize);
   }
 
-  /**
-   * Insert new index entry with a rank
-   *
-   * @param key item key
-   * @param indexPtr item index data pointer
-   * @param indexSize index size
-   * @param rank rank of an item (1 - max, 8 - min)
-   * @return INSERTED or FAILED
-   */
-  public MutationResult insertWithRank(byte[] key, long indexPtr, int indexSize, int rank) {
-    return insertWithRank(key, 0, key.length, indexPtr, indexSize, rank);
-  }
 
   /**
    * Insert new index entry
@@ -1281,26 +1334,41 @@ public class MemoryIndex implements Persistent {
       unlock(slot);
     }
   }
-
+  
   /**
    * Insert new index entry with a rank
    *
-   * @param ptr key address
-   * @param size key size
-   * @param index data pointer (not used for AQ, for MQ - its 12 bytes value)
-   * @param indexSize index size
+   * @param keyPtr key address
+   * @param keyLength key size
+   * @param valuePtr value address
+   * @param valueLength value size
    * @param rank item's rank
+   * @param expire expiration time
    * @param mutation result: INSERTED or FAILED
    */
-  public MutationResult insertWithRank(long ptr, int size, long indexPtr, int indexSize, int rank) {
+  public MutationResult insertWithRank(long keyPtr, int keyLength, long valuePtr, int valueLength, 
+      short sid, int offset, int rank, long expire) {
     int slot = 0;
     // get hashed key value
+    int dataSize = Utils.kvSize(keyLength, valueLength);
+    
+    IndexFormat format = this.indexFormat;
+    int indexSize = format.fullEntrySize(keyLength, valueLength);
+    long indexPtr = UnsafeAccess.malloc(indexSize); 
+
     try {
-      slot = lock(ptr, size);
-      long hash = Utils.hash64(ptr, size);
+      slot = lock(keyPtr, keyLength);
+      long ibPtr = getIndexForKey(keyPtr, keyLength)[slot];
+
+      checkFullScanOnInsert(ibPtr);
+
+      format.writeIndex(ibPtr, indexPtr, keyPtr, keyLength, valuePtr,  valueLength, 
+        sid, offset, dataSize, expire); 
+      long hash = Utils.hash64(keyPtr, keyLength);
       return insertInternal(hash, indexPtr, indexSize, rank);
     } finally {
       unlock(slot);
+      UnsafeAccess.free(indexPtr);
     }
   }
   
@@ -1340,6 +1408,30 @@ public class MemoryIndex implements Persistent {
     return index;
   }
   
+  /**
+   * Selects correct index table for a hashed key
+   * Can be either ref_index_base or ref_index_base_rehash
+   * @param key key buffer
+   * @param keyOffset key offset 
+   * @param keyLength key length
+   * @return index
+   */
+  private long[] getIndexForKey(byte[] key, int keyOffset, int keyLength) {
+    long hash = Utils.hash64(key, keyOffset, keyLength);
+    return getIndexForHash(hash);
+  }
+  
+  /**
+   * Selects correct index table for a hashed key
+   * Can be either ref_index_base or ref_index_base_rehash
+   * @param keyPtr key address
+   * @param keyLength key length
+   * @return index
+   */
+  private long[] getIndexForKey(long keyPtr, int keyLength) {
+    long hash = Utils.hash64(keyPtr, keyLength);
+    return getIndexForHash(hash);
+  }
   /**
    * Insert hash - value into index
    *
@@ -1391,60 +1483,55 @@ public class MemoryIndex implements Persistent {
    */
   private long insert0(long ptr, long hash, long indexPtr, int indexSize, int rank) {
 
-    this.indexFormat.begin(ptr);
     long retPtr = ptr;
 
-    try {
-      if (isEvictionEnabled()) {
-        doEviction(ptr); // TODO: take into account size of a new item
-      }
-      // If indexPtr == 0, then insert hash only (for AQ)
-      boolean isAQ = indexPtr == 0;
-      int blockSize = blockSize(ptr);
-      int dataSize = dataSize(ptr);
-      int requiredSize =
-          dataSize + this.indexBlockHeaderSize + (isAQ ? Utils.SIZEOF_LONG : indexSize);
-      if (requiredSize > blockSize) {
-        long $ptr = expand(ptr, requiredSize);
-        if ($ptr > 0) {
+    if (isEvictionEnabled()) {
+      doEviction(ptr); // TODO: take into account size of a new item
+    }
+    // If indexPtr == 0, then insert hash only (for AQ)
+    boolean isAQ = indexPtr == 0;
+    int blockSize = blockSize(ptr);
+    int dataSize = dataSize(ptr);
+    int requiredSize =
+        dataSize + this.indexBlockHeaderSize + (isAQ ? Utils.SIZEOF_LONG : indexSize);
+    if (requiredSize > blockSize) {
+      long $ptr = expand(ptr, requiredSize);
+      if ($ptr > 0) {
+        ptr = $ptr;
+        retPtr = ptr;
+      } else {
+        // rehash slot
+        int $slot = getSlotNumber(hash, ref_index_base.get().length);
+
+        // This is done under write lock for the slot
+        rehashSlot($slot);
+        long rehashed = rehashedSlots.incrementAndGet();
+
+        $slot = getSlotNumber(hash, ref_index_base_rehash.get().length);
+        retPtr = 0; // for rehash we return 0;
+        ptr = ref_index_base_rehash.get()[$slot];
+
+        blockSize = blockSize(ptr);
+        requiredSize =
+            dataSize(ptr) + this.indexBlockHeaderSize + (isAQ ? Utils.SIZEOF_LONG : indexSize);
+        if (blockSize < requiredSize) {
+          // Check on requiredSize again
+          // TODO: optimize in shrink - we do shrink followed by expand
+          $ptr = expand(ptr, requiredSize);
           ptr = $ptr;
-          retPtr = ptr;
-        } else {
-          // rehash slot
-          int $slot = getSlotNumber(hash, ref_index_base.get().length);
-
-          // This is done under write lock for the slot
-          rehashSlot($slot);
-          long rehashed = rehashedSlots.incrementAndGet();
-
-          $slot = getSlotNumber(hash, ref_index_base_rehash.get().length);
-          retPtr = 0; // for rehash we return 0;
-          ptr = ref_index_base_rehash.get()[$slot];
-
-          blockSize = blockSize(ptr);
-          requiredSize =
-              dataSize(ptr) + this.indexBlockHeaderSize + (isAQ ? Utils.SIZEOF_LONG : indexSize);
-          if (blockSize < requiredSize) {
-            // Check on requiredSize again
-            // TODO: optimize in shrink - we do shrink followed by expand
-            $ptr = expand(ptr, requiredSize);
-            ptr = $ptr;
-            ref_index_base_rehash.get()[$slot] = ptr;
-          }
-          if (rehashed == ref_index_base.get().length) {
-            // Rehash is complete
-            ref_index_base.set(ref_index_base_rehash.get());
-            // TODO: Do we really need to set this to NULL?
-            ref_index_base_rehash.set(null);
-            rehashedSlots.set(0);
-            this.rehashInProgress = false;
-          }
+          ref_index_base_rehash.get()[$slot] = ptr;
+        }
+        if (rehashed == ref_index_base.get().length) {
+          // Rehash is complete
+          ref_index_base.set(ref_index_base_rehash.get());
+          // TODO: Do we really need to set this to NULL?
+          ref_index_base_rehash.set(null);
+          rehashedSlots.set(0);
+          this.rehashInProgress = false;
         }
       }
-      insertEntry(ptr, hash, indexPtr, indexSize, rank);
-    } finally {
-      this.indexFormat.end(ptr);
     }
+    insertEntry(ptr, hash, indexPtr, indexSize, rank);
     return retPtr;
   }
 
@@ -1670,9 +1757,8 @@ public class MemoryIndex implements Persistent {
     while (count < numEntries) {
 
       // This is the hack
-      long h = this.indexFormat.getHash($ptr);
-      int $slot = (int) h >>> (64 - level);
-      // int off = 0, size = 0;
+      int bit = this.indexFormat.getHashBit($ptr, level);
+      int $slot = slot0 + bit;
       int size = this.indexFormat.fullEntrySize($ptr);
 
       if ($slot == slot0) {

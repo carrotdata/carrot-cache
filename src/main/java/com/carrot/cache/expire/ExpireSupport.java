@@ -21,6 +21,9 @@ import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 
 public interface ExpireSupport {
+  /*Expiration field size - 2 bytes*/
+  public final static int FIELD_SIZE = Utils.SIZEOF_SHORT;
+  
   /* One epoch duration for seconds type SM in ms */
   public static long EPOCH_DURATION_SEC_SM_TYPE = (long)(1 << 14) * 1000;
   
@@ -49,19 +52,33 @@ public interface ExpireSupport {
   
   /** 
    * Get meta section size 
+   * 
+   * Format meta section:
+   * 8 bytes - current start access time
+   * 2 bytes - epoch seconds counter
+   * 2 bytes - epoch minutes counter
+   * 2 bytes - epoch hours counter (optional) 
    **/
   public default int getExpireMetaSectionSize () {
     return Utils.SIZEOF_LONG;// to keep current scan start time 
   }
   
   /**
-   * Update, check or expire current index
+   * Get expiration time in ms w/o updating index field
+   * @param ibesPtr
+   * @param expireFieldPtr
+   * @return
+   */
+  public long getExpire(long ibesPtr, long expireFieldPtr);
+  
+  /**
+   * Sets expiration time for an item
    * @param ibesPtr index block expire section pointer
    * @param expireFieldPtr address of an expiration field of an index
-   *  Memory index implementation must provide this
-   * @return true if expired, false otherwise 
+   * @param expire expiration time in ms since 01-01-1970 12am
    */
-  public boolean updateOrExpire(long ibesPtr, long expireFieldPtr);
+  public void setExpire(long ibesPtr, long expireFieldPtr, long expire);
+ 
   /**
    * Update meta section at the end of an index block scan
    * @param ibesPtr index block expire section address
@@ -74,7 +91,8 @@ public interface ExpireSupport {
    * @return seconds epoch counter value
    */
   public default int getSecondsEpochCounterValue (long ibesPtr) {
-    return UnsafeAccess.toShort(ibesPtr) & 0xffff;
+    final int off = Utils.SIZEOF_LONG;
+    return UnsafeAccess.toShort(ibesPtr + off) & 0xffff;
   }
   
   /**
@@ -83,7 +101,8 @@ public interface ExpireSupport {
    * @return minutes epoch counter value
    */
   public default int getMinutesEpochCounterValue (long ibesPtr) {
-    return UnsafeAccess.toShort(ibesPtr + 2) & 0xffff;
+    final int off = Utils.SIZEOF_LONG + Utils.SIZEOF_SHORT;
+    return UnsafeAccess.toShort(ibesPtr + off) & 0xffff;
   }
   
   /**
@@ -92,7 +111,8 @@ public interface ExpireSupport {
    * @return minutes epoch counter value
    */
   public default int getHoursEpochCounterValue (long ibesPtr) {
-    return UnsafeAccess.toShort(ibesPtr + 4) & 0xffff;
+    final int off = Utils.SIZEOF_LONG + 2 * Utils.SIZEOF_SHORT;
+    return UnsafeAccess.toShort(ibesPtr + off) & 0xffff;
   }
   
   /**
@@ -101,7 +121,8 @@ public interface ExpireSupport {
    * @param v value
    */
   public default void setSecondsEpochCounterValue (long ibesPtr, int v) {
-    UnsafeAccess.putShort(ibesPtr, (short) v);
+    final int off = Utils.SIZEOF_LONG;
+    UnsafeAccess.putShort(ibesPtr + off, (short) v);
   }
   
   /**
@@ -110,7 +131,8 @@ public interface ExpireSupport {
    * @param v value
    */
   public default void setMinutesEpochCounterValue (long ibesPtr, int v ) {
-    UnsafeAccess.putShort(ibesPtr + 2, (short) v);
+    final int off = Utils.SIZEOF_LONG + Utils.SIZEOF_SHORT;
+    UnsafeAccess.putShort(ibesPtr + off, (short) v);
   }
   
   /**
@@ -119,16 +141,17 @@ public interface ExpireSupport {
    * @param v value
    */
   public default void setHoursEpochCounterValue (long ibesPtr, int v) {
-    UnsafeAccess.putShort(ibesPtr + 4, (short) v);
+    final int off = Utils.SIZEOF_LONG + 2 * Utils.SIZEOF_SHORT;
+    UnsafeAccess.putShort(ibesPtr + off, (short) v);
   }
   
   /**
    * Begin index block
    * @param ibesPtr index block expire section address
+   * @param force forces scan block scan
+   * @return true, if full block scan is required, false - otherwise
    */
-  public default void begin(long ibesPtr) {
-    UnsafeAccess.putLong(ibesPtr, System.currentTimeMillis());
-  }
+  public boolean begin(long ibesPtr, boolean force);
   
   /**
    * End index block

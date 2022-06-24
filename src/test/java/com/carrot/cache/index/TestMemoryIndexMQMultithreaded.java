@@ -23,7 +23,6 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.carrot.cache.util.UnsafeAccess;
-import com.carrot.cache.util.Utils;
 
 public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreadedBase{
   /** Logger */
@@ -48,7 +47,7 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     int[] lengths = lengthsTL.get();
     long start = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
-      format.writeIndex(buf, keys[i], 0, keys[i].length, values[i], 0, values[i].length, 
+      format.writeIndex(0L, buf, keys[i], 0, keys[i].length, values[i], 0, values[i].length, 
         sids[i], offsets[i], lengths[i], 0);
       forceInsert(keys[i], 0, keySize, buf, entrySize);
     }
@@ -68,7 +67,7 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     int[] offsets = offsetsTL.get();
     int[] lengths = lengthsTL.get();
     for(int i = 0; i < numRecords; i++) {
-      format.writeIndex(buf, keys[i], 0, keys[i].length, values[i], 0, values[i].length, 
+      format.writeIndex(0L, buf, keys[i], 0, keys[i].length, values[i], 0, values[i].length, 
         sids[i], offsets[i], lengths[i], 0);
       forceInsert(keys[i], 0, keySize, buf, entrySize);
       if (i == evictionStartFrom - 1) {
@@ -94,14 +93,12 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     int failed = 0;
     long start = System.currentTimeMillis();
     for (int i = 0; i < numRecords; i++) {
-      long hash = Utils.hash64(keys[i], 0, keySize);
       int result = (int) memoryIndex.find(keys[i], 0, keySize, hit, buf, entrySize);
       if (result < 0) {
         failed ++;
         continue;
       }
       assertEquals(entrySize, result);
-      assertEquals(hash, format.getHash(buf));
       short sid = (short)format.getSegmentId(buf);
       int offset = (int) format.getOffset(buf);
       int size = (int) format.getKeyValueSize(buf);
@@ -128,7 +125,7 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     int[] lengths = lengthsTL.get();
     long start = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
-      format.writeIndex(buf, mKeys[i], keySize, mValues[i], valueSize, 
+      format.writeIndex(0L, buf, mKeys[i], keySize, mValues[i], valueSize, 
         sids[i], offsets[i], lengths[i], 0);
       forceInsert(mKeys[i], keySize, buf, entrySize);
     }
@@ -148,7 +145,7 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     int[] offsets = offsetsTL.get();
     int[] lengths = lengthsTL.get();
     for(int i = 0; i < numRecords; i++) {
-      format.writeIndex(buf, mKeys[i], keySize, mValues[i], valueSize, 
+      format.writeIndex(0L, buf, mKeys[i], keySize, mValues[i], valueSize, 
         sids[i], offsets[i], lengths[i], 0);
       forceInsert(mKeys[i], keySize, buf, entrySize);
       if (i == evictionStartFrom - 1) {
@@ -173,14 +170,12 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
     int failed = 0;
     long start = System.currentTimeMillis();
     for (int i = 0; i < numRecords; i++) {
-      long hash = Utils.hash64(mKeys[i], keySize);
       int result = (int) memoryIndex.find(mKeys[i], keySize, hit, buf, entrySize);
       if (result < 0) {
         failed++;
         continue;
       }
       assertEquals(entrySize, result);
-      assertEquals(hash, format.getHash(buf));
       short sid = (short)format.getSegmentId(buf);
       int offset = (int) format.getOffset(buf);
       int size = (int) format.getKeyValueSize(buf);

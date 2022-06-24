@@ -56,20 +56,6 @@ public class MQIndexFormat implements IndexFormat {
     return current + fullEntrySize(current);
   }
 
-  //TODO: remove this API
-  @Override
-  public int find(long ibPtr, long keyPtr, int keySize, boolean hit, long buffer) {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-  
-  //TODO: remove this API
-  @Override
-  public int find(long ibPtr, byte[] key, int keyOffset, int keySize, boolean hit, long buffer) {
-    // TODO Auto-generated method stub
-    return 0;
-  }
-
   @Override
   public int getKeyValueSize(long buffer) {
     return UnsafeAccess.toInt(buffer + Utils.SIZEOF_LONG);
@@ -126,6 +112,7 @@ public class MQIndexFormat implements IndexFormat {
 
   @Override
   public void writeIndex(
+      long ibPtr,
       long ptr,
       byte[] key,
       int keyOffset,
@@ -133,7 +120,7 @@ public class MQIndexFormat implements IndexFormat {
       byte[] value,
       int valueOffset,
       int valueSize,
-      short sid,
+      int sid,
       int dataOffset,
       int dataSize,
       long expire /* not supported here*/) 
@@ -150,12 +137,13 @@ public class MQIndexFormat implements IndexFormat {
 
   @Override
   public void writeIndex(
+      long ibPtr,
       long ptr,
       long keyPtr,
       int keySize,
       long valuePtr,
       int valueSize,
-      short sid,
+      int sid,
       int dataOffset,
       int dataSize,
       long expire) 

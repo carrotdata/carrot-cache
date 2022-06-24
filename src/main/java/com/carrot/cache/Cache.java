@@ -44,6 +44,7 @@ import com.carrot.cache.io.OffheapIOEngine;
 import com.carrot.cache.io.Segment;
 import com.carrot.cache.io.IOEngine.IOEngineEvent;
 import com.carrot.cache.util.CacheConfig;
+import com.carrot.cache.util.Epoch;
 import com.carrot.cache.util.Utils;
 
 /**
@@ -383,6 +384,9 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
   
   /* Threshold to reject writes */
   double writeRejectionThreshold;
+  
+  Epoch epoch;
+  
   /**
    * Constructor with configuration
    *
@@ -402,6 +406,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
   
   private void initAll() throws IOException {
 
+    
     initAdmissionController();
     initRecyclingSelector();
     if (this.engine instanceof FileIOEngine) {
@@ -1141,6 +1146,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
       this.totalHits.set(dis.readLong());
       this.totalWrites.set(dis.readLong());
       this.totalRejectedWrites.set(dis.readLong());
+      Epoch.setEpochStartTime(dis.readLong());
       dis.close();
     }
   }
@@ -1161,6 +1167,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
     dos.writeLong(totalHits.get());
     dos.writeLong(totalWrites.get());
     dos.writeLong(totalRejectedWrites.get());
+    dos.writeLong(Epoch.getEpochStartTime());
     dos.close();
   }
   

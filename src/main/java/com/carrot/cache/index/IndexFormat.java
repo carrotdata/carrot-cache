@@ -69,31 +69,7 @@ public interface IndexFormat extends Persistent {
    * @return next index entry address or -1 (last one)
    */
   public long advance(long current);
-  
-  /**
-   * Find key in the index and loads index data into a provided buffer
-   * @param ibPtr index block pointer
-   * @param keyPtr key address
-   * @param keySize key size
-   * @param hit true - if hit, false - otherwise
-   * @param buffer memory buffer pointer
-   * @return size of an index entry or -1 (if not found)
-   */
-  public int find(long ibPtr, long keyPtr, int keySize, boolean hit, long buffer);
-  
-  /**
-   * Find key in the index and loads index data into a provided buffer
-   * 
-   * @param ibPtr index block pointer
-   * @param key key buffer
-   * @param keyOffset key offset
-   * @param keySize key size
-   * @param hit true - if hit, false - otherwise
-   * @param buffer memory buffer pointer
-   * @return size of an index entry or -1 (if not found)
-   */
-  public int find(long ibPtr, byte[] key, int keyOffset, int keySize, boolean hit, long buffer);
-  
+    
   /**
    * Returns key-value size 
    * @param buffer buffer contains entry data 
@@ -140,14 +116,14 @@ public interface IndexFormat extends Persistent {
     return 0;
   }
   
-  
   /**
-   * Get hash value for a given index entry address
+   * Get hash bit value value for a given index entry address
    * @param ptr address
-   * @return hash value
+   * @param n bit number
+   * @return n-th bit of a hash value
    */
-  public default long getHash(long ptr) {
-    return UnsafeAccess.toLong(ptr);
+  public default int getHashBit(long ptr, int n) {
+    return (int)(UnsafeAccess.toLong(ptr) >>> 64 - n) & 1;
   }
   
   /**
@@ -172,6 +148,7 @@ public interface IndexFormat extends Persistent {
   /**
    * Write index in place
    * 
+   * @param ibPtr index block pointer
    * @param ptr address to write
    * @param key key buffer
    * @param keyOffset key offset in the buffer
@@ -184,12 +161,13 @@ public interface IndexFormat extends Persistent {
    * @param dataSize data size
    * @param expire expiration time in ms since 01/01/1970 (if supported)
    */
-  public void writeIndex(long ptr, byte[] key, int keyOffset, int keySize, byte[] value, 
-      int valueOffset, int valueSize, short sid, int dataOffset, int dataSize, long expire);
+  public void writeIndex(long ibPtr, long ptr, byte[] key, int keyOffset, int keySize, byte[] value, 
+      int valueOffset, int valueSize, int sid, int dataOffset, int dataSize, long expire);
   
   /**
    * Write index in place
    * 
+   * @param ibPtr index block pointer
    * @param ptr address to write
    * @param keyPtr key address
    * @param keySize key size
@@ -200,15 +178,29 @@ public interface IndexFormat extends Persistent {
    * @param dataSize data size
    * @param expire expiration time 
    */
-  public void writeIndex(long ptr, long keyPtr, int keySize, long valuePtr, 
-      int valueSize, short sid, int dataOffset, int dataSize, long expire);
+  public void writeIndex(long ibPtr, long ptr, long keyPtr, int keySize, long valuePtr, 
+      int valueSize, int sid, int dataOffset, int dataSize, long expire);
   
   /**
    * Begin index block access
    * @param ibPtr index block address
+   * @param force forces scan operations
    * @return true if full index block scan requested, false - otherwise
+   *   when force = true, always returns true
    */
-  public default boolean begin(long ibPtr) { return false;}
+  public default boolean begin(long ibPtr, boolean force) {
+    return false;
+  }
+  
+  /**
+   * Begins index block access operation
+   * @param ibPtr index block address
+   * @return true if scan is requested, false - otherwise
+   */
+  public default boolean begin(long ibPtr) {
+    return begin(ibPtr, false);
+  }
+  
   /**
    * End index block access
    * @param ibPtr index block address

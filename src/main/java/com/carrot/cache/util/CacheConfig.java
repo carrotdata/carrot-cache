@@ -25,6 +25,7 @@ import com.carrot.cache.controllers.RecyclingSelector;
 import com.carrot.cache.controllers.ThroughputController;
 import com.carrot.cache.eviction.EvictionPolicy;
 import com.carrot.cache.eviction.SLRUEvictionPolicy;
+import com.carrot.cache.expire.ExpireSupport;
 import com.carrot.cache.index.AQIndexFormat;
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MQIndexFormat;
@@ -218,6 +219,10 @@ public class CacheConfig {
   /* File prefetch buffer size */
   public static final String FILE_PREFETCH_BUFFER_SIZE_KEY = "file.prefetch.buffer.size";
   
+  /* Cache expiration support implementation key */
+  public static final String CACHE_EXPIRE_SUPPORT_IMPL_KEY = "cache.expire.support.impl";
+  
+  
   /* Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 256 * 1024 * 1024;
@@ -323,6 +328,10 @@ public class CacheConfig {
   /** Default reader for file segments */
   public final static String DEFAULT_CACHE_FILE_DATA_READER_IMPL = 
       "com.carrot.cache.io.BaseFileDataReader";
+  
+  /** Default expire support implementation */
+  public final static String DEFAULT_CACHE_EXPIRE_SUPPORT_IMPL = 
+      "com.carrot.cache.expire.BaseFileDataReader";
   
   /** Default block writer block size */
   public final static int DEFAULT_CACHE_BLOCK_WRITER_BLOCK_SIZE = 4096;
@@ -1021,5 +1030,26 @@ public class CacheConfig {
     } else {
       return Integer.parseInt(value);
     }
+  }
+  
+  /**
+   * Get expiration support implementation by cache name
+   * @param cacheName cache name
+   * @return recycling selector
+   * @throws ClassNotFoundException
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   */
+  public ExpireSupport getExpireSupport(String cacheName)
+      throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+    String value = props.getProperty(cacheName + "." + CACHE_EXPIRE_SUPPORT_IMPL_KEY);
+    if (value == null) {
+      value = props.getProperty(CACHE_EXPIRE_SUPPORT_IMPL_KEY, DEFAULT_CACHE_EXPIRE_SUPPORT_IMPL);
+    }
+    
+    @SuppressWarnings("unchecked")
+    Class<ExpireSupport> clz = (Class<ExpireSupport>) Class.forName(value);
+    ExpireSupport instance = clz.newInstance();
+    return instance;
   }
 }
