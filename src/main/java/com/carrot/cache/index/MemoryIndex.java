@@ -1738,9 +1738,11 @@ public class MemoryIndex implements Persistent {
     int slot1 = slot0 + 1;
 
     long ptr0 = UnsafeAccess.mallocZeroed(blockSize);
+    UnsafeAccess.copy(ptr, ptr0, this.indexBlockHeaderSize);
     setBlockSize(ptr0, blockSize);
 
     long ptr1 = UnsafeAccess.mallocZeroed(blockSize);
+    UnsafeAccess.copy(ptr, ptr1, this.indexBlockHeaderSize);
     setBlockSize(ptr1, blockSize);
 
     // set slots pointers
