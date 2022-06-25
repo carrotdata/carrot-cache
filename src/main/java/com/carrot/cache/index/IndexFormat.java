@@ -207,4 +207,12 @@ public interface IndexFormat extends Persistent {
    */
   public default void end(long ibPtr) {}
   
+  /**
+   * Update meta section after index block split (if needed)
+   * @param ibPtr new index block pointer
+   */
+  public default void updateMetaSection(long ibPtr) {
+    // do nothing by default
+  }
+  
 }

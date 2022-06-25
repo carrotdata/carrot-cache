@@ -1793,6 +1793,10 @@ public class MemoryIndex implements Persistent {
     
     UnsafeAccess.free(ptr);
     ref_index_base.get()[slot] = 0;
+    // Update index format meta sections
+    this.indexFormat.updateMetaSection(ptr0);
+    this.indexFormat.updateMetaSection(ptr1);
+    
     
   }
 
