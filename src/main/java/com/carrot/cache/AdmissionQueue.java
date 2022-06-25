@@ -83,6 +83,28 @@ public class AdmissionQueue implements Persistent {
   }
   
   /**
+   * Constructor for testing
+   */
+  public AdmissionQueue() {
+    this.cacheName = "default";
+    CacheConfig conf = CacheConfig.getInstance();
+    this.currentMaxSize = conf.getAdmissionQueueStartSize(this.cacheName);
+    this.globalMaxSize = conf.getAdmissionQueueMaxSize(this.cacheName);
+    this.globalMinSize = conf.getAdmissionQueueMinSize(this.cacheName);
+    this.index = new MemoryIndex(this.cacheName, MemoryIndex.Type.AQ);
+    this.index.setMaximumSize(this.currentMaxSize);
+    
+  }
+  
+  /**
+   * Get memory index for this admission queue
+   * @return memory index
+   */
+  public MemoryIndex getMemoryIndex() {
+    return this.index;
+  }
+  
+  /**
    * Current size of the AQ
    * @return size
    */
@@ -103,6 +125,10 @@ public class AdmissionQueue implements Persistent {
    * @param max new maximum size
    */
   public void setMaximumSize(long max) {
+    if (max > this.globalMaxSize || max < this.globalMinSize) {
+      throw new IllegalArgumentException(String.format("requested maximum queue size %d is out of allowed range [%d, %d]", 
+        max, this.globalMinSize, this.globalMaxSize));
+    }
     this.currentMaxSize = max;
     this.index.setMaximumSize(max);
   }
@@ -193,5 +219,12 @@ public class AdmissionQueue implements Persistent {
     //TODO: set parent Cache after loading
     this.index = new MemoryIndex();
     this.index.load(dis);
+  }
+  
+  /**
+   * Dispose the AQ
+   */
+  public void dispose() {
+    this.index.dispose();
   }
 }
