@@ -107,10 +107,10 @@ public class OffheapIOEngine extends IOEngine {
         continue;
       }
       Path filePath = Paths.get(dataDir, getSegmentFileName(s.getId()));
-      if (Files.exists(filePath)) {
-        //FIXME: old segment? MUST be deleted when segment ID is reassigned
-        continue; // we skip it
-      }
+//      if (Files.exists(filePath)) {
+//        //FIXME: old segment? MUST be deleted when segment ID is reassigned
+//        continue; // we skip it
+//      }
       FileOutputStream fos = new FileOutputStream(filePath.toFile());
       DataOutputStream dos = new DataOutputStream(fos);
       s.save(os);
@@ -124,15 +124,17 @@ public class OffheapIOEngine extends IOEngine {
     // now load segments
     String dataDir = this.config.getDataDir(cacheName);
     Path path = Paths.get(dataDir);
-    Stream<Path> ls =Files.list(path);
+    Stream<Path> ls = Files.list(path);
     Iterator<Path> it = ls.iterator();
     while(it.hasNext()) {
       Path p = it.next();
       int id = getSegmentIdFromPath(p);
+      // FIXME: what is this is null?
       Segment s = this.dataSegments[id];
       FileInputStream fis = new FileInputStream(p.toFile());
       DataInputStream dis = new DataInputStream(fis);
       s.load(dis);
+      s.setOffheap(true);
       dis.close();
     }
     ls.close();

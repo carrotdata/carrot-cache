@@ -14,4 +14,9 @@
  */
 package com.carrot.cache.io;
 
-public class TestSegment {}
+public class TestSegmentBaseDataWriterReader {
+  
+  
+  
+  
+}

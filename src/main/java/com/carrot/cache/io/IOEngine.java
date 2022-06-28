@@ -108,7 +108,7 @@ public abstract class IOEngine implements Persistent {
   protected String dataDir;
   
   /* Segment data appender */
-  protected DataWriter dataAppender;
+  protected DataWriter dataWriter;
   
   /* IOEngine data reader - reads only memory based segments */
   protected DataReader memoryDataReader;
@@ -170,8 +170,8 @@ public abstract class IOEngine implements Persistent {
     this.index = new MemoryIndex(this.parent, MemoryIndex.Type.MQ);
     this.dataDir = this.config.getDataDir(this.cacheName);
     try {
-      this.dataAppender = this.config.getDataWriter(this.cacheName);
-      this.dataAppender.init(this.cacheName);
+      this.dataWriter = this.config.getDataWriter(this.cacheName);
+      this.dataWriter.init(this.cacheName);
       this.memoryDataReader = this.config.getMemoryDataReader(this.cacheName);
       this.memoryDataReader.init(this.cacheName);
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
@@ -918,7 +918,7 @@ public abstract class IOEngine implements Persistent {
         aListener.onEvent(this, IOEngineEvent.DATA_SIZE_CHANGED);
       }
     } finally {
-      
+      data.readUnlock();
     }
   }
 
@@ -929,18 +929,18 @@ public abstract class IOEngine implements Persistent {
    * @throws IOException 
    */
   protected void saveInternal(Segment data) throws IOException {
-    removeFromRAMBuffers(data);
+    //removeFromRAMBuffers(data);
   }
 
-  protected boolean removeFromRAMBuffers(Segment data) {
-    for (int i = 0; i < ramBuffers.length; i++) {
-      if (data == ramBuffers[i]) {
-        ramBuffers[i] = null;
-        return true;
-      }
-    }
-    return false;
-  }
+//  protected boolean removeFromRAMBuffers(Segment data) {
+//    for (int i = 0; i < ramBuffers.length; i++) {
+//      if (data == ramBuffers[i]) {
+//        ramBuffers[i] = null;
+//        return true;
+//      }
+//    }
+//    return false;
+//  }
 
   /**
    * Get maximum storage size (depends on IOEngine)
@@ -1182,7 +1182,7 @@ public abstract class IOEngine implements Persistent {
     }
   }
 
-  private Segment getRAMSegmentByRank(int rank) {
+  protected Segment getRAMSegmentByRank(int rank) {
     Segment s = this.ramBuffers[rank];
     if (s == null) {
       synchronized(this.ramBuffers) {
@@ -1197,7 +1197,7 @@ public abstract class IOEngine implements Persistent {
         if (this.dataSegments[id] == null) {
           s = Segment.newSegment((int) this.segmentSize, id, rank, System.currentTimeMillis());
           // Set data appender
-          s.setDataAppender(this.dataAppender);
+          s.setDataWriter(this.dataWriter);
           this.dataSegments[id] = s;
 
         } else {
@@ -1227,6 +1227,7 @@ public abstract class IOEngine implements Persistent {
     
     int num = getNumberOfActiveSegments();
     dos.writeInt(num);
+    
     // Save all segment meta info
     for(Segment s : this.dataSegments) {
       if (s == null) {

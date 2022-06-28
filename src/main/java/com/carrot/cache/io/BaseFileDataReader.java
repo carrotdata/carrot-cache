@@ -290,7 +290,8 @@ public class BaseFileDataReader implements DataReader {
 
   @Override
   public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
-    
-    return new BaseFileSegmentScanner(s, (FileIOEngine) engine);
+    RandomAccessFile file = ((FileIOEngine)engine).getFileFor(s.getId());
+    int prefetchBuferSize = ((FileIOEngine)engine).getFilePrefetchBufferSize();
+    return new BaseFileSegmentScanner(s, file, prefetchBuferSize);
   }
 }

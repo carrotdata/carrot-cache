@@ -25,17 +25,15 @@ import com.carrot.cache.util.PrefetchBuffer;
 
 public class BaseFileSegmentScanner implements SegmentScanner {
 
-    RandomAccessFile file;
+   // RandomAccessFile file;
     int numEntries;
     int currentEntry = 0;
-    FileIOEngine engine;    
     PrefetchBuffer pBuffer;
     
-    public BaseFileSegmentScanner(Segment s, FileIOEngine engine) throws IOException{
-      this.engine = engine;
-      this.file = engine.getOrCreateFileFor(s.getId());
+    public BaseFileSegmentScanner(Segment s, RandomAccessFile file, 
+        int prefetchBufferSize) throws IOException{
       this.numEntries = s.getInfo().getTotalItems();
-      int bufSize = this.engine.getFilePrefetchBufferSize();
+      int bufSize = prefetchBufferSize;
       this.pBuffer = new PrefetchBuffer(file, bufSize);
     }
     
@@ -83,7 +81,7 @@ public class BaseFileSegmentScanner implements SegmentScanner {
 
     @Override
     public void close() throws IOException {
-      file.close();
+     // file.close();
     }
 
     @Override

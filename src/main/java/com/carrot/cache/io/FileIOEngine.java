@@ -29,11 +29,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.carrot.cache.Cache;
+import com.carrot.cache.util.UnsafeAccess;
 
 public class FileIOEngine extends IOEngine {
   /** Logger */
@@ -44,6 +46,10 @@ public class FileIOEngine extends IOEngine {
   Map<Integer, RandomAccessFile> dataFiles = new HashMap<Integer, RandomAccessFile>();
   
   protected DataReader fileDataReader;
+  
+  /** We use this buffer pool to avoid unnecessary large memory allocations */ 
+  protected ConcurrentLinkedQueue<Long> bufferPool = new ConcurrentLinkedQueue<Long>();
+  
   /**
    * Constructor
    * @param numSegments
@@ -77,12 +83,50 @@ public class FileIOEngine extends IOEngine {
         // Close stream
         os.close();
         // Remove from RAM buffers
-        removeFromRAMBuffers(data);
+        //removeFromRAMBuffers(data);
+        data.setOffheap(false);
+        // release memory buffer
+        this.bufferPool.offer(data.getAddress());
+        data.setAddress(0);
       } catch (IOException e) {
         LOG.error(e);
       }
     };
     new Thread(r).start();
+  }
+  
+  protected Segment getRAMSegmentByRank(int rank) {
+    Segment s = this.ramBuffers[rank];
+    if (s == null) {
+      synchronized(this.ramBuffers) {
+        s = this.ramBuffers[rank];
+        if (s != null) {
+          return s;
+        }
+        int id = getAvailableId();
+        if (id < 0) {
+          return null;
+        }
+        if (this.dataSegments[id] == null) {
+          Long ptr = this.bufferPool.poll();
+          if (ptr == null) {
+            ptr = UnsafeAccess.malloc(this.segmentSize);
+          }
+          s = Segment.newSegment(ptr, (int) this.segmentSize, id, rank, System.currentTimeMillis());
+          // Set data appender
+          s.setDataWriter(this.dataWriter);
+          this.dataSegments[id] = s;
+
+        } else {
+          //TODO: is it normal path of an execution?
+          //FIXME: check Scavenger
+          s = this.dataSegments[id];
+          s.reuse(id, rank, System.currentTimeMillis());
+        }
+        this.ramBuffers[rank] = s;
+      }
+    }
+    return s;
   }
   
   @Override
