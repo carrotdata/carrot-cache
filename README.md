@@ -29,8 +29,8 @@ Some cherries on cake's top:
 TBI - To Be Implemented
 
 Timeline:
-07-31-22 - beta1 (available for customers)
-08-31-22 - beta2
+07-31-22 - beta1 (available for customers) \
+08-31-22 - beta2 \
 09-30-22 - first GA release.
 
 
