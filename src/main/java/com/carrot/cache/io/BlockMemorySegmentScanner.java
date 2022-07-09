@@ -40,9 +40,9 @@ import static com.carrot.cache.util.BlockReaderWriterSupport.META_SIZE;
    */
 public class BlockMemorySegmentScanner implements SegmentScanner {
   /*
-   * Parent segment
+   * Data segment
    */
-  Segment parent;
+  Segment segment;
   /*
    * Current scanner index 
    */
@@ -75,7 +75,7 @@ public class BlockMemorySegmentScanner implements SegmentScanner {
   /**
    * Current block number
    */
-  int currentBlockIndex = 0;
+  int currentBlockIndex = -1;
   
   /*
    * Private constructor
@@ -85,39 +85,45 @@ public class BlockMemorySegmentScanner implements SegmentScanner {
     if (s.isSealed() == false) {
       throw new RuntimeException("segment is not sealed");
     }
-    this.parent = s;
+    this.segment = s;
     this.blockSize = blockSize;
+    this.totalItems = s.numberOfEntries();
+    /*DEBUG*/ System.out.println("total items=" + totalItems);
     s.readLock();
-    this.currentBlockIndex = 0;
+    this.currentBlockIndex = -1;
     initNextBlock();
   }
   
   
   private void initNextBlock() {
-    this.currentBlockIndex++;
+    int blockIndexIncrement = this.currentBlockIndex < 0? 1: ((this.blockDataSize + META_SIZE - 1) / this.blockSize + 1);
+    this.currentBlockIndex += blockIndexIncrement;
     this.segmentOffset = this.currentBlockIndex * this.blockSize;
-    this.blockDataSize = getBlockDataSize(this.segmentOffset);
+    this.blockDataSize = getBlockDataSize(this.segment.getAddress() + this.segmentOffset);
     this.blockOffset = META_SIZE;
     
   }
+  
   public boolean hasNext() {
     return this.currentItemIndex < this.totalItems;
   }
   
   public boolean next() {
-    if (this.currentItemIndex == this.totalItems - 1) {
+    
+    this.currentItemIndex++;
+    
+    if (this.currentItemIndex == this.totalItems) {
       return false;
     }
-    long ptr = parent.getAddress();
+    long ptr = segment.getAddress();
     int off = this.segmentOffset + this.blockOffset;
-    int keySize = Utils.readUVInt(off);
+    int keySize = Utils.readUVInt(ptr + off);
     int keySizeSize = Utils.sizeUVInt(keySize);
     off += keySizeSize;
-    int valueSize = Utils.readUVInt(ptr + segmentOffset);
+    int valueSize = Utils.readUVInt(ptr + off);
     int valueSizeSize = Utils.sizeUVInt(valueSize);
     off += valueSizeSize;
     off += keySize + valueSize;
-    this.currentItemIndex++;
     if (off - this.segmentOffset == this.blockDataSize + META_SIZE) {
       initNextBlock();
     } else {
@@ -140,7 +146,7 @@ public class BlockMemorySegmentScanner implements SegmentScanner {
    * @return key size
    */
   public final int keyLength() {
-    long ptr = parent.getAddress();
+    long ptr = segment.getAddress();
     return Utils.readUVInt(ptr + this.segmentOffset + this.blockOffset);
   }
   
@@ -150,7 +156,7 @@ public class BlockMemorySegmentScanner implements SegmentScanner {
    */
   
   public final int valueLength() {
-    long ptr = parent.getAddress();
+    long ptr = segment.getAddress();
     int off = this.segmentOffset + this.blockOffset;
     int keySize = Utils.readUVInt(ptr + off);
     int keySizeSize = Utils.sizeUVInt(keySize);
@@ -163,7 +169,7 @@ public class BlockMemorySegmentScanner implements SegmentScanner {
    * @return keys address
    */
   public final long keyAddress() {
-    long ptr = parent.getAddress();
+    long ptr = segment.getAddress();
     int off = this.segmentOffset + this.blockOffset;
     int keySize = Utils.readUVInt(ptr + off);
     int keySizeSize = Utils.sizeUVInt(keySize);
@@ -179,7 +185,7 @@ public class BlockMemorySegmentScanner implements SegmentScanner {
    * @return values address
    */
   public final long valueAddress() {
-    long ptr = parent.getAddress();
+    long ptr = segment.getAddress();
     int off = this.segmentOffset + this.blockOffset;
     int keySize = Utils.readUVInt(ptr + off);
     int keySizeSize = Utils.sizeUVInt(keySize);
@@ -192,7 +198,7 @@ public class BlockMemorySegmentScanner implements SegmentScanner {
 
   @Override
   public void close() throws IOException {
-    parent.readUnlock();
+    segment.readUnlock();
   }
 
   @Override
@@ -235,5 +241,12 @@ public class BlockMemorySegmentScanner implements SegmentScanner {
     long valueAddress = valueAddress();
     UnsafeAccess.copy(valueAddress, buffer, offset, valueSize);
     return valueSize;
+  }
+
+
+  @Override
+  public Segment getSegment() {
+    // TODO Auto-generated method stub
+    return null;
   }
 }

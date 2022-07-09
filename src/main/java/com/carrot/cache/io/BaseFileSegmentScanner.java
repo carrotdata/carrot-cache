@@ -26,12 +26,14 @@ import com.carrot.cache.util.PrefetchBuffer;
 public class BaseFileSegmentScanner implements SegmentScanner {
 
    // RandomAccessFile file;
+    Segment segment;
     int numEntries;
     int currentEntry = 0;
     PrefetchBuffer pBuffer;
     
     public BaseFileSegmentScanner(Segment s, RandomAccessFile file, 
         int prefetchBufferSize) throws IOException{
+      this.segment = s;
       this.numEntries = s.getInfo().getTotalItems();
       int bufSize = prefetchBufferSize;
       this.pBuffer = new PrefetchBuffer(file, bufSize);
@@ -107,5 +109,10 @@ public class BaseFileSegmentScanner implements SegmentScanner {
     @Override
     public int getValue(byte[] buffer, int offset) throws IOException {
       return this.pBuffer.getValue(buffer, offset);
+    }
+
+    @Override
+    public Segment getSegment() {
+      return this.segment;
     }
   }

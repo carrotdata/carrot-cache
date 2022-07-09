@@ -41,8 +41,10 @@ public class BaseDataWriter implements DataWriter {
     UnsafeAccess.copy(keyPtr, addr, keySize);
     addr += keySize;
     // Copy value (item)
-    UnsafeAccess.copy(itemPtr, addr, itemSize);        
-    return requiredSize;
+    UnsafeAccess.copy(itemPtr, addr, itemSize);  
+    long retValue = s.dataSize();
+    s.incrDataSize(requiredSize);
+    return retValue;
   }
 
   @Override
@@ -72,7 +74,9 @@ public class BaseDataWriter implements DataWriter {
     addr += keySize;
     // Copy value (item)
     UnsafeAccess.copy(value, valueOffset, addr, valueSize);
-    return requiredSize;
+    long retValue = s.dataSize();
+    s.incrDataSize(requiredSize);
+    return retValue;
   }
 
   @Override

@@ -1265,12 +1265,20 @@ public abstract class IOEngine implements Persistent {
     FileInputStream fis = new FileInputStream(filePath.toFile());
     DataInputStream dis = new DataInputStream(fis);
     int num = dis.readInt();
+    
+    DataWriter dataWriter = null;
+    try {    
+      dataWriter = this.config.getDataWriter(cacheName);
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
     for (int i = 0; i < num; i++) {
       Segment.Info info = new Segment.Info();
       info.load(dis);
       int id = info.getId();
       this.dataSegments[id] = new Segment();
-      this.dataSegments[i].setInfo(info);
+      this.dataSegments[id].setDataWriter(dataWriter);
+      this.dataSegments[id].setInfo(info);
     }
     
     this.index.load(dis);

@@ -21,6 +21,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
+
 import sun.misc.Unsafe;
 
 public class Utils {
@@ -733,6 +734,38 @@ public class Utils {
     return buf;
   }
 
+  public static String toHexString(long ptr, int size) {
+    byte[] buf = new byte[size];
+    UnsafeAccess.copy(ptr, buf, 0, size);
+    return toHex(buf);
+  }
+  
+  private static final char[] HEX_CHARS = {
+      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+    };
+
+  /** Convert a byte range into a hex string */
+  public static String toHex(byte[] b, int offset, int length) {
+    int numChars = length * 2;
+    char[] ch = new char[numChars];
+    for (int i = 0; i < numChars; i += 2) {
+      byte d = b[offset + i / 2];
+      ch[i] = HEX_CHARS[(d >> 4) & 0x0F];
+      ch[i + 1] = HEX_CHARS[d & 0x0F];
+    }
+    return new String(ch);
+  }
+
+  /** Convert a byte array into a hex string */
+  public static String toHex(byte[] b) {
+    return toHex(b, 0, b.length);
+  }
+
+  public static String toHex(long ptr, int size) {
+    byte[] bytes = new byte[size];
+    UnsafeAccess.copy(ptr, bytes, 0, size);
+    return toHex(bytes);
+  }
   /**
    * Generates random alphanumeric string
    *
@@ -785,7 +818,7 @@ public class Utils {
   
   /* The total size of a K-V pair in the storage */
   public static int kvSize(int keySize, int valSize) {
-    return keySize + valSize + 8 /* timestamp */ + Utils.sizeUVInt(valSize) + Utils.sizeUVInt(keySize);
+    return keySize + valSize + Utils.sizeUVInt(valSize) + Utils.sizeUVInt(keySize);
   }
   
   /**

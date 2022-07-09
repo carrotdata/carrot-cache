@@ -106,4 +106,9 @@ public interface SegmentScanner extends Closeable {
     return true;
   }
   
+  /**
+   * Get data segment for the scanner
+   * @return data segment
+   */
+  public Segment getSegment();
 }

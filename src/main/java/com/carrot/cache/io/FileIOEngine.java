@@ -110,7 +110,7 @@ public class FileIOEngine extends IOEngine {
         if (this.dataSegments[id] == null) {
           Long ptr = this.bufferPool.poll();
           if (ptr == null) {
-            ptr = UnsafeAccess.malloc(this.segmentSize);
+            ptr = UnsafeAccess.mallocZeroed(this.segmentSize);
           }
           s = Segment.newSegment(ptr, (int) this.segmentSize, id, rank, System.currentTimeMillis());
           // Set data appender

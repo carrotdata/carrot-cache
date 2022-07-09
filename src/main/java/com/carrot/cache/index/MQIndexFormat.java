@@ -43,7 +43,7 @@ public class MQIndexFormat implements IndexFormat {
 
   @Override
   public final int indexEntrySize() {
-    return Utils.SIZEOF_INT + 2 * Utils.SIZEOF_LONG;
+    return Utils.SIZEOF_LONG + 3 * Utils.SIZEOF_INT;
   }
 
   @Override
@@ -63,14 +63,14 @@ public class MQIndexFormat implements IndexFormat {
 
   @Override
   public int getSegmentId(long buffer) {
-    long ref = UnsafeAccess.toLong(buffer + Utils.SIZEOF_INT + Utils.SIZEOF_LONG);
+    long ref = UnsafeAccess.toInt(buffer + Utils.SIZEOF_INT + Utils.SIZEOF_LONG);
     // Segment id (low 2 bytes of a first 4 bytes )
     return (int) (ref >>> 32) & 0xffff;    
   }
 
   @Override
   public long getOffset(long buffer) {
-    long ref = UnsafeAccess.toLong(buffer + Utils.SIZEOF_INT + Utils.SIZEOF_LONG);
+    long ref = UnsafeAccess.toInt(buffer + 2 * Utils.SIZEOF_INT + Utils.SIZEOF_LONG);
     return ref & 0xffffffff;
   }
 

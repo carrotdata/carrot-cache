@@ -55,13 +55,13 @@ public class BlockDataWriter implements DataWriter {
     if (addr < 0) {
       return IOEngine.NOT_FOUND;
     }
-    int currentBlock = (int)(addr - s.getAddress()) / this.blockSize;
-    //TODO: check this code
-    boolean crossedBlockBoundary = addr > s.getAddress() + getFullDataSize(s, blockSize);
-    
-    if (crossedBlockBoundary) {
-      zeroBlockMeta(s, currentBlock);
-    }
+
+    long fullDataSize = getFullDataSize(s, blockSize);
+    boolean notEmptySegment = s.numberOfEntries() > 0;
+    boolean crossedBlockBoundary = notEmptySegment && addr > s.getAddress() + fullDataSize;
+    long retValue = crossedBlockBoundary? addr - META_SIZE - s.dataSize() - s.getAddress(): 0;
+    int currentBlock = crossedBlockBoundary? (int) (addr - s.getAddress()) / this.blockSize:
+      (int) (s.dataSize() / this.blockSize);
     
     // Key size
     Utils.writeUVInt(addr, keySize);
@@ -78,30 +78,41 @@ public class BlockDataWriter implements DataWriter {
     UnsafeAccess.copy(valuePtr, addr, valueSize);   
     int requiredSize = Utils.requiredSize(keySize, valueSize);
     incrBlockDataSize(s, currentBlock, requiredSize);
-    
-    return crossedBlockBoundary? this.blockSize: 0;
+    s.incrDataSize((int)retValue);
+    return s.dataSize();//retValue;
   }
 
   private long getAppendAddress(Segment s, int keySize, int valueSize) {
     int requiredSize = Utils.requiredSize(keySize, valueSize);
-    long dataSize = getFullDataSize(s, blockSize);
-    if (requiredSize + dataSize > s.size()) {
+    long fullDataSize = getFullDataSize(s, blockSize);
+    if (requiredSize + fullDataSize > s.size()) {
       return IOEngine.NOT_FOUND;
     }
-    boolean crossedBlockBoundary = dataSize / this.blockSize < (dataSize + requiredSize) /this.blockSize ;
+    
+    // corner case: fullDataSize / blockSize * blockSize == fullDataSize
+    boolean fullBlocks = fullDataSize / blockSize * blockSize == fullDataSize;
+    
+    boolean crossedBlockBoundary = fullDataSize > 0 && !fullBlocks && 
+        fullDataSize / this.blockSize < (fullDataSize + requiredSize) /this.blockSize ;
     
     if (crossedBlockBoundary) {
       // next block starts with
-      int off = (int)(dataSize / this.blockSize) * this.blockSize + this.blockSize;
-      // and must have space for blockSize
-      off += this.blockSize;
-      if (off > s.size()) {
+      int off = (int)(fullDataSize / this.blockSize) * this.blockSize + this.blockSize;
+      // and must have space for requiredSize
+      if (off + META_SIZE + requiredSize > s.size()) {
         // Not enough space in this segment for additional block
         return IOEngine.NOT_FOUND;
       }
     }
-    long addr = crossedBlockBoundary? s.getAddress() + (dataSize / this.blockSize) * this.blockSize 
-        + this.blockSize + META_SIZE: s.getAddress() + dataSize;
+    // This is equivalent to :
+    // if (fullDataSize == 0) {
+    //   fullDataSize += META_SIZE
+    // } 
+    long incr = ((fullDataSize - 1) & 0x8000000000000000L) >>> 63;   
+    fullDataSize += META_SIZE * incr; 
+    
+    long addr = crossedBlockBoundary? s.getAddress() + (fullDataSize / this.blockSize) * this.blockSize 
+        + this.blockSize + META_SIZE: s.getAddress() + fullDataSize;
     return addr;
   }
 
@@ -120,14 +131,15 @@ public class BlockDataWriter implements DataWriter {
     if (addr < 0) {
       return IOEngine.NOT_FOUND;
     }
-    int currentBlock = (int) (addr - s.getAddress()) / this.blockSize;
     // TODO: check this code
-    boolean crossedBlockBoundary = addr > s.getAddress() + getFullDataSize(s, blockSize);
-
-    if (crossedBlockBoundary) {
-      zeroBlockMeta(s, currentBlock);
-    }
-
+    long fullDataSize = getFullDataSize(s, blockSize);
+    boolean notEmptySegment = s.numberOfEntries() > 0;
+    boolean crossedBlockBoundary = notEmptySegment && addr > s.getAddress() + fullDataSize;
+    long retValue = crossedBlockBoundary? addr - META_SIZE - s.dataSize() - s.getAddress(): 0;
+    
+    int currentBlock = crossedBlockBoundary? (int) (addr - s.getAddress()) / this.blockSize:
+      (int) (s.dataSize() / this.blockSize);
+    
     // Key size
     Utils.writeUVInt(addr, keySize);
     int kSizeSize = Utils.sizeUVInt(keySize);
@@ -141,12 +153,10 @@ public class BlockDataWriter implements DataWriter {
     addr += keySize;
     // Copy value (item)
     UnsafeAccess.copy(value, valueOffset, addr, valueSize);
-
     int requiredSize = Utils.requiredSize(keySize, valueSize);
-
     incrBlockDataSize(s, currentBlock, requiredSize);
-
-    return crossedBlockBoundary ? this.blockSize : 0;
+    s.incrDataSize((int)retValue);
+    return s.dataSize();//retValue;
   }
   
   /**
@@ -162,16 +172,6 @@ public class BlockDataWriter implements DataWriter {
   }
   
   /**
-   * Zero first 6 (actually - 8) bytes of a given block
-   * @param s segment
-   * @param n block number
-   */
-  private void zeroBlockMeta(Segment s, int n) {
-    long ptr = s.getAddress() + n * blockSize;
-    UnsafeAccess.putLong(ptr, 0L);
-  }
-  
-  /**
    * Processes empty segment
    * @param s segment
    */
@@ -180,6 +180,22 @@ public class BlockDataWriter implements DataWriter {
       long ptr = s.getAddress();
       UnsafeAccess.putShort(ptr, (short) 0);
     }
+  }
+  
+  /**
+   * Get block size
+   * @return block size
+   */
+  public int getBlockSize() {
+    return this.blockSize;
+  }
+  
+  /**
+   * Sets block size
+   * @param size block size
+   */
+  public void setBlockSize(int size) {
+    this.blockSize = size;
   }
   
   @Override

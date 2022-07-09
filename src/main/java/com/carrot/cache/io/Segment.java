@@ -429,8 +429,8 @@ public class Segment implements Persistent {
   /* Segment info */
   volatile private Info info;
   
-  /* Data appender */
-  DataWriter dataAppender;
+  /* Data writer */
+  DataWriter dataWriter;
   
   /**
    * 
@@ -439,17 +439,7 @@ public class Segment implements Persistent {
    */
   Segment(){
   }
-  
-  /**
-   *  Used for off-heap only
-   * @param address memory address
-   * @param size segment size
-   */
-  Segment(long address, int size){
-    this.address = address;
-    this.size = size;
-  }
-  
+    
   /**
    * Private constructor
    * @param address address of a segment
@@ -459,6 +449,8 @@ public class Segment implements Persistent {
     this.address = address;
     this.size = size;
     this.info = new Info(id, rank, creationTime);
+    this.info.setSegmentSize(size);
+    setOffheap(true);
   }
   
   /**
@@ -466,7 +458,7 @@ public class Segment implements Persistent {
    * @param da data appender
    */
   public void setDataWriter(DataWriter da) {
-    this.dataAppender = da;
+    this.dataWriter = da;
   }
   
   /**
@@ -512,7 +504,7 @@ public class Segment implements Persistent {
    * @return new segment
    */
   public static Segment newSegment(int size, int id, int rank, long creationTime) {
-    long ptr = UnsafeAccess.malloc(size);
+    long ptr = UnsafeAccess.mallocZeroed(size);
     return new Segment(ptr, size, id, rank, creationTime);
   }
   
@@ -549,7 +541,7 @@ public class Segment implements Persistent {
    * @param incr increment
    * @return new data size
    */
-  private long incrDataSize(int incr) {
+  public long incrDataSize(int incr) {
     return this.info.incrementDataSize(incr);
   }
   
@@ -722,17 +714,16 @@ public class Segment implements Persistent {
     }
     try {
       writeLock();
-      processExpire(expire);
       
-      long offset = dataSize();
-      int requiredSize = (int) this.dataAppender.append(this, key, keyOffset, keySize, item, itemOffset, itemSize);
-      if (requiredSize < 0) {
-        //seal();
+      //long curOffset = dataSize();
+      long offset = this.dataWriter.append(this, key, keyOffset, keySize, item, itemOffset, itemSize);
+      if (offset < 0) {
         return -1;
       }
-      incrDataSize(requiredSize);
+      processExpire(expire);
+      //incrDataSize((int)(newOffset - curOffset));
       incrNumEntries(1);
-      return offset /* offset in a segment*/;
+      return offset/* offset in a segment*/;
     } finally {
       writeUnlock();
     }
@@ -788,14 +779,14 @@ public class Segment implements Persistent {
     }
     try {
       writeLock();
-      processExpire(expire);
-      long offset = dataSize();
-      int requiredSize = (int) this.dataAppender.append(this, keyPtr, keySize, itemPtr, itemSize);
-      if (requiredSize < 0) {
-        //seal();
+      //long curOffset = dataSize();
+      long offset = (int) this.dataWriter.append(this, keyPtr, keySize, itemPtr, itemSize);
+      if (offset < 0) {
         return -1;
       }
-      incrDataSize(requiredSize);
+      processExpire(expire);
+      // data writer MUST set dataSize in a segment
+      //incrDataSize((int)(newOffset - curOffset));
       incrNumEntries(1);
       return offset;
     } finally {
@@ -829,15 +820,15 @@ public class Segment implements Persistent {
     try {
       
       readLock();
-      // Write data size
-      dos.writeLong(dataSize());
+      // Write segment size
+      long size = size();
+      dos.writeLong(size);
       
-      int size = (int) Math.min(dataSize(), 1024 * 1024);
-      byte[] buffer = new byte[size];
+      int bufSize = (int) Math.min(size, 1024 * 1024);
+      byte[] buffer = new byte[bufSize];
       long written = 0;
-      long dataSize = dataSize() ;
-      while (written < dataSize) {
-        int toCopy = (int) Math.min(size, dataSize - written);
+      while (written < size) {
+        int toCopy = (int) Math.min(bufSize, size - written);
         UnsafeAccess.copy(this.address + written, buffer, 0, toCopy);
         written += toCopy;
         dos.write(buffer, 0, toCopy);
@@ -853,7 +844,7 @@ public class Segment implements Persistent {
     //FIXME: do not allocate memory
     DataInputStream dis = Utils.toDataInputStream(is);
     long size = dis.readLong();
-    long ptr = UnsafeAccess.malloc(size);
+    long ptr = UnsafeAccess.mallocZeroed(size);
     int bufSize = (int) Math.min(1024 * 1024, size);
     byte[] buffer = new byte[bufSize];
     int read = 0;
@@ -861,7 +852,7 @@ public class Segment implements Persistent {
     while(read < size) {
       int toRead = (int) Math.min(size - read, bufSize);
       dis.readFully(buffer, 0, toRead);
-      UnsafeAccess.copy(ptr + read, buffer, 0, toRead);
+      UnsafeAccess.copy(buffer, 0, ptr + read, toRead);
       read += toRead;
     }
     this.setAddress(ptr);

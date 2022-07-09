@@ -30,7 +30,8 @@ public class BlockReaderWriterSupport {
    */
   public static int getBlockDataSize(Segment s, int blockSize, int blockNumber) {
     long ptr = s.getAddress() + blockNumber * blockSize + SIZE_OFFSET;
-    return UnsafeAccess.toInt(ptr);
+    int blockS =  UnsafeAccess.toInt(ptr);
+    return blockS;
   } 
   
   /**
@@ -70,7 +71,9 @@ public class BlockReaderWriterSupport {
   public static long getDataSize(Segment s, int blockSize) {
     long size = s.dataSize();
     int currentBlock = (int) (size / blockSize);
-    return size + getBlockDataSize(s, blockSize, currentBlock);
+    size += getBlockDataSize(s, blockSize, currentBlock);
+    /*DEBUG*/ System.out.println("size="+ size);
+    return size;
   }
   
   /**
@@ -80,7 +83,11 @@ public class BlockReaderWriterSupport {
    * @return data size
    */
   public static long getFullDataSize(Segment s, int blockSize) {
-    return getDataSize(s, blockSize) + META_SIZE;
+    long size = s.dataSize();
+    int currentBlock = (int) (size / blockSize);
+    int blockDataSize =  getBlockDataSize(s, blockSize, currentBlock);
+    size += blockDataSize;
+    return size + (blockDataSize > 0? META_SIZE: 0);
   }
   
   /**
@@ -94,20 +101,21 @@ public class BlockReaderWriterSupport {
   public static long findInBlock(long ptr, byte[] key, int keyOffset, int keySize) {
     int blockDataSize = getBlockDataSize(ptr);
     long $ptr = ptr + META_SIZE;
-    long $$ptr;
     while ($ptr < ptr + blockDataSize) {
-      $$ptr = $ptr;
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
       int kSize = Utils.readUVInt($ptr);
-      $ptr += Utils.sizeUVInt(kSize);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      $ptr += kSizeSize;
       int vSize = Utils.readUVInt($ptr);
-      $ptr += Utils.sizeUVInt(vSize);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      $ptr += vSizeSize;
       if (kSize != keySize) {
         $ptr += kSize + vSize;
         continue;
       }
-      if (Utils.compareTo(key, keyOffset, keySize, $$ptr, kSize) == 0) {
-        return $$ptr;
+      if (Utils.compareTo(key, keyOffset, keySize, $ptr, kSize) == 0) {
+        $ptr -= kSizeSize + vSizeSize;
+        return $ptr;
       }
       $ptr += kSize + vSize;
     }
@@ -124,20 +132,21 @@ public class BlockReaderWriterSupport {
   public static long findInBlock(long ptr, long keyPtr, int keySize) {
     int blockDataSize = getBlockDataSize(ptr);
     long $ptr = ptr + META_SIZE;
-    long $$ptr;
     while ($ptr < ptr + blockDataSize) {
-      $$ptr = $ptr;
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
       int kSize = Utils.readUVInt($ptr);
-      $ptr += Utils.sizeUVInt(kSize);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      $ptr += kSizeSize;
       int vSize = Utils.readUVInt($ptr);
-      $ptr += Utils.sizeUVInt(vSize);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      $ptr += vSizeSize;
       if (kSize != keySize) {
         $ptr += kSize + vSize;
         continue;
       }
-      if (Utils.compareTo(keyPtr, keySize, $$ptr, kSize) == 0) {
-        return $$ptr;
+      if (Utils.compareTo(keyPtr, keySize, $ptr, kSize) == 0) {
+        $ptr -= kSizeSize + vSizeSize;
+        return $ptr;
       }
       $ptr += kSize + vSize;
     }
@@ -155,20 +164,21 @@ public class BlockReaderWriterSupport {
   public static long findInBlock(byte[] block, byte[] key, int keyOffset, int keySize) {
     int blockDataSize = getBlockDataSize(block);
     int off = META_SIZE;
-    int $off;
     while (off < blockDataSize) {
-      $off = off;
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
       int kSize = Utils.readUVInt(block, off);
-      off += Utils.sizeUVInt(kSize);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      off += kSizeSize;
       int vSize = Utils.readUVInt(block, off);
-      off += Utils.sizeUVInt(vSize);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      off += vSizeSize;
       if (kSize != keySize) {
         off += kSize + vSize;
         continue;
       }
       if (Utils.compareTo(key, keyOffset, keySize, block, off, kSize) == 0) {
-        return $off;
+        off -= kSizeSize + vSizeSize;
+        return off;
       }
       off += kSize + vSize;
     }
@@ -185,20 +195,21 @@ public class BlockReaderWriterSupport {
   public static long findInBlock(byte[] block, long keyPtr, int keySize) {
     int blockDataSize = getBlockDataSize(block);
     int off = META_SIZE;
-    int $off;
     while (off < blockDataSize) {
-      $off = off;
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
       int kSize = Utils.readUVInt(block, off);
-      off += Utils.sizeUVInt(kSize);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      off += kSizeSize;
       int vSize = Utils.readUVInt(block, off);
-      off += Utils.sizeUVInt(vSize);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      off += vSizeSize;
       if (kSize != keySize) {
         off += kSize + vSize;
         continue;
       }
-      if (Utils.compareTo( block, off, kSize, keyPtr, keySize) == 0) {
-        return $off;
+      if (Utils.compareTo(block, off, kSize, keyPtr, keySize) == 0) {
+        off -= kSizeSize + vSizeSize;
+        return off;
       }
       off += kSize + vSize;
     }

@@ -37,9 +37,9 @@ import com.carrot.cache.util.Utils;
    */
   public class BaseMemorySegmentScanner implements SegmentScanner {
     /*
-     * Parent segment
+     * Data segment
      */
-    Segment parent;
+    Segment segment;
     /*
      * Current scanner index 
      */
@@ -58,16 +58,16 @@ import com.carrot.cache.util.Utils;
       if (s.isSealed() == false) {
         throw new RuntimeException("segment is not sealed");
       }
-      this.parent = s;
+      this.segment = s;
       s.readLock();
     }
     
     public boolean hasNext() {
-      return currentIndex < parent.numberOfEntries();
+      return currentIndex < segment.numberOfEntries();
     }
     
     public boolean next() {
-      long ptr = parent.getAddress();
+      long ptr = segment.getAddress();
       
       int keySize = Utils.readUVInt(ptr + offset);
       int keySizeSize = Utils.sizeUVInt(keySize);
@@ -95,7 +95,7 @@ import com.carrot.cache.util.Utils;
      * @return key size
      */
     public final int keyLength() {
-      long ptr = parent.getAddress();
+      long ptr = segment.getAddress();
       return Utils.readUVInt(ptr + offset);
     }
     
@@ -105,7 +105,7 @@ import com.carrot.cache.util.Utils;
      */
     
     public final int valueLength() {
-      long ptr = parent.getAddress();
+      long ptr = segment.getAddress();
       int off = offset;
       int keySize = Utils.readUVInt(ptr + off);
       int keySizeSize = Utils.sizeUVInt(keySize);
@@ -118,7 +118,7 @@ import com.carrot.cache.util.Utils;
      * @return keys address
      */
     public final long keyAddress() {
-      long ptr = parent.getAddress();
+      long ptr = segment.getAddress();
       int off = offset;
       int keySize = Utils.readUVInt(ptr + off);
       int keySizeSize = Utils.sizeUVInt(keySize);
@@ -134,7 +134,7 @@ import com.carrot.cache.util.Utils;
      * @return values address
      */
     public final long valueAddress() {
-      long ptr = parent.getAddress();
+      long ptr = segment.getAddress();
       int off = offset;
       int keySize = Utils.readUVInt(ptr + off);
       int keySizeSize = Utils.sizeUVInt(keySize);
@@ -147,7 +147,7 @@ import com.carrot.cache.util.Utils;
 
     @Override
     public void close() throws IOException {
-      parent.readUnlock();
+      segment.readUnlock();
     }
 
     @Override
@@ -190,5 +190,10 @@ import com.carrot.cache.util.Utils;
       long valueAddress = valueAddress();
       UnsafeAccess.copy(valueAddress, buffer, offset, valueSize);
       return valueSize;
+    }
+
+    @Override
+    public Segment getSegment() {
+      return this.segment;
     }
   }

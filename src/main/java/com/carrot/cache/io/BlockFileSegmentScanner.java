@@ -28,6 +28,8 @@ import static com.carrot.cache.util.BlockReaderWriterSupport.getBlockDataSize;
 
 public class BlockFileSegmentScanner implements SegmentScanner {
 
+  /** Data segment*/
+  Segment segment;
   /** File */
   RandomAccessFile file;
   
@@ -53,6 +55,7 @@ public class BlockFileSegmentScanner implements SegmentScanner {
   int currentBlockDataSize = 0;
   
   public BlockFileSegmentScanner(Segment s, FileIOEngine engine, int blockSize) throws IOException {
+    this.segment = s;
     this.engine = engine;
     this.file = engine.getOrCreateFileFor(s.getId());
     this.numEntries = s.getInfo().getTotalItems();
@@ -156,5 +159,10 @@ public class BlockFileSegmentScanner implements SegmentScanner {
   @Override
   public int getValue(byte[] buffer, int offset) throws IOException {
     return this.pBuffer.getValue(buffer, offset);
+  }
+
+  @Override
+  public Segment getSegment() {
+    return this.segment;
   }
 }
