@@ -1208,6 +1208,25 @@ public class MemoryIndex implements Persistent {
   }
 
   /**
+   * Internal API: used by Scavenger Get key's popularity for a given key
+   *
+   * @param keyPtr key address
+   * @param keySize key size
+   * @return number between 1.0 and 0.0 (0.0 - means key is absent), 1.0 - key is at the top of a
+   *     index block.
+   */
+  public final double popularity(long keyPtr, int keySize) {
+    int slot = 0;
+    try {
+      slot = lock(keyPtr, keySize);
+      long hash = Utils.hash64(keyPtr, keySize);
+      return popularity(hash);
+    } finally {
+      unlock(slot);
+    }
+  }
+  
+  /**
    * Internal API: used by Scavenger Get key's popularity for a given key's hash
    *
    * @param hash key's hash

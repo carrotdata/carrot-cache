@@ -1104,7 +1104,23 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
   }
 
   @Override
+  public void evicted(long keyPtr, int keySize, 
+      long valuePtr, int valueSize, long expire) {
+    if (this.admissionController != null) {
+      AdmissionController.Type type = this.admissionController.readmit(keyPtr, keySize);
+      if (type == AdmissionController.Type.AQ) {
+        admissionQueue.addIfAbsentRemoveIfPresent(keyPtr, keySize);
+      }
+    }
+  }
+  
+  @Override
   public void expired(byte[] key, int off, int keySize) {
+    // Do nothing yet
+  }
+  
+  @Override
+  public void expired(long keyPtr,int keySize) {
     // Do nothing yet
   }
   

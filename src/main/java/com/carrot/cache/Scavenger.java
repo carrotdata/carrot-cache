@@ -23,12 +23,14 @@ import java.io.OutputStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MemoryIndex;
 import com.carrot.cache.io.IOEngine;
 import com.carrot.cache.io.Segment;
 import com.carrot.cache.io.SegmentScanner;
 import com.carrot.cache.util.CacheConfig;
 import com.carrot.cache.util.Persistent;
+import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 
 public class Scavenger extends Thread {
@@ -57,6 +59,22 @@ public class Scavenger extends Thread {
      * @param keySize key size
      */
     public void expired(byte[] key, int off, int keySize);
+    
+    /**
+     * Reports evicted item 
+     * @param keyPtr key address
+     * @param keySize key size
+     * @param valuePtr value address
+     * @param valueSize value size
+     */
+    public void evicted(long keyPtr, int keySize, long valuePtr, int valueSize, long expirationTime);
+    
+    /**
+     * Reports expired key
+     * @param keyPtr key address
+     * @param keySize key size
+     */
+    public void expired(long keyPtr, int keySize);
     
   }
   static class Stats implements Persistent {
@@ -264,108 +282,110 @@ public class Scavenger extends Thread {
     stats.totalRunTimes += (runEnd - runStart);
   }
 
+  // TODO: refactor this method
   private boolean cleanSegment(Segment s) throws IOException {
     // Check if segment is empty on active items
     CacheConfig config = this.cache.getCacheConfig();
     String cacheName = this.cache.getName();
     double stopRatio = config.getScavengerStopMemoryRatio(cacheName);
     Segment.Info info = s.getInfo();
-    if (info.getTotalItems() == 0) {
-      // We can dump it completely w/o asking memory index
-      //
-      long dataSize = info.getSegmentDataSize();
-      cache.reportUsed(-dataSize);
-      totalFreedBytes += dataSize;
-      // Update stats
-      stats.totalBytesFreed += dataSize;
-    } else {
-      double dumpBelowRatio = config.getScavengerDumpEntryBelowStart(cacheName);
-      IOEngine engine = cache.getEngine();
-      MemoryIndex index = engine.getMemoryIndex();
-      SegmentScanner sc = engine.getScanner(s);
-      byte[] key = null, val = null;
-      while (sc.hasNext()) {
-        long expire = sc.getExpire();
-        int keySize = sc.keyLength();
-        int valSize = sc.valueLength();
-        key = checkBuffer(key, keySize);
-
-        int keySizeSize = Utils.sizeUVInt(keySize);
-        int valSizeSize = Utils.sizeUVInt(valSize);
-        int totalSize = keySize + valSize + keySizeSize + valSizeSize;
+    SegmentScanner sc = null;
+    long indexBuf = 0;
+    int sid = s.getId();
+    try {
+      if (info.getTotalItems() == 0) {
+        // We can dump it completely w/o asking memory index
+        //
+        long dataSize = info.getSegmentDataSize();
+        cache.reportUsed(-dataSize);
+        totalFreedBytes += dataSize;
         // Update stats
-        stats.totalBytesScanned += totalSize;
-        // Read key
-        sc.getKey(key, 0);
-        // Check if it was expired
-        boolean expired = expire > 0 && (System.currentTimeMillis() > expire);
-        double p = index.popularity(key, 0, keySize);
+        stats.totalBytesFreed += dataSize;
+      } else {
+        double dumpBelowRatio = config.getScavengerDumpEntryBelowStart(cacheName);
+        IOEngine engine = cache.getEngine();
+        MemoryIndex index = engine.getMemoryIndex();
+        IndexFormat format = index.getIndexFormat();
+        int indexEntrySize = format.indexEntrySize();
+        indexBuf = UnsafeAccess.malloc(indexEntrySize);
 
-        if (expired) {
-          // Expire current item
-          cache.reportUsed(-totalSize);
-          totalFreedBytes += totalSize;
+        sc = engine.getScanner(s);
+
+        while (sc.hasNext()) {
+          long keyPtr = sc.keyAddress();
+          int keySize = sc.keyLength();
+          long offset = sc.getOffset();
+          boolean exists = index.exists(keyPtr, keySize, sid, offset, indexBuf, sid);
+          long expire = exists ? format.getExpire(indexBuf, indexEntrySize) : 0;
+          long valuePtr = sc.valueAddress();
+          int valSize = sc.valueLength();
+
+          int keySizeSize = Utils.sizeUVInt(keySize);
+          int valSizeSize = Utils.sizeUVInt(valSize);
+          int totalSize = keySize + valSize + keySizeSize + valSizeSize;
           // Update stats
-          stats.totalBytesExpired += totalSize;
-          stats.totalBytesFreed += totalSize;
-          stats.totalItemsExpired += 1;
-          // Report expiration
-          if (aListener != null) {
-            aListener.expired(key, 0, keySize);
-          }
-          // Delete from the index
-          index.delete(key, 0, keySize);
-        } else if (p < dumpBelowRatio) {
-          // Dump current item as a low value
-          cache.reportUsed(-totalSize);
-          totalFreedBytes += totalSize;
-          // Update stats
-          stats.totalBytesFreed += totalSize;
-          val = checkBuffer(val, valSize);
-          sc.getValue(val, 0);
-          // Return Item back to AQ
-          // TODO: fix this code. We need to move data to a victim cache on
-          // memory index eviction.
-          if (aListener != null) {
-            if (p > 0.0) {
-              aListener.evicted(key, 0, keySize, val, 0, valSize, expire);
-            } else {
-              // p == 0.0 means, that item was previously evicted from the index
-              aListener.evicted(key, 0, keySize, null, 0, 0, expire);
+          stats.totalBytesScanned += totalSize;
+
+          // Check if it was expired
+          boolean expired = expire > 0 && (System.currentTimeMillis() > expire);
+          double p = index.popularity(keyPtr, keySize);
+
+          if (expired || !exists) {
+            // Expire current item
+            cache.reportUsed(-totalSize);
+            totalFreedBytes += totalSize;
+            // Update stats
+            stats.totalBytesExpired += totalSize;
+            stats.totalBytesFreed += totalSize;
+            stats.totalItemsExpired += 1;
+            // Report expiration
+            if (aListener != null && expired) {
+              aListener.expired(keyPtr, keySize);
             }
+            if (exists) {
+              // Delete from the index
+              index.delete(keyPtr, keySize);
+            }
+          } else if (p < dumpBelowRatio) {
+            // Dump current item as a low value
+            cache.reportUsed(-totalSize);
+            totalFreedBytes += totalSize;
+            // Update stats
+            stats.totalBytesFreed += totalSize;
+            // Return Item back to AQ
+            // TODO: fix this code. We need to move data to a victim cache on
+            // memory index eviction.
+            if (aListener != null) {
+              if (p > 0.0) {
+                aListener.evicted(keyPtr, keySize, valuePtr, valSize, expire);
+              } else {
+                // p == 0.0 means, that item was previously evicted from the index
+                aListener.evicted(keyPtr, keySize, 0L, 0, expire);
+              }
+            }
+            // Delete from the index
+            index.delete(keyPtr, keySize);
+          } else {
+            // Delete from the index
+            index.delete(keyPtr, keySize);
+            int rank = engine.popularityToRank(p);
+            // Otherwise reinsert item back
+            engine.put(keyPtr, keySize, valuePtr, valSize, expire, rank);
           }
-          // Delete from the index
-          index.delete(key, 0, keySize);
-        } else {
-          // Read value
-          val = checkBuffer(val, valSize);
-          sc.getValue(val, 0);
-          // Delete from the index
-          index.delete(key, 0, keySize);
-          int rank = engine.popularityToRank(p);
-          // Otherwise reinsert item back
-          engine.put(key, 0, keySize, val, 0, valSize, expire, rank);
+          sc.next();
         }
-        sc.next();
+      }
+      double usage = cache.getMemoryUsedPct();
+      return usage < stopRatio;
+    } finally {
+      if (sc != null) {
+        sc.close();
+      }
+      if (indexBuf > 0) {
+        // Free buffer
+        UnsafeAccess.free(indexBuf);
       }
     }
-    double usage = cache.getMemoryUsedPct();
-    return usage < stopRatio;
-  }
-
-  /**
-   * Check that memory is at least requiredSize
-   * @param ptr memory buffer address
-   * @param size current allocated size
-   * @param requiredSize required size
-   * @return new buffer address (or old one)
-   */
-  private byte[] checkBuffer(byte[] buf, int requiredSize) {
-    if (buf != null && buf.length >= requiredSize) {
-      return buf;
-    }
-    buf = new byte[requiredSize];
-    return buf; 
   }
 
   /**
