@@ -101,6 +101,8 @@ public class BlockReaderWriterSupport {
   public static long findInBlock(long ptr, byte[] key, int keyOffset, int keySize) {
     int blockDataSize = getBlockDataSize(ptr);
     long $ptr = ptr + META_SIZE;
+    long found = IOEngine.NOT_FOUND;
+
     while ($ptr < ptr + blockDataSize) {
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
       int kSize = Utils.readUVInt($ptr);
@@ -115,15 +117,22 @@ public class BlockReaderWriterSupport {
       }
       if (Utils.compareTo(key, keyOffset, keySize, $ptr, kSize) == 0) {
         $ptr -= kSizeSize + vSizeSize;
-        return $ptr;
+        found = $ptr;
       }
       $ptr += kSize + vSize;
     }
-    return IOEngine.NOT_FOUND;
+    return found;
   }
   
   /**
    * Find key in a memory block
+   * 
+   * There is a chance that the same key is present more than once
+   * in t he block. In this case the last one will be considered as 
+   * a right one. It is not a transactional DB and consistency requirements
+   * is relaxed.
+   * 
+   * 
    * @param ptr block address
    * @param keyPtr key address
    * @param keySize key size
@@ -132,6 +141,7 @@ public class BlockReaderWriterSupport {
   public static long findInBlock(long ptr, long keyPtr, int keySize) {
     int blockDataSize = getBlockDataSize(ptr);
     long $ptr = ptr + META_SIZE;
+    long found = IOEngine.NOT_FOUND;
     while ($ptr < ptr + blockDataSize) {
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
       int kSize = Utils.readUVInt($ptr);
@@ -146,11 +156,11 @@ public class BlockReaderWriterSupport {
       }
       if (Utils.compareTo(keyPtr, keySize, $ptr, kSize) == 0) {
         $ptr -= kSizeSize + vSizeSize;
-        return $ptr;
+        found = $ptr;
       }
       $ptr += kSize + vSize;
     }
-    return IOEngine.NOT_FOUND;
+    return found;
   }
   
   /**
@@ -164,6 +174,8 @@ public class BlockReaderWriterSupport {
   public static long findInBlock(byte[] block, byte[] key, int keyOffset, int keySize) {
     int blockDataSize = getBlockDataSize(block);
     int off = META_SIZE;
+    long found = IOEngine.NOT_FOUND;
+
     while (off < blockDataSize) {
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
       int kSize = Utils.readUVInt(block, off);
@@ -178,11 +190,11 @@ public class BlockReaderWriterSupport {
       }
       if (Utils.compareTo(key, keyOffset, keySize, block, off, kSize) == 0) {
         off -= kSizeSize + vSizeSize;
-        return off;
+        found = off;
       }
       off += kSize + vSize;
     }
-    return IOEngine.NOT_FOUND;
+    return found;
   }
   
   /**
@@ -195,6 +207,8 @@ public class BlockReaderWriterSupport {
   public static long findInBlock(byte[] block, long keyPtr, int keySize) {
     int blockDataSize = getBlockDataSize(block);
     int off = META_SIZE;
+    long found = IOEngine.NOT_FOUND;
+
     while (off < blockDataSize) {
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
       int kSize = Utils.readUVInt(block, off);
@@ -209,10 +223,10 @@ public class BlockReaderWriterSupport {
       }
       if (Utils.compareTo(block, off, kSize, keyPtr, keySize) == 0) {
         off -= kSizeSize + vSizeSize;
-        return off;
+        found = off;
       }
       off += kSize + vSize;
     }
-    return IOEngine.NOT_FOUND;
+    return found;
   }
 }
