@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 //FIXME: handling last sK-V in a file which is less than 6 bytes total
-public class PrefetchBuffer {
+public final class PrefetchBuffer {
   /*
    * File to prefetch - all operations on file must be 
    * synchronized
@@ -287,5 +287,13 @@ public class PrefetchBuffer {
    */
   public int getBufferOffset() {
     return this.bufferOffset;
+  }
+  
+  /**
+   * Get current offset in the file
+   * @return offset
+   */
+  public long getOffset() {
+    return this.offset + this.bufferOffset;
   }
 }

@@ -111,4 +111,10 @@ public interface SegmentScanner extends Closeable {
    * @return data segment
    */
   public Segment getSegment();
+  
+  /**
+   * Get current offset in the segment
+   * @return offset
+   */
+  public long getOffset();
 }

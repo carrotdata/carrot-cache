@@ -26,7 +26,7 @@ import static com.carrot.cache.util.BlockReaderWriterSupport.META_SIZE;
 import static com.carrot.cache.util.BlockReaderWriterSupport.getBlockDataSize;
 
 
-public class BlockFileSegmentScanner implements SegmentScanner {
+public final class BlockFileSegmentScanner implements SegmentScanner {
 
   /** Data segment*/
   Segment segment;
@@ -164,5 +164,10 @@ public class BlockFileSegmentScanner implements SegmentScanner {
   @Override
   public Segment getSegment() {
     return this.segment;
+  }
+
+  @Override
+  public long getOffset() {
+    return this.pBuffer.getOffset();
   }
 }

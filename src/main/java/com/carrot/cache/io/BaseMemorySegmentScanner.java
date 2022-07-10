@@ -35,7 +35,7 @@ import com.carrot.cache.util.Utils;
    *   scanner.next();
    * }
    */
-  public class BaseMemorySegmentScanner implements SegmentScanner {
+  public final class BaseMemorySegmentScanner implements SegmentScanner {
     /*
      * Data segment
      */
@@ -195,5 +195,10 @@ import com.carrot.cache.util.Utils;
     @Override
     public Segment getSegment() {
       return this.segment;
+    }
+
+    @Override
+    public long getOffset() {
+      return this.offset;
     }
   }

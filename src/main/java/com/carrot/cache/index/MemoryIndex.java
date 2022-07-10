@@ -1009,6 +1009,33 @@ public class MemoryIndex implements Persistent {
   }
   
   /**
+   * Checks if a key with a given sid, offset and size exists in the index
+   * if exists , then index is copied into a given buffer
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param sid segment id
+   * @param offset offset of a key in a segment
+   * @param buf buffer 
+   * @param bufSize buffer size
+   * @return true if exists, false otherwise
+   */
+  public boolean exists(long keyPtr, int keySize, int sid, long offset, long buf, int bufSize) {
+    int slot = 0;
+    try {
+      slot = lock(keyPtr, keySize);
+      long hash = Utils.hash64(keyPtr, keySize);
+      long result = find(hash, false, buf, bufSize);
+      if (result < 0) {
+        return false;
+      }
+      int $sid = indexFormat.getSegmentId(buf);
+      long $offset = indexFormat.getOffset(buf);
+      return sid == $sid && offset == $offset;
+    } finally {
+      unlock(slot);
+    }
+  }
+  /**
    * Find index for a key
    *
    * @param ptr key address

@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 
 import com.carrot.cache.util.PrefetchBuffer;
 
-public class BaseFileSegmentScanner implements SegmentScanner {
+public final class BaseFileSegmentScanner implements SegmentScanner {
 
    // RandomAccessFile file;
     Segment segment;
@@ -114,5 +114,10 @@ public class BaseFileSegmentScanner implements SegmentScanner {
     @Override
     public Segment getSegment() {
       return this.segment;
+    }
+
+    @Override
+    public long getOffset() {
+      return this.pBuffer.getOffset();
     }
   }

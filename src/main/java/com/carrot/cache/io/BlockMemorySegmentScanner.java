@@ -38,7 +38,7 @@ import static com.carrot.cache.util.BlockReaderWriterSupport.META_SIZE;
    *   scanner.next();
    * }
    */
-public class BlockMemorySegmentScanner implements SegmentScanner {
+public final class BlockMemorySegmentScanner implements SegmentScanner {
   /*
    * Data segment
    */
@@ -246,7 +246,12 @@ public class BlockMemorySegmentScanner implements SegmentScanner {
 
   @Override
   public Segment getSegment() {
-    // TODO Auto-generated method stub
-    return null;
+    return this.segment;
+  }
+
+
+  @Override
+  public final long getOffset() {
+    return this.segmentOffset + this.blockOffset;
   }
 }
