@@ -42,6 +42,8 @@ public class FileIOEngine extends IOEngine {
   private static final Logger LOG = LogManager.getLogger(FileIOEngine.class);
   /**
    * Maps data segment Id to a disk file
+   * Attention: System MUST provide support for reasonably large number of open files
+   * Max = 64K 
    */
   Map<Integer, RandomAccessFile> dataFiles = new HashMap<Integer, RandomAccessFile>();
   
@@ -74,25 +76,35 @@ public class FileIOEngine extends IOEngine {
    */
   protected void saveInternal(Segment data) throws IOException {
     Runnable r = () -> {
-      data.seal();
+ 
       int id = data.getId();
       try {
+        // First save segment data to file
         OutputStream os = getOSFor(id);
         // Save to file
         data.save(os);
         // Close stream
         os.close();
-        // Remove from RAM buffers
-        //removeFromRAMBuffers(data);
+        // Release segment
+        data.writeLock();
+        data.seal();
         data.setOffheap(false);
         // release memory buffer
-        this.bufferPool.offer(data.getAddress());
+        long ptr = data.getAddress();
+        clearMemory(ptr);
+        this.bufferPool.offer(ptr);
         data.setAddress(0);
       } catch (IOException e) {
         LOG.error(e);
+      } finally {
+        data.writeUnlock();
       }
     };
     new Thread(r).start();
+  }
+  
+  private void clearMemory (long ptr) {
+    UnsafeAccess.setMemory(ptr, this.segmentSize, (byte) 0);
   }
   
   protected Segment getRAMSegmentByRank(int rank) {

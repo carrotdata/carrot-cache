@@ -674,7 +674,9 @@ public class Segment implements Persistent {
    * Write unlock the segment
    */
   public void writeUnlock() {
-    lock.writeLock().unlock();
+    if (lock.isWriteLockedByCurrentThread()) {
+      lock.writeLock().unlock();
+    }
   }
   
   /**
