@@ -21,8 +21,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 
-import com.carrot.cache.util.PrefetchBuffer;
-
 public final class BaseFileSegmentScanner implements SegmentScanner {
 
    // RandomAccessFile file;

@@ -15,11 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.carrot.cache.util;
+package com.carrot.cache.io;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
+
+import com.carrot.cache.util.IOUtils;
+import com.carrot.cache.util.Utils;
 //FIXME: handling last sK-V in a file which is less than 6 bytes total
 public final class PrefetchBuffer {
   /*
@@ -30,7 +33,7 @@ public final class PrefetchBuffer {
   /*
    * Current offset in a file
    */
-  private long offset = 0;
+  private long fileOffset = Segment.META_SIZE;
   /**
    * File length
    */
@@ -44,11 +47,11 @@ public final class PrefetchBuffer {
    */
   private int bufferSize = 0;
   /**
-   * Offset in a buffer
+   * Offset in a prefetch buffer
    */
   private int bufferOffset = 0;
   /**
-   * Buffer data size
+   * Buffer data size - the size of data currently in the prefetch buffer
    */
   private int bufferDataSize = 0;
   
@@ -56,6 +59,12 @@ public final class PrefetchBuffer {
   
   private int valueLength = -1;
   
+  /**
+   * Constructor
+   * @param file file 
+   * @param bufferSize buffer size
+   * @throws IOException
+   */
   public PrefetchBuffer(RandomAccessFile file, int bufferSize) throws IOException {
     this.file = file;
     this.bufferSize = bufferSize;
@@ -74,17 +83,17 @@ public final class PrefetchBuffer {
    */
   public boolean skip(int nBytes) throws IOException {
     if (nBytes < 0 && this.bufferOffset + nBytes < 0) {
-      // we can reverse back into previous buffer
+      // we can not reverse back into previous buffer
       return false;
     }
-    if (this.offset + nBytes > this.fileLength) {
+    if (this.fileOffset + nBytes > this.fileLength) {
       return false;
     }
-    if (nBytes > 0 && this.bufferOffset + nBytes >= this.bufferSize) {
+    if (nBytes > 0 && this.bufferOffset + nBytes >= this.bufferDataSize) {
       prefetch();
     } 
     this.bufferOffset += nBytes;
-    this.offset += nBytes;
+    this.fileOffset += nBytes;
     return true;
   }
   
@@ -92,13 +101,12 @@ public final class PrefetchBuffer {
   public boolean next() throws IOException {
     int kLength = keyLength();
     int vLength = valueLength();
-    int n = Utils.sizeUVInt(kLength) + Utils.sizeUVInt(vLength) + kLength + vLength;
+    int n = Utils.kvSize(kLength, vLength);
     boolean result = advance(n);
+    
     // reset key-value sizes
     this.keyLength = -1;
     this.valueLength = -1;
-    this.bufferOffset += n;
-    this.offset += n;
     return result;
   }
   /**
@@ -116,10 +124,10 @@ public final class PrefetchBuffer {
    * @throws IOException
    */
   public boolean ensure(int nBytes) throws IOException {
-    if (nBytes + this.offset > this.fileLength) {
+    if (nBytes + this.fileOffset > this.fileLength) {
       return false;
     }
-    if (nBytes + this.bufferOffset >= this.bufferDataSize) {
+    if (nBytes + this.bufferOffset > this.bufferDataSize) {
       prefetch();
       if (nBytes + this.bufferOffset > this.bufferDataSize) {
         return false;
@@ -129,9 +137,12 @@ public final class PrefetchBuffer {
   }
   
   private void prefetch() throws IOException {
-    int toRead = (int) Math.min(this.bufferOffset, this.fileLength - this.offset); 
-    System.arraycopy(buffer, bufferOffset, buffer, 0, bufferSize - bufferOffset);
-    IOUtils.readFully(file, offset, buffer, bufferSize - bufferOffset, toRead);
+    int toRead = (int) Math.min(this.bufferOffset, 
+      this.fileLength - this.fileOffset - (bufferDataSize - bufferOffset)); 
+    System.arraycopy(buffer, bufferOffset, buffer, 0, bufferDataSize - bufferOffset);
+    
+    IOUtils.readFully(file, fileOffset + (bufferDataSize - bufferOffset), 
+      buffer, bufferDataSize - bufferOffset, toRead);
     this.bufferDataSize = this.bufferSize - this.bufferOffset + toRead;
     this.bufferOffset = 0;
   }
@@ -141,7 +152,7 @@ public final class PrefetchBuffer {
    * @return file offset
    */
   public long getFileOffset() {
-    return this.offset;
+    return this.fileOffset;
   }
   
   /**
@@ -294,6 +305,14 @@ public final class PrefetchBuffer {
    * @return offset
    */
   public long getOffset() {
-    return this.offset + this.bufferOffset;
+    return this.fileOffset;// + this.bufferOffset;
+  }
+  
+  /**
+   * Return number of available bytes in the prefetch buffer
+   * @return available bytes
+   */
+  public int available() {
+    return this.bufferDataSize - this.bufferOffset;
   }
 }

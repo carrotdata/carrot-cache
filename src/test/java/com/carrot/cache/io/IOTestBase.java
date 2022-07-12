@@ -17,7 +17,10 @@ package com.carrot.cache.io;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -29,7 +32,7 @@ import com.carrot.cache.index.MemoryIndex;
 import com.carrot.cache.util.TestUtils;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
-import static com.carrot.cache.util.BlockReaderWriterSupport.META_SIZE;;
+import static com.carrot.cache.util.BlockReaderWriterSupport.META_SIZE;
 
 public abstract class IOTestBase {
   
@@ -59,7 +62,9 @@ public abstract class IOTestBase {
   
   @After
   public void tearDown() {
-    this.index.dispose();
+    if (this.index != null) {
+      this.index.dispose();
+    }
     Arrays.stream(mKeys).forEach(x -> UnsafeAccess.free(x));
     Arrays.stream(mValues).forEach(x -> UnsafeAccess.free(x));
   }
@@ -92,9 +97,9 @@ public abstract class IOTestBase {
     int count = 0;
     int sid = this.segment.getId();
 
-    IndexFormat format = this.index.getIndexFormat();
-    int indexSize = format.indexEntrySize();
-    long indexBuf = UnsafeAccess.malloc(indexSize);
+    IndexFormat format = this.index != null? this.index.getIndexFormat(): null;
+    int indexSize = this.index != null? format.indexEntrySize(): 0;
+    long indexBuf = this.index != null? UnsafeAccess.malloc(indexSize): 0L;
     
     while(count < this.numRecords) {
       long expire = expires[count];
@@ -106,12 +111,16 @@ public abstract class IOTestBase {
         break;
       }
       
-      format.writeIndex(0L, indexBuf, key, 0, key.length, value, 0, value.length, 
-        sid, (int) offset, size, expire);
-      index.insert(key, 0, key.length, indexBuf, indexSize);
+      if (this.index != null) {
+        format.writeIndex(0L, indexBuf, key, 0, key.length, value, 0, value.length, 
+          sid, (int) offset, size, expire);
+        index.insert(key, 0, key.length, indexBuf, indexSize);
+      }
       count++;
     }    
-    UnsafeAccess.free(indexBuf);
+    if (indexBuf > 0) {
+      UnsafeAccess.free(indexBuf);
+    }
     return count;
   }
   
@@ -119,9 +128,9 @@ public abstract class IOTestBase {
     int count = 0;
     int sid = this.segment.getId();
 
-    IndexFormat format = this.index.getIndexFormat();
-    int indexSize = format.indexEntrySize();
-    long indexBuf = UnsafeAccess.malloc(indexSize);
+    IndexFormat format = this.index != null? this.index.getIndexFormat(): null;
+    int indexSize = this.index != null? format.indexEntrySize(): 0;
+    long indexBuf = this.index != null? UnsafeAccess.malloc(indexSize): 0L;
    
     while(count < this.numRecords) {
       long expire = expires[count];
@@ -138,14 +147,16 @@ public abstract class IOTestBase {
         break;
       }
       
-      format.writeIndex(0L, indexBuf, keyPtr, keySize, valuePtr, valueSize, 
-        sid, (int) offset, size, expire);
-      index.insert(keyPtr, keySize, indexBuf, indexSize);
-
+      if (this.index != null) {
+        format.writeIndex(0L, indexBuf, keyPtr, keySize, valuePtr, valueSize, 
+          sid, (int) offset, size, expire);
+        index.insert(keyPtr, keySize, indexBuf, indexSize);
+      }
       count++;
     }
-    UnsafeAccess.free(indexBuf);
-
+    if (indexBuf > 0) {
+      UnsafeAccess.free(indexBuf);
+    }
     return count;
   }
   
@@ -346,5 +357,15 @@ public abstract class IOTestBase {
   protected int nextValueSize() {
     int size = 1 + r.nextInt(this.maxValueSize - 1);
     return size;
+  }
+  
+  RandomAccessFile saveToFile(Segment s) throws IOException {
+    File f = File.createTempFile("segment", null);
+    f.deleteOnExit();
+    FileOutputStream fos = new FileOutputStream(f);
+    s.save(fos);
+    fos.close();
+    RandomAccessFile raf = new RandomAccessFile(f, "r");
+    return raf;
   }
 }

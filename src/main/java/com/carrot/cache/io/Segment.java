@@ -53,6 +53,7 @@ public class Segment implements Persistent {
   @SuppressWarnings("unused")
   private static final Logger LOG = LogManager.getLogger(Segment.class);
   
+  public final static int META_SIZE = Utils.SIZEOF_LONG;
   /**
    * 
    *  Class encapsulates data segment statistics:

@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 
-import com.carrot.cache.util.PrefetchBuffer;
 import static com.carrot.cache.util.BlockReaderWriterSupport.META_SIZE;
 import static com.carrot.cache.util.BlockReaderWriterSupport.getBlockDataSize;
 
