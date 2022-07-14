@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 
+import com.carrot.cache.util.Utils;
+
 import static com.carrot.cache.util.BlockReaderWriterSupport.META_SIZE;
 import static com.carrot.cache.util.BlockReaderWriterSupport.getBlockDataSize;
 
@@ -47,11 +49,11 @@ public final class BlockFileSegmentScanner implements SegmentScanner {
   /** Block size */
   int blockSize;
   
-  /** Current block index */
-  int currentBlockIndex = 0;
-  
   /** Current block data size */
   int currentBlockDataSize = 0;
+  
+  /* Offset in a current block */
+  int currentBlockOffset = 0;
   
   public BlockFileSegmentScanner(Segment s, FileIOEngine engine, int blockSize) throws IOException {
     this.segment = s;
@@ -61,26 +63,29 @@ public final class BlockFileSegmentScanner implements SegmentScanner {
     int bufSize = this.engine.getFilePrefetchBufferSize();
     this.pBuffer = new PrefetchBuffer(file, bufSize);
     this.blockSize = blockSize;
-    this.currentBlockIndex = 0;
     initNextBlock();
 
   }
 
   private void initNextBlock() throws IOException {
-    long offset = this.currentBlockIndex * this.blockSize;
-    long fileOffset = this.pBuffer.getFileOffset();
-    int skip = (int) (offset - fileOffset);
-    this.pBuffer.skip(skip);
+    long fileOffset = this.pBuffer.getFileOffset(); // includes META (8 bytes)
+    fileOffset -= Segment.META_SIZE;
+    if (fileOffset > 0) {
+      // When fileOffset % blockSize == 0, skip == 0, that is why we subtract 1
+      int skip = (int) (((fileOffset -1)/blockSize  + 1) * blockSize  - fileOffset);
+      this.pBuffer.skip(skip);
+    }
     byte[] buffer = this.pBuffer.getBuffer();
     int bufOffset = this.pBuffer.getBufferOffset();
     this.currentBlockDataSize = getBlockDataSize(buffer, bufOffset);
     this.pBuffer.skip(META_SIZE);
+    this.currentBlockOffset = 0;
   }
   
   @Override
   public boolean hasNext() throws IOException {
     // TODO Auto-generated method stub
-    if (currentEntry < numEntries - 1) {
+    if (currentEntry < numEntries) {
       return true;
     }
     return false;
@@ -89,15 +94,15 @@ public final class BlockFileSegmentScanner implements SegmentScanner {
   @Override
   public boolean next() throws IOException {
     this.currentEntry++;
+    int kSize = this.pBuffer.keyLength();
+    int vSize = this.pBuffer.valueLength();
+    int adv = Utils.kvSize(kSize, vSize);
+    this.currentBlockOffset += adv;
     boolean result = this.pBuffer.next();
     if (!result) {
       return result;
     }
-    
-    long fileOffset = this.pBuffer.getFileOffset();
-    int blockOffset =(int) (fileOffset % this.blockSize);
-    if (blockOffset == this.currentBlockDataSize) {
-      this.currentBlockIndex++;
+    if (this.currentBlockOffset == this.currentBlockDataSize) {
       initNextBlock();
     }
     return true;

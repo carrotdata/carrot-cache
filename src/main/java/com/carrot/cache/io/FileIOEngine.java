@@ -238,7 +238,7 @@ public class FileIOEngine extends IOEngine {
    * Get file prefetch buffer size
    * @return prefetch buffer size
    */
-  public final int getFilePrefetchBufferSize() {
+  public int getFilePrefetchBufferSize() {
     String cacheName = this.parent.getName();
     return this.config.getFilePrefetchBufferSize(cacheName);
   }

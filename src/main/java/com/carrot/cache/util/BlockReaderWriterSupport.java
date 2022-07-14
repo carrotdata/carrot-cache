@@ -166,14 +166,15 @@ public class BlockReaderWriterSupport {
   /**
    * Find key in a block buffer
    * @param block data block
+   * @param blockOff block offset
    * @param key key buffer
    * @param keyOffset key offset
    * @param keySize key size
    * @return offset of a K-V pair or -1 (not found)
    */
-  public static long findInBlock(byte[] block, byte[] key, int keyOffset, int keySize) {
-    int blockDataSize = getBlockDataSize(block);
-    int off = META_SIZE;
+  public static long findInBlock(byte[] block, int blockOff, byte[] key, int keyOffset, int keySize) {
+    int blockDataSize = getBlockDataSize(block, blockOff);
+    int off = META_SIZE + blockOff;
     long found = IOEngine.NOT_FOUND;
 
     while (off < blockDataSize) {
@@ -189,8 +190,7 @@ public class BlockReaderWriterSupport {
         continue;
       }
       if (Utils.compareTo(key, keyOffset, keySize, block, off, kSize) == 0) {
-        off -= kSizeSize + vSizeSize;
-        found = off;
+        found = off - kSizeSize - vSizeSize;
       }
       off += kSize + vSize;
     }
@@ -200,13 +200,14 @@ public class BlockReaderWriterSupport {
   /**
    * Find key in a block buffer
    * @param block data block
+   * @param blockOff offset in the block
    * @param keyPtr key address
    * @param keySize key size
    * @return offset of a K-V pair or -1 (not found)
    */
-  public static long findInBlock(byte[] block, long keyPtr, int keySize) {
-    int blockDataSize = getBlockDataSize(block);
-    int off = META_SIZE;
+  public static long findInBlock(byte[] block, int blockOff, long keyPtr, int keySize) {
+    int blockDataSize = getBlockDataSize(block, blockOff);
+    int off = META_SIZE + blockOff;
     long found = IOEngine.NOT_FOUND;
 
     while (off < blockDataSize) {
@@ -222,8 +223,7 @@ public class BlockReaderWriterSupport {
         continue;
       }
       if (Utils.compareTo(block, off, kSize, keyPtr, keySize) == 0) {
-        off -= kSizeSize + vSizeSize;
-        found = off;
+        found = off - kSizeSize - vSizeSize;
       }
       off += kSize + vSize;
     }

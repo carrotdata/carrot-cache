@@ -43,7 +43,9 @@ public class BaseFileDataReader implements DataReader {
       byte[] buffer,
       int bufOffset)
       throws IOException {
-
+    // FIXME: Dirty hack
+    offset += Segment.META_SIZE; // add 8 bytes to 
+    
     int avail = buffer.length - bufOffset;
     // sanity check
     if (size < 0 && avail < 8) {
@@ -107,7 +109,9 @@ public class BaseFileDataReader implements DataReader {
       int size, /* can be < 0*/
       ByteBuffer buffer)
       throws IOException {
-
+    // FIXME: Dirty hack
+    offset += Segment.META_SIZE; // add 8 bytes to 
+    
     int avail = buffer.remaining();
     // Sanity check
     if (size > avail) {
@@ -180,6 +184,8 @@ public class BaseFileDataReader implements DataReader {
       byte[] buffer,
       int bufOffset)
       throws IOException {
+    // FIXME: Dirty hack
+    offset += Segment.META_SIZE; // add 8 bytes to 
     int avail = buffer.length - bufOffset;
     // sanity check
     if (size < 0 && avail < 8) {
@@ -233,6 +239,8 @@ public class BaseFileDataReader implements DataReader {
   public int read(
       IOEngine engine, long keyPtr, int keySize, int sid, long offset, int size, ByteBuffer buffer)
       throws IOException {
+    // FIXME: Dirty hack
+    offset += Segment.META_SIZE; // add 8 bytes to 
     int avail = buffer.remaining();
     int pos = buffer.position();
 

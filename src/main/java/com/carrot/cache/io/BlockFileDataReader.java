@@ -50,72 +50,55 @@ public class BlockFileDataReader implements DataReader {
       long offset,
       int size, // can be -1 (unknown)
       byte[] buffer,
-      int bufOffset) throws IOException {
-    
+      int bufOffset)
+      throws IOException {
+
+    // FIXME: Dirty hack
+    offset += Segment.META_SIZE; // add 8 bytes to the file offset
+    // every segment in a file system has 8 bytes meta prefix
+
     int avail = buffer.length - bufOffset;
     // sanity check
     if (size > avail) {
-      return size;
+      return (size / blockSize + 1) * blockSize;
     }
 
-    //TODO prevent file from being closed/deleted
+    if (avail < blockSize) {
+      // We need at least blockSize available space 
+      return blockSize;
+    }
+    // TODO prevent file from being closed/deleted
     FileIOEngine fileEngine = (FileIOEngine) engine;
     RandomAccessFile file = fileEngine.getFileFor(sid);
     if (file == null) {
-      //TODO: what kind of error is it?
+      // TODO: what kind of error is it?
       return IOEngine.NOT_FOUND;
     }
     if (size > 0 && file.length() < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
-    
-    byte[] buf = getBuffer();
+
     int off = 0;
-    try {
-      readFully(file, offset, buf, 0, buf.length);
-      int dataSize = UnsafeAccess.toInt(buf, 0);
-      if (dataSize > blockSize - META_SIZE) {
-        // means that this is a single item larger than a block
-        if (dataSize > avail) {
-          return dataSize;
-        }
-        System.arraycopy(buf, META_SIZE, buffer, bufOffset, buf.length - META_SIZE);
-        releaseBuffer(buf);
-        readFully(file, offset + blockSize, buffer, 
-            bufOffset + blockSize - META_SIZE, dataSize - blockSize + META_SIZE);
-        buf = buffer;
-        off = bufOffset;
-      } else {
-        // Now buffer contains both: key and value, we need to compare keys
-        // Format of a key-value pair in a buffer: key-size, value-size, key, value
-        off = (int) findInBlock(buf, key, keyOffset, keySize);
-        if (off < 0) {
-          return IOEngine.NOT_FOUND;
-        }
+    // Read first block
+    readFully(file, offset, buffer, bufOffset, blockSize);
+
+    int dataSize = UnsafeAccess.toInt(buffer, bufOffset);
+    if (dataSize > blockSize - META_SIZE) {
+      // means that this is a single item larger than a block
+      if (dataSize > avail) {
+        return dataSize + META_SIZE;
       }
-      
-      int itemSize = getItemSize(buf, off);
-      int $off = getKeyOffset(buf, off);
-      off += $off;
-      
-      // Now compare keys
-      if (Utils.compareTo(buf, off, keySize, key, keyOffset, keySize) == 0) {
-        // Copy data from buf to buffer
-        if (buf != buffer) {
-          off -= $off;
-          System.arraycopy(buf,  off,  buffer, bufOffset, itemSize);
-        }
-        // If key is the same
-        return itemSize;
-      } else {
-        return IOEngine.NOT_FOUND;
-      }
-    } finally {
-      if (buf != buffer && buf != null) {
-        releaseBuffer(buf);
-      }
+      readFully(file, offset + blockSize, buffer, bufOffset + blockSize, dataSize - blockSize + META_SIZE);
     }
+
+    off = (int) findInBlock(buffer, bufOffset, key, keyOffset, keySize);
+    if (off < 0) {
+      return IOEngine.NOT_FOUND;
+    }
+    int itemSize = getItemSize(buffer, off);
+    System.arraycopy(buffer, off, buffer, bufOffset, itemSize);
+    return itemSize;
   }
 
   @Override
@@ -129,7 +112,9 @@ public class BlockFileDataReader implements DataReader {
       int size,
       ByteBuffer buffer)
       throws IOException {
-
+    // FIXME: Dirty hack
+    offset += Segment.META_SIZE; // add 8 bytes to 
+    
     int avail = buffer.remaining();
     // sanity check
     if (size > avail) {
@@ -181,7 +166,7 @@ public class BlockFileDataReader implements DataReader {
       } else {
         // Now buffer contains both: key and value, we need to compare keys
         // Format of a key-value pair in a buffer: key-size, value-size, key, value
-        off = (int) findInBlock(buf, key, keyOffset, keySize);
+        off = (int) findInBlock(buf, 0, key, keyOffset, keySize);
         if (off < 0) {
           return IOEngine.NOT_FOUND;
         }
@@ -219,76 +204,61 @@ public class BlockFileDataReader implements DataReader {
       int size,
       byte[] buffer,
       int bufOffset) throws IOException {
+    // FIXME: Dirty hack
+    offset += Segment.META_SIZE; // add 8 bytes to the file offset
+    // every segment in a file system has 8 bytes meta prefix
+
     int avail = buffer.length - bufOffset;
     // sanity check
     if (size > avail) {
-      return size;
+      return (size / blockSize + 1) * blockSize;
     }
-    //TODO prevent file from being closed/deleted
+
+    if (avail < blockSize) {
+      // We need at least blockSize available space 
+      return blockSize;
+    }
+    // TODO prevent file from being closed/deleted
     FileIOEngine fileEngine = (FileIOEngine) engine;
     RandomAccessFile file = fileEngine.getFileFor(sid);
     if (file == null) {
-      //TODO: what kind of error is it?
+      // TODO: what kind of error is it?
       return IOEngine.NOT_FOUND;
     }
     if (size > 0 && file.length() < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
-    
-    byte[] buf = getBuffer();
 
-    try {
+    int off = 0;
+    // Read first block
+    readFully(file, offset, buffer, bufOffset, blockSize);
 
-      readFully(file, offset, buf, 0, buf.length);
-      
-      int off = bufOffset;
-      int dataSize = UnsafeAccess.toInt(buf, 0);
-      if (dataSize > blockSize - META_SIZE) {
-        // means that this is a single item larger than a block
-        if (dataSize > avail) {
-          return dataSize;
-        }
-        System.arraycopy(buf, META_SIZE, buffer, bufOffset, buf.length - META_SIZE);
-        releaseBuffer(buf);
-        readFully(file, offset + blockSize, buffer, 
-          bufOffset + blockSize - META_SIZE, dataSize - blockSize + META_SIZE);
-        buf = buffer;
-      } else {
-        // Now buffer contains both: key and value, we need to compare keys
-        // Format of a key-value pair in a buffer: key-size, value-size, key, value
-        off = (int) findInBlock(buf, keyPtr, keySize);
-        if (off < 0) {
-          return IOEngine.NOT_FOUND;
-        }
+    int dataSize = UnsafeAccess.toInt(buffer, bufOffset);
+    if (dataSize > blockSize - META_SIZE) {
+      // means that this is a single item larger than a block
+      if (dataSize > avail) {
+        return dataSize + META_SIZE;
       }
-
-      int itemSize = getItemSize(buf, off);
-      int $off = getKeyOffset(buf, off);
-      off += $off;
-      
-      // Now compare keys
-      if (Utils.compareTo(buf, off, keySize, keyPtr, keySize) == 0) {
-        // If key is the same
-        if (buf != buffer) {
-          off -= $off;
-          System.arraycopy(buf,  off,  buffer, bufOffset, itemSize);
-        }
-        return itemSize;
-      } else {
-        return IOEngine.NOT_FOUND;
-      }
-    } finally {
-      if (buf != buffer && buf != null) {
-        releaseBuffer(buf);
-      }
+      readFully(file, offset + blockSize, buffer, bufOffset + blockSize, dataSize - blockSize + META_SIZE);
     }
+
+    off = (int) findInBlock(buffer, bufOffset, keyPtr, keySize);
+    if (off < 0) {
+      return IOEngine.NOT_FOUND;
+    }
+    int itemSize = getItemSize(buffer, off);
+    System.arraycopy(buffer, off, buffer, bufOffset, itemSize);
+    return itemSize;
+
   }
 
   @Override
   public int read(
       IOEngine engine, long keyPtr, int keySize, int sid, 
       long offset, int size, ByteBuffer buffer) throws IOException {
+    // FIXME: Dirty hack
+    offset += Segment.META_SIZE; // add 8 bytes to 
     int avail = buffer.remaining();
     // sanity check
     if (size > avail) {
@@ -344,7 +314,7 @@ public class BlockFileDataReader implements DataReader {
       } else {
         // Now buffer contains both: key and value, we need to compare keys
         // Format of a key-value pair in a buffer: key-size, value-size, key, value
-        off = (int) findInBlock(buf, keyPtr, keySize);
+        off = (int) findInBlock(buf, 0, keyPtr, keySize);
         if (off < 0) {
           return IOEngine.NOT_FOUND;
         }

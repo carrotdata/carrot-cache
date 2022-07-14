@@ -16,11 +16,8 @@ package com.carrot.cache.io;
 
 import static org.junit.Assert.assertEquals;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.Random;
 
 import org.junit.After;
@@ -31,11 +28,10 @@ import org.mockito.Mockito;
 import com.carrot.cache.Cache;
 import com.carrot.cache.index.MemoryIndex;
 import com.carrot.cache.index.MemoryIndex.Type;
-import com.carrot.cache.io.Segment.Info;
 import com.carrot.cache.util.UnsafeAccess;
 
-public class TestSegmentBlockDataWriterReaderMemory extends IOTestBase{
-    
+public class TestSegmentBlockDataWriterReaderFile extends IOTestBase{
+  
   @Before
   public void setUp() {
     this.index = new MemoryIndex("default", Type.MQ);
@@ -43,7 +39,7 @@ public class TestSegmentBlockDataWriterReaderMemory extends IOTestBase{
     this.numRecords = 10000;
     
     this.r = new Random();
-    long seed = System.currentTimeMillis();
+    long seed = System.currentTimeMillis();//1657826085427L;//
     r.setSeed(seed);
     
     System.out.println("r.seed="+ seed);
@@ -69,10 +65,13 @@ public class TestSegmentBlockDataWriterReaderMemory extends IOTestBase{
     assertEquals(expire, segment.getInfo().getMaxExpireAt());
     verifyBytesBlock(count, blockSize);
     
-    DataReader reader = new BlockMemoryDataReader();
+    RandomAccessFile file = saveToFile(segment);
+    
+    DataReader reader = new BlockFileDataReader();
     reader.init("default");
-    IOEngine engine  = Mockito.mock(IOEngine.class);
+    FileIOEngine engine  = Mockito.mock(FileIOEngine.class);
     Mockito.when(engine.getSegmentById(Mockito.anyInt())).thenReturn(segment);
+    Mockito.when(engine.getFileFor(Mockito.anyInt())).thenReturn(file);
     verifyBytesWithReader(count, reader, engine);
   }
   
@@ -83,10 +82,13 @@ public class TestSegmentBlockDataWriterReaderMemory extends IOTestBase{
     assertEquals(expire, segment.getInfo().getMaxExpireAt());
     verifyMemoryBlock(count, blockSize);
     
-    DataReader reader = new BlockMemoryDataReader();
+    RandomAccessFile file = saveToFile(segment);
+    
+    DataReader reader = new BlockFileDataReader();
     reader.init("default");
-    IOEngine engine  = Mockito.mock(IOEngine.class);
+    FileIOEngine engine  = Mockito.mock(FileIOEngine.class);
     Mockito.when(engine.getSegmentById(Mockito.anyInt())).thenReturn(segment);
+    Mockito.when(engine.getFileFor(Mockito.anyInt())).thenReturn(file);
     verifyMemoryWithReader(count, reader, engine);
 
   }
@@ -96,50 +98,25 @@ public class TestSegmentBlockDataWriterReaderMemory extends IOTestBase{
     int count = loadBytes();
     
     verifyBytesBlock(count, blockSize);
-    
-    DataReader reader = new BlockMemoryDataReader();
+    RandomAccessFile file = saveToFile(segment);
+
+    DataReader reader = new BlockFileDataReader();
     reader.init("default");
-    IOEngine engine  = Mockito.mock(IOEngine.class);
+    FileIOEngine engine  = Mockito.mock(FileIOEngine.class);
     Mockito.when(engine.getSegmentById(Mockito.anyInt())).thenReturn(segment);
     Cache cache = Mockito.mock(Cache.class);
     Mockito.when(cache.getName()).thenReturn("default");
     Mockito.when(engine.getCache()).thenReturn(cache);
+    Mockito.when(engine.getOrCreateFileFor(Mockito.anyInt())).thenReturn(file);
+    Mockito.when(engine.getFileFor(Mockito.anyInt())).thenReturn(file);
+    Mockito.when(engine.getFilePrefetchBufferSize()).thenReturn(1024 * 1024);
     // Must be sealed for scanner
     segment.seal();
     
     verifyBytesWithReader(count, reader, engine);
     
-    
     SegmentScanner scanner = reader.getSegmentScanner(engine, segment);
-    verifyScanner(scanner, count);
+    verifyScannerFile(scanner, count);
   }
   
-  @Test
-  public void testSaveLoad() throws IOException {
-    int count = loadBytes();
-    // now save Info and Segment separately
-    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    DataOutputStream dos = new DataOutputStream(baos);
-    Info info = segment.getInfo();
-    info.save(dos);
-    segment.save(dos);
-    // Now load back
-    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-    DataInputStream dis = new DataInputStream(bais);
-    info = new Info();
-    info.load(dis);
-    Segment seg = new Segment();
-    seg.load(dis);
-    seg.setInfo(info);
-    seg.setDataWriter(new BlockDataWriter());
-    segment.dispose();
-    segment = seg;
-    verifyBytesBlock(count, blockSize);
-    
-    DataReader reader = new BlockMemoryDataReader();
-    reader.init("default");
-    IOEngine engine  = Mockito.mock(IOEngine.class);
-    Mockito.when(engine.getSegmentById(Mockito.anyInt())).thenReturn(segment);
-    verifyBytesWithReader(count, reader, engine);
-  }
 }

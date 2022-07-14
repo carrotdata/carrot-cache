@@ -90,7 +90,10 @@ public class BlockDataWriter implements DataWriter {
     }
     
     // corner case: fullDataSize / blockSize * blockSize == fullDataSize
-    boolean fullBlocks = fullDataSize / blockSize * blockSize == fullDataSize;
+    boolean fullBlocks = fullDataSize > 0 && (fullDataSize / blockSize * blockSize == fullDataSize);
+    if (fullBlocks) {
+      return s.getAddress() + fullDataSize + META_SIZE; 
+    }
     
     boolean crossedBlockBoundary = fullDataSize > 0 && !fullBlocks && 
         fullDataSize / this.blockSize < (fullDataSize + requiredSize) /this.blockSize ;

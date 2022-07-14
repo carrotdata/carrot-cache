@@ -36,6 +36,7 @@ import static com.carrot.cache.util.BlockReaderWriterSupport.META_SIZE;
 
 public abstract class IOTestBase {
   
+  int blockSize = 4096;
   int numRecords = 10;
   int maxKeySize = 32;
   int maxValueSize = 5000;
@@ -198,6 +199,37 @@ public abstract class IOTestBase {
     scanner.close();
   }
   
+  protected void verifyScannerFile(SegmentScanner scanner, int num) throws IOException {
+    int n = 0;
+    
+    byte[] keyBuffer = new byte[Utils.kvSize(maxKeySize, maxValueSize)];
+    byte[] valueBuffer = new byte[Utils.kvSize(maxKeySize, maxValueSize)];
+    while(scanner.hasNext()) {
+      byte[] key = keys[n];
+      byte[] value = values[n];
+      
+      //System.out.println(n+ " : " + Utils.kvSize(key.length, value.length));
+
+      int keySize = scanner.keyLength();
+      int valueSize = scanner.valueLength();
+      assertEquals(key.length, keySize);
+      assertEquals(value.length, valueSize);
+      
+      int size = scanner.getKey(keyBuffer, 0);
+      assertEquals(size, keySize);
+      
+      size = scanner.getValue(valueBuffer, 0);
+      assertEquals(size, valueSize);
+
+      assertTrue(Utils.compareTo(key, 0, key.length, keyBuffer, 0, keySize) == 0);
+      assertTrue(Utils.compareTo(value, 0, value.length, valueBuffer, 0, valueSize) == 0);
+      n++;
+      scanner.next();
+    }
+    assertEquals(num, n);
+    scanner.close();
+  }
+  
   protected void verifyMemory(int num) {
     long ptr = segment.getAddress();
     
@@ -218,14 +250,18 @@ public abstract class IOTestBase {
     }
   }
 
+  private int safeBufferSize() {
+    int bufSize = Utils.kvSize(maxKeySize, maxValueSize);
+    return (bufSize / blockSize + 1) * blockSize;
+  }
+  
   protected void verifyBytesWithReader(int num, DataReader reader, IOEngine engine) 
       throws IOException {
     IndexFormat format = index.getIndexFormat();
     int indexSize = format.indexEntrySize();
     long indexBuf = UnsafeAccess.malloc(indexSize);
-    int bufSize = Utils.kvSize(maxKeySize, maxValueSize);
+    int bufSize = safeBufferSize();
     byte[] buf = new byte[bufSize];
-    
     int sid = segment.getId();
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
@@ -259,7 +295,7 @@ public abstract class IOTestBase {
     IndexFormat format = index.getIndexFormat();
     int indexSize = format.indexEntrySize();
     long indexBuf = UnsafeAccess.malloc(indexSize);
-    int bufSize = Utils.kvSize(maxKeySize, maxValueSize);
+    int bufSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
     byte[] buf = new byte[bufSize];
     
     int sid = segment.getId();

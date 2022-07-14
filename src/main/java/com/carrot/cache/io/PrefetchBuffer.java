@@ -190,7 +190,7 @@ public final class PrefetchBuffer {
    * Get key from this prefetch buffer to another byte array
    * @param buf byte array
    * @param bufOffset offset
-   * @return bytes copied or -1
+   * @return key size
    * @throws IOException 
    */
   public int getKey(byte[] buf, int bufOffset) throws IOException {
@@ -198,17 +198,15 @@ public final class PrefetchBuffer {
     int vSize = valueLength();
     int kSizeSize = Utils.sizeUVInt(kSize);
     int vSizeSize = Utils.sizeUVInt(vSize);
-    int n = kSize + vSize + kSizeSize + vSizeSize;
+    int n = Utils.kvSize(kSize, vSize);
     boolean result = ensure(n);
     if (!result) {
       return -1;
     }
     if (buf.length - bufOffset >= kSize) {
       System.arraycopy(this.buffer, this.bufferOffset + kSizeSize + vSizeSize, buf, bufOffset, kSize);
-      return kSize;
-    } else {
-      return -1; // not enough space
     }
+    return kSize;
   }
   
   /**
@@ -222,15 +220,14 @@ public final class PrefetchBuffer {
     int vSize = valueLength();
     int kSizeSize = Utils.sizeUVInt(kSize);
     int vSizeSize = Utils.sizeUVInt(vSize);
-    int n = kSize + vSize + kSizeSize + vSizeSize;
+    int n = Utils.kvSize(kSize, vSize);
     boolean result = ensure(n);
     if (!result) {
       return -1;
     }
-    if (buf.remaining() < kSize) {
-      return -1;
+    if (buf.remaining() >= kSize) {
+      buf.put(this.buffer, this.bufferOffset + kSizeSize + vSizeSize, kSize);
     }
-    buf.put(this.buffer, this.bufferOffset + kSizeSize + vSizeSize, kSize);
     //TODO restore old position?
     return vSize;
   }
@@ -247,17 +244,16 @@ public final class PrefetchBuffer {
     int vSize = valueLength();
     int kSizeSize = Utils.sizeUVInt(kSize);
     int vSizeSize = Utils.sizeUVInt(vSize);
-    int n = kSize + vSize + kSizeSize + vSizeSize;
+    int n = Utils.kvSize(kSize, vSize);
     boolean result = ensure(n);
     if (!result) {
       return -1;
     }
     if (buf.length - bufOffset >= vSize) {
       System.arraycopy(this.buffer, this.bufferOffset + kSizeSize + vSizeSize + kSize, buf, bufOffset, vSize);
-      return vSize;
-    } else {
-      return -1; // not enough space
-    }
+    } 
+    return vSize;
+
   }
   
   /**
@@ -271,15 +267,14 @@ public final class PrefetchBuffer {
     int vSize = valueLength();
     int kSizeSize = Utils.sizeUVInt(kSize);
     int vSizeSize = Utils.sizeUVInt(vSize);
-    int n = kSize + vSize + kSizeSize + vSizeSize;
+    int n = Utils.kvSize(kSize, vSize);
     boolean result = ensure(n);
     if (!result) {
       return -1;
     }
-    if (buf.remaining() < kSize) {
-      return -1;
+    if (buf.remaining() >= kSize) { 
+      buf.put(this.buffer, this.bufferOffset + kSizeSize + vSizeSize + kSize, vSize);
     }
-    buf.put(this.buffer, this.bufferOffset + kSizeSize + vSizeSize + kSize, vSize);
     //TODO restore old position?
     return vSize;
   }
