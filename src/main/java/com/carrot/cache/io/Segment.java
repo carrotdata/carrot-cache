@@ -717,14 +717,11 @@ public class Segment implements Persistent {
     }
     try {
       writeLock();
-      
-      //long curOffset = dataSize();
       long offset = this.dataWriter.append(this, key, keyOffset, keySize, item, itemOffset, itemSize);
       if (offset < 0) {
         return -1;
       }
       processExpire(expire);
-      //incrDataSize((int)(newOffset - curOffset));
       incrNumEntries(1);
       return offset/* offset in a segment*/;
     } finally {
@@ -782,14 +779,12 @@ public class Segment implements Persistent {
     }
     try {
       writeLock();
-      //long curOffset = dataSize();
       long offset = (int) this.dataWriter.append(this, keyPtr, keySize, itemPtr, itemSize);
       if (offset < 0) {
         return -1;
       }
       processExpire(expire);
       // data writer MUST set dataSize in a segment
-      //incrDataSize((int)(newOffset - curOffset));
       incrNumEntries(1);
       return offset;
     } finally {

@@ -64,10 +64,10 @@ public interface ExpireSupport {
   }
   
   /**
-   * Get expiration time in ms w/o updating index field
+   * Get expiration time in ms 
    * @param ibesPtr
    * @param expireFieldPtr
-   * @return
+   * @return expiration time in ms (0 - does not expire, -1 - expired)
    */
   public long getExpire(long ibesPtr, long expireFieldPtr);
   

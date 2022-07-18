@@ -24,7 +24,7 @@ import com.carrot.cache.util.Utils;
  * 
  * Support for compact expiration time in Seconds-Minutes format
  * It takes only 2 bytes in the index field. There are additional 2 2 bytes fields in
- * a the Meta section of each index block
+ * the Meta section of each index block
  *
  */
 public class ExpireSupportSecondsMinutes implements ExpireSupport {
@@ -39,7 +39,15 @@ public class ExpireSupportSecondsMinutes implements ExpireSupport {
   public ExpireSupportSecondsMinutes() {
     this.epochStartTime = Epoch.getEpochStartTime();
   }
-
+  
+  /**
+   * For testing only
+   * @param time
+   */
+  public void setEpochStartTime(long time) {
+    this.epochStartTime = time;
+  }
+  
   /**
    * Get expiration meta section size for index data block. Expire adds additional 
    * meta section to each index block meta.
@@ -74,6 +82,7 @@ public class ExpireSupportSecondsMinutes implements ExpireSupport {
     long accessStartTime = getAccessStartTime(ibesPtr);
     
     long expTime = getExpire0(ibesPtr, expireFieldPtr);
+    //accessStartTime = 0 means no update for expire field
     if (accessStartTime == 0 || accessStartTime > expTime) {
       return expTime; // expired
     }
@@ -104,6 +113,8 @@ public class ExpireSupportSecondsMinutes implements ExpireSupport {
         // Update expiration field
         value -= EPOCH_DURATION_MIN_SM_TYPE / 60 * 1000; 
         value = min1(value);
+        //FIXME: what if its < 0?
+
         // Save it back
         UnsafeAccess.putShort(expireFieldPtr, value);
       }

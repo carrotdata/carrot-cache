@@ -41,6 +41,14 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
   }
 
   /**
+   * For testing only
+   * @param time
+   */
+  public void setEpochStartTime(long time) {
+    this.epochStartTime = time;
+  }
+  
+  /**
    * Get expiration meta section size for index data block. Expire adds additional 
    * meta section to each index block meta.
    * 
@@ -96,6 +104,7 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
             // Save it back
             UnsafeAccess.putShort(expireFieldPtr, sec2(value));
           }
+          break;
         }
       case TIME_IN_MINUTES:
         { // minutes
@@ -110,6 +119,7 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
             // Save it back
             UnsafeAccess.putShort(expireFieldPtr, min2(value));
           }
+          break;
         }
       case TIME_IN_HOURS:
         int currentCounter = getCurrentHoursEpochCounter(accessStartTime);
@@ -186,7 +196,7 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
   public void setExpire(long ibesPtr, long expireFieldPtr, long expire) {
     long epochSecTime = getEpochTimeSeconds(ibesPtr);
     // Maximum expiration time in seconds we can set
-    long maxSeconds = epochSecTime + 2 * EPOCH_DURATION_SEC_SM_TYPE;
+    long maxSeconds = epochSecTime + 2 * EPOCH_DURATION_SEC_SMH_TYPE;
     maxSeconds += epochStartTime;
     epochSecTime += epochStartTime;
     if (expire  < maxSeconds) {
@@ -195,7 +205,7 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
       return;
     }
     long epochMinTime = getEpochTimeMinutes(ibesPtr);
-    long maxMinutes = epochMinTime + 2 * EPOCH_DURATION_MIN_SM_TYPE;
+    long maxMinutes = epochMinTime + 2 * EPOCH_DURATION_MIN_SMH_TYPE;
     maxMinutes += epochStartTime;
     epochMinTime += epochStartTime;
     if (expire < maxMinutes) {
@@ -254,7 +264,6 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
 
   @Override
   public boolean begin(long ibesPtr, boolean force) {
-    // TODO Auto-generated method stub
     long time = System.currentTimeMillis();
     if (force) {
       setAccessStartTime(ibesPtr, time);
@@ -272,4 +281,5 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
     }
     return false;
   }
+  
 }
