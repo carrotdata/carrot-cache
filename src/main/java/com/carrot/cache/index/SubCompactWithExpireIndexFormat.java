@@ -147,4 +147,8 @@ public class SubCompactWithExpireIndexFormat extends CompactIndexFormat {
     return 0;
   }
   
+  @Override
+  public boolean isSizeSupported() {
+    return false;
+  }
 }

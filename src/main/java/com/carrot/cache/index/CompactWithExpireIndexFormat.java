@@ -145,4 +145,9 @@ public class CompactWithExpireIndexFormat extends CompactIndexFormat {
   int expireOffset() {
     return 0;
   }
+  
+  @Override
+  public boolean isSizeSupported() {
+    return false;
+  }
 }

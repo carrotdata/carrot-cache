@@ -63,9 +63,9 @@ public class MQIndexFormat implements IndexFormat {
 
   @Override
   public int getSegmentId(long buffer) {
-    long ref = UnsafeAccess.toInt(buffer + Utils.SIZEOF_INT + Utils.SIZEOF_LONG);
+    int ref = UnsafeAccess.toInt(buffer + Utils.SIZEOF_INT + Utils.SIZEOF_LONG);
     // Segment id (low 2 bytes of a first 4 bytes )
-    return (int) (ref >>> 32) & 0xffff;    
+    return  ref  & 0xffff;    
   }
 
   @Override
@@ -82,7 +82,7 @@ public class MQIndexFormat implements IndexFormat {
   @Override
   public long getExpire(long ibPtr, long buffer) {
     // Does not support expiration
-    return 0;
+    return -1;
   }
 
   @Override

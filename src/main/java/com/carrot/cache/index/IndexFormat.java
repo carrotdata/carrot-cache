@@ -110,10 +110,10 @@ public interface IndexFormat extends Persistent {
    * Get expiration time
    * @param ibPtr index block address
    * @param buffer buffer contains entry data
-   * @return expiration time (0 - no expire)
+   * @return expiration time (0 - no expire, -1 - not supported)
    */
   public default long getExpire(long ibPtr, long buffer) {
-    return 0;
+    return -1;
   }
   
   /**
@@ -215,4 +215,11 @@ public interface IndexFormat extends Persistent {
     // do nothing by default
   }
   
+  /**
+   * Does this format keeps K-V size?
+   * @return true or false
+   */
+  public default boolean isSizeSupported() {
+    return true;
+  }
 }

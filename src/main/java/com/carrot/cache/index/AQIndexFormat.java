@@ -126,4 +126,10 @@ public class AQIndexFormat implements IndexFormat {
     long hash = Utils.hash64(keyPtr, keySize);
     UnsafeAccess.putLong(ptr, hash);
   }
+
+  @Override
+  public boolean isSizeSupported() {
+    return false;
+  }
+  
 }

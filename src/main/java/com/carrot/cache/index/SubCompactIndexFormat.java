@@ -31,11 +31,12 @@ import com.carrot.cache.util.Utils;
  * 
  * Memory index hash table size = 2**L
  * 
- * 2 bytes - segment id
+ * 2 bytes - segment id (lowest 15 bits only, bit 15 is used for 1-bit hit counter)
  * 2 - bytes data block number which "potentially" stores this key-value
  * 
- * real offset is data block * block size. With 64K blocks addressed (2 bytes) and 4K block size 
- * We can address maximum 64K * 4K = 256MB size segments. 
+ * real offset is data block * block size. With 64K blocks addressed and 4K block size 
+ * We can address maximum 64K * 4K = 256MB size segments. With 32K maximum segments (15 bits)
+ * Total maximum cache size supported is 32K * 256MB = 8TB. 
  * 
  */
 public class SubCompactIndexFormat implements IndexFormat {
@@ -57,7 +58,7 @@ public class SubCompactIndexFormat implements IndexFormat {
   public boolean equals(long ptr, long hash) {
     int off = hashOffset();
     int v = UnsafeAccess.toShort(ptr + off) & 0xffff;
-    hash = (int)(hash >>> (64 - L - 16));
+    hash = ((hash >>> (64 - L - 16)) & 0xffff);
     return v == hash;
   }
 
@@ -91,7 +92,7 @@ public class SubCompactIndexFormat implements IndexFormat {
   @Override
   public int getSegmentId(long buffer) {
     int off = sidOffset();
-    return UnsafeAccess.toShort(buffer + off) & 0xffff;
+    return UnsafeAccess.toShort(buffer + off) & 0x7fff;
   }
 
   @Override
@@ -107,12 +108,16 @@ public class SubCompactIndexFormat implements IndexFormat {
   }
 
   public int getHitCount(long buffer) {
-    return 1;// yes, always 1
+    int off = sidOffset();
+    return (UnsafeAccess.toShort(buffer + off) & 0x8000) >>> 15;
   }
 
   @Override
   public void hit(long ptr) {
-    // do nothing
+    int off = sidOffset();
+    int v = UnsafeAccess.toShort(ptr + off) & 0xffff;
+    v |= 0x8000;
+    UnsafeAccess.putShort(ptr + off, (short) v);
   }
 
   @Override
@@ -195,5 +200,10 @@ public class SubCompactIndexFormat implements IndexFormat {
   int expireOffset() {
     // Not supported
     return -1;
+  }
+  
+  @Override
+  public boolean isSizeSupported() {
+    return false;
   }
 }

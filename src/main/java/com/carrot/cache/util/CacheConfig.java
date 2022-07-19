@@ -331,7 +331,7 @@ public class CacheConfig {
   
   /** Default expire support implementation */
   public final static String DEFAULT_CACHE_EXPIRE_SUPPORT_IMPL = 
-      "com.carrot.cache.expire.BaseFileDataReader";
+      "com.carrot.cache.expire.ExpireSupportSecondsMinutes";
   
   /** Default block writer block size */
   public final static int DEFAULT_CACHE_BLOCK_WRITER_BLOCK_SIZE = 4096;
@@ -1031,7 +1031,7 @@ public class CacheConfig {
       return Integer.parseInt(value);
     }
   }
-  
+    
   /**
    * Get expiration support implementation by cache name
    * @param cacheName cache name
