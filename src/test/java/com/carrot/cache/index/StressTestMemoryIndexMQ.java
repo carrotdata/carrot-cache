@@ -18,7 +18,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-public class StressTestMemoryIndexMQ extends TestMemoryIndexMQ{
+import com.carrot.cache.index.MemoryIndex.Type;
+
+public class StressTestMemoryIndexMQ extends TestMemoryIndexFormatBase{
   
   @Before
   public void setUp() {
@@ -98,5 +100,10 @@ public class StressTestMemoryIndexMQ extends TestMemoryIndexMQ{
       teardown();
       
     }
+  }
+
+  @Override
+  protected MemoryIndex getMemoryIndex() {
+    return new MemoryIndex("default", Type.MQ);
   }
 }

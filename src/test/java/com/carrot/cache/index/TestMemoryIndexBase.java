@@ -25,18 +25,20 @@ import org.junit.BeforeClass;
 
 import com.carrot.cache.util.TestUtils;
 import com.carrot.cache.util.UnsafeAccess;
+import com.carrot.cache.util.Utils;
 
 public class TestMemoryIndexBase {
   MemoryIndex memoryIndex;
   
   int numRecords = 10;
-  byte[][] keys = new byte[numRecords][];
-  byte[][] values = new byte[numRecords][];
-  long[] mKeys = new long[numRecords];
-  long[] mValues = new long[numRecords];
-  short[] sids = new short[numRecords];
-  int[] offsets = new int[numRecords];
-  int[] lengths = new int[numRecords];
+  byte[][] keys;
+  byte[][] values;
+  long[] mKeys;
+  long[] mValues;
+  short[] sids;
+  int[] offsets;
+  int[] sizes;
+  long[] expires;
   
   static int keySize = 16;
   static int valueSize = 16;
@@ -65,7 +67,8 @@ public class TestMemoryIndexBase {
     mValues = new long[numRecords];
     sids = new short[numRecords];
     offsets = new int[numRecords];
-    lengths = new int[numRecords];
+    sizes = new int[numRecords];
+    expires = new long[numRecords];
     
     Random r = new Random();
     long seed = System.currentTimeMillis();
@@ -77,26 +80,63 @@ public class TestMemoryIndexBase {
       values[i] = TestUtils.randomBytes(valueSize, r);
       mKeys[i] = TestUtils.randomMemory(keySize, r);
       mValues[i] = TestUtils.randomMemory(valueSize, r);
-      sids[i] = (short) r.nextInt(1000);
-      offsets[i] = r.nextInt(100000);
-      lengths[i] = r.nextInt(10000);
+      sids[i] = (short) r.nextInt(32000);
+      offsets[i] = nextOffset(r, 100000000);
+      sizes[i] = nextSize(keySize, valueSize);
+      expires[i] = nextExpire();
     }  
   }
   
+  /**
+   * Subclasses can overwrite
+   * @param r random
+   * @param max maximum value
+   * @return next offset (for block based formats - must have granularity of a block size)
+   */
+  int nextOffset(Random r, int max) {
+    return r.nextInt(max);
+  }
   
-  protected void deleteIndexBytes() {
+  /**
+   * Subclasses can overwrite
+   * @param r random
+   * @param max maximum value
+   * @return next size or -1 (size is not supported by format)
+   */
+  int nextSize(int keySize, int valueSize) {
+    IndexFormat format = this.memoryIndex.getIndexFormat();
+    return format.isSizeSupported()? Utils.kvSize(keySize, valueSize): -1;
+  }
+  
+  /**
+   * Subclasses can override it
+   * @return next expiration time
+   */
+  long nextExpire() {
+    return -1;
+  }
+  
+  protected void deleteIndexBytes(int expected) {
+    int deleted = 0;
     for(int i = 0; i < numRecords; i++) {
       boolean result = memoryIndex.delete(keys[i], 0, keySize);
-      assertTrue(result);
+      if (result) {
+        deleted++;
+      }
     }
+    assertEquals(expected, deleted);
     assertEquals(0L, memoryIndex.size());
   }
   
-  protected void deleteIndexMemory() {
+  protected void deleteIndexMemory(int expected) {
+    int deleted = 0;
     for(int i = 0; i < numRecords; i++) {
       boolean result = memoryIndex.delete(mKeys[i], keySize);
-      assertTrue(result);
+      if (result) {
+        deleted++;
+      }
     }
+    assertEquals(expected, deleted);
     assertEquals(0L, memoryIndex.size());
   }
   
@@ -119,5 +159,9 @@ public class TestMemoryIndexBase {
       assertEquals(-1, result);
     }
     UnsafeAccess.free(buf);
+  }
+  
+  protected boolean sameExpire (long exp, long value) {
+    return Math.abs(exp - value) <= 1000;
   }
 }

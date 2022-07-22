@@ -700,7 +700,7 @@ public class MemoryIndex implements Persistent {
    * @param size key size
    * @return index size (8 or 12); -1 - not found
    */
-  public long find(byte[] key, int off, int size, boolean hit, long buf, int bufSize) {
+  public int find(byte[] key, int off, int size, boolean hit, long buf, int bufSize) {
     int slot = 0;
     try {
       slot = lock(key, off, size);
@@ -938,6 +938,7 @@ public class MemoryIndex implements Persistent {
         long expire = this.indexFormat.getExpire(ptr, $ptr);
         if (expire > 0) {
           long current = System.currentTimeMillis();
+
           if (current > expire) {
             int sid0 = this.indexFormat.getSegmentId($ptr);
             deleteAt(ptr, $ptr, count);
@@ -1097,7 +1098,7 @@ public class MemoryIndex implements Persistent {
    * @param hit - perform promotion if true
    * @return index size; -1 - not found
    */
-  public long find(long ptr, int size, boolean hit, long buf, int bufSize) {
+  public int find(long ptr, int size, boolean hit, long buf, int bufSize) {
     int slot = 0;
     try {
       slot = lock(ptr, size);
@@ -1157,7 +1158,7 @@ public class MemoryIndex implements Persistent {
    * @param hit if true - promote item on hit
    * @return found index size or -1 (not found)
    */
-  private long find(long hash, boolean hit, long buf, int bufSize) {
+  private int find(long hash, boolean hit, long buf, int bufSize) {
     // This  method is called under lock
     // Get slot number
     long[] index = ref_index_base.get();
@@ -1998,10 +1999,8 @@ public class MemoryIndex implements Persistent {
     // Update index format meta sections
     this.indexFormat.updateMetaSection(ptr0);
     this.indexFormat.updateMetaSection(ptr1);
-    
-    
   }
-
+  
   /*
    * This method is not thread safe 
    */
@@ -2148,8 +2147,10 @@ public class MemoryIndex implements Persistent {
     } else {
       try {
         Class<?> cls = Class.forName(formatImpl);
-        this.indexFormat = (IndexFormat) cls.newInstance();
-        this.indexFormat.setCacheName(this.cacheName);
+        IndexFormat indexFormat = (IndexFormat) cls.newInstance();
+        indexFormat.setCacheName(this.cacheName);
+        setIndexFormat(indexFormat);
+        this.evictionPolicy = CacheConfig.getInstance().getCacheEvictionPolicy(this.cacheName);
       } catch (Exception e) {
         throw new IOException(e);
       } 

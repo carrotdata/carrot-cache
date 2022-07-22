@@ -59,7 +59,7 @@ public class CompactIndexFormat implements IndexFormat {
     int off = hashOffset();
     int v = UnsafeAccess.toInt(ptr + off);
     v &= 0x7fffffff;
-    hash = hash >>> (64 - L - 32);
+    hash = hash >>> (32 - L + 1);
     hash &= 0x7fffffff;
     return v == hash;
   }
@@ -118,7 +118,7 @@ public class CompactIndexFormat implements IndexFormat {
   @Override
   public void hit(long ptr) {
     int off = hashOffset();    
-    int v = UnsafeAccess.toInt(ptr) + off;
+    int v = UnsafeAccess.toInt(ptr + off);
     v |= 0x80000000;
     UnsafeAccess.putInt(ptr + off, v);
   }
@@ -150,7 +150,7 @@ public class CompactIndexFormat implements IndexFormat {
       int dataSize,
       long expire) {
     long hash = Utils.hash64(key, keyOffset, keySize);
-    int $hash = (int)(hash >>> 64 - L - 32) & 0x7fffffff;
+    int $hash = (int)(hash >>> 32 - L + 1) & 0x7fffffff;
     UnsafeAccess.putInt(ptr + hashOffset(), $hash);
     UnsafeAccess.putShort(ptr + sidOffset(), (short) (sid & 0xffff));
     UnsafeAccess.putShort(ptr + dataOffsetOffset(),(short) ((dataOffset / this.blockSize) & 0xffff));    
@@ -169,7 +169,7 @@ public class CompactIndexFormat implements IndexFormat {
       int dataSize,
       long expire) {
     long hash = Utils.hash64(keyPtr, keySize);
-    int $hash = (int)(hash >>> 64 - L - 32) & 0x7fffffff;
+    int $hash = (int)(hash >>> 32 - L + 1) & 0x7fffffff;
     UnsafeAccess.putInt(ptr + hashOffset(), $hash);
     UnsafeAccess.putShort(ptr + sidOffset(), (short) (sid & 0xffff));
     UnsafeAccess.putShort(ptr + dataOffsetOffset(), (short) ((dataOffset / this.blockSize) & 0xffff));        

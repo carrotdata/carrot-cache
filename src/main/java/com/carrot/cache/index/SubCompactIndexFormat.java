@@ -129,7 +129,7 @@ public class SubCompactIndexFormat implements IndexFormat {
   public int getHashBit(long ptr, int n) {
     int off = hashOffset();
     // TODO:test
-    return (UnsafeAccess.toShort(ptr + off) & 0xffff >>> (16 - n + L)) & 1;
+    return ((UnsafeAccess.toShort(ptr + off) & 0xffff) >>> (16 - n + L)) & 1;
   }
 
   @Override

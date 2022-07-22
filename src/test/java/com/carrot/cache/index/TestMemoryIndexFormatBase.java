@@ -27,119 +27,157 @@ import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.carrot.cache.index.MemoryIndex.MutationResult;
 import com.carrot.cache.util.UnsafeAccess;
 
-public class TestMemoryIndexMQ extends TestMemoryIndexBase{
+public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
   /** Logger */
   @SuppressWarnings("unused")
-  private static final Logger LOG = LogManager.getLogger(TestMemoryIndexMQ.class);
+  private static final Logger LOG = LogManager.getLogger(TestMemoryIndexFormatBase.class);
   
   @Before
   public void setUp() {
-    memoryIndex = new MemoryIndex("default", MemoryIndex.Type.MQ);
+    memoryIndex = getMemoryIndex();
   }
   
-  private void loadIndexBytes() {
-    IndexFormat format = memoryIndex.getIndexFormat();
-    int entrySize = format.indexEntrySize();
-    long buf = UnsafeAccess.mallocZeroed(entrySize);
-    
+  /**
+   * Subclasses must provide memory index implementation for testing
+   * @return
+   */
+  protected abstract MemoryIndex getMemoryIndex();
+  
+  protected int loadIndexBytes() {
+    int loaded = 0;
     for(int i = 0; i < numRecords; i++) {
-      format.writeIndex(0L, buf, keys[i], 0, keys[i].length, values[i], 0, values[i].length, 
-        sids[i], offsets[i], lengths[i], 0);
-      memoryIndex.insert(keys[i], 0, keySize, buf, entrySize);
+      MutationResult res = memoryIndex.insert(keys[i], 0, keySize, values[i], 0, values[i].length, 
+        sids[i], offsets[i], expires[i]);
+      if (res == MutationResult.INSERTED) {
+        loaded++;
+      }
     }
-    UnsafeAccess.free(buf);
+    return loaded;
   }
   
-  private void loadIndexBytesWithEviction(int evictionStartFrom) {
-    IndexFormat format = memoryIndex.getIndexFormat();
-    int entrySize = format.indexEntrySize();
-    long buf = UnsafeAccess.mallocZeroed(entrySize);
-    
+  protected int loadIndexBytesWithEviction(int evictionStartFrom) {
+    int loaded = 0;
     for(int i = 0; i < numRecords; i++) {
-      format.writeIndex(0L, buf, keys[i], 0, keys[i].length, values[i], 0, values[i].length, 
-        sids[i], offsets[i], lengths[i], 0);
-      memoryIndex.insert(keys[i], 0, keySize, buf, entrySize);
+      MutationResult res = memoryIndex.insert(keys[i], 0, keySize, values[i], 0, values[i].length, 
+        sids[i], offsets[i], expires[i]);
+      if (res == MutationResult.INSERTED && !memoryIndex.isEvictionEnabled()) {
+        loaded++;
+      } else if (res == MutationResult.UPDATED && memoryIndex.isEvictionEnabled()) {
+        loaded--;
+      }
       if (i == evictionStartFrom - 1) {
         memoryIndex.setEvictionEnabled(true);
       }
     }
-    UnsafeAccess.free(buf);
+    return loaded;
   }
   
-  private void verifyIndexBytes() {
-    verifyIndexBytes(false);
+  protected void verifyIndexBytes(int expected) {
+    verifyIndexBytes(false, expected);
   }
 
-  private void verifyIndexBytes(boolean hit) {
+  protected void verifyIndexBytes(boolean hit, int expected) {
     
     IndexFormat format = memoryIndex.getIndexFormat();
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
-
+    int verified = 0;
     for (int i = 0; i < numRecords; i++) {
       int result = (int) memoryIndex.find(keys[i], 0, keySize, hit, buf, entrySize);
-      assertEquals(entrySize, result);
+      if (result > 0) {
+        assertEquals(entrySize, result);
+      } else {
+        continue;
+      }
+      
       short sid = (short)format.getSegmentId(buf);
       int offset = (int) format.getOffset(buf);
       int size = (int) format.getKeyValueSize(buf);
-      assertEquals(sids[i], sid);
-      assertEquals(offsets[i], offset);
-      assertEquals(lengths[i], size);
+      if (sids[i] != sid) {
+        continue;
+      }
+      if(offsets[i] != offset) {
+        continue;
+      }
+      if (sizes[i] != size) {
+        continue;
+      }
+      long expire = memoryIndex.getExpire(keys[i], 0, keySize);
+      if (!sameExpire(expires[i], expire)) {
+        continue;
+      }
+      verified ++;
     }
     UnsafeAccess.free(buf);
+    assertEquals(expected, verified);
   }
   
-  private void loadIndexMemory() {
-    IndexFormat format = memoryIndex.getIndexFormat();
-    int entrySize = format.indexEntrySize();
-    long buf = UnsafeAccess.mallocZeroed(entrySize);
-    
+  protected int loadIndexMemory() {
+    int loaded = 0;
     for(int i = 0; i < numRecords; i++) {
-      format.writeIndex(0L, buf, mKeys[i], keySize, mValues[i], valueSize, 
-        sids[i], offsets[i], lengths[i], 0);
-      memoryIndex.insert(mKeys[i], keySize, buf, entrySize);
+      MutationResult res = memoryIndex.insert(mKeys[i], keySize, mValues[i], valueSize, sids[i], offsets[i], expires[i]);
+      if (res == MutationResult.INSERTED) {
+        loaded++;
+      }
     }
-    UnsafeAccess.free(buf);
+    return loaded;
   }
   
-  private void loadIndexMemoryWithEviction(int evictionStartFrom) {
-    IndexFormat format = memoryIndex.getIndexFormat();
-    int entrySize = format.indexEntrySize();
-    long buf = UnsafeAccess.mallocZeroed(entrySize);
-    
+  protected int loadIndexMemoryWithEviction(int evictionStartFrom) {
+    int loaded = 0;
     for(int i = 0; i < numRecords; i++) {
-      format.writeIndex(0L, buf, mKeys[i], keySize, mValues[i], valueSize, 
-        sids[i], offsets[i], lengths[i], 0);
-      memoryIndex.insert(mKeys[i], keySize, buf, entrySize);
+      MutationResult res = memoryIndex.insert(mKeys[i], keySize, mValues[i], valueSize, sids[i], offsets[i], expires[i]);
+      if (res == MutationResult.INSERTED && !memoryIndex.isEvictionEnabled()) {
+        loaded++;
+      } else if (res == MutationResult.UPDATED && memoryIndex.isEvictionEnabled()) {
+        loaded--;
+      }
       if (i == evictionStartFrom - 1) {
         memoryIndex.setEvictionEnabled(true);
       }
     }
-    UnsafeAccess.free(buf);
+    return loaded;
   }
   
-  private void verifyIndexMemory() {
-    verifyIndexMemory(false);
+  protected void verifyIndexMemory(int expected) {
+    verifyIndexMemory(false, expected);
   }
   
-  private void verifyIndexMemory(boolean hit) {
+  protected void verifyIndexMemory(boolean hit, int expected) {
     IndexFormat format = memoryIndex.getIndexFormat();
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
-
+    int verified = 0;
     for (int i = 0; i < numRecords; i++) {
       int result = (int) memoryIndex.find(mKeys[i], keySize, hit, buf, entrySize);
-      assertEquals(entrySize, result);
+      if (result > 0) {
+        assertEquals(entrySize, result);
+      } else {
+        continue;
+      }
       short sid = (short)format.getSegmentId(buf);
       int offset = (int) format.getOffset(buf);
       int size = (int) format.getKeyValueSize(buf);
-      assertEquals(sids[i], sid);
-      assertEquals(offsets[i], offset);
-      assertEquals(lengths[i], size);
+      if (sids[i] !=  sid) {
+        continue;
+      }
+      if (offsets[i] != offset) {
+        continue;
+      }
+      if (sizes[i] != size) {
+        continue;
+      }
+      long expire = memoryIndex.getExpire(mKeys[i], keySize);
+      if (!sameExpire(expires[i], expire)) {
+        continue;
+      }
+      verified++;
     }
     UnsafeAccess.free(buf);
+    assertEquals(expected, verified);
   }
   
   @Test
@@ -170,16 +208,16 @@ public class TestMemoryIndexMQ extends TestMemoryIndexBase{
   @Test
   public void testLoadReadDeleteNoRehashBytes() {
     System.out.println("Test load and read-delete no rehash bytes");
-    loadReadBytes(100000);
-    deleteIndexBytes();
+    int loaded = loadReadBytes(100000);
+    deleteIndexBytes(loaded);
     verifyIndexBytesNot();
   }
   
   @Test
   public void testLoadReadDeleteNoRehashMemory() {
     System.out.println("Test load and read-delete no rehash memory");
-    loadReadMemory(100000);
-    deleteIndexMemory();
+    int loaded = loadReadMemory(100000);
+    deleteIndexMemory(loaded);
     verifyIndexMemoryNot();
   }
   
@@ -210,85 +248,133 @@ public class TestMemoryIndexMQ extends TestMemoryIndexBase{
   @Test
   public void testLoadReadDeleteWithRehashBytes() {
     System.out.println("Test load and read-delete with rehash bytes");
-    loadReadBytes(1000000);
-    deleteIndexBytes();
+    int loaded = loadReadBytes(1000000);
+    deleteIndexBytes(loaded);
     verifyIndexBytesNot();
   }
   
   @Test
   public void testLoadReadDeleteWithRehashMemory() {
     System.out.println("Test load and read with rehash memory");
-    loadReadMemory(1000000);
-    deleteIndexMemory();
+    int loaded = loadReadMemory(1000000);
+    deleteIndexMemory(loaded);
     verifyIndexMemoryNot();
   }
   
   @Test
   public void testEvictionBytes() {
     System.out.println("Test eviction bytes");
-
-    prepareData(200000);
-    loadIndexBytesWithEviction(100000);
+    int toLoad = 200000;
+    
+    prepareData(toLoad);
+    int loaded = loadIndexBytesWithEviction(toLoad / 2);
     
     long size = memoryIndex.size();
-    assertEquals(100000L, size);
+    assertEquals(loaded, size);
     
-    int entrySize = memoryIndex.getIndexFormat().indexEntrySize();
+    IndexFormat format = memoryIndex.getIndexFormat();
+    int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     
     int evicted1 = 0;
     int evicted2 = 0;
-    for (int i = 0; i < 100000; i++) {
+    for (int i = 0; i < toLoad / 2; i++) {
       int result = (int) memoryIndex.find(keys[i], 0, keySize, false, buf, entrySize);
-      if (result == -1) evicted1++;
+      if (result == -1) {
+        evicted1++;
+      } else {
+        int sid = format.getSegmentId(buf);
+        long off = format.getOffset(buf);
+        int kvSize = format.getKeyValueSize(buf);
+        long expire = memoryIndex.getExpire(keys[i], 0, keys[i].length);
+        if (sids[i] != sid || offsets[i] != off || 
+            sizes[i] != kvSize || !sameExpire(expires[i], expire)) {
+          evicted1++;
+        }
+      }
     }
     
-    for (int i = 100000; i < 200000; i++) {
+    for (int i = toLoad / 2; i < toLoad; i++) {
       int result = (int) memoryIndex.find(keys[i], 0, keySize, false, buf, entrySize);
-      if (result == -1) evicted2 ++;
+      if (result == -1) {
+        evicted2 ++;
+      } else {
+        int sid = format.getSegmentId(buf);
+        long off = format.getOffset(buf);
+        int kvSize = format.getKeyValueSize(buf);
+        long expire = memoryIndex.getExpire(keys[i], 0, keySize);
+        if (sids[i] != sid || offsets[i] != off || 
+            sizes[i] != kvSize || !sameExpire(expires[i], expire)) {
+          evicted1++;
+        }
+      }
     }
     System.out.println("evicted1=" + evicted1 + " evicted2="+ evicted2);
-    assertEquals(100000, evicted1 + evicted2);
+    assertEquals(toLoad - loaded, evicted1 + evicted2);
     UnsafeAccess.free(buf); 
   }
   
   @Test
   public void testEvictionMemory() {
     System.out.println("Test eviction memory");
-
-    prepareData(200000);
-    loadIndexMemoryWithEviction(100000);
+    int toLoad = 200000;
+    prepareData(toLoad);
+    long loaded = loadIndexMemoryWithEviction(toLoad / 2);
     
     long size = memoryIndex.size();
-    assertEquals(100000L, size);
+    assertEquals(loaded, size);
     
-    int entrySize = memoryIndex.getIndexFormat().indexEntrySize();
+    IndexFormat format = memoryIndex.getIndexFormat();
+    int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     
     int evicted1 = 0;
     int evicted2 = 0;
-    for (int i = 0; i < 100000; i++) {
+    for (int i = 0; i < toLoad / 2; i++) {
       int result = (int) memoryIndex.find(mKeys[i], keySize, false, buf, entrySize);
-      if (result == -1) evicted1++;
+      if (result == -1) {
+        evicted1++;
+      } else {
+        int sid = format.getSegmentId(buf);
+        long off = format.getOffset(buf);
+        int kvSize = format.getKeyValueSize(buf);
+        long expire = memoryIndex.getExpire(mKeys[i], keySize);
+        if (sids[i] != sid || offsets[i] != off || 
+            sizes[i] != kvSize || !sameExpire(expires[i], expire)) {
+          evicted1++;
+        }
+      }
     }
     
-    for (int i = 100000; i < 200000; i++) {
+    for (int i = toLoad / 2; i < toLoad; i++) {
       int result = (int) memoryIndex.find(mKeys[i], keySize, false, buf, entrySize);
-      if (result == -1) evicted2 ++;
+      if (result == -1) {
+        evicted2 ++;
+      } else {
+        int sid = format.getSegmentId(buf);
+        long off = format.getOffset(buf);
+        int kvSize = format.getKeyValueSize(buf);
+        long expire = memoryIndex.getExpire(mKeys[i], keySize);
+        if (sids[i] != sid || offsets[i] != off || 
+            sizes[i] != kvSize || !sameExpire(expires[i], expire)) {
+          evicted1++;
+        }
+      }
     }
     System.out.println("evicted1=" + evicted1 + " evicted2="+ evicted2);
-    assertEquals(100000, evicted1 + evicted2);
+    assertEquals((int)(toLoad - loaded), evicted1 + evicted2);
     UnsafeAccess.free(buf);
   }
   
   @Test
   public void testLoadSave() throws IOException {
     System.out.println("Test load save");
-    prepareData(200000);
-    loadIndexMemory();
+    prepareData(100000);
+    long loaded = loadIndexMemory();
     long size = memoryIndex.size();
-    assertEquals(200000L, size);
-    
+    assertEquals(loaded, size);
+    verifyIndexMemory((int)loaded);
+
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
     
@@ -302,43 +388,45 @@ public class TestMemoryIndexMQ extends TestMemoryIndexBase{
     memoryIndex = new MemoryIndex();
     memoryIndex.load(dis);
     
-    verifyIndexMemory();
+    verifyIndexMemory((int)loaded);
 
   }
   
-  private void loadReadBytes(int num) {
+  protected int loadReadBytes(int num) {
     prepareData(num);
     System.out.println("prepare done");
-    loadIndexBytes();
-    System.out.println("load done");
+    int loaded = loadIndexBytes();
+    System.out.println("load done: "+ loaded);
     long size = memoryIndex.size();
-    assertEquals((long)num, size);
-    verifyIndexBytes();
+    assertEquals(loaded, (int)size);
+    verifyIndexBytes(loaded);
+    return loaded;
   }
   
   
-  private void loadReadMemory(int num) {
+  protected int loadReadMemory(int num) {
     prepareData(num);
-    loadIndexMemory();
+    int loaded = loadIndexMemory();
     long size = memoryIndex.size();
-    assertEquals((long)num, size);
-    verifyIndexMemory();
+    assertEquals(loaded, (int) size);
+    verifyIndexMemory(loaded);
+    return loaded;
   }
   
-  private void loadReadBytesWithHit(int num) {
-    loadReadBytes(num);
-    verifyIndexBytes(true);
-    verifyIndexBytes();
+  protected void loadReadBytesWithHit(int num) {
+    int loaded = loadReadBytes(num);
+    verifyIndexBytes(true, loaded);
+    verifyIndexBytes(loaded);
     long size = memoryIndex.size();
-    assertEquals(num, (int) size);
+    assertEquals(loaded, (int) size);
   }
   
   
-  private void loadReadMemoryWithHit(int num) {
-    loadReadMemory(num);
-    verifyIndexMemory(true);
-    verifyIndexMemory();
+  protected void loadReadMemoryWithHit(int num) {
+    int loaded = loadReadMemory(num);
+    verifyIndexMemory(true, loaded);
+    verifyIndexMemory(loaded);
     long size = memoryIndex.size();
-    assertEquals(num, (int) size);
+    assertEquals(loaded, (int) size);
   }
 }

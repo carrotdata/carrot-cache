@@ -42,6 +42,13 @@ public class SubCompactWithExpireIndexFormat extends CompactIndexFormat {
     return true;
   }
 
+  /**
+   * For testing
+   */
+  public void setExpireSupport(ExpireSupport support) {
+    this.expireSupport = support;
+  }
+  
   @Override
   public long getExpire(long ibPtr, long ptr) {
     ibPtr += super.getIndexBlockHeaderSize();

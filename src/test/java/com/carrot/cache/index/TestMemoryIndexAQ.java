@@ -42,15 +42,12 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
     memoryIndex.setMaximumSize(10000000);
   }
   
-  
-  
   private void loadIndexBytes() {
     for(int i = 0; i < numRecords; i++) {
       MutationResult result = memoryIndex.aarp(keys[i], 0, keySize);
       assertEquals(MutationResult.INSERTED, result);
     }
   }
-  
   
   private void verifyIndexBytes() {
     verifyIndexBytes(false);
@@ -135,7 +132,7 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
   public void testLoadReadDeleteNoRehashBytes() {
     LOG.info("Test load and read-delete no rehash bytes");
     loadReadBytes(100000);
-    deleteIndexBytes();
+    deleteIndexBytes(100000);
     verifyIndexBytesNot();
   }
   
@@ -143,7 +140,7 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
   public void testLoadReadDeleteNoRehashMemory() {
     LOG.info("Test load and read-delete no rehash memory");
     loadReadMemory(100000);
-    deleteIndexMemory();
+    deleteIndexMemory(100000);
     verifyIndexMemoryNot();
   }
   
@@ -187,7 +184,7 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
   public void testLoadReadDeleteWithRehashBytes() {
     LOG.info("Test load and read-delete with rehash bytes");
     loadReadBytes(1000000);
-    deleteIndexBytes();
+    deleteIndexBytes(1000000);
     verifyIndexBytesNot();
   }
   
@@ -195,7 +192,7 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
   public void testLoadReadDeleteWithRehashMemory() {
     LOG.info("Test load and read with rehash memory");
     loadReadMemory(1000000);
-    deleteIndexMemory();
+    deleteIndexMemory(1000000);
     verifyIndexMemoryNot();
   }
   
