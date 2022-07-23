@@ -22,6 +22,15 @@ import com.carrot.cache.util.UnsafeAccess;
 
 public interface IndexFormat extends Persistent {
     
+  
+  /**
+   * Are all entries of the same size?
+   * @return true - yes, false - otherwise
+   */
+  public default boolean isFixedSize() {
+    return true;
+  }
+  
   /**
    * Cache name for this index format
    * @param cacheName

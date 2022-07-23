@@ -869,10 +869,11 @@ public class MemoryIndex implements Persistent {
     //TODO: separate method
     int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);  
     int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
-    int sid1 = getSegmentIdForEntry(ptr, count);
+    int sid1 = this.indexFormat.getSegmentId($ptr);
     // Update stats
     if (this.cache != null) {
       cache.getEngine().updateStats(sid1, -1, -(numRanks - rank));
+      //TODO: update segments ranks after the deleted item?
     }
   }
   
@@ -892,15 +893,7 @@ public class MemoryIndex implements Persistent {
       if (expire > 0) {
         long current = System.currentTimeMillis();
         if (current > expire) {
-          int sid0 = this.indexFormat.getSegmentId($ptr);
           deleteAt(ptr, $ptr, count);
-          // TODO Update segment stats for expired item
-          // TODO:move this code into deleteAt method
-          int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
-          int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
-          if (this.cache != null) {
-            cache.getEngine().updateStats(sid0, -1, -rank);
-          }
           numEntries --;
           continue;
         }
@@ -935,20 +928,14 @@ public class MemoryIndex implements Persistent {
     try {
       while (count < numEntries) {
         // Check if expired - pro-active expiration check
+        //TODO: this is expensive - make it configurable
+        // We check ALL expired items for every find/get operation
         long expire = this.indexFormat.getExpire(ptr, $ptr);
         if (expire > 0) {
           long current = System.currentTimeMillis();
 
           if (current > expire) {
-            int sid0 = this.indexFormat.getSegmentId($ptr);
             deleteAt(ptr, $ptr, count);
-            // TODO Update segment stats for expired item
-            // TODO:move this code into deleteAt method
-            int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
-            int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
-            if (this.cache != null) {
-              cache.getEngine().updateStats(sid0, -1, -rank);
-            }
             numEntries --;
             continue;
           }
@@ -962,18 +949,17 @@ public class MemoryIndex implements Persistent {
           // Update hits
           if (hit) {
             this.indexFormat.hit($ptr);
-            int sid0 = this.indexFormat.getSegmentId($ptr);
-            // TODO: this works only if we promote item by +1 rank
-            // Update stats
             if (this.cache != null) {
+              int sid0 = this.indexFormat.getSegmentId($ptr);
+              // TODO: this works only if we promote item by +1 rank
+              // Update statistics
+              // Increase total rank for segment with the item being promoted
               this.cache.getEngine().updateStats(sid0, 0, 1);
-            }
-            int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
-            int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
-            int idx = rank == 0? 0: this.evictionPolicy.getStartIndexForRank(numRanks, rank - 1, numEntries);
-            int sid1 = getSegmentIdForEntry(ptr, idx);
-            // Update stats
-            if (this.cache != null) {
+              // Decrease total rank for the segment with an item being demoted
+              int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
+              int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
+              int idx = this.evictionPolicy.getStartIndexForRank(numRanks, rank, numEntries);
+              int sid1 = getSegmentIdForEntry(ptr, idx);
               cache.getEngine().updateStats(sid1, 0, -1);
             }
           }
@@ -983,10 +969,10 @@ public class MemoryIndex implements Persistent {
           if (hit && count > 0) {
             // ask parent where to move
             int idx = this.evictionPolicy.getPromotionIndex(ptr, count, numEntries);
+            //TODO: optimize this code by combining
             int off = offsetFor(ptr, idx);
-            int offc = offsetFor($ptr, count);
+            int offc = offsetFor(ptr, count);
             int toMove = offc - off;
-
             // Move data between 'idx' (inclusive) and 'count' (exclusive)(count > idx must be)
             UnsafeAccess.copy(ptr + off, ptr + off + indexSize, toMove);
             // insert index into new place
@@ -1005,6 +991,10 @@ public class MemoryIndex implements Persistent {
 
   final int getSegmentIdForEntry(long ptr, int entryNumber) {
     long $ptr = ptr + this.indexBlockHeaderSize;
+    if (this.indexFormat.isFixedSize()) {
+      return this.indexFormat.getSegmentId($ptr + 
+        entryNumber * this.indexFormat.indexEntrySize());
+    }
     int count = 0;
     while (count < entryNumber) {
       $ptr += this.indexFormat.fullEntrySize($ptr);
@@ -1014,13 +1004,17 @@ public class MemoryIndex implements Persistent {
   }
   
   final int offsetFor(long ptr, int idx) {
-    //TODO: can be optimized
-    long $ptr = ptr + this.indexBlockHeaderSize;
-    int count = 0;
-    while (count++ < idx) {
-      $ptr += this.indexFormat.fullEntrySize($ptr);
+    if (this.indexFormat.isFixedSize()) {
+      return this.indexBlockHeaderSize + 
+          this.indexFormat.indexEntrySize() * idx;
+    } else {
+      long $ptr = ptr + this.indexBlockHeaderSize;
+      int count = 0;
+      while (count++ < idx) {
+        $ptr += this.indexFormat.fullEntrySize($ptr);
+      }
+      return (int) ($ptr - ptr);
     }
-    return (int) ($ptr - ptr);
   }
   
   /**
@@ -1065,7 +1059,7 @@ public class MemoryIndex implements Persistent {
   
   /**
    * Checks if a key with a given sid, offset and size exists in the index
-   * if exists , then index is copied into a given buffer
+   * if exists , then index is copied into a given buffer (NOPE - FIXME)
    * @param keyPtr key address
    * @param keySize key size
    * @param sid segment id
@@ -2003,6 +1997,7 @@ public class MemoryIndex implements Persistent {
   
   /*
    * This method is not thread safe 
+   * TODO : test on save/load when rehasing is in progress
    */
   private void completeRehashing() {
     if (isRehashingInProgress() == false) return;

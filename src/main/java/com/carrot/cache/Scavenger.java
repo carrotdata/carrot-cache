@@ -315,7 +315,11 @@ public class Scavenger extends Thread {
           long keyPtr = sc.keyAddress();
           int keySize = sc.keyLength();
           long offset = sc.getOffset();
+          
+          //TODO: exists does not copy index
           boolean exists = index.exists(keyPtr, keySize, sid, offset, indexBuf, sid);
+          
+          //TODI: this code is wrong - FIXME
           long expire = exists ? format.getExpire(indexBuf, indexEntrySize) : 0;
           long valuePtr = sc.valueAddress();
           int valSize = sc.valueLength();
