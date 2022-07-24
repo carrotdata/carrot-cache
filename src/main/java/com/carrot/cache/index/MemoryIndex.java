@@ -56,6 +56,41 @@ public class MemoryIndex implements Persistent {
     FAILED    /* Failed due to memory index full rehashing  */
   }
   
+  /**
+   * This is result of a check key operation
+   *  
+   */
+  public static enum Result {
+    OK,
+    NOT_FOUND,
+    DELETED,
+    EXPIRED
+  }
+  
+  public static class ResultWithRankAndExpire {
+    
+    private Result result;
+    
+    private int rank;
+    
+    long expire;
+    
+    public ResultWithRankAndExpire setResultRankExpire(Result result, int rank, long expire) {
+      this.result = result;
+      this.rank = rank;
+      return this;
+    }
+    public int getRank() {
+      return this.rank;
+    }
+    public Result getResult() {
+      return this.result;
+    }
+    public long getExpire( ) {
+      return this.expire;
+    }
+  }
+  
   public static enum Type {
     AQ, /* Admission Queue*/
     /*
@@ -69,7 +104,6 @@ public class MemoryIndex implements Persistent {
      * 8 bytes - location in the storage - information 
      */
   }
-  
   
   /* Failure code */
   private static final int FAILED = -1;
@@ -812,7 +846,7 @@ public class MemoryIndex implements Persistent {
    * @param key key buffer
    * @param off offset
    * @param size key size
-   * @return expiration time (or -1)
+   * @return expiration time (0 - does not expire, or -1 - not supported)
    */
   public long getExpire(byte[] key, int off, int size) {
     if (this.indexFormat.isExpirationSupported() == false) {
@@ -833,7 +867,7 @@ public class MemoryIndex implements Persistent {
    *
    * @param keyPtr key address
    * @param keySize key size
-   * @return expiration time or -1
+   * @return expiration time (0 - does not expire -1)
    */
   public long getExpire(long keyPtr, int keySize) {
     if (this.indexFormat.isExpirationSupported() == false) {
@@ -1101,6 +1135,88 @@ public class MemoryIndex implements Persistent {
     } finally {
       unlock(slot);
     }
+  }
+
+  /**
+   * This method is used exclusively by the Scavenger
+   * @param keyPtr key address
+   * @param keySize key size
+   * @return operation result (OK, NOT_FOUND, EXPIRED, DELETED)
+   */
+  public ResultWithRankAndExpire checkDeleteKeyForScavenger(long keyPtr, int keySize, ResultWithRankAndExpire result) {
+    int slot = 0;
+    try {
+      slot = lock(keyPtr, keySize);
+      long hash = Utils.hash64(keyPtr, keySize);
+      // This  method is called under lock
+      // Get slot number
+      long[] index = ref_index_base.get();
+      int $slot = getSlotNumber(hash, index.length);
+      long ptr = index[$slot];
+      if (ptr == 0) {
+        // Rehashing is in progress
+        index = ref_index_base_rehash.get();
+        if (index == null) {
+          // Rehashing finished - race condition
+          index = ref_index_base.get();
+        }
+        $slot = getSlotNumber(hash, index.length);
+        ptr = index[$slot];
+      }
+      return checkDeleteKeyForScavenger(ptr, hash, result);
+    } finally {
+      unlock(slot);
+    }
+  }
+  
+  private ResultWithRankAndExpire checkDeleteKeyForScavenger(long ptr, long hash, ResultWithRankAndExpire result) {
+    int numEntries = numEntries(ptr);
+    //ATTN: we do not check keys directly - only hashes, for small hashes this may result in 
+    // collisions. 
+    // TODO: this works ONLY when index size = item size (no embedded data)
+    //TODO: Check count when delete
+    //TODO: If deleted > 0, update number of items and size
+    long $ptr = ptr + this.indexBlockHeaderSize;
+    int count = 0;
+    double dumpBelowRatio = this.cacheConfig.getScavengerDumpEntryBelowStart(cacheName);
+    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
+    
+    result = result.setResultRankExpire(Result.NOT_FOUND, 0, 0);
+    
+    this.indexFormat.begin(ptr, true); // force scan
+    try {
+      
+      while (count < numEntries) {
+        if (this.indexFormat.equals($ptr, hash)) {
+          long expire = this.indexFormat.getExpire(ptr, $ptr);
+          if (expire > 0) {
+            long current = System.currentTimeMillis();
+            if (current > expire) {
+              // For expired items rank does not matter
+              result.setResultRankExpire(Result.EXPIRED, 0, expire);
+            }
+          } else {
+            // Check popularity
+            int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
+            double popularity = ((double) (numEntries - count)) / numEntries;
+            if (popularity < dumpBelowRatio) {
+              // Delete item as having low popularity
+              result.setResultRankExpire(Result.DELETED, rank, expire);
+            } else {
+              result.setResultRankExpire(Result.OK, rank, expire);
+            }
+          }
+          deleteAt(ptr, $ptr, count);
+          break;
+        }
+        count++;
+        $ptr += this.indexFormat.fullEntrySize($ptr);
+      }
+    } finally {
+      // Report end of a scan operation
+      this.indexFormat.end(ptr);
+    }
+    return result;
   }
 
   /**

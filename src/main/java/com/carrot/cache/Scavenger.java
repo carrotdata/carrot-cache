@@ -33,6 +33,9 @@ import com.carrot.cache.util.Persistent;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 
+import static com.carrot.cache.index.MemoryIndex.ResultWithRankAndExpire;
+import static com.carrot.cache.index.MemoryIndex.Result;
+
 public class Scavenger extends Thread {
 
   /** Logger */
@@ -291,7 +294,6 @@ public class Scavenger extends Thread {
     Segment.Info info = s.getInfo();
     SegmentScanner sc = null;
     long indexBuf = 0;
-    int sid = s.getId();
     try {
       if (info.getTotalItems() == 0) {
         // We can dump it completely w/o asking memory index
@@ -302,7 +304,6 @@ public class Scavenger extends Thread {
         // Update stats
         stats.totalBytesFreed += dataSize;
       } else {
-        double dumpBelowRatio = config.getScavengerDumpEntryBelowStart(cacheName);
         IOEngine engine = cache.getEngine();
         MemoryIndex index = engine.getMemoryIndex();
         IndexFormat format = index.getIndexFormat();
@@ -312,69 +313,54 @@ public class Scavenger extends Thread {
         sc = engine.getScanner(s);
 
         while (sc.hasNext()) {
-          long keyPtr = sc.keyAddress();
-          int keySize = sc.keyLength();
-          long offset = sc.getOffset();
+          final long keyPtr = sc.keyAddress();
+          final int keySize = sc.keyLength();
+          final long valuePtr = sc.valueAddress();
+          final int valSize = sc.valueLength();
+          final int totalSize = Utils.kvSize(keySize, valSize);
           
-          //TODO: exists does not copy index
-          boolean exists = index.exists(keyPtr, keySize, sid, offset, indexBuf, sid);
-          
-          //TODI: this code is wrong - FIXME
-          long expire = exists ? format.getExpire(indexBuf, indexEntrySize) : 0;
-          long valuePtr = sc.valueAddress();
-          int valSize = sc.valueLength();
-
-          int keySizeSize = Utils.sizeUVInt(keySize);
-          int valSizeSize = Utils.sizeUVInt(valSize);
-          int totalSize = keySize + valSize + keySizeSize + valSizeSize;
-          // Update stats
           stats.totalBytesScanned += totalSize;
 
-          // Check if it was expired
-          boolean expired = expire > 0 && (System.currentTimeMillis() > expire);
-          double p = index.popularity(keyPtr, keySize);
-
-          if (expired || !exists) {
-            // Expire current item
-            cache.reportUsed(-totalSize);
-            totalFreedBytes += totalSize;
-            // Update stats
-            stats.totalBytesExpired += totalSize;
-            stats.totalBytesFreed += totalSize;
-            stats.totalItemsExpired += 1;
-            // Report expiration
-            if (aListener != null && expired) {
-              aListener.expired(keyPtr, keySize);
-            }
-            if (exists) {
-              // Delete from the index
-              index.delete(keyPtr, keySize);
-            }
-          } else if (p < dumpBelowRatio) {
-            // Dump current item as a low value
-            cache.reportUsed(-totalSize);
-            totalFreedBytes += totalSize;
-            // Update stats
-            stats.totalBytesFreed += totalSize;
-            // Return Item back to AQ
-            // TODO: fix this code. We need to move data to a victim cache on
-            // memory index eviction.
-            if (aListener != null) {
-              if (p > 0.0) {
-                aListener.evicted(keyPtr, keySize, valuePtr, valSize, expire);
-              } else {
-                // p == 0.0 means, that item was previously evicted from the index
-                aListener.evicted(keyPtr, keySize, 0L, 0, expire);
+          ResultWithRankAndExpire result = new ResultWithRankAndExpire();
+          
+          result = index.checkDeleteKeyForScavenger(keyPtr, keySize, result);
+          
+          Result res = result.getResult();
+          int rank = result.getRank();
+          long expire = result.getExpire();
+          
+          switch (res) {
+            case EXPIRED:
+              cache.reportUsed(-totalSize);
+              totalFreedBytes += totalSize;
+              stats.totalBytesExpired += totalSize;
+              stats.totalBytesFreed += totalSize;
+              stats.totalItemsExpired += 1;
+              // Report expiration
+              if (aListener != null) {
+                aListener.expired(keyPtr, keySize);
               }
-            }
-            // Delete from the index
-            index.delete(keyPtr, keySize);
-          } else {
-            // Delete from the index
-            index.delete(keyPtr, keySize);
-            int rank = engine.popularityToRank(p);
-            // Otherwise reinsert item back
-            engine.put(keyPtr, keySize, valuePtr, valSize, expire, rank);
+              break;
+            case NOT_FOUND:
+              cache.reportUsed(-totalSize);
+              totalFreedBytes += totalSize;
+              stats.totalBytesFreed += totalSize;
+              break;
+            case DELETED:
+              cache.reportUsed(-totalSize);
+              totalFreedBytes += totalSize;
+              // Update stats
+              stats.totalBytesFreed += totalSize;
+              // Return Item back to AQ
+              // TODO: fix this code. We need to move data to a victim cache on
+              // memory index eviction.
+              if (aListener != null) {
+                aListener.evicted(keyPtr, keySize, valuePtr, valSize, expire);
+              }
+            case OK:
+              // Put value back into the cache - it has high popularity
+              engine.put(keyPtr, keySize, valuePtr, valSize, expire, rank);
+              break;
           }
           sc.next();
         }
