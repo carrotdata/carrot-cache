@@ -367,6 +367,7 @@ public class MemoryIndex implements Persistent {
    * For AQ memory index - asynchronous operation
    */
   private void shrinkIndex() {
+    //TODO: have not been tested yet
     Runnable r =
         () -> {
           /*1*/long[] index = ref_index_base.get();
@@ -893,17 +894,16 @@ public class MemoryIndex implements Persistent {
     // TODO: Move this to a separate method
     int dataSize = dataSize(ptr);
     int numEntries = numEntries(ptr);
+    //TODO: separate method
+    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);  
+    int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
+    int sid1 = this.indexFormat.getSegmentId($ptr);
     // delete entry
     int toDelete = this.indexFormat.fullEntrySize($ptr);
     int toMove = (int) ((ptr + indexBlockHeaderSize + dataSize) - $ptr - toDelete);
     UnsafeAccess.copy($ptr + toDelete, $ptr, toMove);
     incrDataSize(ptr, -toDelete);
     incrNumEntries(ptr, -1);
-    // Update stats
-    //TODO: separate method
-    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);  
-    int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
-    int sid1 = this.indexFormat.getSegmentId($ptr);
     // Update stats
     if (this.cache != null) {
       cache.getEngine().updateStats(sid1, -1, -(numRanks - rank));
@@ -1003,7 +1003,6 @@ public class MemoryIndex implements Persistent {
           if (hit && count > 0) {
             // ask parent where to move
             int idx = this.evictionPolicy.getPromotionIndex(ptr, count, numEntries);
-            //TODO: optimize this code by combining
             int off = offsetFor(ptr, idx);
             int offc = offsetFor(ptr, count);
             int toMove = offc - off;
@@ -1189,12 +1188,10 @@ public class MemoryIndex implements Persistent {
       while (count < numEntries) {
         if (this.indexFormat.equals($ptr, hash)) {
           long expire = this.indexFormat.getExpire(ptr, $ptr);
-          if (expire > 0) {
-            long current = System.currentTimeMillis();
-            if (current > expire) {
-              // For expired items rank does not matter
-              result.setResultRankExpire(Result.EXPIRED, 0, expire);
-            }
+          long current = System.currentTimeMillis();
+          if (expire > 0 && current > expire) {
+            // For expired items rank does not matter
+            result.setResultRankExpire(Result.EXPIRED, 0, expire);
           } else {
             // Check popularity
             int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
@@ -1404,6 +1401,7 @@ public class MemoryIndex implements Persistent {
    * @param keySize key size
    * @return number between 1.0 and 0.0 (0.0 - means key is absent), 1.0 - key is at the top of a
    *     index block.
+   * TODO: remove this API call
    */
   public final double popularity(byte[] key, int off, int keySize) {
     int slot = 0;
@@ -1485,7 +1483,7 @@ public class MemoryIndex implements Persistent {
   }
 
   /**
-   * Insert new index entry
+   * Insert new index entry with default rank
    *
    * @param key item key
    * @param keyOff item's key offset
@@ -1591,7 +1589,7 @@ public class MemoryIndex implements Persistent {
 
 
   /**
-   * Insert new index entry
+   * Insert new index entry with default rank
    *
    * @param ptr key address
    * @param size key size
@@ -1683,6 +1681,7 @@ public class MemoryIndex implements Persistent {
    * Can be either ref_index_base or ref_index_base_rehash
    * @param hash hashed key 
    * @return index
+   * TODO: check we under lock
    */
   private long[] getIndexForHash(long hash) {
     long[] index = ref_index_base.get();
@@ -2022,8 +2021,8 @@ public class MemoryIndex implements Persistent {
         if (idx == prev) continue;
         prev = idx;
         int sid = getSegmentIdForEntry(ptr, idx);
-          // decrement by total data segment rank by 1 
-          this.cache.getEngine().updateStats(sid, 0, -1);
+        // decrement by total data segment rank by 1 
+        this.cache.getEngine().updateStats(sid, 0, -1);
       }
     }
   }
@@ -2253,7 +2252,7 @@ public class MemoryIndex implements Persistent {
     int ord = dis.readInt();
     Type type = Type.values()[ord];
     String formatImpl = dis.readUTF();
-    if (type == Type.AQ) {
+    if (type == Type.AQ || this.cache != null) {
       setType(type);
     } else {
       try {
