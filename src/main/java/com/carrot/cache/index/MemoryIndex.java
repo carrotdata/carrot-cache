@@ -1203,7 +1203,12 @@ public class MemoryIndex implements Persistent {
               result.setResultRankExpire(Result.OK, rank, expire);
             }
           }
-          deleteAt(ptr, $ptr, count);
+          if (result.getResult() == Result.DELETED) {
+            // this does eviction to a victim cache
+            deleteEntry(ptr, count, true);
+          } else {
+            deleteAt(ptr, $ptr, count);
+          }
           break;
         }
         count++;
@@ -1927,35 +1932,23 @@ public class MemoryIndex implements Persistent {
   }
 
   private void evictToVictimCache(long ptr, long $ptr) {
-    Cache victim = this.cache != null?this.cache.getVictimCache(): null;
+    Cache victim = this.cache != null? this.cache.getVictimCache(): null;
     if (victim == null) {
       return;
     }
 
     int size = this.indexFormat.fullEntrySize($ptr);
-    long expire = this.indexFormat.getExpire(ptr, $ptr);
     try {
       // Check embedded mode
       if (this.cacheConfig.isIndexDataEmbeddedSupported()) {
         if (size <= this.cacheConfig.getIndexDataEmbeddedSize()) {
-          int off = this.indexFormat.getEmbeddedOffset();
-          $ptr += off;
-          int kSize = Utils.readUVInt($ptr);
-          int kSizeSize = Utils.sizeUVInt(kSize);
-          $ptr += kSizeSize;
-          int vSize = Utils.readUVInt($ptr);
-          int vSizeSize = Utils.sizeUVInt(vSize);
-          $ptr += vSizeSize;
-          int rank = this.cacheConfig.getSLRUInsertionPoint(victim.getName());
-
-          victim.put($ptr, kSize, $ptr + kSize, vSize, expire, rank, true);
+          this.cache.transferEmbedded(ptr, $ptr);
           return;
         }
       }
       // else - not embedded
       // transfer item to victim cache
       this.cache.transfer(ptr, $ptr);
-
     } catch (IOException e) {
       LOG.error(e);
     }

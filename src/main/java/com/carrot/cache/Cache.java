@@ -1066,6 +1066,9 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
       LOG.error("Attempt to transfer cached item when victim cache is null");
       return;
     }
+    if (!this.admissionController.shouldEvictToVictimCache(ibPtr, indexPtr)) {
+      return;
+    }
     // Cache is off-heap 
     IndexFormat format = this.engine.getMemoryIndex().getIndexFormat(); 
     long expire = format.getExpire(ibPtr, indexPtr);
@@ -1090,7 +1093,43 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
       s.readUnlock();
     }
   }
-  
+
+  /**
+   * Transfer cached item to a victim cache
+   *
+   * @param ibPtr index block pointer
+   * @param indexPtr item pointer
+   * @throws IOException
+   */
+  public void transferEmbedded(long ibPtr, long indexPtr) throws IOException {
+    if (getCacheType() == Type.DISK) {
+      LOG.error("Attempt to transfer cached item from cache type = DISK");
+      throw new IllegalArgumentException("Victim cache is not supported for DISK type cache");
+    }
+    if (this.victimCache == null) {
+      LOG.error("Attempt to transfer cached item when victim cache is null");
+      return;
+    }
+    if (!this.admissionController.shouldEvictToVictimCache(ibPtr, indexPtr)) {
+      return;
+    }
+    // Cache is off-heap
+    IndexFormat format = this.engine.getMemoryIndex().getIndexFormat();
+    long expire = format.getExpire(ibPtr, indexPtr);
+    int rank = conf.getSLRUInsertionPoint(this.victimCache.getName());
+
+    int off = format.getEmbeddedOffset();
+    indexPtr += off;
+    int kSize = Utils.readUVInt(indexPtr);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    indexPtr += kSizeSize;
+    int vSize = Utils.readUVInt(indexPtr);
+    int vSizeSize = Utils.sizeUVInt(vSize);
+    indexPtr += vSizeSize;
+    
+    this.victimCache.put(indexPtr, kSize, indexPtr + kSize, vSize, expire, rank, true);
+  }
+
   // Scavenger.Listener
   @Override
   public void evicted(byte[] key, int keyOffset, int keySize, 

@@ -80,7 +80,7 @@ public interface AdmissionController extends Persistent{
   public void access(long keyPtr, int keySize);
   
   /**
-   * Adjust item rank based on its current rank and expiration time (ms)
+   * Adjust item rank based on its current rank and value expiration time (ms)
    * The lower expiration time - the lower rank should be to guarantee
    * that items with low expiration time must be recycled first
    * @param rank current rank
@@ -96,4 +96,14 @@ public interface AdmissionController extends Persistent{
    * @param ttl segment's life-time in ms
    */
   public void registerSegmentTTL(int rank, long ttl);
+  
+  /**
+   * Should item be evicted to the victim cache
+   * @param ibPtr index block address
+   * @param ptr item index address
+   * @return true - yes, false - otherwise
+   */
+  public default boolean shouldEvictToVictimCache(long ibPtr, long ptr) {
+    return true;
+  }
 }
