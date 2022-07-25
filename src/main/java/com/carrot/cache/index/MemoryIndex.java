@@ -793,6 +793,28 @@ public class MemoryIndex implements Persistent {
   }
 
   /**
+   * Get hit count for a key with a given hash value
+   * @param hash key's hash
+   * @return hit count
+   */
+  public int getHitCount(long hash) {
+    //TODO: double locking
+    int bufSize = this.indexFormat.indexEntrySize();
+    long buf = UnsafeAccess.mallocZeroed(bufSize);
+    try {
+      long result = find(hash, false, buf, bufSize);
+      if (result != bufSize) {
+        return -1;
+      }
+      // Check expiration
+      int count = this.indexFormat.getHitCount(buf);
+      return count;
+    } finally {
+      UnsafeAccess.free(buf);
+    }
+  }
+  
+  /**
    * Get item's hit count (only for MQ)
    *
    * @param key key buffer
@@ -888,15 +910,13 @@ public class MemoryIndex implements Persistent {
    * Delete entry from a given index block at a given address
    * @param ptr index block address
    * @param $ptr entry address
-   * @param count - index of an entry at this index block 0-based
+   * @param rank - rank of an entry a
    */
-  private void deleteAt(long ptr, long $ptr, int count) {
+  private void deleteAt(long ptr, long $ptr, int rank) {
     // TODO: Move this to a separate method
     int dataSize = dataSize(ptr);
-    int numEntries = numEntries(ptr);
-    //TODO: separate method
+//    //TODO: separate method
     int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);  
-    int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
     int sid1 = this.indexFormat.getSegmentId($ptr);
     // delete entry
     int toDelete = this.indexFormat.fullEntrySize($ptr);
@@ -917,6 +937,8 @@ public class MemoryIndex implements Persistent {
    */
   private void fullScanUpdate(long ptr) {
     int numEntries = numEntries(ptr);
+    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);  
+
     // TODO: this works ONLY when index size = item size (no embedded data)
 
     long $ptr = ptr + this.indexBlockHeaderSize;
@@ -927,7 +949,9 @@ public class MemoryIndex implements Persistent {
       if (expire > 0) {
         long current = System.currentTimeMillis();
         if (current > expire) {
-          deleteAt(ptr, $ptr, count);
+          //TODO: separate method
+          int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
+          deleteAt(ptr, $ptr, rank);
           numEntries --;
           continue;
         }
@@ -950,6 +974,8 @@ public class MemoryIndex implements Persistent {
   // TODO: check return value
   private int findAndPromote(long ptr, long hash, boolean hit, long buf, int bufSize) {
     int numEntries = numEntries(ptr);
+    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);  
+
     // TODO: this works ONLY when index size = item size (no embedded data)
     //TODO: Check count when delete
     //TODO: If deleted > 0, update number of items and size
@@ -969,7 +995,8 @@ public class MemoryIndex implements Persistent {
           long current = System.currentTimeMillis();
 
           if (current > expire) {
-            deleteAt(ptr, $ptr, count);
+            int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
+            deleteAt(ptr, $ptr, rank);
             numEntries --;
             continue;
           }
@@ -990,7 +1017,6 @@ public class MemoryIndex implements Persistent {
               // Increase total rank for segment with the item being promoted
               this.cache.getEngine().updateStats(sid0, 0, 1);
               // Decrease total rank for the segment with an item being demoted
-              int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
               int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
               int idx = this.evictionPolicy.getStartIndexForRank(numRanks, rank, numEntries);
               int sid1 = getSegmentIdForEntry(ptr, idx);
@@ -1189,12 +1215,13 @@ public class MemoryIndex implements Persistent {
         if (this.indexFormat.equals($ptr, hash)) {
           long expire = this.indexFormat.getExpire(ptr, $ptr);
           long current = System.currentTimeMillis();
+          int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
+
           if (expire > 0 && current > expire) {
             // For expired items rank does not matter
             result.setResultRankExpire(Result.EXPIRED, 0, expire);
           } else {
             // Check popularity
-            int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
             double popularity = ((double) (numEntries - count)) / numEntries;
             if (popularity < dumpBelowRatio) {
               // Delete item as having low popularity
@@ -1203,12 +1230,11 @@ public class MemoryIndex implements Persistent {
               result.setResultRankExpire(Result.OK, rank, expire);
             }
           }
-          if (result.getResult() == Result.DELETED) {
-            // this does eviction to a victim cache
-            deleteEntry(ptr, count, true);
-          } else {
-            deleteAt(ptr, $ptr, count);
-          }
+          if (result.getResult() == Result.DELETED && this.evictionListener != null) {
+            // Report eviction
+            this.evictionListener.onEviction(ptr, $ptr);
+          } 
+          deleteAt(ptr, $ptr, rank);
           break;
         }
         count++;
@@ -1385,11 +1411,13 @@ public class MemoryIndex implements Persistent {
    */
   private boolean delete(long ptr, long hash) {
     int numEntries = numEntries(ptr);
+    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);  
     long $ptr = ptr + indexBlockHeaderSize;
     int count = 0;
     while (count < numEntries) {
       if (this.indexFormat.equals($ptr, hash)) {
-        deleteAt(ptr, $ptr, count);
+        int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
+        deleteAt(ptr, $ptr, rank);
         return true;
       }
       count++;
@@ -1858,26 +1886,34 @@ public class MemoryIndex implements Persistent {
    */
   private void doEviction(long slotPtr) { 
     int toEvict = -1;
-    boolean evictToVictim  = true;
+    boolean expired = false;
+    //boolean evictToVictim  = true;
     //TODO: we can improve insert performance by 
     // disabling search for expired items
     if (this.indexFormat.isExpirationSupported()){
       toEvict = findExpired(slotPtr);
+      expired = true;
     }
     
-    evictToVictim = toEvict < 0;
+    //evictToVictim = toEvict < 0;
 
     if (toEvict == -1) {
       int numEntries = numEntries(slotPtr);
       toEvict = evictionPolicy.getEvictionCandidateIndex(slotPtr, numEntries);
     }
+    long ptr = slotPtr + offsetFor(slotPtr, toEvict);
+
     // report eviction
-    if (this.evictionListener != null) {
-      long ptr = slotPtr + offsetFor(slotPtr, toEvict);
-      int size = this.indexFormat.fullEntrySize(ptr);
-      this.evictionListener.onEviction(ptr, size);
+    if (this.evictionListener != null && !expired) {
+      //int size = this.indexFormat.fullEntrySize(ptr);
+      // This MUST implements ALL the eviction-related logic
+      this.evictionListener.onEviction(slotPtr, ptr);
     }
-    deleteEntry(slotPtr, toEvict, evictToVictim);
+    //deleteEntry(slotPtr, toEvict, evictToVictim);
+    int numEntries = numEntries(slotPtr);
+    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName); 
+    int rank = this.evictionPolicy.getRankForIndex(numRanks, toEvict, numEntries);
+    deleteAt(slotPtr, ptr, rank);
   }
   
   private int findExpired(long slotPtr) {
@@ -1895,63 +1931,6 @@ public class MemoryIndex implements Persistent {
       count ++;
     }
     return toEvict;
-  }
-
-  /**
-   * Delete entry by index (used only for eviction)
-   * @param ptr index segment address 
-   * @param num index to delete
-   * @throws IOException 
-   */
-  private void deleteEntry(long ptr, int num, boolean evictToVictim) {
-    int numEntries = numEntries(ptr);
-    int off = offsetFor(ptr, num);
-    long $ptr = ptr + off;
-    int toDelete = this.indexFormat.fullEntrySize($ptr);
-    
-    // TODO: send evicted item to a victim cache
-    if (evictToVictim) {
-      evictToVictimCache(ptr, $ptr);
-    }
-    
-    if (num != numEntries - 1) {
-      int toMove = dataSize(ptr) + this.indexBlockHeaderSize - off;
-      UnsafeAccess.copy($ptr + toDelete, $ptr, toMove);
-    }
-    incrDataSize(ptr, -toDelete);
-    incrNumEntries(ptr, -1);
-    // decrease total number of index entries
-    //TODO: this works only if we promote item by +1 rank
-    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
-    int rank = this.evictionPolicy.getRankForIndex(numRanks, num, numEntries);
-    int sid1 = getSegmentIdForEntry(ptr, num);
-    // Update stats
-    if (this.cache != null) {
-      cache.getEngine().updateStats(sid1, -1, -(numRanks - rank));
-    }
-  }
-
-  private void evictToVictimCache(long ptr, long $ptr) {
-    Cache victim = this.cache != null? this.cache.getVictimCache(): null;
-    if (victim == null) {
-      return;
-    }
-
-    int size = this.indexFormat.fullEntrySize($ptr);
-    try {
-      // Check embedded mode
-      if (this.cacheConfig.isIndexDataEmbeddedSupported()) {
-        if (size <= this.cacheConfig.getIndexDataEmbeddedSize()) {
-          this.cache.transferEmbedded(ptr, $ptr);
-          return;
-        }
-      }
-      // else - not embedded
-      // transfer item to victim cache
-      this.cache.transfer(ptr, $ptr);
-    } catch (IOException e) {
-      LOG.error(e);
-    }
   }
 
   /**

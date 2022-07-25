@@ -17,8 +17,16 @@ package com.carrot.cache.eviction;
 public interface EvictionListener {
   /**
    * On eviction item from memory index
-   * @param ptr item address
-   * @param size item size (first 8 bytes is the hash value)
+   * @param ibPtr index block address
+   * @param ptr item being evicted index address
    */
-  public void onEviction(long ptr, int size);
+  public void onEviction(long ibPtr, long ptr);
+  
+  /**
+   * On item promotion if parent cache is present
+   * @param ibPtr index block address
+   * @param ptr item being promoted index address
+   * @return true if was promoted, false - otherwise
+   */
+  public boolean onPromotion(long ibPtr, long ptr);
 }

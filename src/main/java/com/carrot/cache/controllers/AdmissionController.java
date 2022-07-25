@@ -47,22 +47,6 @@ public interface AdmissionController extends Persistent{
    */
   
   public Type admit(byte[] key, int off, int size);
-  /**
-   * Returns queue (or dump) for an evicted item
-   * @param keyPtr key address
-   * @param keySize item's key size
-   * @return queue to admit to (either AQ or DUMP)
-   */
-  public Type readmit(long keyPtr, int keySize);
-  
-  /**
-   * Returns queue (or dump) for an evicted item
-   * @param key item key buffer
-   * @param off item key buffer offset
-   * @param size item's key size
-   * @return queue to admit to
-   */
-  public Type readmit(byte[] key, int off, int size);
   
   /**
    * Called on each items access

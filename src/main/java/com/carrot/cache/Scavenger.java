@@ -41,45 +41,6 @@ public class Scavenger extends Thread {
   /** Logger */
   private static final Logger LOG = LogManager.getLogger(Scavenger.class);
   
-  static interface Listener {
-    
-    /**
-     * Reports evicted item 
-     * @param key key buffer
-     * @param keyOffset key offset
-     * @param keySize key size
-     * @param value value buffer
-     * @param valueOffset value offset
-     * @param valueSize
-     */
-    public void evicted(byte[] key, int keyOffset, int keySize, byte[] value, 
-        int valueOffset, int valueSize, long expirationTime);
-    
-    /**
-     * Reports expired key
-     * @param key key buffer
-     * @param off offset
-     * @param keySize key size
-     */
-    public void expired(byte[] key, int off, int keySize);
-    
-    /**
-     * Reports evicted item 
-     * @param keyPtr key address
-     * @param keySize key size
-     * @param valuePtr value address
-     * @param valueSize value size
-     */
-    public void evicted(long keyPtr, int keySize, long valuePtr, int valueSize, long expirationTime);
-    
-    /**
-     * Reports expired key
-     * @param keyPtr key address
-     * @param keySize key size
-     */
-    public void expired(long keyPtr, int keySize);
-    
-  }
   static class Stats implements Persistent {
 
     /** Total times scavenger ran */
@@ -235,21 +196,12 @@ public class Scavenger extends Thread {
   private volatile long runStartTime = System.currentTimeMillis();
   private volatile long totalFreedBytes;
   
-  private Listener aListener;
   
   public Scavenger(Cache parent) {
     super("c2 scavenger");
     this.cache = parent;
     // Update stats
     stats.totalRuns++;
-  }
-
-  /**
-   * Scavenger listener
-   * @param l listener
-   */
-  public void setListener(Listener l) {
-    this.aListener = l;
   }
   
   @Override
@@ -336,10 +288,6 @@ public class Scavenger extends Thread {
               stats.totalBytesExpired += totalSize;
               stats.totalBytesFreed += totalSize;
               stats.totalItemsExpired += 1;
-              // Report expiration
-              if (aListener != null) {
-                aListener.expired(keyPtr, keySize);
-              }
               break;
             case NOT_FOUND:
               cache.reportUsed(-totalSize);
@@ -354,9 +302,6 @@ public class Scavenger extends Thread {
               // Return Item back to AQ
               // TODO: fix this code. We need to move data to a victim cache on
               // memory index eviction.
-              if (aListener != null) {
-                aListener.evicted(keyPtr, keySize, valuePtr, valSize, expire);
-              }
             case OK:
               // Put value back into the cache - it has high popularity
               engine.put(keyPtr, keySize, valuePtr, valSize, expire, rank);

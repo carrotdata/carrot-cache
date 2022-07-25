@@ -136,6 +136,7 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
         loaded--;
       }
       if (i == evictionStartFrom - 1) {
+        /*DEBUG*/ System.out.println("Eviction enabled");
         memoryIndex.setEvictionEnabled(true);
       }
     }

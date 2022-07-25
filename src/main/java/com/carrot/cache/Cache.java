@@ -36,8 +36,8 @@ import org.apache.logging.log4j.Logger;
 import com.carrot.cache.controllers.AdmissionController;
 import com.carrot.cache.controllers.RecyclingSelector;
 import com.carrot.cache.controllers.ThroughputController;
+import com.carrot.cache.eviction.EvictionListener;
 import com.carrot.cache.index.IndexFormat;
-import com.carrot.cache.index.MemoryIndex;
 import com.carrot.cache.io.FileIOEngine;
 import com.carrot.cache.io.IOEngine;
 import com.carrot.cache.io.OffheapIOEngine;
@@ -161,7 +161,7 @@ import com.carrot.cache.util.Utils;
  * <p>5.5 During scavenger run, the special rate limiter controls incoming data rate and sets its limit to
  * 90% of a Scavenger cleaning data rate to guarantee that we won't exceed cache maximum capacity
  */
-public class Cache implements IOEngine.Listener, Scavenger.Listener {
+public class Cache implements IOEngine.Listener, EvictionListener {
 
   /** Logger */
   private static final Logger LOG = LogManager.getLogger(Cache.class);
@@ -179,6 +179,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
    */
   public static class BaseAdmissionController implements AdmissionController {
     
+    @SuppressWarnings("unused")
     private Cache cache;
     private boolean fileCache = false;
     
@@ -229,37 +230,6 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
     @Override
     public Type admit(byte[] key, int off, int size) {
       return this.fileCache? Type.AQ: Type.MQ;
-    }
-
-    @Override
-    public Type readmit(long keyPtr, int keySize) {
-      if (!this.fileCache) {
-        return Type.DUMP;
-      }
-      //TODO: this code relies on a particular index format
-      MemoryIndex index = this.cache.getEngine().getMemoryIndex();
-      int hitCount = index.getHitCount(keyPtr, keySize);
-      if (hitCount == -1) {
-        //TODO: in theory a legitimate reference can be -1?
-        return Type.DUMP;
-      }
-      // Top 2 bytes stores hit counter
-      return hitCount > 0? Type.AQ: Type.DUMP;
-    }
-
-    @Override
-    public Type readmit(byte[] key, int off, int size) {
-      if (!this.fileCache) {
-        return Type.DUMP;
-      }
-      MemoryIndex index = this.cache.getEngine().getMemoryIndex();
-      int hitCount = index.getHitCount(key, off, size);
-      if (hitCount == -1) {
-        // means - not found
-        //TODO: make sure that ref is still in the index
-        return Type.DUMP;
-      }
-      return hitCount > 0? Type.AQ: Type.DUMP; 
     }
 
     @Override
@@ -382,6 +352,9 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
   /* Victim cache */
   Cache victimCache;
   
+  /* Parent cache */
+  Cache parentCache;
+  
   /* Threshold to reject writes */
   double writeRejectionThreshold;
   
@@ -405,7 +378,6 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
   }
   
   private void initAll() throws IOException {
-
     
     initAdmissionController();
     initRecyclingSelector();
@@ -1052,12 +1024,78 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
   }
   
   /**
+   * Sets parent cahe
+   * @param parent cache
+   */
+  public void setParentCache(Cache parent) {
+    this.parentCache = parent;
+  }
+  
+  /**
+   * Gets parent cache
+   * @return parent cache
+   */
+  public Cache getParentCache() {
+    return this.parentCache;
+  }
+  
+  
+  private boolean processPromotion(long ptr, long $ptr) {
+    if (this.parentCache == null) {
+     return false;
+    }
+
+    IndexFormat indexFormat = this.engine.getMemoryIndex().getIndexFormat();
+    int size = indexFormat.fullEntrySize($ptr);
+    try {
+      // Check embedded mode
+      if (this.conf.isIndexDataEmbeddedSupported()) {
+        if (size <= this.conf.getIndexDataEmbeddedSize()) {
+          transferEmbeddedToCache(this.parentCache, ptr, $ptr);
+          return true;
+        }
+      }
+      // else - not embedded
+      // transfer item to victim cache
+      transferToCache(this.parentCache, ptr, $ptr);
+    } catch (IOException e) {
+      //TODO: 
+      LOG.error(e);
+    }
+    return true;
+  }
+
+  private void processEviction(long ptr, long $ptr) {
+    if (this.victimCache == null) {
+     return;
+    }
+    if (!this.admissionController.shouldEvictToVictimCache(ptr, $ptr)) {
+      return;
+    }
+    IndexFormat indexFormat = this.engine.getMemoryIndex().getIndexFormat();
+    int size = indexFormat.fullEntrySize($ptr);
+    try {
+      // Check embedded mode
+      if (this.conf.isIndexDataEmbeddedSupported()) {
+        if (size <= this.conf.getIndexDataEmbeddedSize()) {
+          transferEmbeddedToCache(this.victimCache, ptr, $ptr);
+          return;
+        }
+      }
+      // else - not embedded
+      // transfer item to victim cache
+      transferToCache(this.victimCache, ptr, $ptr);
+    } catch (IOException e) {
+      LOG.error(e);
+    }
+  }
+  /**
    * Transfer cached item to a victim cache
    * @param ibPtr index block pointer
    * @param indexPtr item pointer
    * @throws IOException 
    */
-  public void transfer(long ibPtr, long indexPtr) throws IOException {
+  public void transferToCache (Cache c, long ibPtr, long indexPtr) throws IOException {
     if (getCacheType() == Type.DISK) {
       LOG.error("Attempt to transfer cached item from cache type = DISK");
       throw new IllegalArgumentException("Victim cache is not supported for DISK type cache");
@@ -1066,9 +1104,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
       LOG.error("Attempt to transfer cached item when victim cache is null");
       return;
     }
-    if (!this.admissionController.shouldEvictToVictimCache(ibPtr, indexPtr)) {
-      return;
-    }
+
     // Cache is off-heap 
     IndexFormat format = this.engine.getMemoryIndex().getIndexFormat(); 
     long expire = format.getExpire(ibPtr, indexPtr);
@@ -1101,16 +1137,13 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
    * @param indexPtr item pointer
    * @throws IOException
    */
-  public void transferEmbedded(long ibPtr, long indexPtr) throws IOException {
+  public void transferEmbeddedToCache(Cache c, long ibPtr, long indexPtr) throws IOException {
     if (getCacheType() == Type.DISK) {
       LOG.error("Attempt to transfer cached item from cache type = DISK");
       throw new IllegalArgumentException("Victim cache is not supported for DISK type cache");
     }
     if (this.victimCache == null) {
       LOG.error("Attempt to transfer cached item when victim cache is null");
-      return;
-    }
-    if (!this.admissionController.shouldEvictToVictimCache(ibPtr, indexPtr)) {
       return;
     }
     // Cache is off-heap
@@ -1127,41 +1160,9 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
     int vSizeSize = Utils.sizeUVInt(vSize);
     indexPtr += vSizeSize;
     
-    this.victimCache.put(indexPtr, kSize, indexPtr + kSize, vSize, expire, rank, true);
+    c.put(indexPtr, kSize, indexPtr + kSize, vSize, expire, rank, true);
   }
 
-  // Scavenger.Listener
-  @Override
-  public void evicted(byte[] key, int keyOffset, int keySize, 
-      byte[] value, int valueOffset, int valueSize, long expire) {
-    if (this.admissionController != null) {
-      AdmissionController.Type type = this.admissionController.readmit(key, keyOffset, keySize);
-      if (type == AdmissionController.Type.AQ) {
-        admissionQueue.addIfAbsentRemoveIfPresent(key, keyOffset, keySize);
-      }
-    }
-  }
-
-  @Override
-  public void evicted(long keyPtr, int keySize, 
-      long valuePtr, int valueSize, long expire) {
-    if (this.admissionController != null) {
-      AdmissionController.Type type = this.admissionController.readmit(keyPtr, keySize);
-      if (type == AdmissionController.Type.AQ) {
-        admissionQueue.addIfAbsentRemoveIfPresent(keyPtr, keySize);
-      }
-    }
-  }
-  
-  @Override
-  public void expired(byte[] key, int off, int keySize) {
-    // Do nothing yet
-  }
-  
-  @Override
-  public void expired(long keyPtr,int keySize) {
-    // Do nothing yet
-  }
   
   // IOEngine.Listener
   @Override
@@ -1440,5 +1441,16 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener {
     loadScavengerStats();
     long endTime = System.currentTimeMillis();
     LOG.info("Cache loaded in {}ms", endTime - startTime);
+  }
+
+  // EvictionListener
+  @Override
+  public void onEviction(long ibPtr, long ptr) {
+    processEviction(ibPtr, ptr);
+  }
+  
+  @Override
+  public boolean onPromotion(long ibPtr, long ptr) {
+    return processPromotion(ibPtr, ptr);
   }
 }
