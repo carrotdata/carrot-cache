@@ -38,6 +38,7 @@ import com.carrot.cache.controllers.RecyclingSelector;
 import com.carrot.cache.controllers.ThroughputController;
 import com.carrot.cache.eviction.EvictionListener;
 import com.carrot.cache.index.IndexFormat;
+import com.carrot.cache.index.MemoryIndex;
 import com.carrot.cache.io.FileIOEngine;
 import com.carrot.cache.io.IOEngine;
 import com.carrot.cache.io.OffheapIOEngine;
@@ -45,6 +46,7 @@ import com.carrot.cache.io.Segment;
 import com.carrot.cache.io.IOEngine.IOEngineEvent;
 import com.carrot.cache.util.CacheConfig;
 import com.carrot.cache.util.Epoch;
+import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 
 /**
@@ -805,6 +807,39 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     reportUsed(keySize, valSize);
   }
 
+  
+  private void put (byte[] buf, int off, long expire) throws IOException {
+    int rank = conf.getSLRUInsertionPoint(this.cacheName);
+    int keySize = Utils.readUVInt(buf, off);
+    int kSizeSize = Utils.sizeUVInt(keySize);
+    int valueSize = Utils.readUVInt(buf, off + kSizeSize);
+    int vSizeSize = Utils.sizeUVInt(valueSize);
+    put(buf, off + kSizeSize + vSizeSize, keySize, buf, 
+      off + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, true);
+  }
+  
+  
+  private void put(long bufPtr, long expire) throws IOException {
+    int rank = conf.getSLRUInsertionPoint(this.cacheName);
+    int keySize = Utils.readUVInt(bufPtr);
+    int kSizeSize = Utils.sizeUVInt(keySize);
+    int valueSize = Utils.readUVInt(bufPtr + kSizeSize);
+    int vSizeSize = Utils.sizeUVInt(valueSize);
+    put(bufPtr + kSizeSize + vSizeSize, keySize, bufPtr 
+      + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, true);
+  }
+  
+  private void put(ByteBuffer buf, long expire) throws IOException {
+    if (buf.hasArray()) {
+      byte[] buffer = buf.array();
+      int bufOffset = buf.position();
+      put(buffer, bufOffset, expire);
+    } else {
+      long ptr = UnsafeAccess.address(buf);
+      int off = buf.position();
+      put(ptr + off, expire);
+    }
+  }
   /**
    * Put item into the cache
    *
@@ -843,6 +878,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         this.admissionController.access(keyPtr, keySize);
       }
     }
+    if(result < 0 && this.victimCache != null) {
+      result = this.victimCache.get(keyPtr, keySize, hit, buffer, bufOffset);
+      if (result >=0 && result <= buffer.length - bufOffset) {
+        // put k-v into this cache, remove it from the victim cache
+        MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
+        long expire = mi.getExpire(keyPtr, keySize);
+        put(buffer, bufOffset, expire);
+        this.victimCache.delete(keyPtr, keySize);
+      } 
+    }
     return result;
   }
 
@@ -872,6 +917,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         this.admissionController.access(key, keyOffset, keySize);
       }
     }
+    if(result < 0 && this.victimCache != null) {
+      result = this.victimCache.get(key, keyOffset, keySize, hit, buffer, bufOffset);
+      if (result >=0 && result <= buffer.length - bufOffset) {
+        // put k-v into this cache, remove it from the victim cache
+        MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
+        long expire = mi.getExpire(key, bufOffset, keySize);
+        put(buffer, bufOffset, expire);
+        this.victimCache.delete(key, keyOffset, keySize);
+      } 
+    }
     return result;
   }
 
@@ -896,10 +951,20 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         hit();
       }
     }
-    if (result >=0 && result <= rem) {
+    if (result >= 0 && result <= rem) {
       if (this.admissionController != null) {
         this.admissionController.access(key, keyOff, keySize);
       }
+    }
+    if(result < 0 && this.victimCache != null) {
+      result = this.victimCache.get(key, keyOff, keySize, hit, buffer);
+      if (result >= 0 && result <= rem) {
+        // put k-v into this cache, remove it from the victim cache
+        MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
+        long expire = mi.getExpire(key, keyOff, keySize);
+        put(buffer, expire);
+        this.victimCache.delete(key, keyOff, keySize);
+      } 
     }
     return result;
   }
@@ -923,10 +988,20 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         hit();
       }
     }
-    if (result >=0 && result <= rem) {
+    if (result >= 0 && result <= rem) {
       if (this.admissionController != null) {
         this.admissionController.access(keyPtr, keySize);
       }
+    }
+    if(result < 0 && this.victimCache != null) {
+      result = this.victimCache.get(keyPtr, keySize, hit, buffer);
+      if (result >=0 && result <= rem) {
+        // put k-v into this cache, remove it from the victim cache
+        MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
+        long expire = mi.getExpire(keyPtr, keySize);
+        put(buffer, expire);
+        this.victimCache.delete(keyPtr, keySize);
+      } 
     }
     return result;
   }
@@ -941,7 +1016,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @return true - success, false - does not exist
    */
   public boolean delete(long keyPtr, int keySize) {
-    return engine.getMemoryIndex().delete(keyPtr, keySize);
+    boolean result = engine.getMemoryIndex().delete(keyPtr, keySize);
+    if (!result && this.victimCache != null) {
+      return this.victimCache.delete(keyPtr, keySize);
+    }
+    return result;
   }
 
   /**
@@ -953,7 +1032,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @return true - success, false - does not exist
    */
   public boolean delete(byte[] key, int keyOffset, int keySize) {
-    return engine.getMemoryIndex().delete(key, keyOffset, keySize);
+    boolean result = engine.getMemoryIndex().delete(key, keyOffset, keySize);
+    if (!result && this.victimCache != null) {
+      return this.victimCache.delete(key, keyOffset, keySize);
+    }
+    return result;
   }
 
   /**
@@ -977,7 +1060,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @return true - success, false - does not exist
    */
   public boolean expire(long keyPtr, int keySize) {
-    return engine.getMemoryIndex().delete(keyPtr, keySize);
+    return delete(keyPtr, keySize);
   }
 
   /**
@@ -989,7 +1072,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @return true - success, false - does not exist
    */
   public boolean expire(byte[] key, int keyOffset, int keySize) {
-    return engine.getMemoryIndex().delete(key, keyOffset, keySize);
+    return delete(key, keyOffset, keySize);
   }
 
   /**

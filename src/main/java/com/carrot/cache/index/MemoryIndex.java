@@ -1887,7 +1887,6 @@ public class MemoryIndex implements Persistent {
   private void doEviction(long slotPtr) { 
     int toEvict = -1;
     boolean expired = false;
-    //boolean evictToVictim  = true;
     //TODO: we can improve insert performance by 
     // disabling search for expired items
     if (this.indexFormat.isExpirationSupported()){
@@ -1895,8 +1894,6 @@ public class MemoryIndex implements Persistent {
       expired = true;
     }
     
-    //evictToVictim = toEvict < 0;
-
     if (toEvict == -1) {
       int numEntries = numEntries(slotPtr);
       toEvict = evictionPolicy.getEvictionCandidateIndex(slotPtr, numEntries);
@@ -1905,7 +1902,6 @@ public class MemoryIndex implements Persistent {
 
     // report eviction
     if (this.evictionListener != null && !expired) {
-      //int size = this.indexFormat.fullEntrySize(ptr);
       // This MUST implements ALL the eviction-related logic
       this.evictionListener.onEviction(slotPtr, ptr);
     }
