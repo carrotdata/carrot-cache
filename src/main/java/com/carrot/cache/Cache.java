@@ -19,16 +19,15 @@ import java.io.DataOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicLongArray;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,11 +38,10 @@ import com.carrot.cache.controllers.ThroughputController;
 import com.carrot.cache.eviction.EvictionListener;
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MemoryIndex;
-import com.carrot.cache.io.FileIOEngine;
 import com.carrot.cache.io.IOEngine;
+import com.carrot.cache.io.IOEngine.IOEngineEvent;
 import com.carrot.cache.io.OffheapIOEngine;
 import com.carrot.cache.io.Segment;
-import com.carrot.cache.io.IOEngine.IOEngineEvent;
 import com.carrot.cache.util.CacheConfig;
 import com.carrot.cache.util.Epoch;
 import com.carrot.cache.util.UnsafeAccess;
@@ -163,7 +161,7 @@ import com.carrot.cache.util.Utils;
  * <p>5.5 During scavenger run, the special rate limiter controls incoming data rate and sets its limit to
  * 90% of a Scavenger cleaning data rate to guarantee that we won't exceed cache maximum capacity
  */
-public class Cache implements IOEngine.Listener, EvictionListener {
+public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionListener {
 
   /** Logger */
   private static final Logger LOG = LogManager.getLogger(Cache.class);
@@ -209,14 +207,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   
   /* IOEngine */
   IOEngine engine;
-  
-  /* Admission Queue */
-  AdmissionQueue admissionQueue;
-  
-  /* Admission Controller */
+    
+  /* Admission Controller - optional */
   AdmissionController admissionController;
   
-  /* Throughput controller */
+  /* Throughput controller - optional */
   ThroughputController throughputController;
   
   /* Periodic throughput adjustment task */
@@ -233,61 +228,48 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   
   Epoch epoch;
   
+  List<Scavenger.Listener> scavengerListeners = new LinkedList<>();
+  
   /**
    * Constructor with configuration
-   *
+   * 
    * @param conf configuration
    * @throws IOException 
    */
-  Cache(String name, CacheConfig conf) throws IOException {
+  Cache(String name) throws IOException {
     this.cacheName = name;
-    this.conf = conf;
+    this.conf = CacheConfig.getInstance();
     this.engine = IOEngine.getEngineForCache(this);
     // set engine listener
     this.engine.setListener(this);
+    //TODO: do we need this?
     this.writeRejectionThreshold = this.conf.getCacheWriteRejectionThreshold(this.cacheName);
     updateMaxCacheSize();
     initAll();
   }
-  
+
   private void initAll() throws IOException {
-    
+
     initAdmissionController();
     initRecyclingSelector();
-    if (this.engine instanceof FileIOEngine) {
-      initAdmissionQueue();
-      initThroughputController();
-      TimerTask task = new TimerTask() {
-        public void run() {
-          adjustThroughput();
-        }
-      };
+    initThroughputController();
+    if (this.throughputController != null) {
+      TimerTask task =
+        new TimerTask() {
+          public void run() {
+            adjustThroughput();
+          }
+        };
       this.timer = new Timer();
       long interval = this.conf.getThroughputCheckInterval(this.cacheName);
       this.timer.scheduleAtFixedRate(task, interval, interval);
-    } 
+    }
   }
-  
+
   private void adjustThroughput() {
     boolean result = this.throughputController.adjustParameters();
     LOG.info("Adjusted throughput controller =" + result);
     this.throughputController.printStats();
-  }
-  
-  /**
-   * Initialize admission queue
-   * @throws IOException 
-   */
-  private void initAdmissionQueue() throws IOException {
-    this.admissionQueue = new AdmissionQueue(this, conf);
-    String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
-    String file = CacheConfig.ADMISSION_QUEUE_SNAPSHOT_NAME;
-    Path p = Paths.get(snapshotDir, file);
-    if (Files.exists(p)) {
-      FileInputStream fis = new FileInputStream(p.toFile());
-      this.admissionQueue.load(fis);
-      fis.close();
-    }
   }
   
   /**
@@ -301,16 +283,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       LOG.error(e);
       throw new RuntimeException(e);
     }
+    if (this.admissionController == null) {
+      return;
+    }
     this.admissionController.setCache(this);
     
-    String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
-    String file = CacheConfig.ADMISSION_CONTROLLER_SNAPSHOT_NAME;
-    Path p = Paths.get(snapshotDir, file);
-    if (Files.exists(p)) {
-      FileInputStream fis = new FileInputStream(p.toFile());
-      this.admissionController.load(fis);
-      fis.close();
-    }
   }
   
   /**
@@ -336,16 +313,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       LOG.error(e);
       throw new RuntimeException(e);
     }
-    this.throughputController.setCache(this);
     
-    String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
-    String file = CacheConfig.THROUGHPUT_CONTROLLER_SNAPSHOT_NAME;
-    Path p = Paths.get(snapshotDir, file);
-    if (Files.exists(p)) {
-      FileInputStream fis = new FileInputStream(p.toFile());
-      this.throughputController.load(fis);
-      fis.close();
+    if (this.throughputController == null) {
+      return;
     }
+    this.throughputController.setCache(this);
   }
   
   private void updateMaxCacheSize() {
@@ -380,15 +352,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public CacheConfig getCacheConfig() {
     return this.conf;
   }
-  
-  /**
-   * Get admission queue
-   * @return admission queue
-   */
-  public AdmissionQueue getAdmissionQueue() {
-    return this.admissionQueue;
-  }
-  
+    
   /**
    * Get IOEngine
    * @return engine
@@ -568,6 +532,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     put(keyPtr, keySize, valPtr, valSize, expire, rank, false);
   }
 
+  private boolean shouldAdmitToMainQueue(long keyPtr, int keySize, boolean force) {
+    if (!force && this.admissionController != null) {
+      return this.admissionController.admit(keyPtr, keySize);
+    }
+    return true;
+  }
+  
   /**
    * Put item into the cache - API for new items
    *
@@ -591,27 +562,17 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     // Check rank
     checkRank(rank);
 
-    boolean result = false;
-
-    if (!force) {
-      AdmissionController.Type type = AdmissionController.Type.AQ;
-      if (admissionController != null) {
-        // Adjust rank taking into account item's expiration time
-        rank = this.admissionController.adjustRank(rank, expire);
-        type = admissionController.admit(keyPtr, keySize);
-      }
-      if (type == AdmissionController.Type.AQ) {
-        // Add to the AQ
-        result = admissionQueue.addIfAbsentRemoveIfPresent(keyPtr, keySize);
-        if (result) {
-          return;
-        }
-      }
+    if (!shouldAdmitToMainQueue(keyPtr, keySize, force)) {
+      return;
     }
-    if (!result) {
-      // Add to the cache
-      engine.put(keyPtr, keySize, valPtr, valSize, expire, rank);
+    
+    if (this.admissionController != null) {
+      // Adjust rank taking into account item's expiration time
+      rank = this.admissionController.adjustRank(rank, expire);
     }
+    
+    // Add to the cache
+    engine.put(keyPtr, keySize, valPtr, valSize, expire, rank);
     // TODO: update stats
     reportUsed(keySize, valSize);
   }
@@ -623,6 +584,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
   }
 
+  private boolean shouldAdmitToMainQueue(byte[] key, int keyOffset, int keySize, boolean force) {
+    if (!force && this.admissionController != null) {
+      return this.admissionController.admit(key, keyOffset, keySize);
+    }
+    return true;
+  }
+  
   /**
    * Put item into the cache
    *
@@ -653,32 +621,20 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.totalWrites.incrementAndGet();
     // Check rank
     checkRank(rank);
-    boolean result = false;
-
-    if (!force) {
-      AdmissionController.Type type = AdmissionController.Type.AQ;
-      if (admissionController != null) {
-        // Adjust rank
-        rank = this.admissionController.adjustRank(rank, expire);
-        type = admissionController.admit(key, keyOffset, keySize);
-      }
-      if (type == AdmissionController.Type.AQ) {
-        // Add to the AQ
-        result = admissionQueue.addIfAbsentRemoveIfPresent(key, keyOffset, keySize);
-        if (result) {
-          return;
-        }
-      }
+    if (this.admissionController != null) {
+      // Adjust rank
+      rank = this.admissionController.adjustRank(rank, expire);
     }
-    if (!result) {
-      // Add to the cache
-      engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank);
+    
+    if (!shouldAdmitToMainQueue(key, keyOffset, keySize, force)) {
+      return;
     }
+    // Add to the cache
+    engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank);
     // TODO: update stats
     reportUsed(keySize, valSize);
   }
 
-  
   private void put (byte[] buf, int off, long expire) throws IOException {
     int rank = conf.getSLRUInsertionPoint(this.cacheName);
     int keySize = Utils.readUVInt(buf, off);
@@ -688,7 +644,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     put(buf, off + kSizeSize + vSizeSize, keySize, buf, 
       off + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, true);
   }
-  
   
   private void put(long bufPtr, long expire) throws IOException {
     int rank = conf.getSLRUInsertionPoint(this.cacheName);
@@ -1023,7 +978,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.victimCache == null) {
      return;
     }
-    if (!this.admissionController.shouldEvictToVictimCache(ptr, $ptr)) {
+    if (this.admissionController != null && 
+        !this.admissionController.shouldEvictToVictimCache(ptr, $ptr)) {
       return;
     }
     IndexFormat indexFormat = this.engine.getMemoryIndex().getIndexFormat();
@@ -1180,42 +1136,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     dos.writeLong(Epoch.getEpochStartTime());
     dos.close();
   }
-  
-  /**
-   * Loads admission queue data
-   * @throws IOException
-   */
-  private void loadAdmissionQueue() throws IOException {
-    String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
-    String file = CacheConfig.ADMISSION_QUEUE_SNAPSHOT_NAME;
-    Path p = Paths.get(snapshotDir, file);
-    if (Files.exists(p) && Files.size(p) > 0) {
-      FileInputStream fis = new FileInputStream(p.toFile());
-      DataInputStream dis = new DataInputStream(fis);
-      this.admissionQueue.load(dis);
-      dis.close();
-    }
-  }
-  
-  /**
-   * Saves admission queue data
-   * @throws IOException
-   */
-  private void saveAdmissionQueue() throws IOException {
-    String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
-    String file = CacheConfig.ADMISSION_QUEUE_SNAPSHOT_NAME;
-    Path p = Paths.get(snapshotDir, file);
-    FileOutputStream fos = new FileOutputStream(p.toFile());
-    DataOutputStream dos = new DataOutputStream(fos);
-    this.admissionQueue.save(dos);
-    dos.close();
-  }
-  
+    
   /**
    * Loads admission controller data
    * @throws IOException
    */
   private void loadAdmissionControlller() throws IOException {
+    if (this.admissionController == null) {
+      return;
+    }
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
     String file = CacheConfig.ADMISSION_CONTROLLER_SNAPSHOT_NAME;
     Path p = Paths.get(snapshotDir, file);
@@ -1232,6 +1161,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException
    */
   private void saveAdmissionController() throws IOException {
+    if (this.admissionController == null) {
+      return;
+    }
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
     String file = CacheConfig.ADMISSION_CONTROLLER_SNAPSHOT_NAME;
     Path p = Paths.get(snapshotDir, file);
@@ -1246,6 +1178,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException
    */
   private void loadThroughputControlller() throws IOException {
+    if (this.throughputController == null) {
+      return;
+    }
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
     String file = CacheConfig.THROUGHPUT_CONTROLLER_SNAPSHOT_NAME;
     Path p = Paths.get(snapshotDir, file);
@@ -1262,6 +1197,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException
    */
   private void saveThroughputController() throws IOException {
+    if (this.throughputController == null) {
+      return;
+    }
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
     String file = CacheConfig.THROUGHPUT_CONTROLLER_SNAPSHOT_NAME;
     Path p = Paths.get(snapshotDir, file);
@@ -1370,7 +1308,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     LOG.info("Started saving cache ...");
     long startTime = System.currentTimeMillis();
     saveCache();
-    saveAdmissionQueue();
     saveAdmissionController();
     saveThroughputController();
     saveRecyclingSelector();
@@ -1379,6 +1316,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     long endTime = System.currentTimeMillis();
     LOG.info("Cache saved in {}ms", endTime - startTime);
   }
+  
   /**
    * Load cache data and meta-data from a file system
    * @throws IOException
@@ -1387,7 +1325,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     LOG.info("Started loading cache ...");
     long startTime = System.currentTimeMillis();
     loadCache();
-    loadAdmissionQueue();
     loadAdmissionControlller();
     loadThroughputControlller();
     loadRecyclingSelector();
@@ -1406,5 +1343,27 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   @Override
   public boolean onPromotion(long ibPtr, long ptr) {
     return processPromotion(ibPtr, ptr);
+  }
+
+  @Override
+  public void startSegment(Segment s) {
+    for(Scavenger.Listener l : this.scavengerListeners) {
+      l.startSegment(s);
+    }
+  }
+
+  @Override
+  public void finishSegment(Segment s) {
+    for(Scavenger.Listener l : this.scavengerListeners) {
+      l.finishSegment(s);
+    }
+  }
+  
+  /**
+   * Add Scavenger listener
+   * @param l listener
+   */
+  public void addScavengerListener(Scavenger.Listener l) {
+    this.scavengerListeners.add(l);
   }
 }

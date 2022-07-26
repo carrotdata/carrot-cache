@@ -29,7 +29,7 @@ import com.carrot.cache.util.Utils;
  * Basic implementation of ThroughputController
  *
  */
-public class BaseThroughputController implements ThroughputController {
+public class AQBasedThroughputController implements ThroughputController {
   
   /* Controller's start time */
   protected long startTime;
@@ -86,12 +86,11 @@ public class BaseThroughputController implements ThroughputController {
   /**
    * Constructor
    */
-  public BaseThroughputController(Cache parent) {
+  public AQBasedThroughputController(Cache parent) {
     setCache(cache);
   }
   
-  public BaseThroughputController() {
-    // TODO Auto-generated constructor stub
+  public AQBasedThroughputController() {
   }
 
   public void setCache(Cache parent) {
@@ -235,7 +234,10 @@ public class BaseThroughputController implements ThroughputController {
     } else if (this.aqAdjustStepIndex > 0) {
       this.aqAdjustStepIndex--;
       this.aqCurrent =  this.aqAdjustStepIndex * (this.aqMax - this.aqMin) / this.numberAdustSteps + this.aqMin;
-      this.cache.getAdmissionQueue().setMaximumSize(this.aqCurrent);
+      AdmissionQueueBased controller = 
+          (AdmissionQueueBased) this.cache.getAdmissionController();
+      AdmissionQueue queue = controller.getAdmissionQueue();
+      queue.setMaximumSize(this.aqCurrent);
       return true;
     } 
     return false;  
@@ -245,7 +247,10 @@ public class BaseThroughputController implements ThroughputController {
     if (this.aqAdjustStepIndex < this.numberAdustSteps) {
       this.aqAdjustStepIndex++;
       this.aqCurrent =  this.aqAdjustStepIndex * (this.aqMax - this.aqMin) / this.numberAdustSteps + this.aqMin;
-      this.cache.getAdmissionQueue().setMaximumSize(this.aqCurrent);
+      AdmissionQueueBased controller = 
+          (AdmissionQueueBased) this.cache.getAdmissionController();
+      AdmissionQueue queue = controller.getAdmissionQueue();
+      queue.setMaximumSize(this.aqCurrent);
       return true;
     } else if (this.scavengerAdjustStepIndex < this.numberAdustSteps) {
       this.scavengerAdjustStepIndex++;

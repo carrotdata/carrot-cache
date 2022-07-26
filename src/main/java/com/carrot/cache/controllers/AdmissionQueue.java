@@ -12,7 +12,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.carrot.cache;
+package com.carrot.cache.controllers;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -23,6 +23,7 @@ import java.io.OutputStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.carrot.cache.Cache;
 import com.carrot.cache.index.MemoryIndex;
 import com.carrot.cache.util.CacheConfig;
 import com.carrot.cache.util.Persistent;
@@ -72,8 +73,9 @@ public class AdmissionQueue implements Persistent {
    * Public constructor
    * @param initialMaxSize initial maximum size
    */
-  public AdmissionQueue(Cache cache, CacheConfig conf) {
+  public AdmissionQueue(Cache cache) {
     this.cache = cache;
+    CacheConfig conf = this.cache.getCacheConfig();
     this.cacheName = this.cache.getName();
     this.currentMaxSize = conf.getAdmissionQueueStartSize(this.cacheName);
     this.globalMaxSize = conf.getAdmissionQueueMaxSize(this.cacheName);

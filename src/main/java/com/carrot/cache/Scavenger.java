@@ -38,6 +38,21 @@ import static com.carrot.cache.index.MemoryIndex.Result;
 
 public class Scavenger extends Thread {
 
+  public static interface Listener {
+    
+    /**
+     * Start segment
+     * @param s segment
+     */
+    public void startSegment(Segment s);
+    
+    /**
+     * Finish segment
+     * @param s segment
+     */
+    public void finishSegment(Segment s);
+    
+  }
   /** Logger */
   private static final Logger LOG = LogManager.getLogger(Scavenger.class);
   
@@ -194,9 +209,7 @@ public class Scavenger extends Thread {
   private final Cache cache;
 
   private volatile long runStartTime = System.currentTimeMillis();
-  private volatile long totalFreedBytes;
-  
-  
+    
   public Scavenger(Cache parent) {
     super("c2 scavenger");
     this.cache = parent;
@@ -215,22 +228,22 @@ public class Scavenger extends Thread {
         LOG.error(Thread.currentThread().getName()+": empty segment");
         return;
       }
+      
+      this.cache.startSegment(s);
+      
       if (s.getInfo().getTotalItems() == 0) {
         stats.totalEmptySegments ++;
       }
-      long creationTime = s.getInfo().getCreationTime();
-      int rank = s.getInfo().getRank();
       try {
         finished = cleanSegment(s);
         // Release segment
-        engine.releaseSegmentId(s);
-        
+        engine.releaseSegmentId(s);        
       } catch (IOException e) {
         LOG.error(e);
         return;
       }
       // Update admission controller statistics 
-      cache.getAdmissionController().registerSegmentTTL(rank, System.currentTimeMillis() - creationTime);
+      this.cache.finishSegment(s);
     }
     long runEnd = System.currentTimeMillis();
     // Update stats
@@ -252,7 +265,6 @@ public class Scavenger extends Thread {
         //
         long dataSize = info.getSegmentDataSize();
         cache.reportUsed(-dataSize);
-        totalFreedBytes += dataSize;
         // Update stats
         stats.totalBytesFreed += dataSize;
       } else {
@@ -284,19 +296,16 @@ public class Scavenger extends Thread {
           switch (res) {
             case EXPIRED:
               cache.reportUsed(-totalSize);
-              totalFreedBytes += totalSize;
               stats.totalBytesExpired += totalSize;
               stats.totalBytesFreed += totalSize;
               stats.totalItemsExpired += 1;
               break;
             case NOT_FOUND:
               cache.reportUsed(-totalSize);
-              totalFreedBytes += totalSize;
               stats.totalBytesFreed += totalSize;
               break;
             case DELETED:
               cache.reportUsed(-totalSize);
-              totalFreedBytes += totalSize;
               // Update stats
               stats.totalBytesFreed += totalSize;
               // Return Item back to AQ
@@ -328,6 +337,6 @@ public class Scavenger extends Thread {
    * @return run rate
    */
   public long getScavengerRunRateAverage() {
-    return (long) totalFreedBytes * 1000 / (System.currentTimeMillis() - runStartTime); 
+    return (long) stats.totalBytesFreed * 1000 / (System.currentTimeMillis() - runStartTime); 
   }
 }

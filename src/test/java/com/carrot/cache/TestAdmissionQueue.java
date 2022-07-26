@@ -33,6 +33,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.carrot.cache.controllers.AdmissionQueue;
 import com.carrot.cache.index.MemoryIndex;
 import com.carrot.cache.util.TestUtils;
 import com.carrot.cache.util.UnsafeAccess;

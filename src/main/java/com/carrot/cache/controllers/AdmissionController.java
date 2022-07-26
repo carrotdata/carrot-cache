@@ -14,6 +14,8 @@
  */
 package com.carrot.cache.controllers;
 
+import java.io.IOException;
+
 import com.carrot.cache.Cache;
 import com.carrot.cache.util.Persistent;
 
@@ -22,31 +24,27 @@ import com.carrot.cache.util.Persistent;
  * Admission queue or main queue or must be discarded
  */
 public interface AdmissionController extends Persistent{
-  static enum Type {
-    AQ, MQ, DUMP
-  }
   
-  public default void setCache(Cache cache) {
-    
+  public default void setCache(Cache cache) throws IOException {
   }
   
   /**
-   * Returns queue (or dump) for a new item
+   * Returns if item should be admitted to the cache
    * @param keyPtr key's address
    * @param keySize item's key size
-   * @return queue to admit to
+   * @return true if item must be admitted to the cache, false - otherwise
    */
-  public Type admit(long keyPtr, int keySize);
+  public boolean admit(long keyPtr, int keySize);
   
   /**
-   * Returns queue (or dump) for a new item
+   * Returns if item should be admitted to the cache
    * @param key item key buffer
    * @param off item key buffer offset
    * @param size item's key size
-   * @return queue to admit to
+   * @return true if item must be admitted to the cache, false - otherwise
    */
   
-  public Type admit(byte[] key, int off, int size);
+  public boolean admit(byte[] key, int off, int size);
   
   /**
    * Called on each items access
@@ -72,14 +70,6 @@ public interface AdmissionController extends Persistent{
    * @return new rank
    */
   public int adjustRank(int rank, long expire);
-  
-  /**
-   * During compaction process, scavenger calls this method to update
-   * segment's life-time statistics.
-   * @param rank segment's rank
-   * @param ttl segment's life-time in ms
-   */
-  public void registerSegmentTTL(int rank, long ttl);
   
   /**
    * Should item be evicted to the victim cache

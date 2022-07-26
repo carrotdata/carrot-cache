@@ -19,8 +19,6 @@ import java.io.IOException;
 import java.util.Properties;
 
 import com.carrot.cache.controllers.AdmissionController;
-import com.carrot.cache.controllers.BaseAdmissionController;
-import com.carrot.cache.controllers.BaseThroughputController;
 import com.carrot.cache.controllers.RecyclingSelector;
 import com.carrot.cache.controllers.ThroughputController;
 import com.carrot.cache.eviction.EvictionPolicy;
@@ -29,8 +27,8 @@ import com.carrot.cache.expire.ExpireSupport;
 import com.carrot.cache.index.AQIndexFormat;
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MQIndexFormat;
-import com.carrot.cache.io.DataWriter;
 import com.carrot.cache.io.DataReader;
+import com.carrot.cache.io.DataWriter;
 
 public class CacheConfig {
 
@@ -884,8 +882,7 @@ public class CacheConfig {
     }
     if (value == null) {
       // default implementation;
-      AdmissionController controller = new BaseAdmissionController();
-      return controller;
+      return null;
     }
     @SuppressWarnings("unchecked")
     Class<AdmissionController> clz = (Class<AdmissionController>) Class.forName(value);
@@ -908,16 +905,15 @@ public class CacheConfig {
       value = props.getProperty(CACHE_THROUGHPUT_CONTROLLER_IMPL_KEY);
     }
     if (value == null) {
-      // default implementation;
-      ThroughputController controller = new BaseThroughputController();
-      return controller;
+      // No defaults
+      return null;
     }
     @SuppressWarnings("unchecked")
     Class<ThroughputController> clz = (Class<ThroughputController>) Class.forName(value);
     ThroughputController instance = clz.newInstance();
     return instance;
   }
-  
+    
   /**
    * Get Scavenger recycling selector implementation by cache name
    * @param cacheName cache name
