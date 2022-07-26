@@ -18,8 +18,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
 
-import com.carrot.cache.Cache;
 import com.carrot.cache.controllers.AdmissionController;
+import com.carrot.cache.controllers.BaseAdmissionController;
 import com.carrot.cache.controllers.BaseThroughputController;
 import com.carrot.cache.controllers.RecyclingSelector;
 import com.carrot.cache.controllers.ThroughputController;
@@ -884,7 +884,7 @@ public class CacheConfig {
     }
     if (value == null) {
       // default implementation;
-      AdmissionController controller = new Cache.BaseAdmissionController();
+      AdmissionController controller = new BaseAdmissionController();
       return controller;
     }
     @SuppressWarnings("unchecked")
