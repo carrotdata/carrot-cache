@@ -49,6 +49,9 @@ public class MemoryIndex implements Persistent {
   /** Logger */
   private static final Logger LOG = LogManager.getLogger(MemoryIndex.class);
   
+  /** This is value which guarantees that rehashing won't break*/
+  private static final int MAX_INDEX_ENTRIES_PER_BLOCK = 200;
+  
   public static enum MutationResult{
     INSERTED, /* Operation succeeded */ 
     DELETED,  /* Operation succeeded (for AQ and MQ), but existing one was deleted in case of AQ*/
@@ -133,7 +136,8 @@ public class MemoryIndex implements Persistent {
   // 4K block
   static int[] BASE_MULTIPLIERS =
       new int[] {
-        2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 26, 28, 30, 32
+        2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 
+        22, 24, 26, 28, 30, 32, 64, 96, 128, 160, 192, 224, 256, 512 /* 32K size max with 200 per block */
       };
 
   /**
@@ -220,6 +224,8 @@ public class MemoryIndex implements Persistent {
   
   /* Number of rehashed slots so far */
   private AtomicLong rehashedSlots = new AtomicLong();
+  
+  
   
   public MemoryIndex() {
     this.cacheConfig = CacheConfig.getInstance();
@@ -513,6 +519,10 @@ public class MemoryIndex implements Persistent {
    * @return new pointer - can be -1 (check return value)
    */
   long expand(long indexBlockPtr, int requiredSize) {
+    int num = numEntries(indexBlockPtr);
+    if (num >= MAX_INDEX_ENTRIES_PER_BLOCK) {
+      return FAILED;
+    }
     int blockSize = blockSize(indexBlockPtr);
     if (blockSize >= requiredSize) return indexBlockPtr;
     int newSize = getMinSizeGreaterOrEqualsThan(requiredSize);
