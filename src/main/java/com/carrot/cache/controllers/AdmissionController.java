@@ -23,7 +23,7 @@ import com.carrot.cache.util.Persistent;
  * Admission controller decides which queue new item must be admitted or re-admitted after eviction:
  * Admission queue or main queue or must be discarded
  */
-public interface AdmissionController extends Persistent{
+public interface AdmissionController extends Persistent, ThroughputControllable {
   
   public default void setCache(Cache cache) throws IOException {
   }

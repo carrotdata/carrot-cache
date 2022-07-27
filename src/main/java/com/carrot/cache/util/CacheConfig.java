@@ -110,6 +110,9 @@ public class CacheConfig {
   /* Discard cached entry if it in this lower percentile - stop value (maximum) */
   public static final String SCAVENGER_DUMP_ENTRY_BELOW_STOP_KEY = "scavenger.dump.entry.below.stop";
   
+  /* Adjustment step for scavenger */
+  public static final String SCAVENGER_DUMP_ENTRY_BELOW_STEP_KEY = "scavenger.dump.entry.below.step";
+  
   /* Number of admission ranks ( default - 8) */
   public static final String CACHE_ADMISSION_NUMBER_RANKS_KEY = "cache.admission.number.ranks";
   
@@ -130,6 +133,11 @@ public class CacheConfig {
   
   /* Admission Queue maximum size in fraction of a full cache size */
   public static final String ADMISSION_QUEUE_MAX_SIZE_KEY = "admission.queue.max.size";
+  
+  /* Admission Queue adjustment step number  */
+  //public static final String ADMISSION_QUEUE_ADJ_STEPS_NUMBER_KEY = "admission.queue.adj.steps.number";
+  
+  
   
   /* Readmission evicted item to AQ minimum hit count threshold */
   public static final String READMISSION_HIT_COUNT_MIN_KEY = "readmission.hit.count.min";
@@ -220,6 +228,11 @@ public class CacheConfig {
   /* Cache expiration support implementation key */
   public static final String CACHE_EXPIRE_SUPPORT_IMPL_KEY = "cache.expire.support.impl";
   
+  /* Random admission controller ratio start key */
+  public static final String CACHE_RANDOM_ADMISSION_RATIO_START_KEY = "cache.random.admission.ratio.start";
+  
+  /* Random admission controller ratio key */
+  public static final String CACHE_RANDOM_ADMISSION_RATIO_STOP_KEY = "cache.random.admission.ratio.stop";
   
   /* Defaults section */
   
@@ -243,6 +256,11 @@ public class CacheConfig {
    * value will be dumped, all others will be rewritten back to a cache. This is the stop value
    */
   public static final double DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_STOP = 0.5;
+  
+  /**
+   * Default value for scavenger adjustment step
+   */
+  public static final double DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_STEP = 0.1;
   
   /**
    * Limits write speed during scavenger run to 0.9 of scavenger cleaning memory rate Suppose
@@ -304,7 +322,7 @@ public class CacheConfig {
   public static final long DEFAULT_CACHE_WRITE_RATE_LIMIT = 50 * 1024 * 1024;
   
   /* Default number of adjustment steps */
-  public static final int DEFAULT_THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS = 8;
+  public static final int DEFAULT_THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS = 10;
   
   /* Default for index data embedding */
   public final static boolean DEFAULT_INDEX_DATA_EMBEDDED = false;
@@ -336,6 +354,13 @@ public class CacheConfig {
   
   /** Increase this size if you want to cache items larger*/
   public final static int DEFAULT_FILE_PREFETCH_BUFFER_SIZE = 4 * 1024 * 1024;
+  
+  /** Default value for random admission adjustment start */
+  public static final double DEFAULT_CACHE_RANDOM_ADMISSION_RATIO_START = 1.d;
+  
+  /** Default value for random admission adjustment stop */
+  public static final double DEFAULT_CACHE_RANDOM_ADMISSION_RATIO_STOP = 0.d;
+  
   // Statics
   static CacheConfig instance;
 
@@ -500,6 +525,20 @@ public class CacheConfig {
    * @param cacheName cache name
    * @return dump entry below ratio
    */
+  public double getScavengerDumpEntryBelowAdjStep(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ SCAVENGER_DUMP_ENTRY_BELOW_STEP_KEY);
+    if (value != null) {
+      return Double.parseDouble(value);
+    }
+    return getDoubleProperty(SCAVENGER_DUMP_ENTRY_BELOW_STEP_KEY, DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_STEP);
+  }
+
+  
+  /**
+   * Gets scavenger dump entry below - start
+   * @param cacheName cache name
+   * @return dump entry below ratio
+   */
   public double getScavengerDumpEntryBelowStart(String cacheName) {
     String value = props.getProperty(cacheName + "."+ SCAVENGER_DUMP_ENTRY_BELOW_START_KEY);
     if (value != null) {
@@ -508,6 +547,32 @@ public class CacheConfig {
     return getDoubleProperty(SCAVENGER_DUMP_ENTRY_BELOW_START_KEY, DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_START);
   }
 
+  /**
+   * Get random admission controller start ratio
+   * @param cacheName cache name
+   * @return start ratio
+   */
+  public double getRandomAdmissionControllerStartRatio(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ CACHE_RANDOM_ADMISSION_RATIO_START_KEY);
+    if (value != null) {
+      return Double.parseDouble(value);
+    }
+    return getDoubleProperty(CACHE_RANDOM_ADMISSION_RATIO_START_KEY, DEFAULT_CACHE_RANDOM_ADMISSION_RATIO_START);
+  }
+  
+  /**
+   * Get random admission controller stop ratio
+   * @param cacheName cache name
+   * @return stop ratio
+   */
+  public double getRandomAdmissionControllerStopRatio(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ CACHE_RANDOM_ADMISSION_RATIO_STOP_KEY);
+    if (value != null) {
+      return Double.parseDouble(value);
+    }
+    return getDoubleProperty(CACHE_RANDOM_ADMISSION_RATIO_STOP_KEY, DEFAULT_CACHE_RANDOM_ADMISSION_RATIO_STOP);
+  }
+  
   /**
    * Gets scavenger dump entry below - stop
    * @param cacheName cache name

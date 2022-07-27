@@ -14,11 +14,15 @@
  */
 package com.carrot.cache.controllers;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
 import com.carrot.cache.Cache;
+import com.carrot.cache.util.CacheConfig;
+import com.carrot.cache.util.Utils;
 
 /**
  * Basic cache admission controller with AdmissionQueue For newly admitted items it always
@@ -32,6 +36,14 @@ public class AQBasedAdmissionController extends BaseAdmissionController
   implements AdmissionQueueBased {
  
   protected AdmissionQueue admissionQueue;
+  /* AQ current size */
+  protected long aqCurrent;
+  /* AQ minimum size */
+  protected long aqMin;
+  /* AQ maximum size */
+  protected long aqMax;
+  /* AQ size adjustment step */
+  protected long adjStep;
   
   public AQBasedAdmissionController() {
     super();
@@ -41,6 +53,14 @@ public class AQBasedAdmissionController extends BaseAdmissionController
   public void setCache(Cache cache) throws IOException {
     super.setCache(cache);
     initAdmissionQueue();
+    /* Admission Queue */
+    CacheConfig config = CacheConfig.getInstance();
+    String cacheName = cache.getName();
+    this.aqMin = config.getAdmissionQueueMinSize(cacheName);
+    this.aqMax = config.getAdmissionQueueMaxSize(cacheName);
+    this.aqCurrent = config.getAdmissionQueueMaxSize(cacheName);
+    int steps = config.getThrougputControllerNumberOfAdjustmentSteps(cacheName);
+    this.adjStep = (this.aqMax - this.aqMin) / steps;
   }
   
   /**
@@ -70,12 +90,22 @@ public class AQBasedAdmissionController extends BaseAdmissionController
   @Override
   public void save(OutputStream os) throws IOException {
     super.save(os);
+    DataOutputStream dos = Utils.toDataOutputStream(os);
+    dos.writeLong(this.aqCurrent);
+    dos.writeLong(this.aqMax);
+    dos.writeLong(this.aqMin);
+    dos.writeLong(this.adjStep);
     this.admissionQueue.save(os);
   }
 
   @Override
   public void load(InputStream is) throws IOException {
     super.load(is);
+    DataInputStream dis = Utils.toDataInputStream(is);
+    this.aqCurrent = dis.readLong();
+    this.aqMax = dis.readLong();
+    this.aqMin = dis.readLong();
+    this.adjStep = dis.readLong();
     this.admissionQueue.load(is);
   }
 
@@ -88,5 +118,24 @@ public class AQBasedAdmissionController extends BaseAdmissionController
   public void setAdmissionQueue(AdmissionQueue queue) {
     this.admissionQueue = queue;
   }
-  
+
+  @Override
+  public boolean decreaseThroughput() { 
+    if (this.aqCurrent - this.adjStep < this.aqMin) {
+      return false;
+    }
+    this.aqCurrent -= this.adjStep;
+    this.admissionQueue.setMaximumSize(this.aqCurrent);
+    return true;
+  }
+
+  @Override
+  public boolean increaseThroughput() {
+    if (this.aqCurrent + this.adjStep > this.aqMax) {
+      return false;
+    }
+    this.aqCurrent += this.adjStep;
+    this.admissionQueue.setMaximumSize(this.aqCurrent);
+    return true;
+  }
 }

@@ -69,20 +69,7 @@ public interface ThroughputController extends Persistent{
    * @return total bytes written
    */
   public long getTotalBytesWritten();
-  
-  /**
-   * Get current admission queue size
-   * @return admission queue size
-   */
-  public long getAdmissionQueueSize();
-  
-  
-  /**
-   * Get compaction threshold
-   * @return current compaction discard threshold (between 0 and 1.0)
-   */
-  public double getCompactionDiscardThreshold();
-  
+    
   /**
    * Adjust parameters (AQ size and compaction discard threshold )
    * @return true, if adjustment was made, false - otherwise

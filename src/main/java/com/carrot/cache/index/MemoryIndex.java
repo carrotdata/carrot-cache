@@ -1178,7 +1178,8 @@ public class MemoryIndex implements Persistent {
    * @param keySize key size
    * @return operation result (OK, NOT_FOUND, EXPIRED, DELETED)
    */
-  public ResultWithRankAndExpire checkDeleteKeyForScavenger(long keyPtr, int keySize, ResultWithRankAndExpire result) {
+  public ResultWithRankAndExpire checkDeleteKeyForScavenger(long keyPtr, int keySize, 
+      ResultWithRankAndExpire result, double dumpBelowRatio) {
     int slot = 0;
     try {
       slot = lock(keyPtr, keySize);
@@ -1198,13 +1199,14 @@ public class MemoryIndex implements Persistent {
         $slot = getSlotNumber(hash, index.length);
         ptr = index[$slot];
       }
-      return checkDeleteKeyForScavenger(ptr, hash, result);
+      return checkDeleteKeyForScavenger(ptr, hash, result, dumpBelowRatio);
     } finally {
       unlock(slot);
     }
   }
   
-  private ResultWithRankAndExpire checkDeleteKeyForScavenger(long ptr, long hash, ResultWithRankAndExpire result) {
+  private ResultWithRankAndExpire checkDeleteKeyForScavenger(long ptr, long hash, 
+      ResultWithRankAndExpire result, double dumpBelowRatio) {
     int numEntries = numEntries(ptr);
     //ATTN: we do not check keys directly - only hashes, for small hashes this may result in 
     // collisions. 
@@ -1213,7 +1215,6 @@ public class MemoryIndex implements Persistent {
     //TODO: If deleted > 0, update number of items and size
     long $ptr = ptr + this.indexBlockHeaderSize;
     int count = 0;
-    double dumpBelowRatio = this.cacheConfig.getScavengerDumpEntryBelowStart(cacheName);
     int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
     
     result = result.setResultRankExpire(Result.NOT_FOUND, 0, 0);

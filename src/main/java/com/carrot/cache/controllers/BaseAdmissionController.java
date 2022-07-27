@@ -158,5 +158,15 @@ public class BaseAdmissionController implements AdmissionController, Scavenger.L
     long ttl = System.currentTimeMillis() - s.getInfo().getCreationTime();
     registerSegmentTTL(rank, ttl);
   }
+
+  @Override
+  public boolean decreaseThroughput() {
+    return true;
+  }
+
+  @Override
+  public boolean increaseThroughput() {
+    return true;
+  }
   
 }

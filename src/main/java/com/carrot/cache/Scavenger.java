@@ -209,12 +209,27 @@ public class Scavenger extends Thread {
   private final Cache cache;
 
   private volatile long runStartTime = System.currentTimeMillis();
-    
+
+  private static double dumpBelowRatioMin;
+  
+  private static double dumpBelowRatioMax;
+  
+  private static double dumpBelowRatio = -1;
+  
+  private static double adjStep = 0.05;
+  
   public Scavenger(Cache parent) {
     super("c2 scavenger");
     this.cache = parent;
     // Update stats
     stats.totalRuns++;
+    String cacheName = this.cache.getName();
+    if (dumpBelowRatio < 0) {
+      dumpBelowRatio = this.cache.getCacheConfig().getScavengerDumpEntryBelowStart(cacheName);
+      dumpBelowRatioMin = dumpBelowRatio;
+      dumpBelowRatioMax = this.cache.getCacheConfig().getScavengerDumpEntryBelowStop(cacheName);
+      adjStep = this.cache.getCacheConfig().getScavengerDumpEntryBelowAdjStep(cacheName);
+    }
   }
   
   @Override
@@ -228,9 +243,7 @@ public class Scavenger extends Thread {
         LOG.error(Thread.currentThread().getName()+": empty segment");
         return;
       }
-      
       this.cache.startSegment(s);
-      
       if (s.getInfo().getTotalItems() == 0) {
         stats.totalEmptySegments ++;
       }
@@ -287,7 +300,7 @@ public class Scavenger extends Thread {
 
           ResultWithRankAndExpire result = new ResultWithRankAndExpire();
           
-          result = index.checkDeleteKeyForScavenger(keyPtr, keySize, result);
+          result = index.checkDeleteKeyForScavenger(keyPtr, keySize, result, dumpBelowRatio);
           
           Result res = result.getResult();
           int rank = result.getRank();
@@ -311,6 +324,7 @@ public class Scavenger extends Thread {
               // Return Item back to AQ
               // TODO: fix this code. We need to move data to a victim cache on
               // memory index eviction.
+              break;
             case OK:
               // Put value back into the cache - it has high popularity
               engine.put(keyPtr, keySize, valuePtr, valSize, expire, rank);
@@ -338,5 +352,21 @@ public class Scavenger extends Thread {
    */
   public long getScavengerRunRateAverage() {
     return (long) stats.totalBytesFreed * 1000 / (System.currentTimeMillis() - runStartTime); 
+  }
+
+  public static boolean decreaseThroughput() {
+    if (dumpBelowRatio + adjStep > dumpBelowRatioMax) {
+      return false;
+    }
+    dumpBelowRatio += adjStep;
+    return true;
+  }
+
+  public static boolean increaseThroughput() {
+    if (dumpBelowRatio - adjStep < dumpBelowRatioMin) {
+      return false;
+    }
+    dumpBelowRatio -= adjStep;
+    return true;  
   }
 }
