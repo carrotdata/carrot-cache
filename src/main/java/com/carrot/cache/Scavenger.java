@@ -327,7 +327,7 @@ public class Scavenger extends Thread {
               break;
             case OK:
               // Put value back into the cache - it has high popularity
-              engine.put(keyPtr, keySize, valuePtr, valSize, expire, rank);
+              cache.put(keyPtr, keySize, valuePtr, valSize, expire, rank, true);
               break;
           }
           sc.next();

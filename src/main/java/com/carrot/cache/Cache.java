@@ -230,6 +230,8 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
   
   List<Scavenger.Listener> scavengerListeners = new LinkedList<>();
   
+  /* Throughput controller enabled */
+  boolean tcEnabled;
   /**
    * Constructor with configuration
    * 
@@ -270,6 +272,13 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     boolean result = this.throughputController.adjustParameters();
     LOG.info("Adjusted throughput controller =" + result);
     this.throughputController.printStats();
+  }
+  
+  private void reportThroughputController(long bytes) {
+    if (!this.tcEnabled  || this.throughputController == null) {
+      return;
+    }
+    this.throughputController.record(bytes);
   }
   
   /**
@@ -367,6 +376,8 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
    * @param size allocated memory size
    */
   public long reportUsed(long size) {
+    
+    reportThroughputController(size);
     return this.usedMemory.addAndGet(size);
   }
 
@@ -1086,6 +1097,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
         this.scavenger = new Scavenger(this);
         this.scavenger.start();
         this.engine.setEvictionEnabled(true);
+        this.tcEnabled = true;
       } else if (used < min) {
         // Disable eviction
         this.engine.setEvictionEnabled(false);
@@ -1113,6 +1125,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
       this.totalWrites.set(dis.readLong());
       this.totalRejectedWrites.set(dis.readLong());
       Epoch.setEpochStartTime(dis.readLong());
+      this.tcEnabled = dis.readBoolean();
       dis.close();
     }
   }
@@ -1134,6 +1147,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     dos.writeLong(totalWrites.get());
     dos.writeLong(totalRejectedWrites.get());
     dos.writeLong(Epoch.getEpochStartTime());
+    dos.writeBoolean(this.tcEnabled);
     dos.close();
   }
     
