@@ -24,8 +24,14 @@ public class SLRUEvictionPolicy implements EvictionPolicy {
   @SuppressWarnings("unused")
   private static final Logger LOG = LogManager.getLogger(SLRUEvictionPolicy.class);
   
+  /* Number of segments in SLRU*/
   private int numSegments;
+  
+  /* Insertion segment */
   private int insertPoint;
+  
+  /* Default rank to insert */
+  private int defaultRank;
   
   /**
    * Default constructor
@@ -50,6 +56,8 @@ public class SLRUEvictionPolicy implements EvictionPolicy {
     CacheConfig config = CacheConfig.getInstance();
     this.numSegments = config.getSLRUNumberOfSegments(cacheName);
     this.insertPoint = config.getSLRUInsertionPoint(cacheName);
+    int numRanks = config.getNumberOfAdmissionRanks(cacheName);
+    this.defaultRank = this.insertPoint * numRanks / this.numSegments;
   }
   
   @Override
@@ -69,5 +77,10 @@ public class SLRUEvictionPolicy implements EvictionPolicy {
   public int getInsertIndex(long idbPtr, int totalItems) {
     // insert point is 0- based, 
     return getStartIndexForRank(numSegments, insertPoint - 1, totalItems);
+  }
+  
+  @Override
+  public int getDefaultRankForInsert() {
+    return this.defaultRank;
   }
 }

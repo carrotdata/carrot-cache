@@ -78,4 +78,12 @@ public interface EvictionPolicy {
   public default int getStartIndexForRank(int numRanks, int rank, int totalItems) {
     return rank * totalItems / numRanks;
   }
+  
+  /**
+   * get default rank for insert operation
+   * @return default rank
+   */
+  public default int getDefaultRankForInsert() {
+    return 0;
+  }
 }

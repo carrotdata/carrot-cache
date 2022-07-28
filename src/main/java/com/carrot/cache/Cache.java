@@ -539,7 +539,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
    */
   public void put(long keyPtr, int keySize, long valPtr, int valSize, long expire)
     throws IOException {    
-    int rank = conf.getSLRUInsertionPoint(this.cacheName);
+    int rank = getDefaultRankToInsert();//.getSLRUInsertionPoint(this.cacheName);
     put(keyPtr, keySize, valPtr, valSize, expire, rank, false);
   }
 
@@ -646,8 +646,10 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     reportUsed(keySize, valSize);
   }
 
+  
+  
   private void put (byte[] buf, int off, long expire) throws IOException {
-    int rank = conf.getSLRUInsertionPoint(this.cacheName);
+    int rank = getDefaultRankToInsert();//conf.getSLRUInsertionPoint(this.cacheName);
     int keySize = Utils.readUVInt(buf, off);
     int kSizeSize = Utils.sizeUVInt(keySize);
     int valueSize = Utils.readUVInt(buf, off + kSizeSize);
@@ -657,7 +659,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
   }
   
   private void put(long bufPtr, long expire) throws IOException {
-    int rank = conf.getSLRUInsertionPoint(this.cacheName);
+    int rank = getDefaultRankToInsert();//conf.getSLRUInsertionPoint(this.cacheName);
     int keySize = Utils.readUVInt(bufPtr);
     int kSizeSize = Utils.sizeUVInt(keySize);
     int valueSize = Utils.readUVInt(bufPtr + kSizeSize);
@@ -677,6 +679,11 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
       put(ptr + off, expire);
     }
   }
+  
+  private int getDefaultRankToInsert() {
+    return this.engine.getMemoryIndex().getEvictionPolicy().getDefaultRankForInsert();
+  }
+  
   /**
    * Put item into the cache
    *
@@ -685,7 +692,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
    * @param expire - expiration (0 - no expire)
    */
   public void put(byte[] key, byte[] value, long expire) throws IOException {
-    int rank = conf.getSLRUInsertionPoint(this.cacheName);
+    int rank = getDefaultRankToInsert();//conf.getSLRUInsertionPoint(this.cacheName);
     put(key, 0, key.length, value, 0, value.length, expire, rank, false);
   }
 
@@ -1037,15 +1044,19 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     //TODO : check segment
     try {
       s.readLock();
-      long ptr = s.getAddress();
-      ptr += offset;
-      int keySize = Utils.readUVInt(ptr);
-      int kSizeSize = Utils.sizeUVInt(keySize);
-      ptr += kSizeSize;
-      int valueSize = Utils.readUVInt(ptr);
-      int vSizeSize = Utils.sizeUVInt(valueSize);
-      ptr += vSizeSize;
-      this.victimCache.put(ptr, keySize, ptr + keySize, valueSize, expire, rank, true);
+      if (s.isOffheap()) {
+        long ptr = s.getAddress();
+        ptr += offset;
+        int keySize = Utils.readUVInt(ptr);
+        int kSizeSize = Utils.sizeUVInt(keySize);
+        ptr += kSizeSize;
+        int valueSize = Utils.readUVInt(ptr);
+        int vSizeSize = Utils.sizeUVInt(valueSize);
+        ptr += vSizeSize;
+        this.victimCache.put(ptr, keySize, ptr + keySize, valueSize, expire, rank, true);
+      } else {
+        // not supported yet
+      }
     } finally {
       s.readUnlock();
     }
