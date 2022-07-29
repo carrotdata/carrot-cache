@@ -164,7 +164,7 @@ public abstract class IOEngine implements Persistent {
     this.segmentSize = this.config.getCacheSegmentSize(this.cacheName);
     this.maxStorageSize = this.config.getCacheMaximumSize(this.cacheName);
     this.numSegments = (int) (this.maxStorageSize / this.segmentSize + 1);
-    int num = this.config.getNumberOfAdmissionRanks(this.cacheName);
+    int num = this.config.getNumberOfPopularityRanks(this.cacheName);
     ramBuffers = new Segment[num];
     this.dataSegments = new Segment[this.numSegments];
     this.index = new MemoryIndex(this.parent, MemoryIndex.Type.MQ);
@@ -373,6 +373,7 @@ public abstract class IOEngine implements Persistent {
   public long get(byte[] key, int keyOffset, int keySize, byte[] buffer, int bufOffset)
       throws IOException {
 
+    //FIXME: expensive calls to CacheConfig in a critical path
     // TODO: locking
     IndexFormat format = this.index.getIndexFormat();
     // TODO: embedded entry case
@@ -1019,20 +1020,6 @@ public abstract class IOEngine implements Persistent {
   }
 
   /**
-   * Put key-value into a cache with a default rank
-   *
-   * @param key key buffer
-   * @param value value buffer
-   * @param rank cache item rank
-   * @throws IOException
-   */
-  public void put(byte[] key, byte[] value, long expire) throws IOException {
-    int rank = config.getSLRUInsertionPoint(this.cacheName);
-    // TODO: check if it is the right rank
-    // TODO: expire on rank
-    put(key, 0, key.length, value, 0, value.length, expire, rank);
-  }
-  /**
    * Put key-value into a cache with a rank
    *
    * @param key key buffer
@@ -1044,29 +1031,6 @@ public abstract class IOEngine implements Persistent {
     put(key, 0, key.length, value, 0, value.length, expire, rank);
   }
 
-  /**
-   * Put key-value into a cache with a default rank
-   *
-   * @param key key buffer
-   * @param keyOff key offset
-   * @param keyLength key length
-   * @param value value buffer
-   * @param valueOff value offset
-   * @param valueLength value length
-   * @throws IOException
-   */
-  public void put(
-      byte[] key,
-      int keyOff,
-      int keyLength,
-      byte[] value,
-      int valueOff,
-      int valueLength,
-      long expire)
-      throws IOException {
-    int rank = config.getSLRUInsertionPoint(this.cacheName);
-    put(key, keyOff, keyLength, value, valueOff, valueLength, expire, rank);
-  }
   /**
    * Put key-value into a cache
    *
@@ -1124,22 +1088,6 @@ public abstract class IOEngine implements Persistent {
 
 
   /**
-   * Put key-value into a cache with a default rank
-   *
-   * @param key key buffer
-   * @param keyOff key offset
-   * @param keyLength key length
-   * @param value value buffer
-   * @param valueOff value offset
-   * @param valueLength value length
-   * @throws IOException
-   */
-  public void put(long keyPtr, int keyLength, long valuePtr, int valueLength, long expire)
-      throws IOException {
-    int rank = config.getSLRUInsertionPoint(this.cacheName);
-    put(keyPtr, keyLength, valuePtr, valueLength, expire, rank);
-  }
-  /**
    * Put key-value into a cache with a rank
    *
    * @param key key buffer
@@ -1195,7 +1143,7 @@ public abstract class IOEngine implements Persistent {
           return null;
         }
         if (this.dataSegments[id] == null) {
-          s = Segment.newSegment((int) this.segmentSize, id, rank, System.currentTimeMillis());
+          s = Segment.newSegment((int) this.segmentSize, id, rank);
           // Set data appender
           s.setDataWriter(this.dataWriter);
           this.dataSegments[id] = s;

@@ -56,7 +56,7 @@ public class SLRUEvictionPolicy implements EvictionPolicy {
     CacheConfig config = CacheConfig.getInstance();
     this.numSegments = config.getSLRUNumberOfSegments(cacheName);
     this.insertPoint = config.getSLRUInsertionPoint(cacheName);
-    int numRanks = config.getNumberOfAdmissionRanks(cacheName);
+    int numRanks = config.getNumberOfPopularityRanks(cacheName);
     this.defaultRank = this.insertPoint * numRanks / this.numSegments;
   }
   

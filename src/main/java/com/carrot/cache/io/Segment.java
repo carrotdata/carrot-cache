@@ -445,11 +445,13 @@ public class Segment implements Persistent {
    * Private constructor
    * @param address address of a segment
    * @param size size of a segment
+   * @param id segment id
+   * @param rank segment's rank (0- based, 0 - maximum rank)
    */
-  Segment(long address, int size, int id, int rank, long creationTime) {
+  Segment(long address, int size, int id, int rank) {
     this.address = address;
     this.size = size;
-    this.info = new Info(id, rank, creationTime);
+    this.info = new Info(id, rank, System.currentTimeMillis());
     this.info.setSegmentSize(size);
     setOffheap(true);
   }
@@ -504,9 +506,9 @@ public class Segment implements Persistent {
    * @param creationTime  segment's creation time
    * @return new segment
    */
-  public static Segment newSegment(int size, int id, int rank, long creationTime) {
+  public static Segment newSegment(int size, int id, int rank) {
     long ptr = UnsafeAccess.mallocZeroed(size);
-    return new Segment(ptr, size, id, rank, creationTime);
+    return new Segment(ptr, size, id, rank);
   }
   
   /**
@@ -515,10 +517,11 @@ public class Segment implements Persistent {
    * @param size requested size
    * @param id segment id
    * @param rank segment's rank
-   * @param creationTime  segment's creation time   * @return new segment
+   * @param creationTime  segment's creation time   
+   * @return new segment
    */
-  public static Segment newSegment(long ptr, int size, int id, int rank, long creationTime) {
-    return new Segment(ptr, size, id, rank, creationTime);
+  public static Segment newSegment(long ptr, int size, int id, int rank) {
+    return new Segment(ptr, size, id, rank);
   }
   
   /**

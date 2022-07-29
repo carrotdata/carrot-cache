@@ -19,7 +19,8 @@ import java.nio.ByteBuffer;
 
 import com.carrot.cache.util.CacheConfig;
 import com.carrot.cache.util.UnsafeAccess;
-import static com.carrot.cache.util.BlockReaderWriterSupport.*;
+
+import static com.carrot.cache.io.BlockReaderWriterSupport.*;
 import static com.carrot.cache.util.Utils.getItemSize;
 
 

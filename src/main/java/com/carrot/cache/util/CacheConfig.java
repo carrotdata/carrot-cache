@@ -234,6 +234,12 @@ public class CacheConfig {
   /* Random admission controller ratio key */
   public static final String CACHE_RANDOM_ADMISSION_RATIO_STOP_KEY = "cache.random.admission.ratio.stop";
   
+  /* For expiration  based admission controller */
+  public static final String CACHE_EXPIRATION_BIN_START_VALUE_KEY = "cache.expire.start.bin.value";
+  
+  /* Bin value multiplier */
+  public static final String CACHE_EXPIRATION_MULTIPLIER_VALUE_KEY = "cache.expire.multiplier.value";
+  
   /* Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 256 * 1024 * 1024;
@@ -360,6 +366,11 @@ public class CacheConfig {
   
   /** Default value for random admission adjustment stop */
   public static final double DEFAULT_CACHE_RANDOM_ADMISSION_RATIO_STOP = 0.d;
+  
+  /** Default value for start bin limit in seconds */
+  public static final long DEFAULT_CACHE_EXPIRATION_BIN_START_VALUE = 60;// in seconds
+  
+  public static final double DEFAULT_CACHE_EXPIRATION_MULTIPLIER_VALUE = 2;
   
   // Statics
   static CacheConfig instance;
@@ -584,19 +595,6 @@ public class CacheConfig {
       return Double.parseDouble(value);
     }
     return getDoubleProperty(SCAVENGER_DUMP_ENTRY_BELOW_STOP_KEY, DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_STOP);
-  }
-
-  /**
-   * Get number of admission ranks for a cache
-   * @param cacheName cache name
-   * @return number of admission ranks
-   */
-  public int getNumberOfAdmissionRanks(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ CACHE_ADMISSION_NUMBER_RANKS_KEY);
-    if (value != null) {
-      return (int) Long.parseLong(value);
-    }
-    return (int) getLongProperty(CACHE_ADMISSION_NUMBER_RANKS_KEY, DEFAULT_CACHE_ADMISSION_NUMBER_RANKS);
   }
   
   /**
@@ -1112,5 +1110,32 @@ public class CacheConfig {
     Class<ExpireSupport> clz = (Class<ExpireSupport>) Class.forName(value);
     ExpireSupport instance = clz.newInstance();
     return instance;
+  }
+  
+  /**
+   * Get start bin value for expiration - based admission controller
+   * @return value
+   */
+  public long getExpireStartBinValue(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_EXPIRATION_BIN_START_VALUE_KEY);
+    if (value == null) {
+      return (int) getLongProperty(CACHE_EXPIRATION_BIN_START_VALUE_KEY, DEFAULT_CACHE_EXPIRATION_BIN_START_VALUE);
+    } else {
+      return Integer.parseInt(value);
+    }
+  }
+  
+  /**
+   * Get expiration bin multiplier
+   * @param cacheName cache name
+   * @return value
+   */
+  public double getExpireBinMultiplier (String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_EXPIRATION_MULTIPLIER_VALUE_KEY);
+    if (value == null) {
+      return getDoubleProperty(CACHE_EXPIRATION_MULTIPLIER_VALUE_KEY, DEFAULT_CACHE_EXPIRATION_MULTIPLIER_VALUE);
+    } else {
+      return Double.parseDouble(value);
+    }
   }
 }

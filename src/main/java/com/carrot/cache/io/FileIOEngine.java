@@ -124,7 +124,7 @@ public class FileIOEngine extends IOEngine {
           if (ptr == null) {
             ptr = UnsafeAccess.mallocZeroed(this.segmentSize);
           }
-          s = Segment.newSegment(ptr, (int) this.segmentSize, id, rank, System.currentTimeMillis());
+          s = Segment.newSegment(ptr, (int) this.segmentSize, id, rank);
           // Set data appender
           s.setDataWriter(this.dataWriter);
           this.dataSegments[id] = s;

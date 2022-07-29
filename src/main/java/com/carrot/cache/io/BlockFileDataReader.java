@@ -14,8 +14,8 @@
  */
 package com.carrot.cache.io;
 
-import static com.carrot.cache.util.BlockReaderWriterSupport.META_SIZE;
-import static com.carrot.cache.util.BlockReaderWriterSupport.findInBlock;
+import static com.carrot.cache.io.BlockReaderWriterSupport.META_SIZE;
+import static com.carrot.cache.io.BlockReaderWriterSupport.findInBlock;
 import static com.carrot.cache.util.IOUtils.readFully;
 import static com.carrot.cache.util.Utils.getKeyOffset;
 import static com.carrot.cache.util.Utils.getItemSize;

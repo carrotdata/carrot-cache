@@ -12,10 +12,10 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.carrot.cache.util;
+package com.carrot.cache.io;
 
-import com.carrot.cache.io.IOEngine;
-import com.carrot.cache.io.Segment;
+import com.carrot.cache.util.UnsafeAccess;
+import com.carrot.cache.util.Utils;
 
 public class BlockReaderWriterSupport {
   public final static int SIZE_OFFSET = 0;

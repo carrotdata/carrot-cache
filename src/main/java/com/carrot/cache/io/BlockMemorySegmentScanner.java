@@ -17,13 +17,14 @@
  */
 package com.carrot.cache.io;
 
+import static com.carrot.cache.io.BlockReaderWriterSupport.META_SIZE;
+import static com.carrot.cache.io.BlockReaderWriterSupport.getBlockDataSize;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
-import static com.carrot.cache.util.BlockReaderWriterSupport.getBlockDataSize;
-import static com.carrot.cache.util.BlockReaderWriterSupport.META_SIZE;
 
 
 /**

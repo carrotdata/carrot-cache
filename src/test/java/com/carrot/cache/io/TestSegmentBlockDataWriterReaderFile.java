@@ -39,11 +39,11 @@ public class TestSegmentBlockDataWriterReaderFile extends IOTestBase{
     this.numRecords = 10000;
     
     this.r = new Random();
-    long seed = System.currentTimeMillis();//1657826085427L;//
+    long seed = System.currentTimeMillis();
     r.setSeed(seed);
     
     System.out.println("r.seed="+ seed);
-    segment = Segment.newSegment(this.segmentSize, 1, 1, System.currentTimeMillis());
+    segment = Segment.newSegment(this.segmentSize, 1, 1);
     prepareData(this.numRecords);
     BlockDataWriter bdw = new BlockDataWriter();
     bdw.setBlockSize(blockSize);

@@ -14,9 +14,9 @@
  */
 package com.carrot.cache.io;
 
-import static com.carrot.cache.util.BlockReaderWriterSupport.META_SIZE;
-import static com.carrot.cache.util.BlockReaderWriterSupport.SIZE_OFFSET;
-import static com.carrot.cache.util.BlockReaderWriterSupport.getFullDataSize;
+import static com.carrot.cache.io.BlockReaderWriterSupport.META_SIZE;
+import static com.carrot.cache.io.BlockReaderWriterSupport.SIZE_OFFSET;
+import static com.carrot.cache.io.BlockReaderWriterSupport.getFullDataSize;
 
 import com.carrot.cache.util.CacheConfig;
 import com.carrot.cache.util.UnsafeAccess;

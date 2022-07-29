@@ -39,7 +39,7 @@ public class TestSegmentBaseDataWriterReaderFile extends IOTestBase{
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
     /*DEBUG*/ System.out.println("r.seed="+ seed);
-    segment = Segment.newSegment(this.segmentSize, 1, 1, System.currentTimeMillis());
+    segment = Segment.newSegment(this.segmentSize, 1, 1);
     prepareData(this.numRecords);
     segment.setDataWriter(new BaseDataWriter());
   }

@@ -577,10 +577,8 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
       return;
     }
     
-    if (this.admissionController != null) {
-      // Adjust rank taking into account item's expiration time
-      rank = this.admissionController.adjustRank(rank, expire);
-    }
+    // Adjust rank taking into account item's expiration time
+    rank = adjustRank(rank, expire);
     
     // Add to the cache
     engine.put(keyPtr, keySize, valPtr, valSize, expire, rank);
@@ -602,6 +600,13 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     return true;
   }
   
+  private int adjustRank(int rank, long expire) {
+    if (this.admissionController != null) {
+      // Adjust rank taking into account item's expiration time
+      rank = this.admissionController.adjustRank(rank, expire);
+    }
+    return rank;
+  }
   /**
    * Put item into the cache
    *
@@ -632,10 +637,8 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     this.totalWrites.incrementAndGet();
     // Check rank
     checkRank(rank);
-    if (this.admissionController != null) {
       // Adjust rank
-      rank = this.admissionController.adjustRank(rank, expire);
-    }
+    rank = adjustRank(rank, expire);
     
     if (!shouldAdmitToMainQueue(key, keyOffset, keySize, force)) {
       return;
@@ -649,7 +652,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
   
   
   private void put (byte[] buf, int off, long expire) throws IOException {
-    int rank = getDefaultRankToInsert();//conf.getSLRUInsertionPoint(this.cacheName);
+    int rank = getDefaultRankToInsert();
     int keySize = Utils.readUVInt(buf, off);
     int kSizeSize = Utils.sizeUVInt(keySize);
     int valueSize = Utils.readUVInt(buf, off + kSizeSize);
@@ -659,7 +662,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
   }
   
   private void put(long bufPtr, long expire) throws IOException {
-    int rank = getDefaultRankToInsert();//conf.getSLRUInsertionPoint(this.cacheName);
+    int rank = getDefaultRankToInsert();
     int keySize = Utils.readUVInt(bufPtr);
     int kSizeSize = Utils.sizeUVInt(keySize);
     int valueSize = Utils.readUVInt(bufPtr + kSizeSize);
@@ -692,7 +695,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
    * @param expire - expiration (0 - no expire)
    */
   public void put(byte[] key, byte[] value, long expire) throws IOException {
-    int rank = getDefaultRankToInsert();//conf.getSLRUInsertionPoint(this.cacheName);
+    int rank = getDefaultRankToInsert();
     put(key, 0, key.length, value, 0, value.length, expire, rank, false);
   }
 
@@ -748,7 +751,8 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
    *     adjusted buffer
    * @throws IOException 
    */
-  public long get(byte[] key, int keyOffset, int keySize, boolean hit, byte[] buffer, int bufOffset) throws IOException {
+  public long get(byte[] key, int keyOffset, int keySize, boolean hit, byte[] buffer, int bufOffset) 
+      throws IOException {
     long result = engine.get(key, keyOffset, keySize, buffer, bufOffset);
     if (result <= buffer.length - bufOffset) {
       access();
@@ -786,7 +790,8 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
    *     adjusted buffer
    * @throws IOException 
    */
-  public long get(byte[] key, int keyOff, int keySize, boolean hit, ByteBuffer buffer) throws IOException {
+  public long get(byte[] key, int keyOff, int keySize, boolean hit, ByteBuffer buffer) 
+      throws IOException {
     int rem = buffer.remaining();
     long result = this.engine.get(key, keyOff, keySize,  buffer);
     if (result <= rem) {
@@ -823,7 +828,8 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
    *     adjusted buffer
    * @throws IOException 
    */
-  public long get(long keyPtr, int keySize, boolean hit, ByteBuffer buffer) throws IOException {
+  public long get(long keyPtr, int keySize, boolean hit, ByteBuffer buffer) 
+      throws IOException {
     int rem = buffer.remaining();
     long result = this.engine.get(keyPtr, keySize,  buffer);
     if (result <= rem) {
@@ -1004,6 +1010,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     int size = indexFormat.fullEntrySize($ptr);
     try {
       // Check embedded mode
+      //FIXME: this calls are expensive 
       if (this.conf.isIndexDataEmbeddedSupported()) {
         if (size <= this.conf.getIndexDataEmbeddedSize()) {
           transferEmbeddedToCache(this.victimCache, ptr, $ptr);

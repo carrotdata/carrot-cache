@@ -17,7 +17,7 @@
  */
 package com.carrot.cache.io;
 
-import static com.carrot.cache.util.BlockReaderWriterSupport.META_SIZE;
+import static com.carrot.cache.io.BlockReaderWriterSupport.META_SIZE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -37,7 +37,7 @@ public class TestPrefetchBuffer extends IOTestBase {
   @Before
   public void setUp() {
     this.segmentSize = 4 * 1024 * 1024;
-    this.segment = Segment.newSegment(segmentSize, 1, 1, System.currentTimeMillis());
+    this.segment = Segment.newSegment(segmentSize, 1, 1);
     this.numRecords = 10000;
     this.r = new Random();
     long seed = System.currentTimeMillis();

@@ -14,6 +14,7 @@
  */
 package com.carrot.cache.io;
 
+import static com.carrot.cache.io.BlockReaderWriterSupport.META_SIZE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -32,7 +33,6 @@ import com.carrot.cache.index.MemoryIndex;
 import com.carrot.cache.util.TestUtils;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
-import static com.carrot.cache.util.BlockReaderWriterSupport.META_SIZE;
 
 public abstract class IOTestBase {
   

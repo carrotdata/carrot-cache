@@ -51,7 +51,7 @@ public class BaseAdmissionController implements AdmissionController, Scavenger.L
   @Override
   public void setCache(Cache cache) throws IOException {
     this.cache = cache;
-    int ranks = cache.getCacheConfig().getNumberOfAdmissionRanks(cache.getName());
+    int ranks = cache.getCacheConfig().getNumberOfPopularityRanks(cache.getName());
     this.ttlCounts= new long[ranks];
     this.cumTtl = new long[ranks];
     this.avgTTL = new AtomicLongArray(ranks);
@@ -117,7 +117,7 @@ public class BaseAdmissionController implements AdmissionController, Scavenger.L
   public int adjustRank(int rank, long expire /* relative - not absolute in ms*/) {
     int ranks = this.ttlCounts.length;
     int minRank = rank;
-    long minPositive = this.avgTTL.get(rank -1) - expire;
+    long minPositive = this.avgTTL.get(rank) - expire;
     if (minPositive <= 0) return minRank;
 
     for (int i = rank; i < ranks; i++) {
@@ -126,7 +126,7 @@ public class BaseAdmissionController implements AdmissionController, Scavenger.L
         return minRank;
       } else if (expDiff < minPositive) {
         minPositive = expDiff;
-        minRank = i + 1;
+        minRank = i;
       }
     }
     return minRank;
@@ -142,9 +142,9 @@ public class BaseAdmissionController implements AdmissionController, Scavenger.L
   protected synchronized void registerSegmentTTL(int rank, long ttl) {
     //TODO: confirm rank is 1 - based
     // rank is 1 - based
-    this.ttlCounts[rank - 1] ++;
-    this.cumTtl[rank - 1] += ttl;
-    this.avgTTL.set(rank - 1, this.cumTtl[rank - 1] / this.cumTtl[rank - 1]);
+    this.ttlCounts[rank] ++;
+    this.cumTtl[rank] += ttl;
+    this.avgTTL.set(rank, this.cumTtl[rank] / this.cumTtl[rank]);
   }
 
   @Override
@@ -161,12 +161,12 @@ public class BaseAdmissionController implements AdmissionController, Scavenger.L
 
   @Override
   public boolean decreaseThroughput() {
-    return true;
+    return false;
   }
 
   @Override
   public boolean increaseThroughput() {
-    return true;
+    return false;
   }
   
 }

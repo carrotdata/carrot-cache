@@ -986,7 +986,7 @@ public class MemoryIndex implements Persistent {
     int numEntries = numEntries(ptr);
     int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);  
 
-    // TODO: this works ONLY when index size = item size (no embedded data)
+    //TODO: this works ONLY when index size = item size (no embedded data)
     //TODO: Check count when delete
     //TODO: If deleted > 0, update number of items and size
     long $ptr = ptr + this.indexBlockHeaderSize;
