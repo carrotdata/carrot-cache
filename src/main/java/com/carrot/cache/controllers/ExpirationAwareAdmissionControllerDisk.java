@@ -17,30 +17,30 @@ package com.carrot.cache.controllers;
 import java.io.IOException;
 
 import com.carrot.cache.Cache;
+import com.carrot.cache.io.Segment;
 import com.carrot.cache.util.CacheConfig;
 
 /**
  * This admission controller can be used 
- * for RAM - based caches only.
- * It accepts all items, it does not control
- * write throughput, the only thing it does - it adjusts
- * item ranks according to its TTL. The lower TTL - the lower rank of 
- * an item is going to be.
+ * for Disk - based caches only. It employs admission queue to decide
+ * acceptance and throughput control
+ * the only thing it does differently  - it adjusts
+ * item ranks according to its TTL, based on predefined set of bins, defined in configuration file. 
+ * The lower TTL - the lower rank of an item is going to be.
  *
  */
 
-public class ExpirationAwareAdmissionControllerMemory implements AdmissionController{
+public class ExpirationAwareAdmissionControllerDisk extends AQBasedAdmissionController{
   
-  Cache parent;
   long[] ttlBins;
   
-  public ExpirationAwareAdmissionControllerMemory() {
+  public ExpirationAwareAdmissionControllerDisk() {
   }
   
   @Override
   public void setCache(Cache cache) throws IOException {
-    this.parent = cache;
-    CacheConfig conf = this.parent.getCacheConfig();
+    super.setCache(cache);
+    CacheConfig conf = this.cache.getCacheConfig();
     int numRanks = conf.getNumberOfPopularityRanks(cache.getName());
     this.ttlBins = new long[numRanks];
     
@@ -56,36 +56,6 @@ public class ExpirationAwareAdmissionControllerMemory implements AdmissionContro
   }
 
   @Override
-  public boolean decreaseThroughput() {
-    return false;
-  }
-
-  @Override
-  public boolean increaseThroughput() {
-    return false;
-  }
-
-  @Override
-  public boolean admit(long keyPtr, int keySize) {
-    // Always admit
-    return true;
-  }
-
-  @Override
-  public boolean admit(byte[] key, int off, int size) {
-    // Always admit
-    return true;
-  }
-
-  @Override
-  public void access(byte[] key, int off, int size) {    
-  }
-
-  @Override
-  public void access(long keyPtr, int keySize) {    
-  }
-
-  @Override
   public int adjustRank(int rank, long expire) {
     if (expire <= 0 || this.ttlBins[rank] < expire) {
       return rank;
@@ -95,4 +65,14 @@ public class ExpirationAwareAdmissionControllerMemory implements AdmissionContro
     }
     return rank;
   } 
+  
+  @Override
+  public void startSegment(Segment s) {
+    // Do nothing
+  }
+  
+  @Override
+  public void finishSegment(Segment s) {
+    // Do nothing
+  }
 }
