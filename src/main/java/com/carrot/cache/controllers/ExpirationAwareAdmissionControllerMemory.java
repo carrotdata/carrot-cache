@@ -74,7 +74,7 @@ public class ExpirationAwareAdmissionControllerMemory implements AdmissionContro
   @Override
   public boolean admit(byte[] key, int off, int size) {
     // Always admit
-    return false;
+    return true;
   }
 
   @Override
