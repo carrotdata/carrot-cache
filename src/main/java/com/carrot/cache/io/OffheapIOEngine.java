@@ -34,16 +34,14 @@ import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.carrot.cache.Cache;
-
 public class OffheapIOEngine extends IOEngine {
   
   /** Logger */
   @SuppressWarnings("unused")
   private static final Logger LOG = LogManager.getLogger(OffheapIOEngine.class);
     
-  public OffheapIOEngine(Cache parent) {
-    super(parent);
+  public OffheapIOEngine(String cacheName) {
+    super(cacheName);
   }
 
   @Override

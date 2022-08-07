@@ -103,7 +103,6 @@ public class TestSegmentBlockDataWriterReaderMemory extends IOTestBase{
     Mockito.when(engine.getSegmentById(Mockito.anyInt())).thenReturn(segment);
     Cache cache = Mockito.mock(Cache.class);
     Mockito.when(cache.getName()).thenReturn("default");
-    Mockito.when(engine.getCache()).thenReturn(cache);
     // Must be sealed for scanner
     segment.seal();
     

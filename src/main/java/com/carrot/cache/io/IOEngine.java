@@ -68,9 +68,6 @@ public abstract class IOEngine implements Persistent {
     public void onEvent(IOEngine e, IOEngineEvent evt);
   }
 
-  /* Parent cache */
-  protected final Cache parent;
-
   /* Parent cache name */
   protected final String cacheName;
 
@@ -113,6 +110,9 @@ public abstract class IOEngine implements Persistent {
   /* IOEngine data reader - reads only memory based segments */
   protected DataReader memoryDataReader;
   
+  /* Recycling selector */
+  protected RecyclingSelector recyclingSelector;
+  
   /**
    * Initialize engine for a given cache
    * @param cacheName cache name
@@ -144,9 +144,9 @@ public abstract class IOEngine implements Persistent {
    */
   protected static IOEngine engineFor(String type, Cache cache) {
     if (type.equals("offheap")) {
-      return new OffheapIOEngine(cache);
+      return new OffheapIOEngine(cache.getName());
     } else if (type.equals("file")) {
-      return new FileIOEngine(cache);
+      return new FileIOEngine(cache.getName());
     }
     return null;
   }
@@ -157,23 +157,24 @@ public abstract class IOEngine implements Persistent {
    * @param numSegments number of segments
    * @param segmentSize segment size
    */
-  public IOEngine(Cache parent) {
-    this.parent = parent;
-    this.cacheName = this.parent.getName();
-    this.config = this.parent.getCacheConfig();
+  public IOEngine(String cacheName) {
+    this.cacheName = cacheName;
+    this.config = CacheConfig.getInstance();
     this.segmentSize = this.config.getCacheSegmentSize(this.cacheName);
     this.maxStorageSize = this.config.getCacheMaximumSize(this.cacheName);
     this.numSegments = (int) (this.maxStorageSize / this.segmentSize + 1);
     int num = this.config.getNumberOfPopularityRanks(this.cacheName);
     ramBuffers = new Segment[num];
     this.dataSegments = new Segment[this.numSegments];
-    this.index = new MemoryIndex(this.parent, MemoryIndex.Type.MQ);
+    this.index = new MemoryIndex(this, MemoryIndex.Type.MQ);
     this.dataDir = this.config.getDataDir(this.cacheName);
     try {
       this.dataWriter = this.config.getDataWriter(this.cacheName);
       this.dataWriter.init(this.cacheName);
       this.memoryDataReader = this.config.getMemoryDataReader(this.cacheName);
       this.memoryDataReader.init(this.cacheName);
+      this.recyclingSelector = this.config.getRecyclingSelector(cacheName);
+
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
       LOG.fatal(e);
       throw new RuntimeException(e);
@@ -192,8 +193,16 @@ public abstract class IOEngine implements Persistent {
    * Get parent cache
    * @return cache instance
    */
-  public Cache getCache() {
-    return this.parent;
+//  public Cache getCache() {
+//    return this.parent;
+//  }
+  
+  /**
+   * Get cache name
+   * @return cache name
+   */
+  public String getCacheName() {
+    return this.cacheName;
   }
   /**
    * Enables - disables eviction
@@ -995,8 +1004,7 @@ public abstract class IOEngine implements Persistent {
    * @return segment 
    */
   public synchronized Segment getSegmentForRecycling() {
-    RecyclingSelector sel = this.parent.getRecyclingSelector(); 
-    return sel.selectForRecycling(dataSegments);
+    return this.recyclingSelector.selectForRecycling(dataSegments);
   }
 
   /**
@@ -1187,7 +1195,8 @@ public abstract class IOEngine implements Persistent {
     }
     // Save index
     this.index.save(dos);
-    
+    this.recyclingSelector.save(dos);
+
     dos.close();  
   }
   
@@ -1230,12 +1239,13 @@ public abstract class IOEngine implements Persistent {
     }
     
     this.index.load(dis);
-    
+    this.recyclingSelector.load(dis);
+
     // We loaded all info and created empty segments
     // Now subclasses must implement additional data loading
     dis.close();    
   }
-  
+    
   /**
    * Get data segment file name
    * @param id data segment id

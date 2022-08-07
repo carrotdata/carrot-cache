@@ -80,7 +80,7 @@ public class AdmissionQueue implements Persistent {
     this.currentMaxSize = conf.getAdmissionQueueStartSize(this.cacheName);
     this.globalMaxSize = conf.getAdmissionQueueMaxSize(this.cacheName);
     this.globalMinSize = conf.getAdmissionQueueMinSize(this.cacheName);
-    this.index = new MemoryIndex(this.cache, MemoryIndex.Type.AQ);
+    this.index = new MemoryIndex(this.cacheName, MemoryIndex.Type.AQ);
     this.index.setMaximumSize(this.currentMaxSize);
   }
   

@@ -27,10 +27,10 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.carrot.cache.Cache;
 import com.carrot.cache.eviction.EvictionListener;
 import com.carrot.cache.eviction.EvictionPolicy;
 import com.carrot.cache.eviction.FIFOEvictionPolicy;
+import com.carrot.cache.io.IOEngine;
 import com.carrot.cache.util.CacheConfig;
 import com.carrot.cache.util.Persistent;
 import com.carrot.cache.util.UnsafeAccess;
@@ -210,8 +210,8 @@ public class MemoryIndex implements Persistent {
   /* Maximum number of entries - for AQ*/
   private volatile long maxEntries = 0; // 0 - means no max
   
-  /* Parent cache  */
-  private Cache cache;
+  /* I/O engine  */
+  private IOEngine engine;
   
   /* Parent cache name */
   private String cacheName;
@@ -237,10 +237,10 @@ public class MemoryIndex implements Persistent {
    *
    * @param type index type
    */
-  public MemoryIndex(Cache cache, Type type) {
-    this.cache = cache;
+  public MemoryIndex(IOEngine engine, Type type) {
+    this.engine = engine;
     this.cacheConfig = CacheConfig.getInstance();
-    this.cacheName = this.cache.getName();
+    this.cacheName = this.engine.getCacheName();
     init();
     setType(type);
   }
@@ -935,8 +935,8 @@ public class MemoryIndex implements Persistent {
     incrDataSize(ptr, -toDelete);
     incrNumEntries(ptr, -1);
     // Update stats
-    if (this.cache != null) {
-      cache.getEngine().updateStats(sid1, -1, -(numRanks - rank));
+    if (this.engine != null) {
+      this.engine.updateStats(sid1, -1, -(numRanks - rank));
       //TODO: update segments ranks after the deleted item?
     }
   }
@@ -1020,17 +1020,17 @@ public class MemoryIndex implements Persistent {
           // Update hits
           if (hit) {
             this.indexFormat.hit($ptr);
-            if (this.cache != null) {
+            if (this.engine != null) {
               int sid0 = this.indexFormat.getSegmentId($ptr);
               // TODO: this works only if we promote item by +1 rank
               // Update statistics
               // Increase total rank for segment with the item being promoted
-              this.cache.getEngine().updateStats(sid0, 0, 1);
+              this.engine.updateStats(sid0, 0, 1);
               // Decrease total rank for the segment with an item being demoted
               int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
               int idx = this.evictionPolicy.getStartIndexForRank(numRanks, rank, numEntries);
               int sid1 = getSegmentIdForEntry(ptr, idx);
-              cache.getEngine().updateStats(sid1, 0, -1);
+              this.engine.updateStats(sid1, 0, -1);
             }
           }
           // Save item size and item location to a buffer
@@ -1987,12 +1987,12 @@ public class MemoryIndex implements Persistent {
 
 
   private void updateStats(long ptr, int sid1, int rank, int numEntries) {
-    if (this.cache == null) {
+    if (this.engine == null) {
       return;
     }
     int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
     // Update stats
-    this.cache.getEngine().updateStats(sid1, 1, (numRanks - rank));
+    this.engine.updateStats(sid1, 1, (numRanks - rank));
     if (numEntries >= numRanks) {
       int prev = -1;
       for (int r = rank + 1; r < numRanks; r++) {
@@ -2001,7 +2001,7 @@ public class MemoryIndex implements Persistent {
         prev = idx;
         int sid = getSegmentIdForEntry(ptr, idx);
         // decrement by total data segment rank by 1 
-        this.cache.getEngine().updateStats(sid, 0, -1);
+        this.engine.updateStats(sid, 0, -1);
       }
     }
   }
@@ -2231,7 +2231,7 @@ public class MemoryIndex implements Persistent {
     int ord = dis.readInt();
     Type type = Type.values()[ord];
     String formatImpl = dis.readUTF();
-    if (type == Type.AQ || this.cache != null) {
+    if (type == Type.AQ || this.engine != null) {
       setType(type);
     } else {
       try {

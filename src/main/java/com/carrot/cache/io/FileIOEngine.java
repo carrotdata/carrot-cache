@@ -34,7 +34,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.carrot.cache.Cache;
 import com.carrot.cache.util.UnsafeAccess;
 
 public class FileIOEngine extends IOEngine {
@@ -57,8 +56,8 @@ public class FileIOEngine extends IOEngine {
    * @param numSegments
    * @param segmentSize
    */
-  public FileIOEngine(Cache parent) {
-    super(parent);
+  public FileIOEngine(String cacheName) {
+    super(cacheName);
     try {
       this.fileDataReader = this.config.getFileDataReader(this.cacheName);
       this.fileDataReader.init(this.cacheName);
@@ -239,8 +238,7 @@ public class FileIOEngine extends IOEngine {
    * @return prefetch buffer size
    */
   public int getFilePrefetchBufferSize() {
-    String cacheName = this.parent.getName();
-    return this.config.getFilePrefetchBufferSize(cacheName);
+    return this.config.getFilePrefetchBufferSize(this.cacheName);
   }
   /**
    * Get file path for a data segment

@@ -197,7 +197,7 @@ public class BlockMemoryDataReader implements DataReader {
   @Override
   public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
     CacheConfig config = CacheConfig.getInstance();
-    String cacheName = engine.getCache().getName();
+    String cacheName = engine.getCacheName();
     int blockSize = config.getBlockWriterBlockSize(cacheName);
     return new BlockMemorySegmentScanner(s, blockSize);
   }

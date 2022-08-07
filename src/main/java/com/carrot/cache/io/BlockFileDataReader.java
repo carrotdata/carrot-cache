@@ -356,7 +356,7 @@ public class BlockFileDataReader implements DataReader {
 
   @Override
   public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
-    String cacheName = engine.getCache().getName();
+    String cacheName = engine.getCacheName();
     int blockSize = CacheConfig.getInstance().getBlockWriterBlockSize(cacheName);
     return new BlockFileSegmentScanner(s, (FileIOEngine) engine, blockSize);
   }

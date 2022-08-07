@@ -106,7 +106,6 @@ public class TestSegmentBlockDataWriterReaderFile extends IOTestBase{
     Mockito.when(engine.getSegmentById(Mockito.anyInt())).thenReturn(segment);
     Cache cache = Mockito.mock(Cache.class);
     Mockito.when(cache.getName()).thenReturn("default");
-    Mockito.when(engine.getCache()).thenReturn(cache);
     Mockito.when(engine.getOrCreateFileFor(Mockito.anyInt())).thenReturn(file);
     Mockito.when(engine.getFileFor(Mockito.anyInt())).thenReturn(file);
     Mockito.when(engine.getFilePrefetchBufferSize()).thenReturn(1024 * 1024);
