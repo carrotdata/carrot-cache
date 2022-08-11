@@ -225,8 +225,6 @@ public class MemoryIndex implements Persistent {
   /* Number of rehashed slots so far */
   private AtomicLong rehashedSlots = new AtomicLong();
   
-  
-  
   public MemoryIndex() {
     this.cacheConfig = CacheConfig.getInstance();
     initLocks();
@@ -1020,7 +1018,7 @@ public class MemoryIndex implements Persistent {
           // Update hits
           if (hit) {
             this.indexFormat.hit($ptr);
-            if (this.engine != null) {
+            if (this.engine != null && numEntries >= numRanks) {
               int sid0 = this.indexFormat.getSegmentId($ptr);
               // TODO: this works only if we promote item by +1 rank
               // Update statistics
@@ -1029,6 +1027,7 @@ public class MemoryIndex implements Persistent {
               // Decrease total rank for the segment with an item being demoted
               int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
               int idx = this.evictionPolicy.getStartIndexForRank(numRanks, rank, numEntries);
+              // idx was demoted from rank -1 to rank
               int sid1 = getSegmentIdForEntry(ptr, idx);
               this.engine.updateStats(sid1, 0, -1);
             }
@@ -1575,7 +1574,7 @@ public class MemoryIndex implements Persistent {
   public MutationResult insert(byte[] key, int keyOffset, int keyLength, 
       byte[] value, int valueOffset, int valueLength, 
       short sid, int offset,  long expire) {
-    int rank = this.cacheConfig.getSLRUInsertionPoint(this.cacheName);
+    int rank = this.evictionPolicy.getDefaultRankForInsert();
     return insertWithRank(key, keyOffset, keyLength, value, valueOffset, 
       valueLength, sid, offset, rank, expire);
   }
@@ -1665,7 +1664,7 @@ public class MemoryIndex implements Persistent {
    */
   public MutationResult insert(long keyPtr, int keyLength, long valuePtr, int valueLength, 
       short sid, int offset, long expire) {
-    int rank = this.cacheConfig.getSLRUInsertionPoint(this.cacheName);
+    int rank = this.evictionPolicy.getDefaultRankForInsert();
     return insertWithRank(keyPtr, keyLength, valuePtr, valueLength, sid, offset, rank, expire);
   }
   
@@ -1716,7 +1715,7 @@ public class MemoryIndex implements Persistent {
 
    */
   private MutationResult insertInternal(long hash, long indexPtr, int indexSize) {
-    int rank = this.cacheConfig.getSLRUInsertionPoint(this.cacheName);
+    int rank = this.evictionPolicy.getDefaultRankForInsert();
     return insertInternal(hash, indexPtr, indexSize, rank);
   }
 
@@ -1807,7 +1806,7 @@ public class MemoryIndex implements Persistent {
    * @throws  
    */
   private long insert0(long ptr, long hash, long indexPtr, int indexSize) {
-    int rank = this.cacheConfig.getSLRUInsertionPoint(this.cacheName);
+    int rank = this.evictionPolicy.getDefaultRankForInsert();
     return insert0(ptr, hash, indexPtr, indexSize, rank);
   }
 
