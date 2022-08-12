@@ -19,15 +19,10 @@ package com.carrot.cache.io;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -80,6 +75,9 @@ public abstract class IOEngine implements Persistent {
   /* Cache configuration */
   protected final CacheConfig config;
 
+  /* Default item rank */
+  protected final int defaultRank;
+  
   /* IOEngine listener */
   protected Listener aListener;
 
@@ -154,20 +152,21 @@ public abstract class IOEngine implements Persistent {
   /**
    * Constructor
    *
-   * @param numSegments number of segments
-   * @param segmentSize segment size
+   * @param cacheName cache name
    */
   public IOEngine(String cacheName) {
     this.cacheName = cacheName;
     this.config = CacheConfig.getInstance();
     this.segmentSize = this.config.getCacheSegmentSize(this.cacheName);
     this.maxStorageSize = this.config.getCacheMaximumSize(this.cacheName);
-    this.numSegments = (int) (this.maxStorageSize / this.segmentSize + 1);
+    this.numSegments = (int) (this.maxStorageSize / this.segmentSize);
     int num = this.config.getNumberOfPopularityRanks(this.cacheName);
     ramBuffers = new Segment[num];
     this.dataSegments = new Segment[this.numSegments];
     this.index = new MemoryIndex(this, MemoryIndex.Type.MQ);
     this.dataDir = this.config.getDataDir(this.cacheName);
+    this.defaultRank = this.index.getEvictionPolicy().getDefaultRankForInsert();
+
     try {
       this.dataWriter = this.config.getDataWriter(this.cacheName);
       this.dataWriter.init(this.cacheName);
@@ -182,20 +181,45 @@ public abstract class IOEngine implements Persistent {
     initLocks();
   }
 
+  /**
+   * Constructor for test
+   *
+   * @param numSegments number of segments
+   * @param segmentSize segment size
+   */
+  public IOEngine(CacheConfig conf) {
+    this.cacheName = "default";
+    this.config = conf;
+    this.segmentSize = this.config.getCacheSegmentSize(this.cacheName);
+    this.maxStorageSize = this.config.getCacheMaximumSize(this.cacheName);
+    this.numSegments = (int) (this.maxStorageSize / this.segmentSize);
+    int num = this.config.getNumberOfPopularityRanks(this.cacheName);
+    ramBuffers = new Segment[num];
+    this.dataSegments = new Segment[this.numSegments];
+    this.index = new MemoryIndex(this, MemoryIndex.Type.MQ);
+    this.dataDir = this.config.getDataDir(this.cacheName);
+    this.defaultRank = this.index.getEvictionPolicy().getDefaultRankForInsert();
+    
+    try {
+      this.dataWriter = this.config.getDataWriter(this.cacheName);
+      this.dataWriter.init(this.cacheName);
+      this.memoryDataReader = this.config.getMemoryDataReader(this.cacheName);
+      this.memoryDataReader.init(this.cacheName);
+      this.recyclingSelector = this.config.getRecyclingSelector(cacheName);
+
+    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+      LOG.fatal(e);
+      throw new RuntimeException(e);
+    }
+    initLocks();
+  }
+  
   private void initLocks() {
     this.rbLocks = new ReentrantReadWriteLock[ramBuffers.length];
     for (int i = 0; i < this.rbLocks.length; i++) {
       rbLocks[i] = new ReentrantReadWriteLock();
     }
   }
-
-  /**
-   * Get parent cache
-   * @return cache instance
-   */
-//  public Cache getCache() {
-//    return this.parent;
-//  }
   
   /**
    * Get cache name
@@ -311,23 +335,22 @@ public abstract class IOEngine implements Persistent {
     // TODO: locking
     IndexFormat format = this.index.getIndexFormat();
     // TODO: embedded entry case
-    int bSize = format.indexEntrySize();
-    long buf = UnsafeAccess.mallocZeroed(bSize);
+    int entrySize = format.indexEntrySize();
+    long buf = UnsafeAccess.mallocZeroed(entrySize);
     boolean dataEmbedded = this.config.isIndexDataEmbeddedSupported();
     int slot = 0;
     try {
       // Lock index for the key (slot)
       slot =  this.index.lock(keyPtr, keySize);
-      long result = index.find(keyPtr, keySize, true, buf, bSize);
+      long result = index.find(keyPtr, keySize, true, buf, entrySize);
       if (result < 0) {
         return NOT_FOUND;
-      } else if (result > bSize) {
+      } else if (result > entrySize) {
         UnsafeAccess.free(buf);
-        bSize = (int) result;
-        buf = UnsafeAccess.mallocZeroed(bSize);
-        index.find(keyPtr, keySize, true, buf, bSize);
+        entrySize = (int) result;
+        buf = UnsafeAccess.mallocZeroed(entrySize);
+        index.find(keyPtr, keySize, true, buf, entrySize);
       }
-      // First 4 bytes is a cached item size
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
       // TODO: actually, not correct
@@ -355,10 +378,11 @@ public abstract class IOEngine implements Persistent {
         UnsafeAccess.copy(buf + off, buffer, bufOffset, keyValueSize);
         return keyValueSize;
       } else {
-        // Offset in a segment - 4 bytes
+        // Cached item offset in a data segment
         long offset = format.getOffset(buf);
         // Segment id
         int sid = (int) format.getSegmentId(buf);
+        // Read the data
         int res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer, bufOffset);
         return res;
       }
@@ -386,8 +410,8 @@ public abstract class IOEngine implements Persistent {
     // TODO: locking
     IndexFormat format = this.index.getIndexFormat();
     // TODO: embedded entry case
-    int bSize = format.indexEntrySize();
-    long buf = UnsafeAccess.mallocZeroed(bSize);
+    int entrySize = format.indexEntrySize();
+    long buf = UnsafeAccess.mallocZeroed(entrySize);
     boolean dataEmbedded = this.config.isIndexDataEmbeddedSupported();
     int bufferAvail =  buffer.length - bufOffset; 
     int slot = 0;
@@ -396,17 +420,16 @@ public abstract class IOEngine implements Persistent {
       //TODO: remove locks?
       slot = this.index.lock(key, keyOffset, keySize);
 
-      long result = index.find(key, keyOffset, keySize, true, buf, bSize);
+      long result = index.find(key, keyOffset, keySize, true, buf, entrySize);
       if (result < 0) {
         return NOT_FOUND;
-      } else if (result > bSize) {
+      } else if (result > entrySize) {
         
         UnsafeAccess.free(buf);
-        bSize = (int) result;
-        buf = UnsafeAccess.mallocZeroed(bSize);
-        index.find(key, keyOffset, keySize, true, buf, bSize);
+        entrySize = (int) result;
+        buf = UnsafeAccess.mallocZeroed(entrySize);
+        index.find(key, keyOffset, keySize, true, buf, entrySize);
       }
-      // First 4 bytes is a cached item size
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
       // can be negative
@@ -435,10 +458,11 @@ public abstract class IOEngine implements Persistent {
         UnsafeAccess.copy(buf + off, buffer, bufOffset, keyValueSize);
         return keyValueSize;
       } else {
-        // Offset in a segment - 4 bytes
+        // Cached item offset in a data segment
         long offset = format.getOffset(buf);
-        // Segment id
+        // segment id
         int sid = (int) format.getSegmentId(buf);
+        // Read the data
         int res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer, bufOffset);
         return res;
       }
@@ -459,8 +483,9 @@ public abstract class IOEngine implements Persistent {
    */
   public long get(long keyPtr, int keySize, ByteBuffer buffer) throws IOException {
     IndexFormat format = this.index.getIndexFormat();
-    int bSize = format.indexEntrySize();
-    long buf = UnsafeAccess.mallocZeroed(bSize);
+    int entrySize = format.indexEntrySize();
+    long buf = UnsafeAccess.mallocZeroed(entrySize);
+    //TODO: slow code
     boolean dataEmbedded = this.config.isIndexDataEmbeddedSupported();
     int slot = 0;
     try {
@@ -468,7 +493,7 @@ public abstract class IOEngine implements Persistent {
       // Index locking  that segment will not be recycled
       // 
       slot = this.index.lock(keyPtr, keySize);
-      long result = index.find(keyPtr, keySize, true, buf, bSize);
+      long result = index.find(keyPtr, keySize, true, buf, entrySize);
       // result can be negative - OK
       // positive - OK b/c we hold read lock on key and key can't be deleted from index
       // until we release read lock, hence data segment can't be reused until this operation finishes
@@ -481,13 +506,12 @@ public abstract class IOEngine implements Persistent {
       
       if (result < 0) {
         return NOT_FOUND;
-      } else if (result > bSize) {
+      } else if (result > entrySize) {
         UnsafeAccess.free(buf);
-        bSize = (int) result;
-        buf = UnsafeAccess.mallocZeroed(bSize);
-        index.find(keyPtr, keySize, true, buf, bSize);
+        entrySize = (int) result;
+        buf = UnsafeAccess.mallocZeroed(entrySize);
+        index.find(keyPtr, keySize, true, buf, entrySize);
       }
-      // First 4 bytes is a cached item size
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
       // TODO: actually, not correct
@@ -516,10 +540,11 @@ public abstract class IOEngine implements Persistent {
         UnsafeAccess.copy(buf + off, buffer, keyValueSize);
         return keyValueSize;
       } else {
-        // Offset in a segment - 4 bytes
+        // Cached item offset in a data segment
         long offset = format.getOffset(buf);
         // Segment id
         int sid = (int) format.getSegmentId(buf);
+        // Finally, read the cached item
         int res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer);
         return res;
       }
@@ -542,22 +567,21 @@ public abstract class IOEngine implements Persistent {
   public long get(byte[] key, int keyOffset, int keySize, ByteBuffer buffer) throws IOException {
 
     IndexFormat format = this.index.getIndexFormat();
-    int bSize = format.indexEntrySize();
-    long buf = UnsafeAccess.mallocZeroed(bSize);
+    int entrySize = format.indexEntrySize();
+    long buf = UnsafeAccess.mallocZeroed(entrySize);
     boolean dataEmbedded = this.config.isIndexDataEmbeddedSupported();
     int slot = 0;
     try {
       slot = this.index.lock(key, keyOffset, keySize);
-      long result = index.find(key, keyOffset, keySize, true, buf, bSize);
+      long result = index.find(key, keyOffset, keySize, true, buf, entrySize);
       if (result < 0) {
         return NOT_FOUND;
-      } else if (result > bSize) {
+      } else if (result > entrySize) {
         UnsafeAccess.free(buf);
-        bSize = (int) result;
-        buf = UnsafeAccess.mallocZeroed(bSize);
-        index.find(key, keyOffset, keySize, true, buf, bSize);
+        entrySize = (int) result;
+        buf = UnsafeAccess.mallocZeroed(entrySize);
+        index.find(key, keyOffset, keySize, true, buf, entrySize);
       }
-      // First 4 bytes is a cached item size
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
       // TODO: actually, not correct
@@ -585,10 +609,11 @@ public abstract class IOEngine implements Persistent {
         UnsafeAccess.copy(buf + off, buffer, keyValueSize);
         return keyValueSize;
       } else {
-        // Offset in a segment - 4 bytes
+        // Cached item offset in a data segment
         long offset = format.getOffset(buf);
-        // Segment id
+        // segment id
         int sid = (int) format.getSegmentId(buf);
+        // Read the data
         int res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer);
         return res;
       }
@@ -789,18 +814,8 @@ public abstract class IOEngine implements Persistent {
     return NOT_FOUND;
   }
 
-  
-//  private Segment getRAMSegment(int id) {
-//    for (Segment s : ramBuffers) {
-//      if (s != null && s.getId() == id) {
-//        return s;
-//      }
-//    }
-//    return null;
-//  }
-
   /**
-   * Get cached item from underlying IOEngine
+   * Get cached item from underlying IOEngine implementation
    *
    * @param id segment id
    * @param offset offset in a segment
@@ -818,7 +833,7 @@ public abstract class IOEngine implements Persistent {
       byte[] buffer, int bufOffset) throws IOException;
   
   /**
-   * Get cached item from underlying IOEngine
+   * Get cached item from underlying IOEngine implementation
    *
    * @param id segment id
    * @param offset offset in a segment
@@ -872,7 +887,7 @@ public abstract class IOEngine implements Persistent {
     return getInternal(id, offset, size, keyPtr, keySize, buffer);
   }
   /**
-   * Get cached item from underlying IOEngine
+   * Get cached item from underlying IOEngine implementation
    *
    * @param id segment id
    * @param offset offset in a segment
@@ -889,7 +904,7 @@ public abstract class IOEngine implements Persistent {
       throws IOException;
   
   /**
-   * Get cached item from underlying IOEngine
+   * Get cached item from underlying IOEngine implementation
    *
    * @param id segment id
    * @param offset offset in a segment
@@ -917,7 +932,7 @@ public abstract class IOEngine implements Persistent {
         return;
       }
       data.seal();
-      // Move data to a main storage
+      // TODO: remove this. Move data to a main storage 
       this.dataSegments[data.getId()] = data;
       // }
       // Call IOEngine - specific (FileIOEngine overrides it)
@@ -939,19 +954,9 @@ public abstract class IOEngine implements Persistent {
    * @throws IOException 
    */
   protected void saveInternal(Segment data) throws IOException {
-    //removeFromRAMBuffers(data);
+    
   }
-
-//  protected boolean removeFromRAMBuffers(Segment data) {
-//    for (int i = 0; i < ramBuffers.length; i++) {
-//      if (data == ramBuffers[i]) {
-//        ramBuffers[i] = null;
-//        return true;
-//      }
-//    }
-//    return false;
-//  }
-
+  
   /**
    * Get maximum storage size (depends on IOEngine)
    *
@@ -976,6 +981,7 @@ public abstract class IOEngine implements Persistent {
    * @param id data segment id
    */
   public synchronized void releaseSegmentId(Segment seg) {
+    //TODO: how it is reused in offheap mode?
     if (seg.isOffheap()) {
       seg.vacate();
     } else {
@@ -1028,17 +1034,84 @@ public abstract class IOEngine implements Persistent {
   }
 
   /**
+   * Delete key from a cache
+   * @param key key buffer
+   * @param off key offset
+   * @param size key size
+   * @return true on success, false otherwise
+   * @throws IOException
+   */
+  public boolean delete (byte[] key, int off, int size) throws IOException {
+    // Delete from index
+    return this.index.delete(key, off, size);
+  }
+  
+  /**
+   * Delete key from a cache
+   * @param key key buffer
+   * @param off key offset
+   * @param size key size
+   * @return true on success, false otherwise
+   * @throws IOException
+   */
+  public boolean delete (long keyPtr, int size) throws IOException {
+    // Delete from index 
+    return this.index.delete(keyPtr, size);
+  }
+  
+  /**
    * Put key-value into a cache with a rank
    *
    * @param key key buffer
    * @param value value buffer
+   * @param expire expiration time
    * @param rank cache item rank
    * @throws IOException
+   * @return true on success, false - otherwise
    */
-  public void put(byte[] key, byte[] value, long expire, int rank) throws IOException {
-    put(key, 0, key.length, value, 0, value.length, expire, rank);
+  public boolean put(byte[] key, byte[] value, long expire) throws IOException {
+    return put(key, 0, key.length, value, 0, value.length, expire, this.defaultRank);
   }
 
+  /**
+   * Put key-value into a cache with a rank
+   *
+   * @param key key buffer
+   * @param value value buffer
+   * @param expire expiration time
+   * @param rank cache item rank
+   * @return true on success, false - otherwise
+   * @throws IOException
+   */
+  public boolean put(byte[] key, byte[] value, long expire, int rank) throws IOException {
+    return put(key, 0, key.length, value, 0, value.length, expire, rank);
+  }
+
+  
+  /**
+   * Put key-value into a cache
+   *
+   * @param key key buffer
+   * @param keyOff key offset
+   * @param keyLength key length
+   * @param value value buffer
+   * @param valueOff value offset
+   * @param valueLength value length
+   * @param expire absolute expiration time in ms, 0 - no expire
+   * @return true on success , false otherwise
+   * @throws IOException
+   */
+  public boolean put(
+      byte[] key,
+      int keyOff,
+      int keyLength,
+      byte[] value,
+      int valueOff,
+      int valueLength,
+      long expire)
+      throws IOException {
+    return put(key, keyOff, keyLength, value, valueOff, valueLength, expire, this.defaultRank);
+  }
   /**
    * Put key-value into a cache
    *
@@ -1050,9 +1123,10 @@ public abstract class IOEngine implements Persistent {
    * @param valueLength value length
    * @param expire absolute expiration time in ms, 0 - no expire
    * @param rank rank of a cache item
+   * @return true on success, false - otherwise
    * @throws IOException
    */
-  public void put(
+  public boolean put(
       byte[] key,
       int keyOff,
       int keyLength,
@@ -1070,7 +1144,7 @@ public abstract class IOEngine implements Persistent {
       if (s == null) {
         // We silently ignore PUT operation due to lack of resources
         //TODO: update stats
-        return;
+        return false;
       }
       // Offset must less 32bit
       long offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength, expire);
@@ -1081,20 +1155,38 @@ public abstract class IOEngine implements Persistent {
         if (s == null) {
           // We silently ignore PUT operation due to lack of resources
           //TODO: update stats
-          return;
+          return false;
         }
         offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength, expire);
       }
       
       this.index.insertWithRank(key, keyOff, keyLength, value, valueOff, valueLength, 
         (short) s.getId(), (int) offset, rank, expire);
-
+      
+      return true;
     } finally {
       this.rbLocks[rank].writeLock().unlock();
     }
   }
 
-
+  /**
+   * Put key-value into a cache with a rank
+   *
+   * @param key key buffer
+   * @param keyOff key offset
+   * @param keyLength key length
+   * @param value value buffer
+   * @param valueOff value offset
+   * @param valueLength value length
+   * @param expire absolute expiration time in ms, 0 - no expire
+   * @return true on success, false - otherwise
+   * @throws IOException
+   */
+  public boolean put(long keyPtr, int keyLength, long valuePtr, int valueLength, long expire)
+      throws IOException {
+    
+    return put(keyPtr, keyLength, valuePtr, valueLength, expire, this.defaultRank);
+  }
   /**
    * Put key-value into a cache with a rank
    *
@@ -1108,7 +1200,7 @@ public abstract class IOEngine implements Persistent {
    * @param expire absolute expiration time in ms, 0 - no expire
    * @throws IOException
    */
-  public void put(long keyPtr, int keyLength, long valuePtr, int valueLength, long expire, int rank)
+  public boolean put(long keyPtr, int keyLength, long valuePtr, int valueLength, long expire, int rank)
       throws IOException {
     checkRank(rank);
     try {
@@ -1117,7 +1209,7 @@ public abstract class IOEngine implements Persistent {
       if (s == null) {
         // We silently ignore PUT operation due to lack of resources
         //TODO: update stats
-        return;
+        return false;
       }
       long offset = s.append(keyPtr, keyLength, valuePtr, valueLength, expire);
       if (offset < 0) {
@@ -1127,12 +1219,12 @@ public abstract class IOEngine implements Persistent {
         if (s == null) {
           // We silently ignore PUT operation due to lack of resources
           //TODO: update stats
-          return;
+          return false;
         }
         offset = s.append(keyPtr, keyLength, valuePtr, valueLength, expire);
       }
-      this.index.insertWithRank(keyPtr, keyLength, valuePtr, valueLength, (short) s.getId(), (int)offset, rank, expire);
-      
+      this.index.insertWithRank(keyPtr, keyLength, valuePtr, valueLength, (short) s.getId(), (int) offset, rank, expire);
+      return true;
     } finally {
       this.rbLocks[rank].writeLock().unlock();
     }
@@ -1174,29 +1266,20 @@ public abstract class IOEngine implements Persistent {
 
   @Override
   public void save (OutputStream os) throws IOException {
-    // os == null - because this is multi-file
-    String snapshotDir = this.config.getSnapshotDir(cacheName);
-    Path filePath = Paths.get(snapshotDir, CacheConfig.CACHE_ENGINE_SNAPSHOT_NAME);
-    Files.deleteIfExists(filePath);
-    FileOutputStream fos = new FileOutputStream(filePath.toFile());
-    DataOutputStream dos = new DataOutputStream(fos);
-    
+    DataOutputStream dos = Utils.toDataOutputStream(os);
     int num = getNumberOfActiveSegments();
     dos.writeInt(num);
-    
     // Save all segment meta info
     for(Segment s : this.dataSegments) {
       if (s == null) {
         continue;
       }
       num++;
-      Segment.Info info = s.getInfo();
-      info.save(fos);
+      s.save(dos);
     }
     // Save index
     this.index.save(dos);
     this.recyclingSelector.save(dos);
-
     dos.close();  
   }
   
@@ -1212,37 +1295,16 @@ public abstract class IOEngine implements Persistent {
   
   @Override
   public void load(InputStream is) throws IOException {
-    // is == null
-    String snapshotDir = this.config.getSnapshotDir(cacheName);
-    Path filePath = Paths.get(snapshotDir, CacheConfig.CACHE_ENGINE_SNAPSHOT_NAME);
-    if(!Files.exists(filePath)) {
-      LOG.warn("Can not load engine, path {} does not exist.", filePath);
-      return;
-    }
-    FileInputStream fis = new FileInputStream(filePath.toFile());
-    DataInputStream dis = new DataInputStream(fis);
+    DataInputStream dis = Utils.toDataInputStream(is);
     int num = dis.readInt();
-    
-    DataWriter dataWriter = null;
-    try {    
-      dataWriter = this.config.getDataWriter(cacheName);
-    } catch (Exception e) {
-      throw new IOException(e);
-    }
     for (int i = 0; i < num; i++) {
-      Segment.Info info = new Segment.Info();
-      info.load(dis);
-      int id = info.getId();
-      this.dataSegments[id] = new Segment();
-      this.dataSegments[id].setDataWriter(dataWriter);
-      this.dataSegments[id].setInfo(info);
+      Segment s = new Segment();
+      s.load(dis);
+      s.setDataWriter(this.dataWriter);
+      this.dataSegments[s.getId()] = s;
     }
-    
     this.index.load(dis);
     this.recyclingSelector.load(dis);
-
-    // We loaded all info and created empty segments
-    // Now subclasses must implement additional data loading
     dis.close();    
   }
     
@@ -1253,5 +1315,17 @@ public abstract class IOEngine implements Persistent {
    */
   protected String getSegmentFileName(int id) {
     return FILE_NAME + Utils.format(Integer.toString(id), 6);
+  }
+  
+  /**
+   * Dispose I/O engine - used for testing
+   */
+  public void dispose() {
+    // 1. dispose memory segments
+    for (Segment s : this.dataSegments) {
+      s.dispose();
+    }
+    // 2. dispose memory index
+    this.index.dispose();
   }
 }
