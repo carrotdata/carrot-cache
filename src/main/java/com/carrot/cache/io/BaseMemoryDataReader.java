@@ -120,7 +120,7 @@ public class BaseMemoryDataReader implements DataReader {
     // Now compare keys
     if (Utils.compareTo(buffer, keySize, key, keyOffset, keySize) == 0) {
       // If key is the same
-      buffer.position(pos + size);
+      buffer.position(pos);
       return size;
     } else {
       return IOEngine.NOT_FOUND;
@@ -200,12 +200,14 @@ public class BaseMemoryDataReader implements DataReader {
     UnsafeAccess.copy(ptr + offset, buffer,  size);
     // Now buffer contains both: key and value, we need to compare keys
     // Format of a key-value pair in a buffer: key-size, value-size, key, value
+    // rewind position back
+    buffer.position(pos);
     int $off = getKeyOffset(buffer);
     buffer.position(pos + $off);
     // Now compare keys
     if (Utils.compareTo(buffer, keySize, keyPtr, keySize) == 0) {
       // If key is the same
-      buffer.position(pos + size);
+      buffer.position(pos);
       return size;
     } else {
       return IOEngine.NOT_FOUND;

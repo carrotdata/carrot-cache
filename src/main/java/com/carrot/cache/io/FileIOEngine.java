@@ -34,6 +34,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.carrot.cache.util.CacheConfig;
 import com.carrot.cache.util.UnsafeAccess;
 
 public class FileIOEngine extends IOEngine {
@@ -53,8 +54,7 @@ public class FileIOEngine extends IOEngine {
   
   /**
    * Constructor
-   * @param numSegments
-   * @param segmentSize
+   * @param cacheName cache name
    */
   public FileIOEngine(String cacheName) {
     super(cacheName);
@@ -67,6 +67,21 @@ public class FileIOEngine extends IOEngine {
     }
   }
  
+  /**
+   * Constructor
+   * @param conf test configuration
+   */
+  public FileIOEngine(CacheConfig conf) {
+    super(conf);
+    try {
+      this.fileDataReader = this.config.getFileDataReader(this.cacheName);
+      this.fileDataReader.init(this.cacheName);
+    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+      LOG.fatal(e);
+      throw new RuntimeException(e);
+    }
+  }
+  
   /**
    * IOEngine subclass can override this method
    *

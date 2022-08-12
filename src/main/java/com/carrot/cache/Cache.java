@@ -654,10 +654,6 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     }
   }
   
-  private int getDefaultRankToInsert() {
-    return this.engine.getMemoryIndex().getEvictionPolicy().getDefaultRankForInsert();
-  }
-  
   /**
    * Put item into the cache
    *
@@ -1014,7 +1010,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     // Cache is off-heap 
     IndexFormat format = this.engine.getMemoryIndex().getIndexFormat(); 
     long expire = format.getExpire(ibPtr, indexPtr);
-    int rank = conf.getSLRUInsertionPoint(this.victimCache.getName());
+    int rank = this.victimCache.getDefaultRankToInsert();
     int sid = (int) format.getSegmentId(indexPtr);
     long offset = format.getOffset(indexPtr); 
     
@@ -1039,7 +1035,10 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
       s.readUnlock();
     }
   }
-
+  
+  private int getDefaultRankToInsert() {
+    return this.engine.getMemoryIndex().getEvictionPolicy().getDefaultRankForInsert();
+  }
   /**
    * Transfer cached item to a victim cache
    *
@@ -1059,7 +1058,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     // Cache is off-heap
     IndexFormat format = this.engine.getMemoryIndex().getIndexFormat();
     long expire = format.getExpire(ibPtr, indexPtr);
-    int rank = conf.getSLRUInsertionPoint(this.victimCache.getName());
+    int rank = this.victimCache.getDefaultRankToInsert();
 
     int off = format.getEmbeddedOffset();
     indexPtr += off;

@@ -816,11 +816,17 @@ public class Segment implements Persistent {
 
   @Override
   public void save(OutputStream os) throws IOException {
-    //TODO: where we save Info?
+
     DataOutputStream dos = Utils.toDataOutputStream(os);
     try {
-      
       readLock();
+      // Segment MUST be sealed
+      seal();
+      // Save info
+      this.info.save(dos);
+      if (!isOffheap()) {
+        return;
+      }
       // Write segment size
       long size = size();
       dos.writeLong(size);
@@ -834,28 +840,32 @@ public class Segment implements Persistent {
         written += toCopy;
         dos.write(buffer, 0, toCopy);
       }
-      dos.flush();
     } finally {
+      dos.flush();
       readUnlock();
     }
   }
 
   @Override
   public void load(InputStream is) throws IOException {
-    //FIXME: do not allocate memory
     DataInputStream dis = Utils.toDataInputStream(is);
-    long size = dis.readLong();
-    long ptr = UnsafeAccess.mallocZeroed(size);
-    int bufSize = (int) Math.min(1024 * 1024, size);
-    byte[] buffer = new byte[bufSize];
-    int read = 0;
+    this.info = new Info();
+    this.info.load(dis);
     
-    while(read < size) {
-      int toRead = (int) Math.min(size - read, bufSize);
-      dis.readFully(buffer, 0, toRead);
-      UnsafeAccess.copy(buffer, 0, ptr + read, toRead);
-      read += toRead;
+    if (isOffheap()) {
+      long size = dis.readLong();
+      long ptr = UnsafeAccess.mallocZeroed(size);
+      int bufSize = (int) Math.min(1024 * 1024, size);
+      byte[] buffer = new byte[bufSize];
+      int read = 0;
+    
+      while(read < size) {
+        int toRead = (int) Math.min(size - read, bufSize);
+        dis.readFully(buffer, 0, toRead);
+        UnsafeAccess.copy(buffer, 0, ptr + read, toRead);
+        read += toRead;
+      }
+      this.setAddress(ptr);
     }
-    this.setAddress(ptr);
   }
 }

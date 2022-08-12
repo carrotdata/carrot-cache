@@ -402,13 +402,19 @@ public class CacheConfig {
   }
 
   // Instance
-  Properties props;
+  Properties props = new Properties();
 
   /** Default constructor */
   private CacheConfig() {
-    props = new Properties();
   }
 
+  /**
+   * Mockito - friendly
+   */
+  public void init() {
+    this.props = new Properties();
+  }
+  
   /**
    * Constructor from file
    *

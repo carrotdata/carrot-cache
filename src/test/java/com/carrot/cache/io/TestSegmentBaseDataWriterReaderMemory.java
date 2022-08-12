@@ -30,7 +30,6 @@ import org.mockito.Mockito;
 
 import com.carrot.cache.index.MemoryIndex;
 import com.carrot.cache.index.MemoryIndex.Type;
-import com.carrot.cache.io.Segment.Info;
 
 public class TestSegmentBaseDataWriterReaderMemory extends IOTestBase{
   
@@ -98,17 +97,12 @@ public class TestSegmentBaseDataWriterReaderMemory extends IOTestBase{
     // now save Info and Segment separately
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
-    Info info = segment.getInfo();
-    info.save(dos);
     segment.save(dos);
     // Now load back
     ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
     DataInputStream dis = new DataInputStream(bais);
-    info = new Info();
-    info.load(dis);
     Segment seg = new Segment();
     seg.load(dis);
-    seg.setInfo(info);
     seg.setDataWriter(new BaseDataWriter());
     segment.dispose();
     segment = seg;

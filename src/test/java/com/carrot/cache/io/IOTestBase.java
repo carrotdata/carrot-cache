@@ -17,19 +17,25 @@ package com.carrot.cache.io;
 import static com.carrot.cache.io.BlockReaderWriterSupport.META_SIZE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Random;
 
 import org.junit.After;
 import org.junit.BeforeClass;
+import org.mockito.Mockito;
 
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MemoryIndex;
+import com.carrot.cache.util.CacheConfig;
 import com.carrot.cache.util.TestUtils;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
@@ -90,8 +96,12 @@ public abstract class IOTestBase {
       values[i] = TestUtils.randomBytes(valueSize, r);
       mKeys[i] = TestUtils.randomMemory(keySize, r);
       mValues[i] = TestUtils.randomMemory(valueSize, r);
-      expires[i] = System.currentTimeMillis() + i; // To make sure that we have distinct expiration values
+      expires[i] = getExpire(i); // To make sure that we have distinct expiration values
     }  
+  }
+  
+  protected long getExpire(int n) {
+    return System.currentTimeMillis() + n * 100000;
   }
   
   protected int loadBytes() {
@@ -122,6 +132,61 @@ public abstract class IOTestBase {
     if (indexBuf > 0) {
       UnsafeAccess.free(indexBuf);
     }
+    return count;
+  }
+  
+  protected int loadBytesEngine(IOEngine engine) throws IOException {
+    int count = 0;
+    while(count < this.numRecords) {
+      long expire = expires[count];
+      byte[] key = keys[count];
+      byte[] value = values[count];      
+      boolean result = engine.put(key, value, expire);
+      if (!result) {
+        break;
+      }
+      count++;
+    }    
+    return count;
+  }
+  
+  protected int deleteBytesEngine(IOEngine engine, int num) throws IOException {
+    int count = 0;
+    while(count < num) {
+      byte[] key = keys[count];
+      boolean result = engine.delete(key, 0, key.length);
+      assertTrue(result);
+      count++;
+    }    
+    return count;
+  }
+  
+  protected int loadMemoryEngine(IOEngine engine) throws IOException {
+    int count = 0;
+    while(count < this.numRecords) {
+      long expire = expires[count];
+      long keyPtr = mKeys[count];
+      int keySize = keys[count].length;
+      long valuePtr = mValues[count];
+      int valueSize = values[count].length;
+      boolean result = engine.put(keyPtr, keySize, valuePtr, valueSize, expire);
+      if (!result) {
+        break;
+      }
+      count++;
+    }    
+    return count;
+  }
+  
+  protected int deleteMemoryEngine(IOEngine engine, int num) throws IOException {
+    int count = 0;
+    while(count < num) {
+      int keySize = keys[count].length;
+      long keyPtr = mKeys[count];
+      boolean result = engine.delete(keyPtr, keySize);
+      assertTrue(result);
+      count++;
+    }    
     return count;
   }
   
@@ -176,6 +241,54 @@ public abstract class IOTestBase {
       assertTrue(Utils.compareTo(key, 0, key.length, ptr + kSizeSize + vSizeSize, kSize) == 0);
       assertTrue(Utils.compareTo(value, 0, value.length, ptr + kSizeSize + vSizeSize + kSize, vSize) == 0);
       ptr += kSize + vSize + kSizeSize + vSizeSize;
+    }
+  }
+  
+  protected void verifyBytesEngine(IOEngine engine, int num) throws IOException {
+    int kvSize = Utils.kvSize(maxKeySize, maxValueSize);
+    byte[] buffer = new byte[kvSize];
+    for (int i = 0; i < num; i++) {
+      byte[] key = keys[i];
+      byte[] value = values[i];
+      long expSize = Utils.kvSize(key.length, value.length);
+      long size = engine.get(key, 0, key.length, buffer, 0);
+      assertEquals(expSize, size);
+      int kSize = Utils.readUVInt(buffer, 0);
+      assertEquals(key.length, kSize);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      int vSize = Utils.readUVInt(buffer, kSizeSize);
+      assertEquals(value.length, vSize);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      int off = kSizeSize + vSizeSize;
+      assertTrue( Utils.compareTo(buffer, off, kSize, key, 0, key.length) == 0);
+      off += kSize;
+      assertTrue( Utils.compareTo(buffer, off, vSize, value, 0, value.length) == 0);
+    }
+  }
+  
+  protected void verifyBytesEngineWithDeletes(IOEngine engine, int num, int deleted) throws IOException {
+    int kvSize = Utils.kvSize(maxKeySize, maxValueSize);
+    byte[] buffer = new byte[kvSize];
+    for (int i = 0; i < num; i++) {
+      byte[] key = keys[i];
+      byte[] value = values[i];
+      long expSize = Utils.kvSize(key.length, value.length);
+      long size = engine.get(key, 0, key.length, buffer, 0);
+      if (i < deleted) {
+        assertTrue( size < 0);
+        continue;
+      }
+      assertEquals(expSize, size);
+      int kSize = Utils.readUVInt(buffer, 0);
+      assertEquals(key.length, kSize);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      int vSize = Utils.readUVInt(buffer, kSizeSize);
+      assertEquals(value.length, vSize);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      int off = kSizeSize + vSizeSize;
+      assertTrue( Utils.compareTo(buffer, off, kSize, key, 0, key.length) == 0);
+      off += kSize;
+      assertTrue( Utils.compareTo(buffer, off, vSize, value, 0, value.length) == 0);
     }
   }
   
@@ -250,6 +363,72 @@ public abstract class IOTestBase {
     }
   }
 
+  protected void verifyMemoryEngine(IOEngine engine, int num) throws IOException {
+    int kvSize = Utils.kvSize(maxKeySize, maxValueSize);
+    ByteBuffer buffer = ByteBuffer.allocate(kvSize);
+    
+    for (int i = 0; i < num; i++) {
+      int keySize = keys[i].length;
+      int valueSize = values[i].length;
+      long keyPtr = mKeys[i];
+      long valuePtr = mValues[i];
+      
+      long expSize = Utils.kvSize(keySize, valueSize);
+      long size = engine.get(keyPtr, keySize, buffer);
+      assertEquals(expSize, size);
+      int kSize = Utils.readUVInt(buffer);
+      assertEquals(keySize, kSize);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      int off = kSizeSize;
+      buffer.position(off);
+      int vSize = Utils.readUVInt(buffer);
+      assertEquals(valueSize, vSize);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      off += vSizeSize;
+      buffer.position(off);
+      assertTrue( Utils.compareTo(buffer, kSize, keyPtr, keySize) == 0);
+      off += kSize;
+      buffer.position(off);
+      assertTrue( Utils.compareTo(buffer, vSize, valuePtr, valueSize) == 0);
+      buffer.clear();
+    }    
+  }
+  
+  protected void verifyMemoryEngineWithDeletes(IOEngine engine, int num, int deleted) throws IOException {
+    int kvSize = Utils.kvSize(maxKeySize, maxValueSize);
+    ByteBuffer buffer = ByteBuffer.allocate(kvSize);
+    
+    for (int i = 0; i < num; i++) {
+      int keySize = keys[i].length;
+      int valueSize = values[i].length;
+      long keyPtr = mKeys[i];
+      long valuePtr = mValues[i];
+      
+      long expSize = Utils.kvSize(keySize, valueSize);
+      long size = engine.get(keyPtr, keySize, buffer);
+      if (i < deleted) {
+        assertTrue(size < 0);
+        continue;
+      }
+      assertEquals(expSize, size);
+      int kSize = Utils.readUVInt(buffer);
+      assertEquals(keySize, kSize);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      int off = kSizeSize;
+      buffer.position(off);
+      int vSize = Utils.readUVInt(buffer);
+      assertEquals(valueSize, vSize);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      off += vSizeSize;
+      buffer.position(off);
+      assertTrue( Utils.compareTo(buffer, kSize, keyPtr, keySize) == 0);
+      off += kSize;
+      buffer.position(off);
+      assertTrue( Utils.compareTo(buffer, vSize, valuePtr, valueSize) == 0);
+      buffer.clear();
+    }    
+  }
+  
   private int safeBufferSize() {
     int bufSize = Utils.kvSize(maxKeySize, maxValueSize);
     return (bufSize / blockSize + 1) * blockSize;
@@ -403,5 +582,20 @@ public abstract class IOTestBase {
     fos.close();
     RandomAccessFile raf = new RandomAccessFile(f, "r");
     return raf;
+  }
+  
+  CacheConfig mockConfigForTests(long segmentSize, long maxCacheSize) throws IOException {
+    CacheConfig mock = Mockito.mock(CacheConfig.class, CALLS_REAL_METHODS);
+    mock.init();
+    // define segment size
+    Mockito.when(mock.getCacheSegmentSize(Mockito.anyString())).thenReturn(segmentSize);
+    // define maximum cache size
+    Mockito.when(mock.getCacheMaximumSize(Mockito.anyString())).thenReturn(maxCacheSize);
+    // data directory
+    Path path = Files.createTempDirectory(null);
+    File  dir = path.toFile();
+    dir.deleteOnExit();
+    Mockito.when(mock.getDataDir(Mockito.anyString())).thenReturn(dir.getAbsolutePath());
+    return mock;
   }
 }
