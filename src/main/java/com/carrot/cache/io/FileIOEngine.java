@@ -17,6 +17,7 @@
  */
 package com.carrot.cache.io;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -28,8 +29,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.stream.Stream;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -94,11 +97,9 @@ public class FileIOEngine extends IOEngine {
       int id = data.getId();
       try {
         // First save segment data to file
-        OutputStream os = getOSFor(id);
+        RandomAccessFile file = getOrCreateFileFor(id);
         // Save to file
-        data.save(os);
-        // Close stream
-        os.close();
+        data.save(file);
         // Release segment
         data.writeLock();
         data.seal();
@@ -264,6 +265,11 @@ public class FileIOEngine extends IOEngine {
     return Paths.get(dataDir, getSegmentFileName(id));
   }
 
+  private int getSegmentIdFromFileName(String name) {
+    String s = name.substring(FILE_NAME.length());
+    return Integer.parseInt(s);
+  }
+  
   @Override
   public SegmentScanner getScanner(Segment s) throws IOException {
     return this.fileDataReader.getSegmentScanner(this, s);
@@ -277,6 +283,20 @@ public class FileIOEngine extends IOEngine {
   @Override
   public void load(InputStream is) throws IOException {
     super.load(is);
+    loadSegments();
   }
   
+  private void loadSegments() throws IOException {
+    try (Stream<Path> list = Files.list(Paths.get(dataDir));) {
+      Iterator<Path> it = list.iterator();
+      while(it.hasNext()) {
+        Path p = it.next();
+        File f = p.toFile();
+        String fileName = f.getName();
+        int sid = getSegmentIdFromFileName(fileName);
+        RandomAccessFile raf = new RandomAccessFile(f, "r");
+        this.dataFiles.put(sid,  raf);
+      }    
+    }
+  }
 }

@@ -166,7 +166,7 @@ public class BaseFileDataReader implements DataReader {
     if (Utils.compareTo(buffer, keySize, key, keyOffset, keySize) == 0) {
       // If key is the same
       // TODO: position?
-      buffer.position(pos + size);
+      buffer.position(pos);
       return size;
     } else {
       return IOEngine.NOT_FOUND;
@@ -289,7 +289,7 @@ public class BaseFileDataReader implements DataReader {
     // Now compare keys
     if (Utils.compareTo(buffer, keySize, keyPtr, keySize) == 0) {
       // If key is the same
-      buffer.position(pos + size);
+      buffer.position(pos);
       return size;
     } else {
       return IOEngine.NOT_FOUND;

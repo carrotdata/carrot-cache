@@ -598,4 +598,15 @@ public abstract class IOTestBase {
     Mockito.when(mock.getDataDir(Mockito.anyString())).thenReturn(dir.getAbsolutePath());
     return mock;
   }
+  
+  CacheConfig mockConfigForTests(long segmentSize, long maxCacheSize, String dataDir) throws IOException {
+    CacheConfig mock = Mockito.mock(CacheConfig.class, CALLS_REAL_METHODS);
+    mock.init();
+    // define segment size
+    Mockito.when(mock.getCacheSegmentSize(Mockito.anyString())).thenReturn(segmentSize);
+    // define maximum cache size
+    Mockito.when(mock.getCacheMaximumSize(Mockito.anyString())).thenReturn(maxCacheSize);
+    Mockito.when(mock.getDataDir(Mockito.anyString())).thenReturn(dataDir);
+    return mock;
+  }
 }

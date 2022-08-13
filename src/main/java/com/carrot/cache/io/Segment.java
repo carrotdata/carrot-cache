@@ -22,6 +22,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -846,6 +847,29 @@ public class Segment implements Persistent {
     }
   }
 
+  public void save(RandomAccessFile file) throws IOException {
+    try {
+      readLock();
+      // Segment MUST be sealed
+      seal();
+      // Write segment size
+      long size = size();
+      file.writeLong(size);
+      
+      int bufSize = (int) Math.min(size, 1024 * 1024);
+      byte[] buffer = new byte[bufSize];
+      long written = 0;
+      while (written < size) {
+        int toCopy = (int) Math.min(bufSize, size - written);
+        UnsafeAccess.copy(this.address + written, buffer, 0, toCopy);
+        written += toCopy;
+        file.write(buffer, 0, toCopy);
+      }
+    } finally {
+      readUnlock();
+    }
+  }
+  
   @Override
   public void load(InputStream is) throws IOException {
     DataInputStream dis = Utils.toDataInputStream(is);
