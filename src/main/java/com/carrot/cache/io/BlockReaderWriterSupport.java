@@ -72,7 +72,6 @@ public class BlockReaderWriterSupport {
     long size = s.dataSize();
     int currentBlock = (int) (size / blockSize);
     size += getBlockDataSize(s, blockSize, currentBlock);
-    /*DEBUG*/ System.out.println("size="+ size);
     return size;
   }
   

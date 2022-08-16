@@ -225,6 +225,9 @@ public class MemoryIndex implements Persistent {
   /* Number of rehashed slots so far */
   private AtomicLong rehashedSlots = new AtomicLong();
   
+  /* Number of popularity ranks*/
+  private int numRanks;
+  
   public MemoryIndex() {
     this.cacheConfig = CacheConfig.getInstance();
     initLocks();
@@ -490,6 +493,7 @@ public class MemoryIndex implements Persistent {
   
   /** Index initializer */
   private void init() {
+    this.numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
     int startNumberOfSlots = 1 << cacheConfig.getStartIndexNumberOfSlotsPower(this.cacheName);
     //TODO: must be positive 
     long[] index_base = new long[startNumberOfSlots];
@@ -924,7 +928,6 @@ public class MemoryIndex implements Persistent {
     // TODO: Move this to a separate method
     int dataSize = dataSize(ptr);
 //    //TODO: separate method
-    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);  
     int sid1 = this.indexFormat.getSegmentId($ptr);
     // delete entry
     int toDelete = this.indexFormat.fullEntrySize($ptr);
@@ -945,7 +948,6 @@ public class MemoryIndex implements Persistent {
    */
   private void fullScanUpdate(long ptr) {
     int numEntries = numEntries(ptr);
-    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);  
 
     // TODO: this works ONLY when index size = item size (no embedded data)
 
@@ -982,7 +984,6 @@ public class MemoryIndex implements Persistent {
   // TODO: check return value
   private int findAndPromote(long ptr, long hash, boolean hit, long buf, int bufSize) {
     int numEntries = numEntries(ptr);
-    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);  
 
     //TODO: this works ONLY when index size = item size (no embedded data)
     //TODO: Check count when delete
@@ -1214,7 +1215,6 @@ public class MemoryIndex implements Persistent {
     //TODO: If deleted > 0, update number of items and size
     long $ptr = ptr + this.indexBlockHeaderSize;
     int count = 0;
-    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
     
     result = result.setResultRankExpire(Result.NOT_FOUND, 0, 0);
     
@@ -1421,7 +1421,6 @@ public class MemoryIndex implements Persistent {
    */
   private boolean delete(long ptr, long hash) {
     int numEntries = numEntries(ptr);
-    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);  
     long $ptr = ptr + indexBlockHeaderSize;
     int count = 0;
     while (count < numEntries) {
@@ -1917,7 +1916,6 @@ public class MemoryIndex implements Persistent {
     }
     //deleteEntry(slotPtr, toEvict, evictToVictim);
     int numEntries = numEntries(slotPtr);
-    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName); 
     int rank = this.evictionPolicy.getRankForIndex(numRanks, toEvict, numEntries);
     deleteAt(slotPtr, ptr, rank);
   }
@@ -1951,7 +1949,6 @@ public class MemoryIndex implements Persistent {
     // Check if it exists already - update
     boolean deleted = delete(ptr, hash);
     int numEntries = numEntries(ptr);
-    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
     int insertIndex = indexType == Type.MQ? evictionPolicy.getStartIndexForRank(numRanks, rank, numEntries):
       evictionPolicy.getInsertIndex(ptr, numEntries);
     // TODO: entry size can be variable
@@ -1989,7 +1986,6 @@ public class MemoryIndex implements Persistent {
     if (this.engine == null) {
       return;
     }
-    int numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
     // Update stats
     this.engine.updateStats(sid1, 1, (numRanks - rank));
     if (numEntries >= numRanks) {
@@ -2209,7 +2205,8 @@ public class MemoryIndex implements Persistent {
     dos.writeLong(numEntries.get());
     /* Maximum number of entries - for AQ*/
     dos.writeLong(this.maxEntries);
-
+    /* Number of popularity ranks */
+    dos.writeInt(this.numRanks);
     long[] table = this.ref_index_base.get();
     byte[] buffer = new byte[getMaximumBlockSize()];
     for (int i = 0; i < table.length; i++) {
@@ -2257,6 +2254,9 @@ public class MemoryIndex implements Persistent {
     this.numEntries.set(dis.readLong());
     // Maximum number of entries
     this.maxEntries = dis.readLong();
+    // Number of popularity ranks
+    this.numRanks = dis.readInt();
+    
     byte[] buffer = new byte[getMaximumBlockSize()];
     for (int i = 0; i < tableSize; i++) {
       // index segment size

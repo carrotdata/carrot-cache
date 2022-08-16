@@ -29,6 +29,7 @@ public class BaseFileDataReader implements DataReader {
   private final int blockSize = 4096;
   @Override
   public void init(String cacheName) {
+    //TODO init blockSize from config 
   }
 
   @Override

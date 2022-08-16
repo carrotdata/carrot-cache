@@ -39,7 +39,6 @@ public final class BaseFileSegmentScanner implements SegmentScanner {
     
     @Override
     public boolean hasNext() throws IOException {
-      // TODO Auto-generated method stub
       if (currentEntry <= numEntries - 1) {
         return true;
       };
