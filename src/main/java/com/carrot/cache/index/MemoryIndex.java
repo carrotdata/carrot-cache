@@ -45,7 +45,7 @@ import com.carrot.cache.util.Utils;
  * This is fixed header size. Implementation of IndexFormat can increase header size, but first 
  * 6 bytes are always fixed. 
  */
-public class MemoryIndex implements Persistent {
+public final class MemoryIndex implements Persistent {
   /** Logger */
   private static final Logger LOG = LogManager.getLogger(MemoryIndex.class);
   
@@ -228,6 +228,9 @@ public class MemoryIndex implements Persistent {
   /* Number of popularity ranks*/
   private int numRanks;
   
+  /* Counter for total expired - evicted balance */
+  private AtomicLong expiredEvictedBalance = new AtomicLong();
+  
   public MemoryIndex() {
     this.cacheConfig = CacheConfig.getInstance();
     initLocks();
@@ -268,6 +271,15 @@ public class MemoryIndex implements Persistent {
     this.cacheName = cacheName;
     init();
   }
+  
+  /**
+   * Get expired evicted balance
+   * @return balance 
+   */
+  public long getExpiredEvictedBalance() {
+    return this.expiredEvictedBalance.get();
+  }
+  
   /**
    * Disposes array of pointers
    */
@@ -661,6 +673,7 @@ public class MemoryIndex implements Persistent {
    * Write lock on a key (slot)
    * @param keyPtr key address
    * @param keySize key address
+   * @return slot number
    */
   public int lock(long keyPtr, int keySize) {
     long hash = Utils.hash64(keyPtr, keySize);
@@ -789,7 +802,7 @@ public class MemoryIndex implements Persistent {
    * @return size of an item, both key and value (-1 - not found)
    */
   public int getItemSize(long keyPtr, int keySize) {
-    //TODO: does it work for variable sizes?
+    //TODO: embedded item case, and format w/o size ?
     int bufSize = this.indexFormat.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(bufSize);
     try {
@@ -810,7 +823,6 @@ public class MemoryIndex implements Persistent {
    * @return hit count
    */
   public int getHitCount(long hash) {
-    //TODO: double locking
     int bufSize = this.indexFormat.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(bufSize);
     try {
@@ -835,7 +847,6 @@ public class MemoryIndex implements Persistent {
    * @return hit count (or -1)
    */
   public int getHitCount(byte[] key, int off, int size) {
-    //TODO: double locking
     int bufSize = this.indexFormat.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(bufSize);
     try {
@@ -962,6 +973,8 @@ public class MemoryIndex implements Persistent {
           //TODO: separate method
           int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
           deleteAt(ptr, $ptr, rank);
+          // Update total expired counter
+          this.expiredEvictedBalance.incrementAndGet();
           numEntries --;
           continue;
         }
@@ -1006,6 +1019,8 @@ public class MemoryIndex implements Persistent {
           if (current > expire) {
             int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
             deleteAt(ptr, $ptr, rank);
+            // update total expired counter
+            this.expiredEvictedBalance.incrementAndGet();
             numEntries --;
             continue;
           }
@@ -1230,6 +1245,8 @@ public class MemoryIndex implements Persistent {
           if (expire > 0 && current > expire) {
             // For expired items rank does not matter
             result.setResultRankExpire(Result.EXPIRED, 0, expire);
+            // update total expired counter
+            this.expiredEvictedBalance.incrementAndGet();
           } else {
             // Check popularity
             double popularity = ((double) (numEntries - count)) / numEntries;
@@ -1244,7 +1261,10 @@ public class MemoryIndex implements Persistent {
             // Report eviction
             this.evictionListener.onEviction(ptr, $ptr);
           } 
-          deleteAt(ptr, $ptr, rank);
+          
+          if (result.getResult() == Result.DELETED || result.getResult() == Result.EXPIRED) {
+            deleteAt(ptr, $ptr, rank);
+          }
           break;
         }
         count++;
@@ -1824,7 +1844,12 @@ public class MemoryIndex implements Persistent {
     long retPtr = ptr;
 
     if (isEvictionEnabled()) {
-      doEviction(ptr); // TODO: take into account size of a new item
+      if (this.expiredEvictedBalance.get() <= 0) {
+        doEviction(ptr); // TODO: take into account size of a new item
+      } else {
+        // Decrement balance
+        this.expiredEvictedBalance.decrementAndGet();
+      }
     }
     // If indexPtr == 0, then insert hash only (for AQ)
     boolean isAQ = indexPtr == 0;
@@ -2207,6 +2232,9 @@ public class MemoryIndex implements Persistent {
     dos.writeLong(this.maxEntries);
     /* Number of popularity ranks */
     dos.writeInt(this.numRanks);
+    /* Expired - evicted balance */
+    dos.writeLong(this.expiredEvictedBalance.get());
+    
     long[] table = this.ref_index_base.get();
     byte[] buffer = new byte[getMaximumBlockSize()];
     for (int i = 0; i < table.length; i++) {
@@ -2256,6 +2284,8 @@ public class MemoryIndex implements Persistent {
     this.maxEntries = dis.readLong();
     // Number of popularity ranks
     this.numRanks = dis.readInt();
+    // Expired - evicted balance
+    this.expiredEvictedBalance = new AtomicLong(dis.readLong());
     
     byte[] buffer = new byte[getMaximumBlockSize()];
     for (int i = 0; i < tableSize; i++) {
