@@ -59,9 +59,9 @@ public class BlockDataWriter implements DataWriter {
     long fullDataSize = getFullDataSize(s, blockSize);
     boolean notEmptySegment = s.numberOfEntries() > 0;
     boolean crossedBlockBoundary = notEmptySegment && addr > s.getAddress() + fullDataSize;
-    long retValue = crossedBlockBoundary? addr - META_SIZE - s.dataSize() - s.getAddress(): 0;
+    long retValue = crossedBlockBoundary? addr - META_SIZE - s.getSegmentDataSize() - s.getAddress(): 0;
     int currentBlock = crossedBlockBoundary? (int) (addr - s.getAddress()) / this.blockSize:
-      (int) (s.dataSize() / this.blockSize);
+      (int) (s.getSegmentDataSize() / this.blockSize);
     
     // Key size
     Utils.writeUVInt(addr, keySize);
@@ -79,7 +79,7 @@ public class BlockDataWriter implements DataWriter {
     int requiredSize = Utils.requiredSize(keySize, valueSize);
     incrBlockDataSize(s, currentBlock, requiredSize);
     s.incrDataSize((int)retValue);
-    return s.dataSize();//retValue;
+    return s.getSegmentDataSize();//retValue;
   }
 
   private long getAppendAddress(Segment s, int keySize, int valueSize) {
@@ -138,10 +138,10 @@ public class BlockDataWriter implements DataWriter {
     long fullDataSize = getFullDataSize(s, blockSize);
     boolean notEmptySegment = s.numberOfEntries() > 0;
     boolean crossedBlockBoundary = notEmptySegment && addr > s.getAddress() + fullDataSize;
-    long retValue = crossedBlockBoundary? addr - META_SIZE - s.dataSize() - s.getAddress(): 0;
+    long retValue = crossedBlockBoundary? addr - META_SIZE - s.getSegmentDataSize() - s.getAddress(): 0;
     
     int currentBlock = crossedBlockBoundary? (int) (addr - s.getAddress()) / this.blockSize:
-      (int) (s.dataSize() / this.blockSize);
+      (int) (s.getSegmentDataSize() / this.blockSize);
     
     // Key size
     Utils.writeUVInt(addr, keySize);
@@ -159,7 +159,7 @@ public class BlockDataWriter implements DataWriter {
     int requiredSize = Utils.requiredSize(keySize, valueSize);
     incrBlockDataSize(s, currentBlock, requiredSize);
     s.incrDataSize((int)retValue);
-    return s.dataSize();//retValue;
+    return s.getSegmentDataSize();//retValue;
   }
   
   /**

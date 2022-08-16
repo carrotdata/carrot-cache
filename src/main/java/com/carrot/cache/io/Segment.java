@@ -91,6 +91,9 @@ public class Segment implements Persistent {
     /* Total expired items */
     private AtomicInteger totalExpiredItems = new AtomicInteger(0);
     
+    /* Total evicted and deleted items */
+    private AtomicInteger totalEvictedItems = new AtomicInteger(0);
+    
     /* Segment's id */
     private volatile int id;
     
@@ -123,7 +126,7 @@ public class Segment implements Persistent {
      * @param itemIncrement total items to increment
      * @param rankIncrement total rank to increment
      */
-    public void update(int itemIncrement, int rankIncrement) {
+    public void updateEvictedDeleted(int itemIncrement, int rankIncrement) {
       this.totalItems.addAndGet(itemIncrement);
       this.totalRank.addAndGet(rankIncrement);
     }
@@ -288,13 +291,6 @@ public class Segment implements Persistent {
       return this.totalExpiredItems.get();
     }
     
-    /**
-     * Sets number of expired items
-     * @param num number of expired items
-     */
-    public void setNumberOfExpiredItems(int num) {
-      this.totalExpiredItems.set(num);
-    }
     
     /**
      * Get number of expected to expire items
@@ -304,28 +300,20 @@ public class Segment implements Persistent {
     }
     
     /**
-     * Sets number of expected to expire items
-     * @param num number of expected to expire items
+     * Get number of evicted - deleted items
+     * @return number of evicted - deleted items
      */
-    public void setNumberOfExpectedToExpireItems(int num) {
-      this.totalExpectedToExpireItems.set(num);
+    public int getNumberEvictedDeletedItems() {
+      return this.totalEvictedItems.get();
     }
     
     /**
      * Expire one item
-     * @return current number of expired
+     * @param rank - rank of an item
      */
-    public int expire() {
-      return this.totalExpiredItems.incrementAndGet();
-    }
-    
-    /**
-     * Expected to expire item
-     * @return current number of expected to expire
-     */
-    
-    public int expectedExpire() {
-      return this.totalExpectedToExpireItems.incrementAndGet();
+    public void updateExpired(int rank) {
+      this.totalExpiredItems.incrementAndGet();
+      this.totalRank.addAndGet(-rank);
     }
 
     /**
@@ -335,6 +323,15 @@ public class Segment implements Persistent {
      */
     public long incrementDataSize(int incr) {
       return this.dataSize.addAndGet(incr);
+    }
+    
+    /**
+     * Increment total rank
+     * @param incr increment
+     * @return new total rank
+     */
+    public long incrementTotalRank(int incr) {
+      return this.totalRank.addAndGet(incr);
     }
     
     /**
@@ -386,6 +383,8 @@ public class Segment implements Persistent {
         dos.writeInt(getNumberExpectedToExpireItems());
         //Total number of expired items
         dos.writeInt(getNumberExpiredItems());
+        // Total evicted and deleted (not expired)
+        dos.writeInt(getNumberEvictedDeletedItems());
         // Off-heap
         dos.writeBoolean(isOffheap());
         dos.flush();
@@ -404,6 +403,7 @@ public class Segment implements Persistent {
       this.totalRank.set(dis.readLong());
       this.totalExpectedToExpireItems.set(dis.readInt());
       this.totalExpiredItems.set(dis.readInt());
+      this.totalEvictedItems.set(dis.readInt());
       this.offheap = dis.readBoolean();
     }
   }
@@ -550,6 +550,10 @@ public class Segment implements Persistent {
     return this.info.incrementDataSize(incr);
   }
   
+  public long incrTotalRank(int incr) {
+    return this.info.incrementTotalRank(incr);
+  }
+  
   /**
    * Increment number of entries
    * @param incr increment
@@ -557,6 +561,15 @@ public class Segment implements Persistent {
    */
   private int incrNumEntries(int incr) {
     return this.info.totalItems.addAndGet(incr);
+  }
+  
+  /**
+   * Increment expected to expire items
+   * @param incr increment
+   * @return new value
+   */
+  private int incrExpectedToExpire(int incr) {
+    return this.info.totalExpectedToExpireItems.addAndGet(incr);
   }
   
   /**
@@ -650,10 +663,41 @@ public class Segment implements Persistent {
    * Get segment's data size
    * @return segment's data size
    */
-  public long dataSize() {
+  public long getSegmentDataSize() {
     return this.info.getSegmentDataSize();
   }
   
+  /**
+   * Get total number of cached items in this segment 
+   * @return number
+   */
+  public int getTotalItems() {
+    return this.info.getTotalItems();
+  }
+  
+  /**
+   * Get number of evicted or explicitly deleted items
+   * @return number
+   */
+  public int getNumberEvictedDeletedItems() {
+    return this.info.getNumberEvictedDeletedItems();
+  }
+  
+  /**
+   * Get number of expired (reported) items 
+   * @return number
+   */
+  public int getNumberExpiredItems() {
+    return this.info.getNumberExpiredItems();
+  }
+  
+  /**
+   * Get expected to expire numbers
+   * @return number
+   */
+  public int getNumberExpectedExpireItems() {
+    return this.getNumberExpectedExpireItems();
+  }
   /**
    * Read lock the segment
    */
@@ -727,6 +771,9 @@ public class Segment implements Persistent {
       }
       processExpire(expire);
       incrNumEntries(1);
+      if (expire > 0) {
+        incrExpectedToExpire(1);
+      }
       return offset/* offset in a segment*/;
     } finally {
       writeUnlock();
@@ -790,6 +837,9 @@ public class Segment implements Persistent {
       processExpire(expire);
       // data writer MUST set dataSize in a segment
       incrNumEntries(1);
+      if (expire > 0) {
+        incrExpectedToExpire(1);
+      }
       return offset;
     } finally {
       writeUnlock();
@@ -801,8 +851,16 @@ public class Segment implements Persistent {
    * @param itemIncrement total items to increment
    * @param rankIncrement total rank to increment
    */
-  public void update(int itemIncrement, int rankIncrement) {
-    this.info.update(itemIncrement, rankIncrement);
+  public void updateEvictedDeleted(int itemIncrement, int rankIncrement) {
+    this.info.updateEvictedDeleted(itemIncrement, rankIncrement);
+  }
+  
+  /**
+   * Update expired counter and total rank
+   * @param rank rank of an expired item
+   */
+  public void updateExpired(int rank) {
+    this.info.updateExpired(rank);
   }
   
   /**

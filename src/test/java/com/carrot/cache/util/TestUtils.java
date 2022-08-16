@@ -115,10 +115,8 @@ public class TestUtils {
   public static RandomAccessFile saveToFile(Segment s) throws IOException {
     File f = File.createTempFile("segment", null);
     f.deleteOnExit();
-    FileOutputStream fos = new FileOutputStream(f);
-    s.save(fos);
-    fos.close();
-    RandomAccessFile raf = new RandomAccessFile(f, "r");
+    RandomAccessFile raf = new RandomAccessFile(f, "rw");
+    s.save(raf);
     return raf;
   }
   

@@ -979,6 +979,7 @@ public abstract class IOEngine implements Persistent {
   }
   /**
    * Update statistics for a segment with a given id
+   * for eviction, deletion
    *
    * @param id segment id
    * @param itemIncrement number of items to increment
@@ -987,9 +988,24 @@ public abstract class IOEngine implements Persistent {
   public void updateStats(int id, int itemIncrement, int rankIncrement) {
     checkId(id);
     Objects.requireNonNull(dataSegments[id]);
-    dataSegments[id].update(itemIncrement, rankIncrement);
+    if (itemIncrement < 0) {
+      dataSegments[id].updateEvictedDeleted(itemIncrement, rankIncrement);
+    } else if (itemIncrement == 0) {
+      dataSegments[id].incrTotalRank(rankIncrement);
+    }
   }
 
+  /**
+   * Update expired stats
+   * @param id segment id
+   * @param rank rank of an expired item
+   */
+  public void updateExpiredStats(int id, int rank) {
+    checkId(id);
+    Objects.requireNonNull(dataSegments[id]);
+    dataSegments[id].updateExpired(rank);
+  }
+  
   /**
    * Get best segment for recycling 
    * TODO: need synchronized?

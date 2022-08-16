@@ -25,10 +25,10 @@ public class BaseDataWriter implements DataWriter {
   @Override
   public long append(Segment s, long keyPtr, int keySize, long itemPtr, int itemSize) {
     int requiredSize = Utils.requiredSize(keySize, itemSize);
-    if (requiredSize + s.dataSize() > s.size()) {
+    if (requiredSize + s.getSegmentDataSize() > s.size()) {
       return -1;
     }
-    long addr = s.getAddress() + s.dataSize();
+    long addr = s.getAddress() + s.getSegmentDataSize();
     // Key size
     Utils.writeUVInt(addr, keySize);
     int kSizeSize = Utils.sizeUVInt(keySize);
@@ -42,7 +42,7 @@ public class BaseDataWriter implements DataWriter {
     addr += keySize;
     // Copy value (item)
     UnsafeAccess.copy(itemPtr, addr, itemSize);  
-    long retValue = s.dataSize();
+    long retValue = s.getSegmentDataSize();
     s.incrDataSize(requiredSize);
     return retValue;
   }
@@ -57,10 +57,10 @@ public class BaseDataWriter implements DataWriter {
       int valueOffset,
       int valueSize) {
     int requiredSize = Utils.requiredSize(keySize, valueSize);
-    if (requiredSize + s.dataSize() > s.size()) {
+    if (requiredSize + s.getSegmentDataSize() > s.size()) {
       return -1;
     }
-    long addr = s.getAddress() + s.dataSize();
+    long addr = s.getAddress() + s.getSegmentDataSize();
     // Key size
     Utils.writeUVInt(addr, keySize);
     int kSizeSize = Utils.sizeUVInt(keySize);
@@ -74,7 +74,7 @@ public class BaseDataWriter implements DataWriter {
     addr += keySize;
     // Copy value (item)
     UnsafeAccess.copy(value, valueOffset, addr, valueSize);
-    long retValue = s.dataSize();
+    long retValue = s.getSegmentDataSize();
     s.incrDataSize(requiredSize);
     return retValue;
   }

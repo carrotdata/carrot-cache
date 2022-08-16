@@ -61,7 +61,7 @@ public class BaseMemoryDataReader implements DataReader {
     if (size > avail) {
       return size;
     }
-    if ( s.dataSize() < offset + size) {
+    if ( s.getSegmentDataSize() < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
@@ -105,7 +105,7 @@ public class BaseMemoryDataReader implements DataReader {
     if (size > avail) {
       return size;
     }
-    if ( s.dataSize() < offset + size) {
+    if ( s.getSegmentDataSize() < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
@@ -155,7 +155,7 @@ public class BaseMemoryDataReader implements DataReader {
     if (size > avail) {
       return size;
     }
-    if ( s.dataSize() < offset + size) {
+    if ( s.getSegmentDataSize() < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
@@ -192,7 +192,7 @@ public class BaseMemoryDataReader implements DataReader {
     if (size > avail) {
       return size;
     }
-    if ( s.dataSize() < offset + size) {
+    if ( s.getSegmentDataSize() < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
