@@ -14,9 +14,21 @@
  */
 package com.carrot.cache.util;
 
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Random;
+
+import org.mockito.Mockito;
+
+import com.carrot.cache.io.Segment;
 
 /**
  * Utility methods for unit tests
@@ -98,5 +110,41 @@ public class TestUtils {
   public static DataOutputStream getOutputStreamForTest() {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     return new DataOutputStream(baos);
+  }
+  
+  public static RandomAccessFile saveToFile(Segment s) throws IOException {
+    File f = File.createTempFile("segment", null);
+    f.deleteOnExit();
+    FileOutputStream fos = new FileOutputStream(f);
+    s.save(fos);
+    fos.close();
+    RandomAccessFile raf = new RandomAccessFile(f, "r");
+    return raf;
+  }
+  
+  public static CacheConfig mockConfigForTests(long segmentSize, long maxCacheSize) throws IOException {
+    CacheConfig mock = Mockito.mock(CacheConfig.class, CALLS_REAL_METHODS);
+    mock.init();
+    // define segment size
+    Mockito.when(mock.getCacheSegmentSize(Mockito.anyString())).thenReturn(segmentSize);
+    // define maximum cache size
+    Mockito.when(mock.getCacheMaximumSize(Mockito.anyString())).thenReturn(maxCacheSize);
+    // data directory
+    Path path = Files.createTempDirectory(null);
+    File  dir = path.toFile();
+    dir.deleteOnExit();
+    Mockito.when(mock.getDataDir(Mockito.anyString())).thenReturn(dir.getAbsolutePath());
+    return mock;
+  }
+  
+  public static CacheConfig mockConfigForTests(long segmentSize, long maxCacheSize, String dataDir) throws IOException {
+    CacheConfig mock = Mockito.mock(CacheConfig.class, CALLS_REAL_METHODS);
+    mock.init();
+    // define segment size
+    Mockito.when(mock.getCacheSegmentSize(Mockito.anyString())).thenReturn(segmentSize);
+    // define maximum cache size
+    Mockito.when(mock.getCacheMaximumSize(Mockito.anyString())).thenReturn(maxCacheSize);
+    Mockito.when(mock.getDataDir(Mockito.anyString())).thenReturn(dataDir);
+    return mock;
   }
 }

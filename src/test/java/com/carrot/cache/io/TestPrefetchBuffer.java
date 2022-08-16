@@ -29,6 +29,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.carrot.cache.util.TestUtils;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 
@@ -56,7 +57,7 @@ public class TestPrefetchBuffer extends IOTestBase {
   public void testPrefetchBufferWithBaseWriter() throws IOException {
     segment.setDataWriter(new BaseDataWriter());
     int n = loadBytes();
-    RandomAccessFile raf = saveToFile(segment);
+    RandomAccessFile raf = TestUtils.saveToFile(segment);
     PrefetchBuffer pbuf = new PrefetchBuffer(raf, 256 * 1024);
     int count = 0;
     while (count < n) {
@@ -90,7 +91,7 @@ public class TestPrefetchBuffer extends IOTestBase {
     segment.setDataWriter(writer);
     int n = loadBytes();
     verifyBytesBlock(n, blockSize);
-    RandomAccessFile raf = saveToFile(segment);
+    RandomAccessFile raf = TestUtils.saveToFile(segment);
     PrefetchBuffer pbuf = new PrefetchBuffer(raf, 256 * 1024 + 24);
     byte[] buffer = pbuf.getBuffer();
     

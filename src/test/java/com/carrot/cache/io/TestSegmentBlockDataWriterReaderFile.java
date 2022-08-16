@@ -28,6 +28,7 @@ import org.mockito.Mockito;
 import com.carrot.cache.Cache;
 import com.carrot.cache.index.MemoryIndex;
 import com.carrot.cache.index.MemoryIndex.Type;
+import com.carrot.cache.util.TestUtils;
 import com.carrot.cache.util.UnsafeAccess;
 
 public class TestSegmentBlockDataWriterReaderFile extends IOTestBase{
@@ -65,7 +66,7 @@ public class TestSegmentBlockDataWriterReaderFile extends IOTestBase{
     assertEquals(expire, segment.getInfo().getMaxExpireAt());
     verifyBytesBlock(count, blockSize);
     
-    RandomAccessFile file = saveToFile(segment);
+    RandomAccessFile file = TestUtils.saveToFile(segment);
     
     DataReader reader = new BlockFileDataReader();
     reader.init("default");
@@ -82,7 +83,7 @@ public class TestSegmentBlockDataWriterReaderFile extends IOTestBase{
     assertEquals(expire, segment.getInfo().getMaxExpireAt());
     verifyMemoryBlock(count, blockSize);
     
-    RandomAccessFile file = saveToFile(segment);
+    RandomAccessFile file = TestUtils.saveToFile(segment);
     
     DataReader reader = new BlockFileDataReader();
     reader.init("default");
@@ -98,7 +99,7 @@ public class TestSegmentBlockDataWriterReaderFile extends IOTestBase{
     int count = loadBytes();
     
     verifyBytesBlock(count, blockSize);
-    RandomAccessFile file = saveToFile(segment);
+    RandomAccessFile file = TestUtils.saveToFile(segment);
 
     DataReader reader = new BlockFileDataReader();
     reader.init("default");

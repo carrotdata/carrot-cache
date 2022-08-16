@@ -27,6 +27,7 @@ import org.mockito.Mockito;
 
 import com.carrot.cache.index.MemoryIndex;
 import com.carrot.cache.index.MemoryIndex.Type;
+import com.carrot.cache.util.TestUtils;
 
 public class TestSegmentBaseDataWriterReaderFile extends IOTestBase{
   
@@ -57,7 +58,7 @@ public class TestSegmentBaseDataWriterReaderFile extends IOTestBase{
     assertEquals(expire, segment.getInfo().getMaxExpireAt());
     verifyBytes(count);
     
-    RandomAccessFile file = saveToFile(segment);
+    RandomAccessFile file = TestUtils.saveToFile(segment);
     
     DataReader reader = new BaseFileDataReader();
     FileIOEngine engine  = Mockito.mock(FileIOEngine.class);
@@ -73,7 +74,7 @@ public class TestSegmentBaseDataWriterReaderFile extends IOTestBase{
     assertEquals(expire, segment.getInfo().getMaxExpireAt());
     verifyMemory(count);
     
-    RandomAccessFile file = saveToFile(segment);
+    RandomAccessFile file = TestUtils.saveToFile(segment);
     
     DataReader reader = new BaseFileDataReader();
     FileIOEngine engine  = Mockito.mock(FileIOEngine.class);
@@ -85,7 +86,7 @@ public class TestSegmentBaseDataWriterReaderFile extends IOTestBase{
   @Test
   public void testSegmentScanner() throws IOException {
     int count = loadBytes();
-    RandomAccessFile file = saveToFile(segment);
+    RandomAccessFile file = TestUtils.saveToFile(segment);
 
     DataReader reader = new BaseFileDataReader();
     FileIOEngine engine  = Mockito.mock(FileIOEngine.class);

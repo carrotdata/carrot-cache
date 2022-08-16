@@ -29,6 +29,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.carrot.cache.util.CacheConfig;
+import com.carrot.cache.util.TestUtils;
 
 public class TestFileIOEngine extends IOTestBase{
   
@@ -140,14 +141,14 @@ public class TestFileIOEngine extends IOTestBase{
   private void createEngine(long segmentSize, long cacheSize) throws IOException {
     this.segmentSize = (int) segmentSize;
     this.cacheSize = cacheSize;
-    CacheConfig conf = mockConfigForTests(this.segmentSize, this.cacheSize);
+    CacheConfig conf = TestUtils.mockConfigForTests(this.segmentSize, this.cacheSize);
     this.engine = new FileIOEngine(conf);
   }
   
   private void createEngine(long segmentSize, long cacheSize, String dataDir) throws IOException {
     this.segmentSize = (int) segmentSize;
     this.cacheSize = cacheSize;
-    CacheConfig conf = mockConfigForTests(this.segmentSize, this.cacheSize, dataDir);
+    CacheConfig conf = TestUtils.mockConfigForTests(this.segmentSize, this.cacheSize, dataDir);
     this.engine = new FileIOEngine(conf);
   }
 }
