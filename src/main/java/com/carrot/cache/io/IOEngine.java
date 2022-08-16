@@ -162,7 +162,7 @@ public abstract class IOEngine implements Persistent {
     this.maxStorageSize = this.config.getCacheMaximumSize(this.cacheName);
     this.numSegments = (int) (this.maxStorageSize / this.segmentSize);
     int num = this.config.getNumberOfPopularityRanks(this.cacheName);
-    ramBuffers = new Segment[num];
+    this.ramBuffers = new Segment[num];
     this.dataSegments = new Segment[this.numSegments];
     this.index = new MemoryIndex(this, MemoryIndex.Type.MQ);
     this.dataDir = this.config.getDataDir(this.cacheName);
@@ -184,10 +184,9 @@ public abstract class IOEngine implements Persistent {
   }
 
   /**
-   * Constructor for test
+   * Constructor
    *
-   * @param numSegments number of segments
-   * @param segmentSize segment size
+   * @param cong cache configuration
    */
   public IOEngine(CacheConfig conf) {
     this.cacheName = "default";
@@ -196,7 +195,7 @@ public abstract class IOEngine implements Persistent {
     this.maxStorageSize = this.config.getCacheMaximumSize(this.cacheName);
     this.numSegments = (int) (this.maxStorageSize / this.segmentSize);
     int num = this.config.getNumberOfPopularityRanks(this.cacheName);
-    ramBuffers = new Segment[num];
+    this.ramBuffers = new Segment[num];
     this.dataSegments = new Segment[this.numSegments];
     this.index = new MemoryIndex(this, MemoryIndex.Type.MQ);
     this.dataDir = this.config.getDataDir(this.cacheName);
@@ -304,19 +303,6 @@ public abstract class IOEngine implements Persistent {
     //TODO: checkId(sid);
     return this.dataSegments[sid];
   }
-  
-  /**
-   * TODO: test
-   * Converts popularity value to a the rank
-   *
-   * @param p popularity (0, 1.0)
-   * @return rank
-   */
-  public int popularityToRank(double p) {
-    //TODO: what is MAX : 0 or ?
-    p = p * ramBuffers.length;
-    return (int) Math.floor(p);
-  }
 
   /**
    * Get key-value into a given byte buffer
@@ -351,7 +337,7 @@ public abstract class IOEngine implements Persistent {
       }
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
-      // TODO: actually, not correct
+      // TODO: actually, not correct IT CAN RETURN -1
       if (keyValueSize > buffer.length - bufOffset) {
         return keyValueSize;
       }
@@ -404,7 +390,6 @@ public abstract class IOEngine implements Persistent {
   public long get(byte[] key, int keyOffset, int keySize, byte[] buffer, int bufOffset)
       throws IOException {
 
-    // TODO: locking
     IndexFormat format = this.index.getIndexFormat();
     // TODO: embedded entry case
     int entrySize = format.indexEntrySize();
@@ -413,7 +398,6 @@ public abstract class IOEngine implements Persistent {
     int slot = 0;
     try {
       // Lock index for the key (slot)
-      //TODO: remove locks?
       slot = this.index.lock(key, keyOffset, keySize);
 
       long result = index.find(key, keyOffset, keySize, true, buf, entrySize);
