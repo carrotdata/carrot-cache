@@ -1328,4 +1328,64 @@ public abstract class IOEngine implements Persistent {
     // 2. dispose memory index
     this.index.dispose();
   }
+  
+  /**
+   * Number of cached items currently in the cache
+   * @return number
+   */
+  public long size() {
+    long total = 0;
+    for (Segment s : this.dataSegments) {
+      if (s == null || s.isVacated()) {
+        continue;
+      }
+      total += s.getTotalItems();
+    }
+    return total;
+  }
+  
+  /**
+   * Get total data size
+   * @return data size
+   */
+  public long dataSize () {
+    long total = 0;
+    for (Segment s : this.dataSegments) {
+      if (s == null || s.isVacated()) {
+        continue;
+      }
+      total += s.getSegmentDataSize();
+    }
+    return total;
+  }
+  
+  /**
+   * Get number of active cached items (still accessible)
+   * @return number
+   */
+  public long activeSize() {
+    long total = 0;
+    for (Segment s : this.dataSegments) {
+      if (s == null || s.isVacated()) {
+        continue;
+      }
+      total += s.getTotalItems() - s.getNumberEvictedDeletedItems() - s.getNumberExpiredItems();
+    }
+    return total;
+  }
+  
+  /**
+   * Active data size (estimate)
+   * @return active data size
+   */
+  public long activeDataSize() {
+    long s = size();
+    if (s == 0) {
+      return 0;
+    }
+    long as = activeSize();
+    double ratio = (double) s / as;
+    return (long) (ratio * dataSize());
+  }
+  
 }
