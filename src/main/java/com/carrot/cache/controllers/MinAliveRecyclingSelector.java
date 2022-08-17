@@ -34,8 +34,7 @@ public class MinAliveRecyclingSelector implements RecyclingSelector {
       Segment s = segments[i];
       if (s == null || !s.isSealed()) continue;
       Segment.Info info = s.getInfo();
-      //FIXME: Selector.Info API to keep initial item number and current active item number
-      int active = info.getTotalItems();
+      int active = info.getTotalActiveItems();
       if (s.isAllExpireSegment()) {
         long maxExpire = info.getMaxExpireAt();
         if (System.currentTimeMillis() > maxExpire) {

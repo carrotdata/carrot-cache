@@ -19,7 +19,6 @@ import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;

@@ -181,6 +181,14 @@ public class Segment implements Persistent {
     }
     
     /**
+     * Get total number of active items (which are still accessible)
+     * @return number
+     */
+    public int getTotalActiveItems() {
+      return this.totalItems.get() - this.totalEvictedItems.get() - this.totalExpiredItems.get();
+    }
+    
+    /**
      * Set total number of items
      * @param num total number of items
      */

@@ -18,7 +18,8 @@ import com.carrot.cache.io.Segment;
 
 /**
  * 
- * This selector selects a segment with a lowest average item rank
+ * This selector selects the "oldest" segment
+ * Least Recently Created (LRC)
  *
  */
 public class LRCRecyclingSelector implements RecyclingSelector {
