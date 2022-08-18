@@ -930,7 +930,7 @@ public final class MemoryIndex implements Persistent {
   }
 
   private void deleteAt(long ptr, long $ptr, int rank) {
-    deleteAt(ptr, $ptr, rank, false);
+    deleteAt(ptr, $ptr, rank, -1);
   }
   
   /**
@@ -938,9 +938,9 @@ public final class MemoryIndex implements Persistent {
    * @param ptr index block address
    * @param $ptr entry address
    * @param rank - rank of an entry a
-   * @param expired item was expired
+   * @param expire item was expired - time
    */
-  private void deleteAt(long ptr, long $ptr, int rank, boolean expired) {
+  private void deleteAt(long ptr, long $ptr, int rank, long expire) {
     // TODO: Move this to a separate method
     int dataSize = dataSize(ptr);
 //    //TODO: separate method
@@ -953,10 +953,10 @@ public final class MemoryIndex implements Persistent {
     incrNumEntries(ptr, -1);
     // Update stats
     if (this.engine != null) {
-      if (!expired) {
+      if (expire <= 0) {
         this.engine.updateStats(sid1, -1, -(numRanks - rank));
       } else {
-        this.engine.updateExpiredStats(sid1, rank);
+        this.engine.updateExpiredStats(sid1, rank, expire);
       }
       //TODO: update segments ranks after the deleted item?
     }
@@ -981,7 +981,7 @@ public final class MemoryIndex implements Persistent {
         if (current > expire) {
           //TODO: separate method
           int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
-          deleteAt(ptr, $ptr, rank, true);
+          deleteAt(ptr, $ptr, rank, expire);
           // Update total expired counter
           this.expiredEvictedBalance.incrementAndGet();
           numEntries --;
@@ -1027,7 +1027,7 @@ public final class MemoryIndex implements Persistent {
 
           if (current > expire) {
             int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
-            deleteAt(ptr, $ptr, rank, true);
+            deleteAt(ptr, $ptr, rank, -1);
             // update total expired counter
             this.expiredEvictedBalance.incrementAndGet();
             numEntries --;
@@ -1272,7 +1272,7 @@ public final class MemoryIndex implements Persistent {
           } 
           
           if (result.getResult() == Result.DELETED || result.getResult() == Result.EXPIRED) {
-            deleteAt(ptr, $ptr, rank, result.getResult() == Result.EXPIRED);
+            deleteAt(ptr, $ptr, rank, result.getResult() == Result.EXPIRED? expire: -1);
           }
           break;
         }
@@ -1930,6 +1930,7 @@ public final class MemoryIndex implements Persistent {
   private void doEviction(long slotPtr) { 
     int toEvict = -1;
     boolean expired = false;
+    long expire = -1;
     //TODO: we can improve insert performance by 
     // disabling search for expired items
     if (this.indexFormat.isExpirationSupported()){
@@ -1942,7 +1943,9 @@ public final class MemoryIndex implements Persistent {
       toEvict = evictionPolicy.getEvictionCandidateIndex(slotPtr, numEntries);
     }
     long ptr = slotPtr + offsetFor(slotPtr, toEvict);
-
+    if (expired) {
+      expire = this.indexFormat.getExpire(slotPtr, ptr);
+    }
     // report eviction
     if (this.evictionListener != null && !expired) {
       // This MUST implements ALL the eviction-related logic
@@ -1951,7 +1954,7 @@ public final class MemoryIndex implements Persistent {
     //deleteEntry(slotPtr, toEvict, evictToVictim);
     int numEntries = numEntries(slotPtr);
     int rank = this.evictionPolicy.getRankForIndex(numRanks, toEvict, numEntries);
-    deleteAt(slotPtr, ptr, rank, expired);
+    deleteAt(slotPtr, ptr, rank, expire);
   }
   
   private int findExpired(long slotPtr) {

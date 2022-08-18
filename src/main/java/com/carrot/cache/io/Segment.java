@@ -862,8 +862,12 @@ public class Segment implements Persistent {
   /**
    * Update expired counter and total rank
    * @param rank rank of an expired item
+   * @param expire expiration time
    */
-  public void updateExpired(int rank) {
+  public void updateExpired(int rank, long expire) {
+    if (this.info.getCreationTime() > expire) {
+      return; // do nothing - segment was recycled recently
+    }
     this.info.updateExpired(rank);
   }
   

@@ -25,7 +25,6 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.logging.log4j.LogManager;
@@ -1032,7 +1031,6 @@ public abstract class IOEngine implements Persistent {
    * @param id data segment id
    */
   public void releaseSegmentId(Segment seg) {
-    //TODO: how it is reused in offheap mode?
     
     try {
       seg.writeLock();
@@ -1053,11 +1051,14 @@ public abstract class IOEngine implements Persistent {
    */
   public void updateStats(int id, int itemIncrement, int rankIncrement) {
     checkId(id);
-    Objects.requireNonNull(dataSegments[id]);
+    Segment s = this.dataSegments[id];
+    if (s == null) {
+      return; // possible when segment was recycled recently
+    }
     if (itemIncrement < 0) {
-      dataSegments[id].updateEvictedDeleted(itemIncrement, rankIncrement);
+      s.updateEvictedDeleted(itemIncrement, rankIncrement);
     } else if (itemIncrement == 0) {
-      dataSegments[id].incrTotalRank(rankIncrement);
+      s.incrTotalRank(rankIncrement);
     }
   }
 
@@ -1065,11 +1066,15 @@ public abstract class IOEngine implements Persistent {
    * Update expired stats
    * @param id segment id
    * @param rank rank of an expired item
+   * @param expire expiration time
    */
-  public void updateExpiredStats(int id, int rank) {
+  public void updateExpiredStats(int id, int rank, long expire) {
     checkId(id);
-    Objects.requireNonNull(dataSegments[id]);
-    dataSegments[id].updateExpired(rank);
+    Segment s = dataSegments[id];
+    if (s == null) {
+      return; // possible, segment was recycled recently
+    }
+    s.updateExpired(rank, expire);
   }
   
   /**
