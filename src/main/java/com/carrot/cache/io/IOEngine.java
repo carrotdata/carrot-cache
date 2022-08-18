@@ -23,12 +23,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.carrot.cache.Cache;
+import com.carrot.cache.Scavenger;
 import com.carrot.cache.controllers.RecyclingSelector;
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MemoryIndex;
@@ -80,9 +84,15 @@ public abstract class IOEngine implements Persistent {
   /* IOEngine listener */
   protected Listener aListener;
 
-  /* maximum allowed storage size */
+  /* Maximum allowed storage size (in bytes) */
   protected long maxStorageSize;
 
+  /* Total allocated storage size (in bytes) */
+  protected AtomicLong storageAllocated = new AtomicLong();
+ 
+  /* Total storage used size in bytes */
+  protected AtomicLong storageUsed = new AtomicLong();
+  
   /*
    * RAM buffers accumulates incoming PUT's before submitting them to an IOEngine
    */
@@ -112,6 +122,9 @@ public abstract class IOEngine implements Persistent {
   
   /* Maximum size for data embedding */
   int maxEmbeddedSize;
+  
+  List<Scavenger.Listener> scavengerListeners = new LinkedList<>();
+
   /**
    * Initialize engine for a given cache
    * @param cacheName cache name
@@ -214,6 +227,58 @@ public abstract class IOEngine implements Persistent {
       LOG.fatal(e);
       throw new RuntimeException(e);
     }
+  }
+  
+  public void addScavengerListener(Scavenger.Listener l) {
+    this.scavengerListeners.add(l);
+  }
+  
+  
+  /**
+   * Get allocated storage size
+   * @return size
+   */
+  public long getStorageAllocated() {
+    return this.storageAllocated.get();
+  }
+  
+  /**
+   * Get storage used 
+   * @return size  
+   */
+  public long getStorageUsed() {
+    return this.storageUsed.get();
+  }
+  
+  /**
+   * Get storage allocation as a ratio of a maximum storage size
+   * @return ratio (0. - 1.)
+   */
+  public double getStorageAllocatedRatio() {
+    return (double) this.storageAllocated.get() / this.maxStorageSize;
+  }
+  
+  /**
+   * Report allocation
+   * @param value allocation value
+   * @return new storage allocation value
+   */
+  public long reportAllocation(long value) {
+    long v = this.storageAllocated.addAndGet(value);
+    if (this.aListener != null) {
+      // This must the Cache
+      aListener.onEvent(this, IOEngineEvent.DATA_SIZE_CHANGED);
+    }
+    return v;
+  }
+  
+  /**
+   * Report usage
+   * @param value usage value
+   * @return new storage usage value
+   */
+  public long reportUsage(long value) {
+    return this.storageUsed.addAndGet(value);
   }
   
   /**
@@ -968,13 +1033,14 @@ public abstract class IOEngine implements Persistent {
    */
   public void releaseSegmentId(Segment seg) {
     //TODO: how it is reused in offheap mode?
-    if (seg.isOffheap()) {
-      seg.vacate();
-    } else {
+    
+    try {
+      seg.writeLock();
+      seg.dispose();
       dataSegments[seg.getId()] = null;
-    }
-    if (this.aListener != null) {
-      aListener.onEvent(this, IOEngineEvent.DATA_SIZE_CHANGED);
+      reportAllocation(- this.segmentSize);
+    } finally {
+      seg.writeUnlock();
     }
   }
   /**
@@ -1022,7 +1088,7 @@ public abstract class IOEngine implements Persistent {
    */
   protected final int getAvailableId() {
     for (int i = 0; i < dataSegments.length; i++) {
-      if (dataSegments[i] == null || dataSegments[i].isVacated()) {
+      if (dataSegments[i] == null) {
         return i;
       }
     }
@@ -1157,7 +1223,9 @@ public abstract class IOEngine implements Persistent {
       }
       offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength, expire);
     }
-
+    
+    reportUsage(Utils.kvSize(keyLength, valueLength));
+    
     this.index.insertWithRank(
         key,
         keyOff,
@@ -1225,12 +1293,16 @@ public abstract class IOEngine implements Persistent {
       }
       offset = s.append(keyPtr, keyLength, valuePtr, valueLength, expire);
     }
+
+    reportUsage(Utils.kvSize(keyLength, valueLength));
+
     this.index.insertWithRank(
         keyPtr, keyLength, valuePtr, valueLength, (short) s.getId(), (int) offset, rank, expire);
     return true;
   }
 
   protected Segment getRAMSegmentByRank(int rank) {
+    
     Segment s = this.ramBuffers[rank];
     if (s == null) {
       synchronized(this.ramBuffers) {
@@ -1244,6 +1316,7 @@ public abstract class IOEngine implements Persistent {
         }
         if (this.dataSegments[id] == null) {
           s = Segment.newSegment((int) this.segmentSize, id, rank);
+          reportAllocation(this.segmentSize);
           // Set data appender
           s.setDataWriter(this.dataWriter);
           this.dataSegments[id] = s;
@@ -1280,6 +1353,8 @@ public abstract class IOEngine implements Persistent {
     // Save index
     this.index.save(dos);
     this.recyclingSelector.save(dos);
+    dos.writeLong(this.storageAllocated.get());
+    dos.writeLong(this.storageUsed.get());
     dos.close();  
   }
   
@@ -1305,6 +1380,8 @@ public abstract class IOEngine implements Persistent {
     }
     this.index.load(dis);
     this.recyclingSelector.load(dis);
+    this.storageAllocated.set(dis.readLong());
+    this.storageUsed.set(dis.readLong());
     dis.close();    
   }
     
@@ -1336,7 +1413,7 @@ public abstract class IOEngine implements Persistent {
   public long size() {
     long total = 0;
     for (Segment s : this.dataSegments) {
-      if (s == null || s.isVacated()) {
+      if (s == null) {
         continue;
       }
       total += s.getTotalItems();
@@ -1351,7 +1428,7 @@ public abstract class IOEngine implements Persistent {
   public long dataSize () {
     long total = 0;
     for (Segment s : this.dataSegments) {
-      if (s == null || s.isVacated()) {
+      if (s == null) {
         continue;
       }
       total += s.getSegmentDataSize();
@@ -1366,7 +1443,7 @@ public abstract class IOEngine implements Persistent {
   public long activeSize() {
     long total = 0;
     for (Segment s : this.dataSegments) {
-      if (s == null || s.isVacated()) {
+      if (s == null) {
         continue;
       }
       total += s.getTotalItems() - s.getNumberEvictedDeletedItems() - s.getNumberExpiredItems();
@@ -1388,4 +1465,23 @@ public abstract class IOEngine implements Persistent {
     return (long) (ratio * dataSize());
   }
   
+  /**
+   * Called by Scavenger
+   * @param s segment to recycle
+   */
+  public void startRecycling(Segment s) {
+    for (Scavenger.Listener l : this.scavengerListeners) {
+      l.startSegment(s);
+    }
+  }
+  
+  /**
+   * Called by Scavenger
+   * @param s segment to recycle
+   */
+  public void finishRecycling(Segment s) {
+    for (Scavenger.Listener l : this.scavengerListeners) {
+      l.finishSegment(s);
+    }  
+  }
 }

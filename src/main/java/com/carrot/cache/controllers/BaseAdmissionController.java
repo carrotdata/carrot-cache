@@ -55,7 +55,7 @@ public class BaseAdmissionController implements AdmissionController, Scavenger.L
     this.ttlCounts= new long[ranks];
     this.cumTtl = new long[ranks];
     this.avgTTL = new AtomicLongArray(ranks);
-    this.cache.addScavengerListener(this);
+    this.cache.getEngine().addScavengerListener(this);
   }
   
   /**

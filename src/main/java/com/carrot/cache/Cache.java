@@ -23,8 +23,6 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicLong;
@@ -160,7 +158,7 @@ import com.carrot.cache.util.Utils;
  * <p>5.5 During scavenger run, the special rate limiter controls incoming data rate and sets its limit to
  * 90% of a Scavenger cleaning data rate to guarantee that we won't exceed cache maximum capacity
  */
-public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionListener {
+public class Cache implements IOEngine.Listener, EvictionListener {
 
   /** Logger */
   private static final Logger LOG = LogManager.getLogger(Cache.class);
@@ -200,9 +198,6 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
 
   /** Cache scavenger */
   Scavenger scavenger;
-
-  /** Recycling selector */
-  //RecyclingSelector recyclingSelector;
   
   /* IOEngine */
   IOEngine engine;
@@ -226,9 +221,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
   double writeRejectionThreshold;
   
   Epoch epoch;
-  
-  List<Scavenger.Listener> scavengerListeners = new LinkedList<>();
-  
+    
   /* Throughput controller enabled */
   boolean tcEnabled;
   /**
@@ -297,7 +290,6 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     
   }
   
-  
   /**
    * Initialize throughput controller
    * @throws IOException
@@ -339,7 +331,6 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
   public String getName() {
     return this.cacheName;
   }
-  
 
   /**
    * Get cache configuration object
@@ -413,7 +404,6 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     return this.maximumCacheSize;
   }
   
-
   /**
    * Get memory used as a fraction of memoryLimit
    *
@@ -439,7 +429,6 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     this.admissionController = ac;
   }
   
-   
   /**
    * Get total gets
    * @return total gets
@@ -578,6 +567,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     }
     return rank;
   }
+  
   /**
    * Put item into the cache
    *
@@ -620,8 +610,6 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     reportUsed(keySize, valSize);
   }
 
-  
-  
   private void put (byte[] buf, int off, long expire) throws IOException {
     int rank = getDefaultRankToInsert();
     int keySize = Utils.readUVInt(buf, off);
@@ -868,7 +856,6 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     return delete(key, 0, key.length);
   }
   
-  
   /**
    * Expire cached item
    *
@@ -924,7 +911,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
   }
   
   /**
-   * Sets parent cahe
+   * Sets parent cache
    * @param parent cache
    */
   public void setParentCache(Cache parent) {
@@ -938,8 +925,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
   public Cache getParentCache() {
     return this.parentCache;
   }
-  
-  
+
   private boolean processPromotion(long ptr, long $ptr) {
     if (this.parentCache == null) {
      return false;
@@ -1072,7 +1058,6 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     c.put(indexPtr, kSize, indexPtr + kSize, vSize, expire, rank, true);
   }
 
-  
   // IOEngine.Listener
   @Override
   public void onEvent(IOEngine e, IOEngineEvent evt) {
@@ -1082,7 +1067,7 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
       double max = this.conf.getScavengerStartMemoryRatio(this.cacheName);
       double min = this.conf.getScavengerStopMemoryRatio(this.cacheName);
       if (used >= max && (this.scavenger == null || !this.scavenger.isAlive())) {
-        this.scavenger = new Scavenger(this);
+        this.scavenger = new Scavenger(this.engine);
         this.scavenger.start();
         this.engine.setEvictionEnabled(true);
         this.tcEnabled = true;
@@ -1314,25 +1299,4 @@ public class Cache implements IOEngine.Listener, Scavenger.Listener, EvictionLis
     return processPromotion(ibPtr, ptr);
   }
 
-  @Override
-  public void startSegment(Segment s) {
-    for(Scavenger.Listener l : this.scavengerListeners) {
-      l.startSegment(s);
-    }
-  }
-
-  @Override
-  public void finishSegment(Segment s) {
-    for(Scavenger.Listener l : this.scavengerListeners) {
-      l.finishSegment(s);
-    }
-  }
-  
-  /**
-   * Add Scavenger listener
-   * @param l listener
-   */
-  public void addScavengerListener(Scavenger.Listener l) {
-    this.scavengerListeners.add(l);
-  }
 }

@@ -442,6 +442,8 @@ public class Segment implements Persistent {
   /* Data writer */
   DataWriter dataWriter;
   
+  /* Is valid segment */
+  private volatile boolean valid = true;
   /**
    * 
    * Default constructor
@@ -474,10 +476,11 @@ public class Segment implements Persistent {
   }
   
   /**
-   * Vacate segment for reuse
+   * Is valid
+   * @return true or false
    */
-  public void vacate() {
-    this.info = null;
+  public boolean isValid() {
+    return this.valid;
   }
   
   /**
@@ -487,6 +490,7 @@ public class Segment implements Persistent {
     if (isOffheap()) {
       UnsafeAccess.free(this.address);
     }
+    this.valid = false;
   }
   
   /**
@@ -497,14 +501,6 @@ public class Segment implements Persistent {
    */
   public void reuse(int id, int rank, long creationTime) {
     this.info = new Info(id, rank, creationTime);
-  }
-  
-  /**
-   * Is segment vacated (can be reused)?
-   * @return true / false
-   */
-  public boolean isVacated() {
-    return this.info == null;
   }
   
   /**

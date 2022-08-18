@@ -206,7 +206,9 @@ public class Scavenger extends Thread {
     return stats;
   }
 
-  private final Cache cache;
+  private final IOEngine engine;
+  
+  private final CacheConfig config;
 
   private volatile long runStartTime = System.currentTimeMillis();
 
@@ -218,24 +220,24 @@ public class Scavenger extends Thread {
   
   private static double adjStep = 0.05;
   
-  public Scavenger(Cache parent) {
+  public Scavenger(IOEngine engine) {
     super("c2 scavenger");
-    this.cache = parent;
+    this.engine = engine;
+    this.config = CacheConfig.getInstance();
     // Update stats
     stats.totalRuns++;
-    String cacheName = this.cache.getName();
+    String cacheName = this.engine.getCacheName();
     if (dumpBelowRatio < 0) {
-      dumpBelowRatio = this.cache.getCacheConfig().getScavengerDumpEntryBelowStart(cacheName);
+      dumpBelowRatio = this.config.getScavengerDumpEntryBelowStart(cacheName);
       dumpBelowRatioMin = dumpBelowRatio;
-      dumpBelowRatioMax = this.cache.getCacheConfig().getScavengerDumpEntryBelowStop(cacheName);
-      adjStep = this.cache.getCacheConfig().getScavengerDumpEntryBelowAdjStep(cacheName);
+      dumpBelowRatioMax = this.config.getScavengerDumpEntryBelowStop(cacheName);
+      adjStep = this.config.getScavengerDumpEntryBelowAdjStep(cacheName);
     }
   }
   
   @Override
   public void run() {
     long runStart = System.currentTimeMillis();
-    IOEngine engine = cache.getEngine();
     boolean finished = false;
     while (!finished) {
       Segment s = engine.getSegmentForRecycling();
@@ -243,7 +245,7 @@ public class Scavenger extends Thread {
         LOG.error(Thread.currentThread().getName()+": empty segment");
         return;
       }
-      this.cache.startSegment(s);
+      this.engine.startRecycling(s);
       if (s.getInfo().getTotalItems() == 0) {
         stats.totalEmptySegments ++;
       }
@@ -256,7 +258,7 @@ public class Scavenger extends Thread {
         return;
       }
       // Update admission controller statistics 
-      this.cache.finishSegment(s);
+      this.engine.finishRecycling(s);
     }
     long runEnd = System.currentTimeMillis();
     // Update stats
@@ -266,8 +268,7 @@ public class Scavenger extends Thread {
   // TODO: refactor this method
   private boolean cleanSegment(Segment s) throws IOException {
     // Check if segment is empty on active items
-    CacheConfig config = this.cache.getCacheConfig();
-    String cacheName = this.cache.getName();
+    String cacheName = this.engine.getCacheName();
     double stopRatio = config.getScavengerStopMemoryRatio(cacheName);
     Segment.Info info = s.getInfo();
     SegmentScanner sc = null;
@@ -277,17 +278,16 @@ public class Scavenger extends Thread {
         // We can dump it completely w/o asking memory index
         //
         long dataSize = info.getSegmentDataSize();
-        cache.reportUsed(-dataSize);
+        this.engine.reportUsage(-dataSize);
         // Update stats
         stats.totalBytesFreed += dataSize;
       } else {
-        IOEngine engine = cache.getEngine();
         MemoryIndex index = engine.getMemoryIndex();
         IndexFormat format = index.getIndexFormat();
         int indexEntrySize = format.indexEntrySize();
         indexBuf = UnsafeAccess.malloc(indexEntrySize);
 
-        sc = engine.getScanner(s);
+        sc = engine.getScanner(s); // acquires read lock 
 
         while (sc.hasNext()) {
           final long keyPtr = sc.keyAddress();
@@ -308,17 +308,17 @@ public class Scavenger extends Thread {
           
           switch (res) {
             case EXPIRED:
-              cache.reportUsed(-totalSize);
+              this.engine.reportUsage(-totalSize);
               stats.totalBytesExpired += totalSize;
               stats.totalBytesFreed += totalSize;
               stats.totalItemsExpired += 1;
               break;
             case NOT_FOUND:
-              cache.reportUsed(-totalSize);
+              this.engine.reportUsage(-totalSize);
               stats.totalBytesFreed += totalSize;
               break;
             case DELETED:
-              cache.reportUsed(-totalSize);
+              this.engine.reportUsage(-totalSize);
               // Update stats
               stats.totalBytesFreed += totalSize;
               // Return Item back to AQ
@@ -327,17 +327,17 @@ public class Scavenger extends Thread {
               break;
             case OK:
               // Put value back into the cache - it has high popularity
-              cache.put(keyPtr, keySize, valuePtr, valSize, expire, rank, true);
+              this.engine.put(keyPtr, keySize, valuePtr, valSize, expire, rank);
               break;
           }
           sc.next();
         }
       }
-      double usage = cache.getMemoryUsedPct();
+      double usage = this.engine.getStorageAllocatedRatio();
       return usage < stopRatio;
     } finally {
       if (sc != null) {
-        sc.close();
+        sc.close(); // releases read lock
       }
       if (indexBuf > 0) {
         // Free buffer

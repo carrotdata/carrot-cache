@@ -139,6 +139,7 @@ public class FileIOEngine extends IOEngine {
           Long ptr = this.bufferPool.poll();
           if (ptr == null) {
             ptr = UnsafeAccess.mallocZeroed(this.segmentSize);
+            reportAllocation(this.segmentSize);
           }
           s = Segment.newSegment(ptr, (int) this.segmentSize, id, rank);
           // Set data appender
