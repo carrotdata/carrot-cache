@@ -17,7 +17,6 @@ package com.carrot.cache.controllers;
 import java.io.IOException;
 
 import com.carrot.cache.Cache;
-import com.carrot.cache.io.Segment;
 import com.carrot.cache.util.CacheConfig;
 
 /**
@@ -66,13 +65,4 @@ public class ExpirationAwareAdmissionControllerDisk extends AQBasedAdmissionCont
     return rank;
   } 
   
-  @Override
-  public void startSegment(Segment s) {
-    // Do nothing
-  }
-  
-  @Override
-  public void finishSegment(Segment s) {
-    // Do nothing
-  }
 }
