@@ -1430,7 +1430,7 @@ public final class MemoryIndex implements Persistent {
       $slot = getSlotNumber(hash, index.length);
       ptr = index[$slot];
     }
-    boolean result = delete(ptr, hash);
+    boolean result = delete(ptr, hash) >= 0? true: false;
     if (shrink && result) {
       long nptr = shrink(ptr);
       if (nptr != ptr) {
@@ -1446,9 +1446,9 @@ public final class MemoryIndex implements Persistent {
    *
    * @param ptr index block address
    * @param hash key's hash
-   * @return true or false
+   * @return deleted index or -1
    */
-  private boolean delete(long ptr, long hash) {
+  private int delete(long ptr, long hash) {
     int numEntries = numEntries(ptr);
     long $ptr = ptr + indexBlockHeaderSize;
     int count = 0;
@@ -1456,12 +1456,12 @@ public final class MemoryIndex implements Persistent {
       if (this.indexFormat.equals($ptr, hash)) {
         int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
         deleteAt(ptr, $ptr, rank);
-        return true;
+        return count;
       }
       count++;
       $ptr += this.indexFormat.fullEntrySize($ptr);
     }
-    return false;
+    return -1;
   }
   
   /**
@@ -1984,10 +1984,13 @@ public final class MemoryIndex implements Persistent {
    */
   private boolean insertEntry(long ptr, long hash, long indexPtr, int indexSize, int rank) {
     // Check if it exists already - update
-    boolean deleted = delete(ptr, hash);
+    int deletedIndex = delete(ptr, hash);
     int numEntries = numEntries(ptr);
     int insertIndex = indexType == Type.MQ? evictionPolicy.getStartIndexForRank(numRanks, rank, numEntries):
       evictionPolicy.getInsertIndex(ptr, numEntries);
+    if (deletedIndex >= 0 && indexType == Type.MQ) {
+      insertIndex = deletedIndex;
+    }
     // TODO: entry size can be variable
     int off = offsetFor(ptr, insertIndex);
     int toMove = dataSize(ptr) + this.indexBlockHeaderSize - off;
@@ -2002,7 +2005,7 @@ public final class MemoryIndex implements Persistent {
     if (this.indexType == Type.AQ) {
       UnsafeAccess.putLong(ptr + off, hash);
       // return for AQ
-      return !deleted;
+      return deletedIndex < 0;
     } else {
       UnsafeAccess.copy(indexPtr, ptr + off, indexSize);
     }
@@ -2013,7 +2016,7 @@ public final class MemoryIndex implements Persistent {
     
     int sid1 = this.indexFormat.getSegmentId(indexPtr);
     updateStats(ptr, sid1, rank, numEntries);
-    return !deleted;
+    return deletedIndex < 0;
   
   }
 
