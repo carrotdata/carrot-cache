@@ -249,7 +249,7 @@ public class Scavenger extends Thread {
         return;
       }
       engine.startRecycling(s);
-      if (s.getInfo().getTotalItems() == 0 || 
+      if (s.getInfo().getTotalActiveItems() == 0 || 
           s.getInfo().getMaxExpireAt() < System.currentTimeMillis()) {
         stats.totalEmptySegments ++;
       }
@@ -280,7 +280,8 @@ public class Scavenger extends Thread {
     
     try {
       long currentTime = System.currentTimeMillis();
-      if (info.getMaxExpireAt() <= currentTime) {
+      if (info.getMaxExpireAt() < currentTime || 
+          info.getTotalActiveItems() == 0) {
         // We can dump it completely w/o asking memory index
         long dataSize = info.getSegmentDataSize();
         engine.reportUsage(-dataSize);
