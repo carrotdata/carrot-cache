@@ -92,11 +92,11 @@ public class CacheConfig {
   
   //TODO - location for data and system snapshots
   
-  /* For in RAM cache  - segment size */
-  public static final String CACHE_SEGMENT_SIZE_KEY = "segment.size";
+  /* Data segment size */
+  public static final String CACHE_SEGMENT_SIZE_KEY = "cache.data.segment.size";
   
-  /* For in RAM cache  - maximum memory limit to use for cache */
-  public static final String CACHE_MAXIMUM_SIZE_KEY = "maximum.size";
+  /* Maximum storage limit to use for cache */
+  public static final String CACHE_MAXIMUM_SIZE_KEY = "cache.data.max.size";
   
   /* When to start GC (garbage collection) - size of the cache as a fraction of the maximum cache size */
   public static final String SCAVENGER_START_RUN_RATIO_KEY = "scavenger.start.ratio";
@@ -112,10 +112,7 @@ public class CacheConfig {
   
   /* Adjustment step for scavenger */
   public static final String SCAVENGER_DUMP_ENTRY_BELOW_STEP_KEY = "scavenger.dump.entry.below.step";
-  
-  /* Number of admission ranks ( default - 8) */
-  public static final String CACHE_ADMISSION_NUMBER_RANKS_KEY = "cache.admission.number.ranks";
-  
+    
   /* Number of popularity ranks ( default - 8) */
   public static final String CACHE_POPULARITY_NUMBER_RANKS_KEY = "cache.popularity.number.ranks";
   
@@ -134,19 +131,12 @@ public class CacheConfig {
   /* Admission Queue maximum size in fraction of a full cache size */
   public static final String ADMISSION_QUEUE_MAX_SIZE_KEY = "admission.queue.max.size";
   
-  /* Admission Queue adjustment step number  */
-  //public static final String ADMISSION_QUEUE_ADJ_STEPS_NUMBER_KEY = "admission.queue.adj.steps.number";
-  
-  
   
   /* Readmission evicted item to AQ minimum hit count threshold */
-  public static final String READMISSION_HIT_COUNT_MIN_KEY = "readmission.hit.count.min";
+  public static final String READMISSION_HIT_COUNT_MIN_KEY = "cache.readmission.hit.count.min";
   
   /* Cumulative average write rate limit  (bytes/sec) */
-  public static final String CACHE_WRITE_RATE_LIMIT_KEY = "write.rate.limit";
-  
-  /* Incremental index rehashing */
-  public static final String INCREMENTRAL_INDEX_REHASHING_KEY = "incremental.index.rehashing";
+  public static final String CACHE_WRITE_RATE_LIMIT_KEY = "cache.write.avg.rate.limit";
   
   /*
    * Some file systems : ext4, xfs, APFS etc supports sparse files and so called 
@@ -209,10 +199,10 @@ public class CacheConfig {
   /* Class name for cache admission controller implementation */
   public static final String CACHE_ADMISSION_CONTROLLER_IMPL_KEY = "cache.admission.controller.impl";
   
-  /* Class name for cache admission controller implementation */
+  /* Class name for cache throughput controller implementation */
   public static final String CACHE_THROUGHPUT_CONTROLLER_IMPL_KEY = "cache.throughput.controller.impl";
   
-  /* Class name for cache admission controller implementation */
+  /* Class name for cache recycling controller implementation */
   public static final String CACHE_RECYCLING_SELECTOR_IMPL_KEY = "cache.recycling.selector.impl";
   
   /* Class name for cache data appender implementation */
@@ -247,7 +237,7 @@ public class CacheConfig {
   
   /* Defaults section */
   
-  public static final long DEFAULT_CACHE_SEGMENT_SIZE = 256 * 1024 * 1024;
+  public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
 
   public static final long DEFAULT_CACHE_MAXIMUM_SIZE = 0; // Unlimited
   
@@ -346,7 +336,7 @@ public class CacheConfig {
   
   /** Default implementation class for recycling selector */
   public final static String DEFAULT_CACHE_RECYCLING_SELECTOR_IMPL = 
-      "com.carrot.cache.controllers.LowestRankRecyclingSelector";
+      "com.carrot.cache.controllers.MinAliveRecyclingSelector";
   /** Default */
   public final static String DEFAULT_CACHE_DATA_WRITER_IMPL = 
       "com.carrot.cache.io.BaseDataWriter";
@@ -678,20 +668,7 @@ public class CacheConfig {
     return (int) getLongProperty(START_INDEX_NUMBER_OF_SLOTS_POWER_KEY, 
       DEFAULT_START_INDEX_NUMBER_OF_SLOTS_POWER);
   }
-  
-  /**
-   * Get incremental index rehashing for a cache
-   * @param cacheName cache name
-   * @return true or false
-   */
-  public boolean getIncrementalIndexRehashing (String cacheName) {
-    String value = props.getProperty(cacheName + "."+ INCREMENTRAL_INDEX_REHASHING_KEY);
-    if (value != null) {
-      return Boolean.parseBoolean(value);
-    }
-    return getBooleanProperty(INCREMENTRAL_INDEX_REHASHING_KEY, DEFAULT_INCREMENTRAL_INDEX_REHASHING);
-  }
-  
+    
   /**
    * Get snapshot directory location for a cache
    * @param cacheName cache name

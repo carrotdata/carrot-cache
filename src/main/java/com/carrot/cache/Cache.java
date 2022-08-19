@@ -1272,7 +1272,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   private void saveEngine() throws IOException {
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
-    String file = CacheConfig.THROUGHPUT_CONTROLLER_SNAPSHOT_NAME;
+    String file = CacheConfig.CACHE_ENGINE_SNAPSHOT_NAME;
     Path p = Paths.get(snapshotDir, file);
     FileOutputStream fos = new FileOutputStream(p.toFile());
     DataOutputStream dos = new DataOutputStream(fos);
