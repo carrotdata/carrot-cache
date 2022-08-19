@@ -236,9 +236,9 @@ public class FileIOEngine extends IOEngine {
   }
   
   @Override
-  public synchronized void releaseSegmentId(Segment data) {
+  public synchronized void disposeDataSegment(Segment data) {
     //TODO: is it a good idea to lock on file I/O?
-    super.releaseSegmentId(data);
+    super.disposeDataSegment(data);
     // close and delete file
     RandomAccessFile f = dataFiles.get(data.getId());
     if (f != null) {

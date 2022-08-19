@@ -208,7 +208,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /* Throughput controller - optional */
   ThroughputController throughputController;
   
-  /* Periodic throughput adjustment task */
+  /* Periodic task runner */
   Timer timer;
   
   /* Victim cache */
@@ -243,20 +243,25 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   private void initAll() throws IOException {
-
     initAdmissionController();
     initThroughputController();
-    if (this.throughputController != null) {
-      TimerTask task =
-        new TimerTask() {
-          public void run() {
-            adjustThroughput();
-          }
-        };
-      this.timer = new Timer();
-      long interval = this.conf.getThroughputCheckInterval(this.cacheName);
-      this.timer.scheduleAtFixedRate(task, interval, interval);
-    }
+
+    initScavenger();
+  }
+
+  private void initScavenger() {
+    long interval = this.conf.getScavengerRunInterval(this.cacheName) * 1000;
+    LOG.info("Started Scavenger, interval=%d sec", interval /1000);
+    TimerTask task = new TimerTask() {
+      public void run() {
+        if (Cache.this.scavenger != null && Cache.this.scavenger.isAlive()) {
+          return;
+        }
+        Cache.this.scavenger = new Scavenger(Cache.this);
+        Cache.this.scavenger.start();
+      }
+    };
+    this.timer.scheduleAtFixedRate(task, interval, interval);
   }
 
   private void adjustThroughput() {
@@ -287,11 +292,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return;
     }
     this.admissionController.setCache(this);
-    
+    LOG.info("Started Admission Controller [%s]", this.admissionController.getClass().getName());
+
   }
-  
+
   /**
    * Initialize throughput controller
+   *
    * @throws IOException
    */
   private void initThroughputController() throws IOException {
@@ -301,13 +308,23 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       LOG.error(e);
       throw new RuntimeException(e);
     }
-    
+
     if (this.throughputController == null) {
       return;
     }
     this.throughputController.setCache(this);
+    TimerTask task =
+        new TimerTask() {
+          public void run() {
+            adjustThroughput();
+          }
+        };
+    this.timer = new Timer();
+    long interval = this.conf.getThroughputCheckInterval(this.cacheName);
+    this.timer.scheduleAtFixedRate(task, interval, interval);
+    LOG.info("Started throughput controller, interval=%d sec", interval /1000);
   }
-  
+
   private void updateMaxCacheSize() {
     this.maximumCacheSize = this.engine.getMaximumStorageSize();
   }
@@ -1068,21 +1085,21 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   // IOEngine.Listener
   @Override
   public void onEvent(IOEngine e, IOEngineEvent evt) {
-    if (evt == IOEngineEvent.DATA_SIZE_CHANGED) {
-      double used = getMemoryUsedPct();
-      //TODO: performance
-      double max = this.conf.getScavengerStartMemoryRatio(this.cacheName);
-      double min = this.conf.getScavengerStopMemoryRatio(this.cacheName);
-      if (used >= max && (this.scavenger == null || !this.scavenger.isAlive())) {
-        this.scavenger = new Scavenger(this);
-        this.scavenger.start();
-        this.engine.setEvictionEnabled(true);
-        this.tcEnabled = true;
-      } else if (used < min) {
-        // Disable eviction
-        this.engine.setEvictionEnabled(false);
-      }
-    }
+//    if (evt == IOEngineEvent.DATA_SIZE_CHANGED) {
+//      double used = getMemoryUsedPct();
+//      //TODO: performance
+//      double max = this.conf.getScavengerStartMemoryRatio(this.cacheName);
+//      double min = this.conf.getScavengerStopMemoryRatio(this.cacheName);
+//      if (used >= max && (this.scavenger == null || !this.scavenger.isAlive())) {
+//        this.scavenger = new Scavenger(this);
+//        this.scavenger.start();
+//        this.engine.setEvictionEnabled(true);
+//        this.tcEnabled = true;
+//      } else if (used < min) {
+//        // Disable eviction
+//        this.engine.setEvictionEnabled(false);
+//      }
+//    }
   }
   
   // Persistence section

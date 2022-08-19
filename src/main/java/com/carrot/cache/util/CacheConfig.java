@@ -163,7 +163,12 @@ public class CacheConfig {
   /*
    * Cache write throughput check interval key  
    */
-  public static final String THROUGHPUT_CHECK_INTERVAL_MS_KEY = "throughput.check.interval.ms"; 
+  public static final String THROUGHPUT_CHECK_INTERVAL_SEC_KEY = "throughput.check.interval.sec"; 
+  
+  /*
+   * Scavenger run interval key (seconds)  
+   */
+  public static final String SCAVENGER_RUN_INTERVAL_SEC_KEY = "scavenger.run.interval.sec"; 
   
   /*
    * Cache write throughput controller tolerance limit
@@ -316,7 +321,10 @@ public class CacheConfig {
   public static final boolean DEFAULT_INCREMENTRAL_INDEX_REHASHING = false;
 
   /* Default throughput check interval - 1 hour*/
-  public static final long DEFAULT_THROUGHPUT_CHECK_INTERVAL_MS = 3600000;// 1h
+  public static final long DEFAULT_THROUGHPUT_CHECK_INTERVAL_SEC = 3600;// 1h
+  
+  /* Default Scavenger run interval - 1 min*/
+  public static final long DEFAULT_SCAVENGER_RUN_INTERVAL_SEC = 60;// 1min
   
   /* Default throughput controller tolerance limit*/
   public static final double DEFAULT_THROUGHPUT_CONTROLLER_TOLERANCE_LIMIT = 0.05;
@@ -755,11 +763,24 @@ public class CacheConfig {
    * @return interval in ms for a given cache name
    */
   public long getThroughputCheckInterval(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ THROUGHPUT_CHECK_INTERVAL_MS_KEY);
+    String value = props.getProperty(cacheName + "."+ THROUGHPUT_CHECK_INTERVAL_SEC_KEY);
+    if (value != null) {
+      return (int) Long.parseLong(value) * 1000;
+    }
+    return getLongProperty(THROUGHPUT_CHECK_INTERVAL_SEC_KEY, DEFAULT_THROUGHPUT_CHECK_INTERVAL_SEC) * 1000;
+  }
+  
+  /**
+   * Get Scavenger run interval for a given cache name
+   * @param cacheName cache name
+   * @return interval in seconds for a given cache name
+   */
+  public long getScavengerRunInterval(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ SCAVENGER_RUN_INTERVAL_SEC_KEY);
     if (value != null) {
       return (int) Long.parseLong(value);
     }
-    return getLongProperty(THROUGHPUT_CHECK_INTERVAL_MS_KEY, DEFAULT_THROUGHPUT_CHECK_INTERVAL_MS);
+    return getLongProperty(SCAVENGER_RUN_INTERVAL_SEC_KEY, DEFAULT_SCAVENGER_RUN_INTERVAL_SEC);
   }
   
   /**

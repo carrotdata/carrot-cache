@@ -1030,7 +1030,7 @@ public abstract class IOEngine implements Persistent {
    *
    * @param id data segment id
    */
-  public void releaseSegmentId(Segment seg) {
+  public void disposeDataSegment(Segment seg) {
     
     try {
       seg.writeLock();

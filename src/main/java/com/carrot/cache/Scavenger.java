@@ -19,22 +19,21 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.DateFormat;
+import java.util.Date;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MemoryIndex;
+import com.carrot.cache.index.MemoryIndex.Result;
+import com.carrot.cache.index.MemoryIndex.ResultWithRankAndExpire;
 import com.carrot.cache.io.IOEngine;
 import com.carrot.cache.io.Segment;
 import com.carrot.cache.io.SegmentScanner;
 import com.carrot.cache.util.CacheConfig;
 import com.carrot.cache.util.Persistent;
-import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
-
-import static com.carrot.cache.index.MemoryIndex.ResultWithRankAndExpire;
-import static com.carrot.cache.index.MemoryIndex.Result;
 
 public class Scavenger extends Thread {
 
@@ -240,20 +239,24 @@ public class Scavenger extends Thread {
     long runStart = System.currentTimeMillis();
     boolean finished = false;
     IOEngine engine = this.cache.getEngine();
+    DateFormat format = DateFormat.getDateInstance();
+    LOG.info("Scavenger started at %s allocated storage=%d maximum storage=%d",
+      format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
     while (!finished) {
       Segment s = engine.getSegmentForRecycling();
       if (s == null) {
-        LOG.error(Thread.currentThread().getName()+": empty segment");
+        LOG.error(Thread.currentThread().getName() + ": empty segment");
         return;
       }
       engine.startRecycling(s);
-      if (s.getInfo().getTotalItems() == 0) {
+      if (s.getInfo().getTotalItems() == 0 || 
+          s.getInfo().getMaxExpireAt() < System.currentTimeMillis()) {
         stats.totalEmptySegments ++;
       }
       try {
         finished = cleanSegment(s);
-        // Release segment
-        engine.releaseSegmentId(s);        
+        // Dispose segment
+        engine.disposeDataSegment(s);        
       } catch (IOException e) {
         LOG.error(e);
         return;
@@ -264,31 +267,33 @@ public class Scavenger extends Thread {
     long runEnd = System.currentTimeMillis();
     // Update stats
     stats.totalRunTimes += (runEnd - runStart);
+    LOG.info("Scavenger finished at %s allocated storage=%d maximum storage=%d",
+      format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
   }
 
-  // TODO: refactor this method
   private boolean cleanSegment(Segment s) throws IOException {
-    // Check if segment is empty on active items
     IOEngine engine = this.cache.getEngine();
     String cacheName = this.cache.getName();
     double stopRatio = config.getScavengerStopMemoryRatio(cacheName);
     Segment.Info info = s.getInfo();
     SegmentScanner sc = null;
-    long indexBuf = 0;
+    
     try {
-      if (info.getTotalItems() == 0) {
+      long currentTime = System.currentTimeMillis();
+      if (info.getMaxExpireAt() <= currentTime) {
         // We can dump it completely w/o asking memory index
-        //
         long dataSize = info.getSegmentDataSize();
         engine.reportUsage(-dataSize);
         // Update stats
         stats.totalBytesFreed += dataSize;
+        return false; // not finished yet
       } else {
+        double usage = engine.getStorageAllocatedRatio();
+        if (usage < stopRatio) {
+          // finished
+          return true;
+        }
         MemoryIndex index = engine.getMemoryIndex();
-        IndexFormat format = index.getIndexFormat();
-        int indexEntrySize = format.indexEntrySize();
-        indexBuf = UnsafeAccess.malloc(indexEntrySize);
-
         sc = engine.getScanner(s); // acquires read lock 
 
         while (sc.hasNext()) {
@@ -335,15 +340,10 @@ public class Scavenger extends Thread {
           sc.next();
         }
       }
-      double usage = engine.getStorageAllocatedRatio();
-      return usage < stopRatio;
+      return false; // try one more
     } finally {
       if (sc != null) {
         sc.close(); // releases read lock
-      }
-      if (indexBuf > 0) {
-        // Free buffer
-        UnsafeAccess.free(indexBuf);
       }
     }
   }
