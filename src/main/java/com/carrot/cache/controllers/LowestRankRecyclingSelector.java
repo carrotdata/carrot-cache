@@ -32,15 +32,14 @@ public class LowestRankRecyclingSelector implements RecyclingSelector {
     double minRank = Double.MAX_VALUE;
     for(int i = 0; i < segments.length; i++) {
       Segment s = segments[i];
-      if (s == null || !s.isSealed()) continue;
+      if (s == null || !s.isSealed()) {
+        continue;
+      }
       Segment.Info info = s.getInfo();
       double rank = info.getAverageRank();
-      if (s.isAllExpireSegment()) {
-        long maxExpire = info.getMaxExpireAt();
-        if (System.currentTimeMillis() > maxExpire) {
-          s.allExpired();
-          rank = 0;
-        }
+      long maxExpire = info.getMaxExpireAt();
+      if ( maxExpire > 0 && System.currentTimeMillis() > maxExpire) {
+        return s;
       }
       if (rank < minRank) {
         minRank = rank;

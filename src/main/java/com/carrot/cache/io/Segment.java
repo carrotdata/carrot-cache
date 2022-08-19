@@ -731,14 +731,7 @@ public class Segment implements Persistent {
       lock.writeLock().unlock();
     }
   }
-  
-  /**
-   * Signals that all items have expired and this data segment is empty now
-   */
-  public void allExpired() {
-    this.info.setTotalItems(0);
-  }
-  
+    
   /**
    * Append new cached item to this segment
    * @param key item key

@@ -32,15 +32,15 @@ public class MinAliveRecyclingSelector implements RecyclingSelector {
     int minActive = Integer.MAX_VALUE;
     for(int i = 0; i < segments.length; i++) {
       Segment s = segments[i];
-      if (s == null || !s.isSealed()) continue;
+      if (s == null || !s.isSealed()) {
+        continue;
+      }
       Segment.Info info = s.getInfo();
       int active = info.getTotalActiveItems();
-      if (s.isAllExpireSegment()) {
-        long maxExpire = info.getMaxExpireAt();
-        if (System.currentTimeMillis() > maxExpire) {
-          s.allExpired();
-          active = 0;
-        }
+      long maxExpire = info.getMaxExpireAt();
+      if (maxExpire > 0 && System.currentTimeMillis() > maxExpire) {
+        // All expired
+        return s;
       }
       if (active < minActive) {
         minActive = active;
