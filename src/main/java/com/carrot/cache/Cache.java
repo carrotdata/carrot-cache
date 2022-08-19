@@ -1074,7 +1074,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       double max = this.conf.getScavengerStartMemoryRatio(this.cacheName);
       double min = this.conf.getScavengerStopMemoryRatio(this.cacheName);
       if (used >= max && (this.scavenger == null || !this.scavenger.isAlive())) {
-        this.scavenger = new Scavenger(this.engine);
+        this.scavenger = new Scavenger(this);
         this.scavenger.start();
         this.engine.setEvictionEnabled(true);
         this.tcEnabled = true;
