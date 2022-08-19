@@ -20,13 +20,16 @@ public interface ThroughputControllable {
    * Decrease throughput
    * @return true - success, false - otherwise
    */
-  public boolean decreaseThroughput();
+  public default boolean decreaseThroughput() {
+    return false;
+  }
   
   /**
    * Increase throughput
    * @return true - success, false - otherwise
    */
-  public boolean increaseThroughput();
-  
+  public default boolean increaseThroughput() {
+    return false;
+  }
   
 }

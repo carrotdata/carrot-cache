@@ -529,17 +529,17 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       this.totalRejectedWrites.incrementAndGet();
       return;
     }
-    this.totalWrites.incrementAndGet();
     // Check rank
     checkRank(rank);
-
     if (!shouldAdmitToMainQueue(keyPtr, keySize, force)) {
       return;
     }
-    
+    this.totalWrites.incrementAndGet();
+
     // Adjust rank taking into account item's expiration time
     rank = adjustRank(rank, expire);
-    
+    expire = adjustExpirationTime(expire);
+
     // Add to the cache
     engine.put(keyPtr, keySize, valPtr, valSize, expire, rank);
     // TODO: update stats
@@ -566,6 +566,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       rank = this.admissionController.adjustRank(rank, expire);
     }
     return rank;
+  }
+  
+  private long adjustExpirationTime(long expire) {
+    if (this.admissionController != null) {
+      expire = this.admissionController.adjustExpirationTime(expire);
+    }
+    return expire;
   }
   
   /**
@@ -595,15 +602,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       this.totalRejectedWrites.incrementAndGet();
       return;
     }
+    if (!shouldAdmitToMainQueue(key, keyOffset, keySize, force)) {
+      return;
+    }
     this.totalWrites.incrementAndGet();
     // Check rank
     checkRank(rank);
       // Adjust rank
     rank = adjustRank(rank, expire);
-    
-    if (!shouldAdmitToMainQueue(key, keyOffset, keySize, force)) {
-      return;
-    }
+    expire = adjustExpirationTime(expire);
     // Add to the cache
     engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank);
     // TODO: update stats

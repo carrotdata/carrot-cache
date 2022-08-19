@@ -34,7 +34,9 @@ public interface AdmissionController extends Persistent, ThroughputControllable 
    * @param keySize item's key size
    * @return true if item must be admitted to the cache, false - otherwise
    */
-  public boolean admit(long keyPtr, int keySize);
+  public default boolean admit(long keyPtr, int keySize) {
+    return true;
+  }
   
   /**
    * Returns if item should be admitted to the cache
@@ -44,7 +46,9 @@ public interface AdmissionController extends Persistent, ThroughputControllable 
    * @return true if item must be admitted to the cache, false - otherwise
    */
   
-  public boolean admit(byte[] key, int off, int size);
+  public default boolean admit(byte[] key, int off, int size) {
+    return true;
+  }
   
   /**
    * Called on each items access
@@ -52,14 +56,16 @@ public interface AdmissionController extends Persistent, ThroughputControllable 
    * @param off offset
    * @param size keys size
    */
-  public void access(byte[] key, int off, int size);
+  public default void access(byte[] key, int off, int size) {
+  }
   
   /**
    * Called on each items access
    * @param keyPtr key's address
    * @param keySize key's size
    */
-  public void access(long keyPtr, int keySize);
+  public default void access(long keyPtr, int keySize){
+  }
   
   /**
    * Adjust item rank based on its current rank and value expiration time (ms)
@@ -71,6 +77,15 @@ public interface AdmissionController extends Persistent, ThroughputControllable 
    */
   public int adjustRank(int rank, long expire);
   
+  /**
+   * Some controller can adjust expiration time (decrease)
+   * @param expire expiration time
+   * @return new expiration time
+   */
+  public default long adjustExpirationTime(long expire) {
+    return expire;
+  }
+
   /**
    * Should item be evicted to the victim cache
    * @param ibPtr index block address

@@ -30,6 +30,8 @@ import com.carrot.cache.util.Utils;
  * it checks  access counter and if it greater than 0 item gets re-admitted 
  * to the Admission queue, otherwise - it is dumped. 
  * It does nothing on item access.
+ * 
+ * For disk - based caches (SSD)
  *
  */
 public class AQBasedAdmissionController extends BaseAdmissionController 
