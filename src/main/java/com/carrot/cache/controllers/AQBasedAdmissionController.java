@@ -38,14 +38,14 @@ public class AQBasedAdmissionController extends BaseAdmissionController
   implements AdmissionQueueBased {
  
   protected AdmissionQueue admissionQueue;
-  /* AQ current size */
-  protected long aqCurrent;
-  /* AQ minimum size */
-  protected long aqMin;
-  /* AQ maximum size */
-  protected long aqMax;
+  /* AQ current size ratio */
+  protected double aqCurrentRatio;
+  /* AQ minimum size ratio */
+  protected double aqMinRatio;
+  /* AQ maximum size ratio */
+  protected double aqMaxRatio;
   /* AQ size adjustment step */
-  protected long adjStep;
+  protected double adjStep;
   
   public AQBasedAdmissionController() {
     super();
@@ -58,11 +58,11 @@ public class AQBasedAdmissionController extends BaseAdmissionController
     /* Admission Queue */
     CacheConfig config = CacheConfig.getInstance();
     String cacheName = cache.getName();
-    this.aqMin = config.getAdmissionQueueMinSize(cacheName);
-    this.aqMax = config.getAdmissionQueueMaxSize(cacheName);
-    this.aqCurrent = config.getAdmissionQueueMaxSize(cacheName);
+    this.aqMinRatio = config.getAdmissionQueueMinSizeRatio(cacheName);
+    this.aqMaxRatio = config.getAdmissionQueueMaxSizeRatio(cacheName);
+    this.aqCurrentRatio = config.getAdmissionQueueMaxSizeRatio(cacheName);
     int steps = config.getThrougputControllerNumberOfAdjustmentSteps(cacheName);
-    this.adjStep = (this.aqMax - this.aqMin) / steps;
+    this.adjStep = (this.aqMaxRatio - this.aqMinRatio) / steps;
   }
   
   /**
@@ -77,26 +77,26 @@ public class AQBasedAdmissionController extends BaseAdmissionController
    * New items are always submitted to the Admission Queue
    */
   @Override
-  public boolean admit(long keyPtr, int keySize) {
-    return !this.admissionQueue.addIfAbsentRemoveIfPresent(keyPtr, keySize);
+  public boolean admit(long keyPtr, int keySize, int valueSize) {
+    return !this.admissionQueue.addIfAbsentRemoveIfPresent(keyPtr, keySize, valueSize);
   }
   
   /**
    * New items are always submitted to the Admission Queue
    */
   @Override
-  public boolean admit(byte[] key, int off, int size) {
-    return !this.admissionQueue.addIfAbsentRemoveIfPresent(key,  off, size);
+  public boolean admit(byte[] key, int off, int size, int valueSize) {
+    return !this.admissionQueue.addIfAbsentRemoveIfPresent(key,  off, size, valueSize);
   }
 
   @Override
   public void save(OutputStream os) throws IOException {
     super.save(os);
     DataOutputStream dos = Utils.toDataOutputStream(os);
-    dos.writeLong(this.aqCurrent);
-    dos.writeLong(this.aqMax);
-    dos.writeLong(this.aqMin);
-    dos.writeLong(this.adjStep);
+    dos.writeDouble(this.aqCurrentRatio);
+    dos.writeDouble(this.aqMaxRatio);
+    dos.writeDouble(this.aqMinRatio);
+    dos.writeDouble(this.adjStep);
     this.admissionQueue.save(os);
   }
 
@@ -104,10 +104,10 @@ public class AQBasedAdmissionController extends BaseAdmissionController
   public void load(InputStream is) throws IOException {
     super.load(is);
     DataInputStream dis = Utils.toDataInputStream(is);
-    this.aqCurrent = dis.readLong();
-    this.aqMax = dis.readLong();
-    this.aqMin = dis.readLong();
-    this.adjStep = dis.readLong();
+    this.aqCurrentRatio = dis.readDouble();
+    this.aqMaxRatio = dis.readDouble();
+    this.aqMinRatio = dis.readDouble();
+    this.adjStep = dis.readDouble();
     this.admissionQueue.load(is);
   }
 
@@ -123,21 +123,21 @@ public class AQBasedAdmissionController extends BaseAdmissionController
 
   @Override
   public boolean decreaseThroughput() { 
-    if (this.aqCurrent - this.adjStep < this.aqMin) {
+    if (this.aqCurrentRatio - this.adjStep < this.aqMinRatio) {
       return false;
     }
-    this.aqCurrent -= this.adjStep;
-    this.admissionQueue.setMaximumSize(this.aqCurrent);
+    this.aqCurrentRatio -= this.adjStep;
+    this.admissionQueue.setCurrentMaxSizeRatio(this.aqCurrentRatio);
     return true;
   }
 
   @Override
   public boolean increaseThroughput() {
-    if (this.aqCurrent + this.adjStep > this.aqMax) {
+    if (this.aqCurrentRatio + this.adjStep > this.aqMaxRatio) {
       return false;
     }
-    this.aqCurrent += this.adjStep;
-    this.admissionQueue.setMaximumSize(this.aqCurrent);
+    this.aqCurrentRatio += this.adjStep;
+    this.admissionQueue.setCurrentMaxSizeRatio(this.aqCurrentRatio);
     return true;
   }
 }

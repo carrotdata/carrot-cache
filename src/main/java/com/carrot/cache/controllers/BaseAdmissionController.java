@@ -37,7 +37,7 @@ public class BaseAdmissionController implements AdmissionController {
    * New items are always admitted
    */
   @Override
-  public boolean admit(long keyPtr, int keySize) {
+  public boolean admit(long keyPtr, int keySize, int valueSize) {
     return true;
   }
   
@@ -45,7 +45,7 @@ public class BaseAdmissionController implements AdmissionController {
    * New items are always admitted
    */
   @Override
-  public boolean admit(byte[] key, int off, int size) {
+  public boolean admit(byte[] key, int off, int size, int valueSize) {
     return true;
   }
 

@@ -32,21 +32,23 @@ public interface AdmissionController extends Persistent, ThroughputControllable 
    * Returns if item should be admitted to the cache
    * @param keyPtr key's address
    * @param keySize item's key size
+   * @param valueSize value size
    * @return true if item must be admitted to the cache, false - otherwise
    */
-  public default boolean admit(long keyPtr, int keySize) {
+  public default boolean admit(long keyPtr, int keySize, int valueSize) {
     return true;
   }
   
   /**
    * Returns if item should be admitted to the cache
    * @param key item key buffer
-   * @param off item key buffer offset
-   * @param size item's key size
+   * @param keyOffset item key buffer offset
+   * @param keySize item's key size
+   * @param valueSize value size
    * @return true if item must be admitted to the cache, false - otherwise
    */
   
-  public default boolean admit(byte[] key, int off, int size) {
+  public default boolean admit(byte[] key, int keyOffset, int keySize, int valueSize) {
     return true;
   }
   

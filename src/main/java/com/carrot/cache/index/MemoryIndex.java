@@ -375,7 +375,7 @@ public final class MemoryIndex implements Persistent {
     this.maxEntries = max;
     if (max < size()) {
       setEvictionEnabled(true);
-      // blocked operation
+      // asynchronous operation
       shrinkIndex();
     } else {
       setEvictionEnabled(false);

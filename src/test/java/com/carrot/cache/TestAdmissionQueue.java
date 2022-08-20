@@ -35,6 +35,7 @@ import org.junit.Test;
 
 import com.carrot.cache.controllers.AdmissionQueue;
 import com.carrot.cache.index.MemoryIndex;
+import com.carrot.cache.util.CacheConfig;
 import com.carrot.cache.util.TestUtils;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
@@ -44,6 +45,7 @@ public class TestAdmissionQueue {
   private static final Logger LOG = LogManager.getLogger(TestAdmissionQueue.class);
   AdmissionQueue queue;
   MemoryIndex memoryIndex;
+  CacheConfig conf;
   
   int numRecords = 10;
   byte[][] keys = new byte[numRecords][];
@@ -136,17 +138,25 @@ public class TestAdmissionQueue {
     }
     UnsafeAccess.free(buf);
   }
+  
   @Before
-  public void setUp() {
-    queue = new AdmissionQueue();
+  public void setUp() throws IOException {
+    conf = TestUtils.mockConfigForTests(4 * 1024 * 1024, 80 * 1024 * 1024);
+    queue = new AdmissionQueue(conf);
     memoryIndex = queue.getMemoryIndex();
-    queue.setGlobalMaximumSize(50000000);
-    queue.setMaximumSize(10000000);
+    queue.setGlobalMaxSizeRatio(0.5);
+    queue.setCurrentMaxSizeRatio(0.5);
+    queue.setGlobalMinSizeRatio(0.0);
+    
+    // maximum storage size = 80MB
+    // AdmissionQueue virtual size 0.5 * 80MB = 40MB
+    // entry size = 34
+    // Maximum number 1233618 elements w/o evictions
   }
   
   private void loadIndexBytes() {
     for(int i = 0; i < numRecords; i++) {
-      boolean result = queue.addIfAbsentRemoveIfPresent(keys[i], 0, keySize);
+      boolean result = queue.addIfAbsentRemoveIfPresent(keys[i], 0, keySize, valueSize);
       assertTrue(result);
     }
   }
@@ -170,14 +180,14 @@ public class TestAdmissionQueue {
   
   private void loadIndexBytesNot() {
     for(int i = 0; i < numRecords; i++) {
-      boolean result = queue.addIfAbsentRemoveIfPresent(keys[i], 0, keySize);
+      boolean result = queue.addIfAbsentRemoveIfPresent(keys[i], 0, keySize, valueSize);
       assertFalse(result);
     }
   }
     
   private void loadIndexMemory() {
     for(int i = 0; i < numRecords; i++) {
-      boolean result = queue.addIfAbsentRemoveIfPresent(mKeys[i], keySize);
+      boolean result = queue.addIfAbsentRemoveIfPresent(mKeys[i], keySize, valueSize);
       assertTrue(result);
     }
   }
@@ -201,7 +211,7 @@ public class TestAdmissionQueue {
   
   private void loadIndexMemoryNot() {
     for(int i = 0; i < numRecords; i++) {
-      boolean result = queue.addIfAbsentRemoveIfPresent(mKeys[i], keySize);
+      boolean result = queue.addIfAbsentRemoveIfPresent(mKeys[i], keySize, valueSize);
       assertFalse(result);
     }
   }
@@ -313,30 +323,35 @@ public class TestAdmissionQueue {
   @Test
   public void testEvictionBytes() {
     LOG.info("Test eviction bytes");
-
-    queue.setMaximumSize(100000);
-    prepareData(200000);
+    double sizeRatio = 0.05;
+    int expectedNum =(int) (conf.getCacheMaximumSize("default") * sizeRatio / Utils.kvSize(keySize, valueSize));
+    
+    queue.setCurrentMaxSizeRatio(sizeRatio); // 0.05 * 80MB = 4MB
+    int toLoad = expectedNum + 30000;
+    prepareData(toLoad);
     loadIndexBytes();
     
     long size = queue.size();
-    assertEquals(100000L, size);
+    // Within 1% of expected number
+    assertTrue(Math.abs(size - expectedNum) < expectedNum / 100);
     
     int entrySize = memoryIndex.getIndexFormat().indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     
     int evicted1 = 0;
     int evicted2 = 0;
-    for (int i = 0; i < 100000; i++) {
+    for (int i = 0; i < expectedNum; i++) {
       int result = (int) memoryIndex.find(keys[i], 0, keySize, false, buf, entrySize);
       if (result == -1) evicted1++;
     }
     
-    for (int i = 100000; i < 200000; i++) {
+    for (int i = expectedNum; i < toLoad; i++) {
       int result = (int) memoryIndex.find(keys[i], 0, keySize, false, buf, entrySize);
       if (result == -1) evicted2 ++;
     }
     System.out.println("evicted1=" + evicted1 + " evicted2="+ evicted2);
-    assertEquals(100000, evicted1 + evicted2);
+    assertEquals(0, evicted2);
+    assertEquals(toLoad - expectedNum, evicted1);
     UnsafeAccess.free(buf); 
   }
   
@@ -344,29 +359,35 @@ public class TestAdmissionQueue {
   public void testEvictionMemory() {
     LOG.info("Test eviction memory");
 
-    queue.setMaximumSize(100000);
-    prepareData(200000);
+    double sizeRatio = 0.05;
+    int expectedNum =(int) (conf.getCacheMaximumSize("default") * sizeRatio / Utils.kvSize(keySize, valueSize));
+    
+    queue.setCurrentMaxSizeRatio(sizeRatio); // 0.05 * 80MB = 4MB
+    int toLoad = expectedNum + 30000;
+    prepareData(toLoad);
     loadIndexMemory();
     
     long size = memoryIndex.size();
-    assertEquals(100000L, size);
+    // Within 1% of expected number
+    assertTrue(Math.abs(size - expectedNum) < expectedNum / 100);
     
     int entrySize = memoryIndex.getIndexFormat().indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     
     int evicted1 = 0;
     int evicted2 = 0;
-    for (int i = 0; i < 100000; i++) {
+    for (int i = 0; i < expectedNum; i++) {
       int result = (int) memoryIndex.find(mKeys[i], keySize, false, buf, entrySize);
       if (result == -1) evicted1++;
     }
     
-    for (int i = 100000; i < 200000; i++) {
+    for (int i = expectedNum; i < toLoad; i++) {
       int result = (int) memoryIndex.find(mKeys[i], keySize, false, buf, entrySize);
       if (result == -1) evicted2 ++;
     }
     System.out.println("evicted1=" + evicted1 + " evicted2="+ evicted2);
-    assertEquals(100000, evicted1 + evicted2);
+    assertEquals(0, evicted2);
+    assertEquals(toLoad - expectedNum, evicted1);
     UnsafeAccess.free(buf);
   }
   

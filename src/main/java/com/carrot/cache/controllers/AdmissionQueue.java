@@ -19,6 +19,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -53,13 +54,13 @@ public class AdmissionQueue implements Persistent {
   private static final Logger LOG = LogManager.getLogger(AdmissionQueue.class);
   
   /* Maximum AQ current size */
-  private long currentMaxSize;
+  private double currentMaxSizeRatio;
   
   /* Global maximum AQ size */
-  private long globalMaxSize;
+  private double globalMaxSizeRatio;
   
   /* Global minimum AQ size */
-  private long globalMinSize;
+  private double globalMinSizeRatio;
   
   /* Memory index - the queue itself */
   private MemoryIndex index;
@@ -67,7 +68,17 @@ public class AdmissionQueue implements Persistent {
   /* Cache */
   private Cache cache;
   
+  /* Cache name */
   private String cacheName;
+  
+  /* Tracks total insert number */
+  private AtomicLong totalPuts = new AtomicLong();
+  
+  /* Total size of all inserted items */
+  private AtomicLong totalSize = new AtomicLong();
+  
+  /* Maximum cache size */
+  private long maxCacheSize;
   
   /**
    * Public constructor
@@ -77,11 +88,11 @@ public class AdmissionQueue implements Persistent {
     this.cache = cache;
     CacheConfig conf = this.cache.getCacheConfig();
     this.cacheName = this.cache.getName();
-    this.currentMaxSize = conf.getAdmissionQueueStartSize(this.cacheName);
-    this.globalMaxSize = conf.getAdmissionQueueMaxSize(this.cacheName);
-    this.globalMinSize = conf.getAdmissionQueueMinSize(this.cacheName);
+    this.currentMaxSizeRatio = conf.getAdmissionQueueStartSizeRatio(this.cacheName);
+    this.globalMaxSizeRatio = conf.getAdmissionQueueMaxSizeRatio(this.cacheName);
+    this.globalMinSizeRatio = conf.getAdmissionQueueMinSizeRatio(this.cacheName);
+    this.maxCacheSize = conf.getCacheMaximumSize(this.cacheName);
     this.index = new MemoryIndex(this.cacheName, MemoryIndex.Type.AQ);
-    this.index.setMaximumSize(this.currentMaxSize);
   }
   
   /**
@@ -90,12 +101,25 @@ public class AdmissionQueue implements Persistent {
   public AdmissionQueue() {
     this.cacheName = "default";
     CacheConfig conf = CacheConfig.getInstance();
-    this.currentMaxSize = conf.getAdmissionQueueStartSize(this.cacheName);
-    this.globalMaxSize = conf.getAdmissionQueueMaxSize(this.cacheName);
-    this.globalMinSize = conf.getAdmissionQueueMinSize(this.cacheName);
+    this.currentMaxSizeRatio = conf.getAdmissionQueueStartSizeRatio(this.cacheName);
+    this.globalMaxSizeRatio = conf.getAdmissionQueueMaxSizeRatio(this.cacheName);
+    this.globalMinSizeRatio = conf.getAdmissionQueueMinSizeRatio(this.cacheName);
+    this.maxCacheSize = conf.getCacheMaximumSize(this.cacheName);
     this.index = new MemoryIndex(this.cacheName, MemoryIndex.Type.AQ);
-    this.index.setMaximumSize(this.currentMaxSize);
     
+  }
+  
+  /**
+   * Constructor for testing
+   * @param conf cache configuration
+   */
+  public AdmissionQueue(CacheConfig conf) {
+    this.cacheName = "default";
+    this.currentMaxSizeRatio = conf.getAdmissionQueueStartSizeRatio(this.cacheName);
+    this.globalMaxSizeRatio = conf.getAdmissionQueueMaxSizeRatio(this.cacheName);
+    this.globalMinSizeRatio = conf.getAdmissionQueueMinSizeRatio(this.cacheName);
+    this.maxCacheSize = conf.getCacheMaximumSize(this.cacheName);
+    this.index = new MemoryIndex(this.cacheName, MemoryIndex.Type.AQ);
   }
   
   /**
@@ -115,57 +139,60 @@ public class AdmissionQueue implements Persistent {
   }
   
   /**
-   * Get maximum AQ size
+   * Get current maximum AQ size ratio as a fraction of 
+   * a maximum cache size
    * @return maximum size
    */
-  public long getMaximumSize() {
-    return this.currentMaxSize;
+  public double getCurrentMaxSizeRatio() {
+    return this.currentMaxSizeRatio;
   }
   
   /**
    * Sets maximum AQ size
    * @param max new maximum size
    */
-  public void setMaximumSize(long max) {
-    if (max > this.globalMaxSize || max < this.globalMinSize) {
-      throw new IllegalArgumentException(String.format("requested maximum queue size %d is out of allowed range [%d, %d]", 
-        max, this.globalMinSize, this.globalMaxSize));
+  public void setCurrentMaxSizeRatio(double max) {
+    if (max > this.globalMaxSizeRatio || max < this.globalMinSizeRatio) {
+      throw new IllegalArgumentException(String.format("requested maximum queue size %f is out of allowed range [%f, %f]", 
+        max, this.globalMinSizeRatio, this.globalMaxSizeRatio));
     }
-    this.currentMaxSize = max;
-    this.index.setMaximumSize(max);
+    this.currentMaxSizeRatio = max;
+    double avgItemSize = (double) this.totalSize.get() / this.totalPuts.get();
+    long maxItems = (long) (this.maxCacheSize * this.currentMaxSizeRatio / avgItemSize);
+    this.index.setMaximumSize(maxItems);
   }
   
   
   /**
-   * Get global maximum AQ size
-   * @return global maximum size
+   * Get global maximum AQ size ratio
+   * @return global maximum size ratio
    */
-  public long getGlobalMaximumSize() {
-    return this.globalMaxSize;
+  public double getGlobalMaxSizeRatio() {
+    return this.globalMaxSizeRatio;
   }
   
   /**
-   * Sets maximum AQ size
+   * Sets global maximum AQ size ratio
    * @param max new maximum size
    */
-  public void setGlobalMaximumSize(long max) {
-    this.globalMaxSize = max;
+  public void setGlobalMaxSizeRatio(double max) {
+    this.globalMaxSizeRatio = max;
   }
   
   /**
-   * Get global minimum AQ size
-   * @return global minimum size
+   * Get global minimum AQ size ratio
+   * @return global minimum size ratio
    */
-  public long getGlobalMinimumSize() {
-    return this.globalMinSize;
+  public double getGlobalMinSizeRatio() {
+    return this.globalMinSizeRatio;
   }
   
   /**
-   * Sets global minimum AQ size
-   * @param  new global minimum size
+   * Sets global minimum AQ size ratio
+   * @param  new global minimum size ratio
    */
-  public void setGlobalMinimumSize(long min) {
-    this.globalMinSize = min;
+  public void setGlobalMinSizeRatio(double min) {
+    this.globalMinSizeRatio = min;
   }
   
   /**
@@ -173,11 +200,31 @@ public class AdmissionQueue implements Persistent {
    * if it is not present in the AQ. If it is already in the AQ
    * it is deleted. - Atomic operation
    * @param key key array
+   * @param valueSize value size
    * @return true - if key was added, false - existed and deleted
    */
   
-  public boolean addIfAbsentRemoveIfPresent(byte[] key) {
-    return addIfAbsentRemoveIfPresent(key, 0, key.length);
+  public boolean addIfAbsentRemoveIfPresent(byte[] key, int valueSize) {
+    updateStats(key.length, valueSize);
+    checkEviction();
+    return index.aarp(key, 0, key.length) == MemoryIndex.MutationResult.DELETED? false: true;
+  }
+  
+  private void checkEviction() {
+    double avgItemSize = (double) this.totalSize.get() / this.totalPuts.get();
+    long maxItems = (long) (this.maxCacheSize * this.currentMaxSizeRatio / avgItemSize);
+    if (maxItems <= this.index.size() && !this.index.isEvictionEnabled()) {
+      this.index.setEvictionEnabled(true);
+    } else if (maxItems * 0.95 >= this.index.size() && this.index.isEvictionEnabled()) {
+      this.index.setEvictionEnabled(false);
+
+    }
+  }
+
+  private void updateStats(int keySize, int valueSize) {
+    int size = Utils.kvSize(keySize, valueSize);
+    this.totalPuts.incrementAndGet();
+    this.totalSize.addAndGet(size);
   }
   /**
    * Add new key to the AQ. The key can be added only
@@ -186,10 +233,13 @@ public class AdmissionQueue implements Persistent {
    * @param key key array
    * @param off offset
    * @param len length
+   * @param valueSize value size
    * @return true - if key was added, false - existed and deleted
    */
   
-  public boolean addIfAbsentRemoveIfPresent(byte[] key, int off, int len) {
+  public boolean addIfAbsentRemoveIfPresent(byte[] key, int off, int len, int valueSize) {
+    updateStats(len, valueSize);
+    checkEviction();
     return index.aarp(key, off, len) == MemoryIndex.MutationResult.DELETED? false: true;
   }
   
@@ -199,17 +249,22 @@ public class AdmissionQueue implements Persistent {
    * it is deleted. Atomic operation.
    * @param keyPtr key address
    * @param keySize key length
+   * @param valueSize value size
    * @return true - if key was added, false - existed and deleted
    */
   
-  public boolean addIfAbsentRemoveIfPresent(long keyPtr, int keySize) {
+  public boolean addIfAbsentRemoveIfPresent(long keyPtr, int keySize, int valueSize) {
+    updateStats(keySize, valueSize);
+    checkEviction();
     return index.aarp(keyPtr, keySize) == MemoryIndex.MutationResult.DELETED? false: true;
   }
   
   @Override
   public void save(OutputStream os) throws IOException {
     DataOutputStream dos = Utils.toDataOutputStream(os);
-    dos.writeLong(currentMaxSize);
+    dos.writeDouble(this.currentMaxSizeRatio);
+    dos.writeLong(totalPuts.get());
+    dos.writeLong(totalSize.get());
     index.save(dos);
     dos.flush();
   }
@@ -217,7 +272,9 @@ public class AdmissionQueue implements Persistent {
   @Override
   public void load(InputStream is) throws IOException {
     DataInputStream dis = Utils.toDataInputStream(is);
-    this.currentMaxSize = dis.readLong();
+    this.currentMaxSizeRatio = dis.readDouble();
+    this.totalPuts = new AtomicLong(dis.readLong());
+    this.totalSize = new AtomicLong(dis.readLong());
     //TODO: set parent Cache after loading
     this.index = new MemoryIndex();
     this.index.load(dis);

@@ -520,9 +520,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     put(keyPtr, keySize, valPtr, valSize, expire, rank, false);
   }
 
-  private boolean shouldAdmitToMainQueue(long keyPtr, int keySize, boolean force) {
+  private boolean shouldAdmitToMainQueue(long keyPtr, int keySize, int valueSize,  boolean force) {
     if (!force && this.admissionController != null) {
-      return this.admissionController.admit(keyPtr, keySize);
+      return this.admissionController.admit(keyPtr, keySize, valueSize);
     }
     return true;
   }
@@ -548,7 +548,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     // Check rank
     checkRank(rank);
-    if (!shouldAdmitToMainQueue(keyPtr, keySize, force)) {
+    if (!shouldAdmitToMainQueue(keyPtr, keySize, valSize, force)) {
       return;
     }
     this.totalWrites.incrementAndGet();
@@ -570,9 +570,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
   }
 
-  private boolean shouldAdmitToMainQueue(byte[] key, int keyOffset, int keySize, boolean force) {
+  private boolean shouldAdmitToMainQueue(byte[] key, int keyOffset, int keySize, int valueSize, boolean force) {
     if (!force && this.admissionController != null) {
-      return this.admissionController.admit(key, keyOffset, keySize);
+      return this.admissionController.admit(key, keyOffset, keySize, valueSize);
     }
     return true;
   }
@@ -619,7 +619,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       this.totalRejectedWrites.incrementAndGet();
       return;
     }
-    if (!shouldAdmitToMainQueue(key, keyOffset, keySize, force)) {
+    if (!shouldAdmitToMainQueue(key, keyOffset, keySize, valSize, force)) {
       return;
     }
     this.totalWrites.incrementAndGet();

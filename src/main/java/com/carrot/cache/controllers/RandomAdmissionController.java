@@ -57,7 +57,7 @@ public class RandomAdmissionController extends BaseAdmissionController {
   }
 
   @Override
-  public boolean admit(long keyPtr, int keySize) {
+  public boolean admit(long keyPtr, int keySize, int valueSize) {
     double v = r.nextDouble();
     if (v < this.threshold) {
       return true;
@@ -66,7 +66,7 @@ public class RandomAdmissionController extends BaseAdmissionController {
   }
 
   @Override
-  public boolean admit(byte[] key, int off, int size) {
+  public boolean admit(byte[] key, int off, int size, int valueSize) {
     double v = r.nextDouble();
     if (v < this.threshold) {
       return true;

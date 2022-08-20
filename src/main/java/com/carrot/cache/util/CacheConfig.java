@@ -123,13 +123,13 @@ public class CacheConfig {
   public static final String SLRU_NUMBER_SEGMENTS_KEY = "eviction.slru.number.segments";
   
   /* Admission Queue start size in fraction of a full cache size */
-  public static final String ADMISSION_QUEUE_START_SIZE_KEY = "admission.queue.start.size";
+  public static final String ADMISSION_QUEUE_START_SIZE_RATIO_KEY = "admission.queue.start.size";
   
   /* Admission Queue minimum size in fraction of a full cache size */
-  public static final String ADMISSION_QUEUE_MIN_SIZE_KEY = "admission.queue.min.size";
+  public static final String ADMISSION_QUEUE_MIN_SIZE_RATIO_KEY = "admission.queue.min.size";
   
   /* Admission Queue maximum size in fraction of a full cache size */
-  public static final String ADMISSION_QUEUE_MAX_SIZE_KEY = "admission.queue.max.size";
+  public static final String ADMISSION_QUEUE_MAX_SIZE_RATIO_KEY = "admission.queue.max.size";
   
   
   /* Readmission evicted item to AQ minimum hit count threshold */
@@ -293,13 +293,13 @@ public class CacheConfig {
   public final static boolean DEFAULT_SPARSE_FILES_SUPPORT = false;
   
   /* Default AQ (admission queue) start size a fraction of a cache size */
-  public final static long DEFAULT_ADMISSION_QUEUE_START_SIZE = 200000;
+  public final static double DEFAULT_ADMISSION_QUEUE_START_SIZE_RATIO = 0.5;
   
   /* Default AQ (admission queue) minimum size a fraction of a cache size */
-  public final static long DEFAULT_ADMISSION_QUEUE_MIN_SIZE = 100000;
+  public final static double DEFAULT_ADMISSION_QUEUE_MIN_SIZE_RATIO = 0.1;
   
   /* Default AQ (admission queue) maximum size a fraction of a cache size */
-  public final static long DEFAULT_ADMISSION_QUEUE_MAX_SIZE = 1000000;
+  public final static double DEFAULT_ADMISSION_QUEUE_MAX_SIZE_RATIO = 0.5;
 
   /* Default disk limit - 0 unlimited*/
   public static final long DEFAULT_DISK_LIMIT = 0; // Unlimited
@@ -696,42 +696,42 @@ public class CacheConfig {
   }
   
   /**
-   * Get admission queue start size for a given cache name
+   * Get admission queue start size ratio for a given cache name
    * @param cacheName cache name
-   * @return AQ start size in cached items for a given cache name
+   * @return AQ start size ratio relative to the maximum cache size
    */
-  public long getAdmissionQueueStartSize(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ ADMISSION_QUEUE_START_SIZE_KEY);
+  public double getAdmissionQueueStartSizeRatio(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ ADMISSION_QUEUE_START_SIZE_RATIO_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value);
+      return Double.parseDouble(value);
     }
-    return getLongProperty(ADMISSION_QUEUE_START_SIZE_KEY, DEFAULT_ADMISSION_QUEUE_START_SIZE);
+    return getDoubleProperty(ADMISSION_QUEUE_START_SIZE_RATIO_KEY, DEFAULT_ADMISSION_QUEUE_START_SIZE_RATIO);
   }
   
   /**
-   * Get admission queue minimum size for a given cache name
+   * Get admission queue minimum size ratio for a given cache name
    * @param cacheName cache name
-   * @return AQ minimum size in cached items for a given cache name
+   * @return AQ minimum size ratio relative to the maximum cache size
    */
-  public long getAdmissionQueueMinSize(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ ADMISSION_QUEUE_MIN_SIZE_KEY);
+  public double getAdmissionQueueMinSizeRatio(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ ADMISSION_QUEUE_MIN_SIZE_RATIO_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value);
+      return Double.parseDouble(value);
     }
-    return getLongProperty(ADMISSION_QUEUE_MIN_SIZE_KEY, DEFAULT_ADMISSION_QUEUE_MIN_SIZE);
+    return getDoubleProperty(ADMISSION_QUEUE_MIN_SIZE_RATIO_KEY, DEFAULT_ADMISSION_QUEUE_MIN_SIZE_RATIO);
   }
   
   /**
-   * Get admission queue starts size for a given cache name
+   * Get admission queue maximum size ratio for a given cache name
    * @param cacheName cache name
-   * @return AQ maximum size in cached items for a given cache name
+   * @return AQ maximum size ratio relative to the maximum cache size
    */
-  public long getAdmissionQueueMaxSize(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ ADMISSION_QUEUE_MAX_SIZE_KEY);
+  public double getAdmissionQueueMaxSizeRatio(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ ADMISSION_QUEUE_MAX_SIZE_RATIO_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value);
+      return Double.parseDouble(value);
     }
-    return getLongProperty(ADMISSION_QUEUE_MAX_SIZE_KEY, DEFAULT_ADMISSION_QUEUE_MAX_SIZE);
+    return getDoubleProperty(ADMISSION_QUEUE_MAX_SIZE_RATIO_KEY, DEFAULT_ADMISSION_QUEUE_MAX_SIZE_RATIO);
   }
   
   /**
