@@ -179,8 +179,8 @@ public abstract class IOEngine implements Persistent {
     this.index = new MemoryIndex(this, MemoryIndex.Type.MQ);
     this.dataDir = this.config.getDataDir(this.cacheName);
     this.defaultRank = this.index.getEvictionPolicy().getDefaultRankForInsert();
-    this.dataEmbedded = this.config.isIndexDataEmbeddedSupported();
-    this.maxEmbeddedSize = this.config.getIndexDataEmbeddedSize();
+    this.dataEmbedded = this.config.isIndexDataEmbeddedSupported(this.cacheName);
+    this.maxEmbeddedSize = this.config.getIndexDataEmbeddedSize(this.cacheName);
     
     try {
       this.dataWriter = this.config.getDataWriter(this.cacheName);
@@ -212,8 +212,8 @@ public abstract class IOEngine implements Persistent {
     this.index = new MemoryIndex(this, MemoryIndex.Type.MQ);
     this.dataDir = this.config.getDataDir(this.cacheName);
     this.defaultRank = this.index.getEvictionPolicy().getDefaultRankForInsert();
-    this.dataEmbedded = this.config.isIndexDataEmbeddedSupported();
-    this.maxEmbeddedSize = this.config.getIndexDataEmbeddedSize();
+    this.dataEmbedded = this.config.isIndexDataEmbeddedSupported(this.cacheName);
+    this.maxEmbeddedSize = this.config.getIndexDataEmbeddedSize(this.cacheName);
 
     try {
       this.dataWriter = this.config.getDataWriter(this.cacheName);
