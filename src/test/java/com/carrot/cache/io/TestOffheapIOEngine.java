@@ -55,6 +55,7 @@ public class TestOffheapIOEngine extends IOTestBase{
     int loaded = loadBytesEngine(engine);
     /*DEBUG*/ System.out.println("loaded=" + loaded);
     verifyBytesEngine(engine, loaded);
+    verifyBytesEngineByteBuffer(engine, loaded);
   }
   
   @Test
@@ -75,6 +76,7 @@ public class TestOffheapIOEngine extends IOTestBase{
     int loaded = loadBytesEngine(engine);
     /*DEBUG*/ System.out.println("loaded=" + loaded);
     verifyBytesEngine(engine, loaded);
+    verifyBytesEngineByteBuffer(engine, loaded);
   }
   
   @Test
