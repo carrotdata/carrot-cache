@@ -116,6 +116,11 @@ public class CacheConfig {
   /* Number of popularity ranks ( default - 8) */
   public static final String CACHE_POPULARITY_NUMBER_RANKS_KEY = "cache.popularity.number.ranks";
   
+  /** Keep active data set fraction above this threshold */
+  public static final String CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO_KEY = 
+      "cache.minimum.active.dataset.ratio"; 
+  
+  
   /* New item insertion point for SLRU (segment number 1- based)*/
   public static final String SLRU_CACHE_INSERT_POINT_KEY = "eviction.slru.insert.point";
 
@@ -367,6 +372,8 @@ public class CacheConfig {
   
   public static final double DEFAULT_CACHE_EXPIRATION_MULTIPLIER_VALUE = 2;
   
+  /* Default minimum active data set ratio */
+  public final static double DEFAULT_CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO = 0.9;
   // Statics
   static CacheConfig instance;
 
@@ -1514,4 +1521,30 @@ public class CacheConfig {
   public void setExpireBinMultiplier (String cacheName, double multiplier) {
     props.getProperty(cacheName + "." + CACHE_EXPIRATION_MULTIPLIER_VALUE_KEY, Double.toString(multiplier));
   }
+  
+  /**
+   * Get minimum cache active data set threshold
+   * @param cacheName cache name
+   * @return value
+   */
+  public double getMinimumActiveDatasetRatio (String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO_KEY);
+    if (value == null) {
+      return getDoubleProperty(CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO_KEY, 
+        DEFAULT_CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO);
+    } else {
+      return Double.parseDouble(value);
+    }
+  }
+  
+  /**
+   * Set minimum cache active data set threshold
+   * @param cacheName cache name
+   * @param value multiplier
+   */
+  public void setMinimumActiveDatasetRatio (String cacheName, double ratio) {
+    props.getProperty(cacheName + "." + CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO_KEY, 
+      Double.toString(ratio));
+  }
+  
 }

@@ -216,10 +216,13 @@ public class Scavenger extends Thread {
   private static double dumpBelowRatioMax;
   
   private static double dumpBelowRatio = -1;
-  
+
   private static double adjStep = 0.05;
   
   private static double stopRatio;
+  
+  /* Clean deleted only items - do not purge low ranks*/
+  private boolean cleanDeletedOnly = true;
   
   public Scavenger(Cache cache) {
     super("c2 scavenger");
@@ -235,7 +238,6 @@ public class Scavenger extends Thread {
       adjStep = this.config.getScavengerDumpEntryBelowAdjStep(cacheName);
     }
     stopRatio =  this.config.getScavengerStopMemoryRatio(cacheName);
-
   }
   
   /**
@@ -271,7 +273,12 @@ public class Scavenger extends Thread {
         stats.totalEmptySegments ++;
       }
       try {
-        finished = cleanSegment(s);    
+        finished = cleanSegment(s); 
+        if (finished && cleanDeletedOnly) {
+          // continue with purging low rank elements
+          cleanDeletedOnly = false;
+          finished = false;
+        }
         // Dispose segment
         engine.disposeDataSegment(s);    
       } catch (IOException e) {
@@ -292,11 +299,26 @@ public class Scavenger extends Thread {
     long expire = s.getInfo().getMaxExpireAt();
     long n = s.getAliveItems();
     long currentTime = System.currentTimeMillis();
-    double usage = cache.getEngine().getStorageAllocatedRatio();
+    IOEngine engine = cache.getEngine();
+    long size = engine.size();
+    if (engine.size() == 0) {
+      return true;
+    }
     if ((expire > 0 && expire <= currentTime) || n == 0) {
       return false;
     }
-    return  usage < stopRatio;   
+    
+    long activeSize = engine.activeSize();
+    double activeRatio = (double) activeSize / size;
+    double minActiveRatio = config.getMinimumActiveDatasetRatio(cache.getName());
+    
+    if (activeRatio >= minActiveRatio) {
+      cleanDeletedOnly = false;
+    } else {
+      cleanDeletedOnly = true;
+    }
+    double usage = engine.getStorageAllocatedRatio();
+    return activeRatio >= minActiveRatio && usage < stopRatio;   
   }
 
   private boolean cleanSegment(Segment s) throws IOException {
@@ -358,11 +380,13 @@ public class Scavenger extends Thread {
         keyBuffer = checkBuffer(keyBuffer, keySize, isDirect);
         valueBuffer = checkBuffer(valueBuffer, valSize, isDirect);
         
+        double ratio = cleanDeletedOnly? 0: dumpBelowRatio;
+        
         if (isDirect) {
-          result = index.checkDeleteKeyForScavenger(keyPtr, keySize, result, dumpBelowRatio);
+          result = index.checkDeleteKeyForScavenger(keyPtr, keySize, result, ratio);
         } else {
           sc.getKey(keyBuffer, 0);
-          result = index.checkDeleteKeyForScavenger(keyBuffer, 0, keySize, result, dumpBelowRatio);
+          result = index.checkDeleteKeyForScavenger(keyBuffer, 0, keySize, result, ratio);
         }
 
         Result res = result.getResult();

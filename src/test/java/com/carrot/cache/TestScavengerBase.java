@@ -42,6 +42,7 @@ public abstract class TestScavengerBase extends IOTestBase {
   int scavengerInterval = 10000; // seconds - disable it for test
   long expireTime;
   double scavDumpBelowRatio = 0.5;
+  double minActiveRatio = 0.90;
       
   @Before
   public void setUp() throws IOException {
@@ -78,7 +79,8 @@ public abstract class TestScavengerBase extends IOTestBase {
       .withFileDataReader(BlockFileDataReader.class.getName())
       .withMainQueueIndexFormat(CompactWithExpireIndexFormat.class.getName())
       .withSnapshotDir(snapshotDir)
-      .withDataDir(dataDir);
+      .withDataDir(dataDir)
+      .withMinimumActiveDatasetRatio(minActiveRatio);
     
     if (offheap) {
       return builder.buildMemoryCache();
@@ -301,6 +303,66 @@ public abstract class TestScavengerBase extends IOTestBase {
     assertTrue(r2 < 0.07);
     assertTrue(r3 < 0.07);
     assertTrue(r4 == 0);
+    verifyBytesCacheWithDeletes(cache, loaded, deleted);
+
+  }
+  
+  @Test
+  public void testNoExpiredWithDeletesRegularRunMinActive() throws IOException {
+    System.out.println("Test no expired with deletes - regular run (min active)");
+    // Clear scavenger's statics
+    Scavenger.clear();
+    // Create cache
+    this.minActiveRatio = 0.97;
+    this.cache = createCache();
+    
+    this.expireTime = 1000000; 
+    prepareData(30000);
+    // Fill cache completely (no eviction is enabled)
+    int loaded = loadBytesCache(cache);
+    System.out.println("loaded=" + loaded);
+    int deleted = deleteBytesCache(cache, loaded / 7);
+  
+    long allocated = cache.getStorageAllocated();
+    long used = cache.getStorageUsed();
+    long size = cache.size();
+    long activeSize = cache.activeSize();
+    System.out.println(String.format("Before scan: allocated=%d, used=%d, size=%d, active=%d", 
+      allocated, used, size, activeSize));
+    // Access all objects to remove them from memory index
+    // and from data segments statistics
+    verifyBytesCacheWithDeletes(cache, loaded, deleted);
+    
+    allocated = cache.getStorageAllocated();
+    used = cache.getStorageUsed();
+    size = cache.size();
+    activeSize = cache.activeSize();
+    System.out.println(String.format("After scan: allocated=%d, used=%d, size=%d, active=%d", 
+      allocated, used, size, activeSize));
+    
+    long oldAllocated = allocated;
+    long oldUsed = used;
+    long oldSize = size;
+    long oldActiveSize = activeSize;
+    
+    Scavenger scavenger = new Scavenger(cache);
+    scavenger.run();
+    
+    allocated = cache.getStorageAllocated();
+    used = cache.getStorageUsed();
+    size = cache.size();
+    activeSize = cache.activeSize();
+    System.out.println(String.format("After Scav run: allocated=%d, used=%d, size=%d, active=%d", 
+      allocated, used, size, activeSize));
+    // After Scavenger run we still have active segment, which is not sealed yet
+    double r1 = (double)(oldAllocated - allocated) / oldAllocated;
+    double r2 = (double)(oldUsed - used) / oldUsed;
+    double r3 = (double)(oldSize - size) / oldSize;
+    double r4 = (double) (oldActiveSize - activeSize) / oldActiveSize;
+    double r5 = (double) activeSize / size;
+    System.out.printf("r1 =%f r2=%f r3=%f r4=%f r5=%f\n", r1, r2, r3, r4, r5);
+    // // we delete 6% of data
+    assertTrue(r5 > minActiveRatio);
     verifyBytesCacheWithDeletes(cache, loaded, deleted);
 
   }

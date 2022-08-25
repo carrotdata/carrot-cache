@@ -609,6 +609,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return this;
     }
     
+    /**
+     * With minimum active data set ratio
+     * @param ratio minimum active data set ratio 
+     * @return builder instance
+     */
+    public Builder withMinimumActiveDatasetRatio(double ratio) {
+      conf.setMinimumActiveDatasetRatio(cacheName, ratio);
+      return this;
+    }
+    
     private Cache build() throws IOException {
       Cache cache = new Cache(conf, cacheName);
       cache.setIOEngine(this.engine);
