@@ -86,7 +86,7 @@ public class BlockFileDataReader implements DataReader {
     int dataSize = UnsafeAccess.toInt(buffer, bufOffset);
     if (dataSize > blockSize - META_SIZE) {
       // means that this is a single item larger than a block
-      if (dataSize > avail) {
+      if (dataSize + META_SIZE > avail) {
         return dataSize + META_SIZE;
       }
 //      /*DEBUG*/ System.out.println(" file to end=" + (file.length() - offset - blockSize) + 
@@ -103,6 +103,7 @@ public class BlockFileDataReader implements DataReader {
     return itemSize;
   }
 
+  //TODO: tests
   @Override
   public int read(
       IOEngine engine,
@@ -144,8 +145,8 @@ public class BlockFileDataReader implements DataReader {
       int dataSize = UnsafeAccess.toInt(buf, 0);
       if (dataSize > blockSize - META_SIZE) {
         // means that this is a single item larger than a block
-        if (dataSize > avail) {
-          return dataSize;
+        if (dataSize + META_SIZE > avail) {
+          return dataSize + META_SIZE;
         }
         // copy from buf to buffer
         buffer.put(buf, META_SIZE, buf.length - META_SIZE);
@@ -239,7 +240,7 @@ public class BlockFileDataReader implements DataReader {
     int dataSize = UnsafeAccess.toInt(buffer, bufOffset);
     if (dataSize > blockSize - META_SIZE) {
       // means that this is a single item larger than a block
-      if (dataSize > avail) {
+      if (dataSize + META_SIZE > avail) {
         return dataSize + META_SIZE;
       }
       readFully(file, offset + blockSize, buffer, bufOffset + blockSize, dataSize - blockSize + META_SIZE);
@@ -289,8 +290,8 @@ public class BlockFileDataReader implements DataReader {
       int dataSize = UnsafeAccess.toInt(buf, 0);
       if (dataSize > blockSize - META_SIZE) {
         // means that this is a single item larger than a block
-        if (dataSize > avail) {
-          return dataSize;
+        if (dataSize + META_SIZE > avail) {
+          return dataSize + META_SIZE;
         }
 
         // copy from buf to buffer
