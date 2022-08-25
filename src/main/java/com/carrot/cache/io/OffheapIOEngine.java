@@ -85,7 +85,7 @@ public class OffheapIOEngine extends IOEngine {
   
   @Override
   public SegmentScanner getScanner(Segment s) throws IOException {
-    return this.memoryDataReader.getSegmentScanner(null, s);
+    return this.memoryDataReader.getSegmentScanner(this, s);
   }
 
 

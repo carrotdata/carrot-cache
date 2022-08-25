@@ -57,11 +57,11 @@ public class BlockDataWriter implements DataWriter {
     }
 
     long fullDataSize = getFullDataSize(s, blockSize);
-    boolean notEmptySegment = s.numberOfEntries() > 0;
+    boolean notEmptySegment = s.getTotalItems() > 0;
     boolean crossedBlockBoundary = notEmptySegment && addr > s.getAddress() + fullDataSize;
-    long retValue = crossedBlockBoundary? addr - META_SIZE - s.getSegmentDataSize() - s.getAddress(): 0;
+    long retValue = crossedBlockBoundary? addr - META_SIZE - s.getSegmentBlockDataSize() - s.getAddress(): 0;
     int currentBlock = crossedBlockBoundary? (int) (addr - s.getAddress()) / this.blockSize:
-      (int) (s.getSegmentDataSize() / this.blockSize);
+      (int) (s.getSegmentBlockDataSize() / this.blockSize);
     
     // Key size
     Utils.writeUVInt(addr, keySize);
@@ -78,8 +78,8 @@ public class BlockDataWriter implements DataWriter {
     UnsafeAccess.copy(valuePtr, addr, valueSize);   
     int requiredSize = Utils.requiredSize(keySize, valueSize);
     incrBlockDataSize(s, currentBlock, requiredSize);
-    s.incrDataSize((int)retValue);
-    return s.getSegmentDataSize();//retValue;
+    s.incrBlockDataSize((int) retValue);
+    return s.getSegmentBlockDataSize();//retValue;
   }
 
   private long getAppendAddress(Segment s, int keySize, int valueSize) {
@@ -136,12 +136,12 @@ public class BlockDataWriter implements DataWriter {
     }
     // TODO: check this code
     long fullDataSize = getFullDataSize(s, blockSize);
-    boolean notEmptySegment = s.numberOfEntries() > 0;
+    boolean notEmptySegment = s.getTotalItems() > 0;
     boolean crossedBlockBoundary = notEmptySegment && addr > s.getAddress() + fullDataSize;
-    long retValue = crossedBlockBoundary? addr - META_SIZE - s.getSegmentDataSize() - s.getAddress(): 0;
+    long retValue = crossedBlockBoundary? addr - META_SIZE - s.getSegmentBlockDataSize() - s.getAddress(): 0;
     
     int currentBlock = crossedBlockBoundary? (int) (addr - s.getAddress()) / this.blockSize:
-      (int) (s.getSegmentDataSize() / this.blockSize);
+      (int) (s.getSegmentBlockDataSize() / this.blockSize);
     
     // Key size
     Utils.writeUVInt(addr, keySize);
@@ -158,8 +158,8 @@ public class BlockDataWriter implements DataWriter {
     UnsafeAccess.copy(value, valueOffset, addr, valueSize);
     int requiredSize = Utils.requiredSize(keySize, valueSize);
     incrBlockDataSize(s, currentBlock, requiredSize);
-    s.incrDataSize((int)retValue);
-    return s.getSegmentDataSize();//retValue;
+    s.incrBlockDataSize((int) retValue);
+    return s.getSegmentBlockDataSize();
   }
   
   /**
@@ -172,6 +172,7 @@ public class BlockDataWriter implements DataWriter {
     long ptr = s.getAddress() + n * blockSize + SIZE_OFFSET;
     int size = UnsafeAccess.toInt(ptr);
     UnsafeAccess.putInt(ptr, size + incr);
+    s.incrDataSize(incr);
   }
   
   /**
@@ -179,7 +180,7 @@ public class BlockDataWriter implements DataWriter {
    * @param s segment
    */
   private void processEmptySegment(Segment s) {
-    if (s.numberOfEntries() == 0) {
+    if (s.getTotalItems() == 0) {
       long ptr = s.getAddress();
       UnsafeAccess.putShort(ptr, (short) 0);
     }

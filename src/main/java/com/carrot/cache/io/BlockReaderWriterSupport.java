@@ -82,7 +82,7 @@ public class BlockReaderWriterSupport {
    * @return data size
    */
   public static long getFullDataSize(Segment s, int blockSize) {
-    long size = s.getSegmentDataSize();
+    long size = s.getSegmentBlockDataSize();
     int currentBlock = (int) (size / blockSize);
     int blockDataSize =  getBlockDataSize(s, blockSize, currentBlock);
     size += blockDataSize;

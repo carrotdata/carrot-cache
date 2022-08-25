@@ -25,23 +25,28 @@ import com.carrot.cache.io.Segment;
 public class LRCRecyclingSelector implements RecyclingSelector {
 
   public LRCRecyclingSelector() {
-    
   }
   
   @Override
   public Segment selectForRecycling(Segment[] segments) {
-    int selectionIndex = -1;
+    Segment selection = null;
     long minCreationTime = Long.MAX_VALUE;
     for(int i = 0; i < segments.length; i++) {
       Segment s = segments[i];
       if (s == null || !s.isSealed()) continue;
       Segment.Info info = s.getInfo();
+      long maxExpireAt = info.getMaxExpireAt();
+      long currentTime = System.currentTimeMillis();
+      if (info.getTotalActiveItems() == 0 || 
+          (maxExpireAt > 0 && maxExpireAt < currentTime)){
+        return s;
+      }
       long time = info.getCreationTime();
       if (time < minCreationTime) {
         minCreationTime = time;
-        selectionIndex = i;
+        selection = s;
       }
     }
-    return segments[selectionIndex];
+    return selection;
   }
 }

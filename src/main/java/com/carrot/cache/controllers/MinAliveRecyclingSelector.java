@@ -28,25 +28,35 @@ public class MinAliveRecyclingSelector implements RecyclingSelector {
   
   @Override
   public Segment selectForRecycling(Segment[] segments) {
-    int selectionIndex = -1;
-    int minActive = Integer.MAX_VALUE;
+    Segment selection1 = null, selection2 = null;
+    double minRatio = 0.99;// little hack
+    long minCreationTime = Long.MAX_VALUE;
+    
     for(int i = 0; i < segments.length; i++) {
       Segment s = segments[i];
       if (s == null || !s.isSealed()) {
         continue;
       }
       Segment.Info info = s.getInfo();
-      int active = info.getTotalActiveItems();
+  
       long maxExpire = info.getMaxExpireAt();
       if (maxExpire > 0 && System.currentTimeMillis() > maxExpire) {
         // All expired
         return s;
       }
-      if (active < minActive) {
-        minActive = active;
-        selectionIndex = i;
+      int active = info.getTotalActiveItems();
+      int total = info.getTotalItems();
+      double r = (double) active / total;
+      if (r < minRatio) {
+        minRatio = r;
+        selection1  = s;
+      }
+      long creationTime = info.getCreationTime();
+      if (creationTime < minCreationTime) {
+        minCreationTime = creationTime;
+        selection2 = s;
       }
     }
-    return segments[selectionIndex];
+    return selection1 != null? selection1: selection2;
   }
 }

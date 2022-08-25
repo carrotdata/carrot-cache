@@ -941,9 +941,7 @@ public final class MemoryIndex implements Persistent {
    * @param expire item was expired - time
    */
   private void deleteAt(long ptr, long $ptr, int rank, long expire) {
-    // TODO: Move this to a separate method
     int dataSize = dataSize(ptr);
-//    //TODO: separate method
     int sid1 = this.indexFormat.getSegmentId($ptr);
     // delete entry
     int toDelete = this.indexFormat.fullEntrySize($ptr);
@@ -953,12 +951,7 @@ public final class MemoryIndex implements Persistent {
     incrNumEntries(ptr, -1);
     // Update stats
     if (this.engine != null) {
-      if (expire <= 0) {
-        this.engine.updateStats(sid1, -1, -(numRanks - rank));
-      } else {
-        this.engine.updateExpiredStats(sid1, rank, expire);
-      }
-      //TODO: update segments ranks after the deleted item?
+      this.engine.updateStats(sid1, expire);
     }
   }
   
@@ -1027,7 +1020,7 @@ public final class MemoryIndex implements Persistent {
 
           if (current > expire) {
             int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
-            deleteAt(ptr, $ptr, rank, -1);
+            deleteAt(ptr, $ptr, rank, expire);
             // update total expired counter
             this.expiredEvictedBalance.incrementAndGet();
             numEntries --;
@@ -1043,19 +1036,6 @@ public final class MemoryIndex implements Persistent {
           // Update hits
           if (hit) {
             this.indexFormat.hit($ptr);
-            if (this.engine != null && numEntries >= numRanks) {
-              int sid0 = this.indexFormat.getSegmentId($ptr);
-              // TODO: this works only if we promote item by +1 rank
-              // Update statistics
-              // Increase total rank for segment with the item being promoted
-              this.engine.updateStats(sid0, 0, 1);
-              // Decrease total rank for the segment with an item being demoted
-              int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
-              int idx = this.evictionPolicy.getStartIndexForRank(numRanks, rank, numEntries);
-              // idx was demoted from rank -1 to rank
-              int sid1 = getSegmentIdForEntry(ptr, idx);
-              this.engine.updateStats(sid1, 0, -1);
-            }
           }
           // Save item size and item location to a buffer
           UnsafeAccess.copy($ptr, buf, indexSize);
@@ -1198,6 +1178,42 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * This method is used exclusively by the Scavenger
+   * @param key key buffer
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @param result result
+   * @param dumpBelowRatio
+   * @return operation result (OK, NOT_FOUND, EXPIRED, DELETED)
+   */
+  public ResultWithRankAndExpire checkDeleteKeyForScavenger(byte[] key, int keyOffset, int keySize, 
+      ResultWithRankAndExpire result, double dumpBelowRatio) {
+    int slot = 0;
+    try {
+      slot = lock(key, keyOffset, keySize);
+      long hash = Utils.hash64(key, keyOffset,keySize);
+      // This  method is called under lock
+      // Get slot number
+      long[] index = ref_index_base.get();
+      int $slot = getSlotNumber(hash, index.length);
+      long ptr = index[$slot];
+      if (ptr == 0) {
+        // Rehashing is in progress
+        index = ref_index_base_rehash.get();
+        if (index == null) {
+          // Rehashing finished - race condition
+          index = ref_index_base.get();
+        }
+        $slot = getSlotNumber(hash, index.length);
+        ptr = index[$slot];
+      }
+      return checkDeleteKeyForScavenger(ptr, hash, result, dumpBelowRatio);
+    } finally {
+      unlock(slot);
+    }
+  }
+  
+  /**
+   * This method is used exclusively by the Scavenger
    * @param keyPtr key address
    * @param keySize key size
    * @return operation result (OK, NOT_FOUND, EXPIRED, DELETED)
@@ -1253,7 +1269,7 @@ public final class MemoryIndex implements Persistent {
 
           if (expire > 0 && current > expire) {
             // For expired items rank does not matter
-            result.setResultRankExpire(Result.EXPIRED, 0, expire);
+            result.setResultRankExpire(Result.EXPIRED, rank, expire);
             // update total expired counter
             this.expiredEvictedBalance.incrementAndGet();
           } else {
@@ -1984,12 +2000,15 @@ public final class MemoryIndex implements Persistent {
    */
   private boolean insertEntry(long ptr, long hash, long indexPtr, int indexSize, int rank) {
     // Check if it exists already - update
-    int deletedIndex = delete(ptr, hash);
-    int numEntries = numEntries(ptr);
+    final int deletedIndex = delete(ptr, hash);
+    final boolean insert = deletedIndex < 0;
+    final int numEntries = numEntries(ptr);
     int insertIndex = indexType == Type.MQ? evictionPolicy.getStartIndexForRank(numRanks, rank, numEntries):
       evictionPolicy.getInsertIndex(ptr, numEntries);
     if (deletedIndex >= 0 && indexType == Type.MQ) {
+      // Do not promote on update
       insertIndex = deletedIndex;
+      rank = this.evictionPolicy.getRankForIndex(numRanks, insertIndex, numEntries);
     }
     // TODO: entry size can be variable
     int off = offsetFor(ptr, insertIndex);
@@ -2005,41 +2024,37 @@ public final class MemoryIndex implements Persistent {
     if (this.indexType == Type.AQ) {
       UnsafeAccess.putLong(ptr + off, hash);
       // return for AQ
-      return deletedIndex < 0;
+      return insert;
     } else {
       UnsafeAccess.copy(indexPtr, ptr + off, indexSize);
-    }
-
-    //TODO: make it a separate method
-    //Update stats
-    //TODO: is rank 1- based?
-    
-    int sid1 = this.indexFormat.getSegmentId(indexPtr);
-    updateStats(ptr, sid1, rank, numEntries);
-    return deletedIndex < 0;
+    }    
+//    int sid1 = this.indexFormat.getSegmentId(indexPtr);
+//    if (insert) {
+//      updateStats(ptr, sid1, rank, numEntries);
+//    } 
+    return insert;
   
   }
 
-
-  private void updateStats(long ptr, int sid1, int rank, int numEntries) {
-    if (this.engine == null) {
-      return;
-    }
-    // Update stats
-    // we do not increase number of total items - segment does this
-    this.engine.updateStats(sid1, 0, (numRanks - rank));
-    if (numEntries >= numRanks) {
-      int prev = -1;
-      for (int r = rank + 1; r < numRanks; r++) {
-        int idx = this.evictionPolicy.getStartIndexForRank(numRanks, r, numEntries);
-        if (idx == prev) continue;
-        prev = idx;
-        int sid = getSegmentIdForEntry(ptr, idx);
-        // decrement by total data segment rank by 1 
-        this.engine.updateStats(sid, 0, -1);
-      }
-    }
-  }
+//  private void updateStats(long ptr, int sid1, int rank, int numEntries) {
+//    if (this.engine == null) {
+//      return;
+//    }
+//    // Update stats
+//    // we do not increase number of total items - segment does this
+//    this.engine.updateStats(sid1, 0, (numRanks - rank));
+//    if (numEntries >= numRanks) {
+//      int prev = -1;
+//      for (int r = rank + 1; r < numRanks; r++) {
+//        int idx = this.evictionPolicy.getStartIndexForRank(numRanks, r, numEntries);
+//        if (idx == prev) continue;
+//        prev = idx;
+//        int sid = getSegmentIdForEntry(ptr, idx);
+//        // decrement by total data segment rank by 1 
+//        this.engine.updateStats(sid, 0, -1);
+//      }
+//    }
+//  }
 
   private void rehashSlot(int slot) {
     // We keep write lock on parent slot - so we are safe to

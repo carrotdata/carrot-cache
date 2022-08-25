@@ -89,6 +89,8 @@ public class BlockFileDataReader implements DataReader {
       if (dataSize > avail) {
         return dataSize + META_SIZE;
       }
+//      /*DEBUG*/ System.out.println(" file to end=" + (file.length() - offset - blockSize) + 
+//        " to read=" + (dataSize - blockSize + META_SIZE) + " avail=" + (avail - blockSize));
       readFully(file, offset + blockSize, buffer, bufOffset + blockSize, dataSize - blockSize + META_SIZE);
     }
 

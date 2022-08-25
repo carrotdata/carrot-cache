@@ -921,7 +921,7 @@ public class CacheConfig {
    * @param interval in sec for a given cache name
    */
   public void setThroughputCheckInterval(String cacheName, int interval) {
-    props.getProperty(cacheName + "."+ THROUGHPUT_CHECK_INTERVAL_SEC_KEY, Long.toString(interval));
+    props.setProperty(cacheName + "."+ THROUGHPUT_CHECK_INTERVAL_SEC_KEY, Long.toString(interval));
   }
   
   /**
@@ -943,7 +943,7 @@ public class CacheConfig {
    * @param interval in seconds for a given cache name
    */
   public void setScavengerRunInterval(String cacheName, int interval) {
-    props.getProperty(cacheName + "."+ SCAVENGER_RUN_INTERVAL_SEC_KEY, Long.toString(interval));
+    props.setProperty(cacheName + "."+ SCAVENGER_RUN_INTERVAL_SEC_KEY, Long.toString(interval));
   }
   
   /**
@@ -987,7 +987,7 @@ public class CacheConfig {
    * @param threshold for a given cache name
    */
   public void setCacheWriteRejectionThreshold(String cacheName, double threshold) {
-    props.getProperty(cacheName + "."+ CACHE_WRITE_REJECTION_THRESHOLD_KEY, Double.toString(threshold));
+    props.setProperty(cacheName + "."+ CACHE_WRITE_REJECTION_THRESHOLD_KEY, Double.toString(threshold));
   }
   
   /**
@@ -1269,7 +1269,7 @@ public class CacheConfig {
    * @param throughput controller class name
    */
   public void setThroughputController(String cacheName, String className) {
-    props.getProperty(cacheName + "." + CACHE_THROUGHPUT_CONTROLLER_IMPL_KEY, className);
+    props.setProperty(cacheName + "." + CACHE_THROUGHPUT_CONTROLLER_IMPL_KEY, className);
   }
   
   /**
@@ -1416,7 +1416,7 @@ public class CacheConfig {
    * @param block size
    */
   public void  setBlockWriterBlockSize(String cacheName, int size) {
-    props.getProperty(cacheName + "." + CACHE_BLOCK_WRITER_BLOCK_SIZE_KEY, Integer.toString(size));
+    props.setProperty(cacheName + "." + CACHE_BLOCK_WRITER_BLOCK_SIZE_KEY, Integer.toString(size));
   }
   
   /**

@@ -213,7 +213,7 @@ public abstract class TestIOEngineMultithreadedBase {
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);
-      long size = engine.get(key, 0, key.length, buffer, 0);
+      long size = engine.get(key, 0, key.length, true, buffer, 0);
       assertEquals(expSize, size);
       int kSize = Utils.readUVInt(buffer, 0);
       assertEquals(key.length, kSize);
@@ -238,7 +238,7 @@ public abstract class TestIOEngineMultithreadedBase {
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);
-      long size = engine.get(key, 0, key.length, buffer, 0);
+      long size = engine.get(key, 0, key.length, true, buffer, 0);
       if (i < deleted) {
         assertTrue( size < 0);
         continue;

@@ -219,6 +219,8 @@ public class Scavenger extends Thread {
   
   private static double adjStep = 0.05;
   
+  private static double stopRatio;
+  
   public Scavenger(Cache cache) {
     super("c2 scavenger");
     this.cache = cache;
@@ -232,21 +234,35 @@ public class Scavenger extends Thread {
       dumpBelowRatioMax = this.config.getScavengerDumpEntryBelowStop(cacheName);
       adjStep = this.config.getScavengerDumpEntryBelowAdjStep(cacheName);
     }
+    stopRatio =  this.config.getScavengerStopMemoryRatio(cacheName);
+
+  }
+  
+  /**
+   * Used for testing
+   */
+  public static void clear() {
+    dumpBelowRatio = -1;
   }
   
   @Override
   public void run() {
     long runStart = System.currentTimeMillis();
-    boolean finished = false;
     IOEngine engine = this.cache.getEngine();
     DateFormat format = DateFormat.getDateInstance();
     LOG.info("Scavenger started at %s allocated storage=%d maximum storage=%d",
       format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
+    
+    boolean finished = false;
+    
     while (!finished) {
       Segment s = engine.getSegmentForRecycling();
       if (s == null) {
-        LOG.error(Thread.currentThread().getName() + ": empty segment");
+        LOG.warn(Thread.currentThread().getName() + ": empty segment");
         return;
+      }
+      if (shouldStopOn(s)) {
+        break;
       }
       engine.startRecycling(s);
       long maxExpire = s.getInfo().getMaxExpireAt();
@@ -255,9 +271,9 @@ public class Scavenger extends Thread {
         stats.totalEmptySegments ++;
       }
       try {
-        finished = cleanSegment(s);
+        finished = cleanSegment(s);    
         // Dispose segment
-        engine.disposeDataSegment(s);        
+        engine.disposeDataSegment(s);    
       } catch (IOException e) {
         LOG.error(e);
         return;
@@ -272,81 +288,176 @@ public class Scavenger extends Thread {
       format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
   }
 
+  private boolean shouldStopOn(Segment s) {
+    long expire = s.getInfo().getMaxExpireAt();
+    long n = s.getAliveItems();
+    long currentTime = System.currentTimeMillis();
+    double usage = cache.getEngine().getStorageAllocatedRatio();
+    if ((expire > 0 && expire <= currentTime) || n == 0) {
+      return false;
+    }
+    return  usage < stopRatio;   
+  }
+
   private boolean cleanSegment(Segment s) throws IOException {
-    IOEngine engine = this.cache.getEngine();
-    String cacheName = this.cache.getName();
-    double stopRatio = config.getScavengerStopMemoryRatio(cacheName);
+
     Segment.Info info = s.getInfo();
+    long currentTime = System.currentTimeMillis();
+    long maxExpire = info.getMaxExpireAt();
+    boolean allExpired = maxExpire > 0 && maxExpire <= currentTime;
+    boolean empty = !allExpired && info.getTotalActiveItems() == 0;
+    if (allExpired || empty) {
+      // We can dump it completely w/o asking memory index
+      long dataSize = info.getSegmentDataSize();
+      // Update stats
+      stats.totalBytesFreed += dataSize;
+      //*DEBUG*/ System.out.println(s.getId() + " is fully empty");
+      return false; // not finished yet
+    } else {
+      return cleanSegmentInternal(s);
+    }
+  }
+
+  private byte[] checkBuffer(byte[] buffer, int requiredSize, boolean isDirect) {
+    if (isDirect) {
+      return buffer;
+    }
+    if (buffer.length < requiredSize) {
+      buffer = new byte[requiredSize];
+    }
+    return buffer;
+  }
+  
+  private boolean cleanSegmentInternal(Segment s) throws IOException {
+    IOEngine engine = this.cache.getEngine();
+    MemoryIndex index = engine.getMemoryIndex();
     SegmentScanner sc = null;
-    
+    int scanned = 0;
+    int deleted = 0;
+    int expired = 0;
+    int notFound = 0;
+    ResultWithRankAndExpire result = new ResultWithRankAndExpire();
+
     try {
-      long currentTime = System.currentTimeMillis();
-      long maxExpire = info.getMaxExpireAt();
-      if (( maxExpire > 0 && maxExpire < currentTime) || 
-          info.getTotalActiveItems() == 0) {
-        // We can dump it completely w/o asking memory index
-        long dataSize = info.getSegmentDataSize();
-        engine.reportUsage(-dataSize);
-        // Update stats
-        stats.totalBytesFreed += dataSize;
-        return false; // not finished yet
-      } else {
-        double usage = engine.getStorageAllocatedRatio();
-        if (usage < stopRatio) {
-          // finished
-          return true;
-        }
-        MemoryIndex index = engine.getMemoryIndex();
-        sc = engine.getScanner(s); // acquires read lock 
-
-        while (sc.hasNext()) {
-          final long keyPtr = sc.keyAddress();
-          final int keySize = sc.keyLength();
-          final long valuePtr = sc.valueAddress();
-          final int valSize = sc.valueLength();
-          final int totalSize = Utils.kvSize(keySize, valSize);
-          
-          stats.totalBytesScanned += totalSize;
-
-          ResultWithRankAndExpire result = new ResultWithRankAndExpire();
-          
+      
+      sc = engine.getScanner(s); // acquires read lock
+      boolean isDirect =  sc.isDirect();
+      
+      byte[] keyBuffer = new byte[4096];
+      byte[] valueBuffer = new byte[4096];
+      
+      while (sc.hasNext()) {
+        // TODO: will it work for file based scanner? - FIXME
+        final long keyPtr = sc.keyAddress();
+        final int keySize = sc.keyLength();
+        final long valuePtr = sc.valueAddress();
+        final int valSize = sc.valueLength();
+        final int totalSize = Utils.kvSize(keySize, valSize);
+        stats.totalBytesScanned += totalSize;
+        
+        keyBuffer = checkBuffer(keyBuffer, keySize, isDirect);
+        valueBuffer = checkBuffer(valueBuffer, valSize, isDirect);
+        
+        if (isDirect) {
           result = index.checkDeleteKeyForScavenger(keyPtr, keySize, result, dumpBelowRatio);
-          
-          Result res = result.getResult();
-          int rank = result.getRank();
-          long expire = result.getExpire();
-          
-          switch (res) {
-            case EXPIRED:
-              engine.reportUsage(-totalSize);
-              stats.totalBytesExpired += totalSize;
-              stats.totalBytesFreed += totalSize;
-              stats.totalItemsExpired += 1;
-              break;
-            case NOT_FOUND:
-              engine.reportUsage(-totalSize);
-              stats.totalBytesFreed += totalSize;
-              break;
-            case DELETED:
-              engine.reportUsage(-totalSize);
-              // Update stats
-              stats.totalBytesFreed += totalSize;
-              // Return Item back to AQ
-              // TODO: fix this code. We need to move data to a victim cache on
-              // memory index eviction.
-              break;
-            case OK:
-              // Put value back into the cache - it has high popularity
-              this.cache.put(keyPtr, keySize, valuePtr, valSize, expire, rank, true);
-              break;
-          }
-          sc.next();
+        } else {
+          sc.getKey(keyBuffer, 0);
+          result = index.checkDeleteKeyForScavenger(keyBuffer, 0, keySize, result, dumpBelowRatio);
         }
+
+        Result res = result.getResult();
+        int rank = result.getRank();
+        long expire = result.getExpire();
+        scanned++;
+        switch (res) {
+          case EXPIRED:
+            stats.totalBytesExpired += totalSize;
+            stats.totalBytesFreed += totalSize;
+            stats.totalItemsExpired += 1;
+            expired++;
+            break;
+          case NOT_FOUND:
+            stats.totalBytesFreed += totalSize;
+            notFound++;
+            break;
+          case DELETED:
+            // Update stats
+            stats.totalBytesFreed += totalSize;
+            // Return Item back to AQ
+            // TODO: fix this code. We need to move data to a victim cache on
+            // memory index eviction.
+            deleted++;
+            break;
+          case OK:
+            // Put value back into the cache - it has high popularity
+            if (isDirect) {
+              this.cache.put(keyPtr, keySize, valuePtr, valSize, expire, rank, true);
+            } else {
+              sc.getValue(valueBuffer, 0);
+              this.cache.put(keyBuffer, 0, keySize, valueBuffer, 0, valSize, expire, rank, true);
+            }
+            break;
+        }
+        sc.next();
       }
-      return false; // try one more
+      /* DEBUG System.out.println(
+          "id ="
+              + s.getId()
+              + " scanned="
+              + scanned
+              + " deleted="
+              + deleted
+              + " not found="
+              + notFound
+              + " expired="
+              + expired
+              + " usageRatio="
+              + engine.getStorageAllocatedRatio());
+      */
     } finally {
       if (sc != null) {
-        sc.close(); // releases read lock
+        sc.close();
+      }
+    }
+    // Returns true if could not clean anything
+    // means Scavenger MUST stop and log warning
+    // Mostly for testing - in a real application properly configured
+    // should never happen
+    return (deleted + expired + notFound) == 0;
+  }
+
+  @SuppressWarnings("unused")
+  private void cleanIndexForSegment(Segment s) throws IOException {
+    IOEngine engine = this.cache.getEngine();
+    MemoryIndex index = engine.getMemoryIndex();
+    SegmentScanner sc = null;
+
+    byte[] buffer = new byte[4096];
+
+    try {
+      sc = engine.getScanner(s); // acquires read lock
+      boolean isDirect = sc.isDirect();
+
+      while (sc.hasNext()) {
+        final long keyPtr = sc.keyAddress();
+        final int keySize = sc.keyLength();
+        final int valSize = sc.valueLength();
+        final int totalSize = Utils.kvSize(keySize, valSize);
+        stats.totalBytesScanned += totalSize;
+        if (!isDirect && buffer.length < keySize) {
+          buffer = new byte[keySize];
+        }
+        if (isDirect) {
+          index.delete(keyPtr, keySize);
+        } else {
+          sc.getKey(buffer, 0);
+          index.delete(buffer, 0, keySize);
+        }
+        sc.next();
+      }
+    } finally {
+      if (sc != null) {
+        sc.close();
       }
     }
   }

@@ -63,7 +63,7 @@ import com.carrot.cache.util.Utils;
     }
     
     public boolean hasNext() {
-      return currentIndex < segment.numberOfEntries();
+      return currentIndex < segment.getTotalItems();
     }
     
     public boolean next() {

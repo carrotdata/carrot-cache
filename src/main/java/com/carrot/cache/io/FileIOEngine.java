@@ -139,12 +139,12 @@ public class FileIOEngine extends IOEngine {
           Long ptr = this.bufferPool.poll();
           if (ptr == null) {
             ptr = UnsafeAccess.mallocZeroed(this.segmentSize);
-            reportAllocation(this.segmentSize);
           }
           s = Segment.newSegment(ptr, (int) this.segmentSize, id, rank);
           // Set data appender
           s.setDataWriter(this.dataWriter);
           this.dataSegments[id] = s;
+          reportAllocation(this.segmentSize);
 
         } else {
           //TODO: is it normal path of an execution?
@@ -238,6 +238,8 @@ public class FileIOEngine extends IOEngine {
   @Override
   public synchronized void disposeDataSegment(Segment data) {
     //TODO: is it a good idea to lock on file I/O?
+    //TODO: make sure that we remove file before save to the same ID
+    // That is the race condition
     super.disposeDataSegment(data);
     // close and delete file
     RandomAccessFile f = dataFiles.get(data.getId());
@@ -245,8 +247,10 @@ public class FileIOEngine extends IOEngine {
       try {
         f.close();
         Files.deleteIfExists(getPathForDataSegment(data.getId()));
+        dataFiles.remove(data.getId());
       } catch(IOException e) {
         //TODO
+        e.printStackTrace();
       }
     }
   }

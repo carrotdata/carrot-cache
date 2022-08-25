@@ -729,15 +729,21 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   private void initScavenger() {
     long interval = this.conf.getScavengerRunInterval(this.cacheName) * 1000;
     LOG.info("Started Scavenger, interval=%d sec", interval /1000);
+    /*DEBUG*/ System.out.println("Scavenger run interval =" + interval);
     TimerTask task = new TimerTask() {
       public void run() {
         if (Cache.this.scavenger != null && Cache.this.scavenger.isAlive()) {
           return;
         }
         Cache.this.scavenger = new Scavenger(Cache.this);
+        /*DEBUG*/ System.out.println("Scavenger started");
+
         Cache.this.scavenger.start();
       }
     };
+    if (this.timer == null) {
+      this.timer = new Timer();
+    }
     this.timer.scheduleAtFixedRate(task, interval, interval);
   }
 
@@ -851,8 +857,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public long getStorageUsed() {
     return this.engine.getStorageUsed();
   }
-
-
+  
   /**
    * Get total allocated memory
    *
@@ -861,7 +866,23 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public long getStorageAllocated() {
     return this.engine.getStorageAllocated();
   }
-
+  
+  /**
+   * Total number of cached items (accessible or not)
+   * @return number
+   */
+  public long size() {
+    return this.engine.size();
+  }
+  
+  /**
+   * Total number of active items (accessible)
+   * @return active number
+   */
+  public long activeSize() {
+    return this.engine.activeSize();
+  }
+  
   /**
    * Gets memory limit
    * @return memory limit in bytes
@@ -963,11 +984,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param valPtr value address
    * @param valSize value size
    * @param expire - expiration (0 - no expire)
+   * @return true on success, false - otherwise
    */
-  public void put(long keyPtr, int keySize, long valPtr, int valSize, long expire)
+  public boolean put(long keyPtr, int keySize, long valPtr, int valSize, long expire)
     throws IOException {    
-    int rank = getDefaultRankToInsert();//.getSLRUInsertionPoint(this.cacheName);
-    put(keyPtr, keySize, valPtr, valSize, expire, rank, false);
+    int rank = getDefaultRankToInsert();
+    return put(keyPtr, keySize, valPtr, valSize, expire, rank, false);
   }
 
   private boolean shouldAdmitToMainQueue(long keyPtr, int keySize, int valueSize,  boolean force) {
@@ -987,27 +1009,31 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param expire expiration (0 - no expire)
    * @param rank rank of the item
    * @param force if true - bypass admission controller
+   * @return true on success, false - otherwise
    */
-  public void put(
+  public boolean put(
       long keyPtr, int keySize, long valPtr, int valSize, long expire, int rank, boolean force)
       throws IOException {
 
     if (rejectWrite()) {
       this.totalRejectedWrites.incrementAndGet();
-      return;
+      return false;
     }
     // Check rank
     checkRank(rank);
     if (!shouldAdmitToMainQueue(keyPtr, keySize, valSize, force)) {
-      return;
+      return false;
     }
     this.totalWrites.incrementAndGet();
     // Adjust rank taking into account item's expiration time
     rank = adjustRank(rank, expire);
     expire = adjustExpirationTime(expire);
     // Add to the cache
-    engine.put(keyPtr, keySize, valPtr, valSize, expire, rank);
-    reportThroughputController(Utils.kvSize(keySize, valSize));
+    boolean result = engine.put(keyPtr, keySize, valPtr, valSize, expire, rank);
+    if (result) {
+      reportThroughputController(Utils.kvSize(keySize, valSize));
+    }
+    return result;
   }
 
   private void checkRank(int rank) {
@@ -1050,8 +1076,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param valSize value size
    * @param expire - expiration (0 - no expire)
    * @param force if true - bypass admission controller
+   * @return true on success, false - otherwise
    */
-  public void put(
+  public boolean put(
       byte[] key,
       int keyOffset,
       int keySize,
@@ -1064,10 +1091,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       throws IOException {
     if (rejectWrite()) {
       this.totalRejectedWrites.incrementAndGet();
-      return;
+      return false;
     }
     if (!shouldAdmitToMainQueue(key, keyOffset, keySize, valSize, force)) {
-      return;
+      return false;
     }
     this.totalWrites.incrementAndGet();
     // Check rank
@@ -1076,40 +1103,42 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     rank = adjustRank(rank, expire);
     expire = adjustExpirationTime(expire);
     // Add to the cache
-    engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank);
-    reportThroughputController(Utils.kvSize(keySize, valSize));
-
+    boolean result = engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank);
+    if (result) {
+      reportThroughputController(Utils.kvSize(keySize, valSize));
+    }
+    return result;
   }
 
-  private void put (byte[] buf, int off, long expire) throws IOException {
+  private boolean put (byte[] buf, int off, long expire) throws IOException {
     int rank = getDefaultRankToInsert();
     int keySize = Utils.readUVInt(buf, off);
     int kSizeSize = Utils.sizeUVInt(keySize);
     int valueSize = Utils.readUVInt(buf, off + kSizeSize);
     int vSizeSize = Utils.sizeUVInt(valueSize);
-    put(buf, off + kSizeSize + vSizeSize, keySize, buf, 
+    return put(buf, off + kSizeSize + vSizeSize, keySize, buf, 
       off + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, true);
   }
   
-  private void put(long bufPtr, long expire) throws IOException {
+  private boolean put(long bufPtr, long expire) throws IOException {
     int rank = getDefaultRankToInsert();
     int keySize = Utils.readUVInt(bufPtr);
     int kSizeSize = Utils.sizeUVInt(keySize);
     int valueSize = Utils.readUVInt(bufPtr + kSizeSize);
     int vSizeSize = Utils.sizeUVInt(valueSize);
-    put(bufPtr + kSizeSize + vSizeSize, keySize, bufPtr 
+    return put(bufPtr + kSizeSize + vSizeSize, keySize, bufPtr 
       + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, true);
   }
   
-  private void put(ByteBuffer buf, long expire) throws IOException {
+  private boolean put(ByteBuffer buf, long expire) throws IOException {
     if (buf.hasArray()) {
       byte[] buffer = buf.array();
       int bufOffset = buf.position();
-      put(buffer, bufOffset, expire);
+      return put(buffer, bufOffset, expire);
     } else {
       long ptr = UnsafeAccess.address(buf);
       int off = buf.position();
-      put(ptr + off, expire);
+      return put(ptr + off, expire);
     }
   }
   
@@ -1120,12 +1149,28 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param value value
    * @param expire - expiration (0 - no expire)
    */
-  public void put(byte[] key, byte[] value, long expire) throws IOException {
+  public boolean put(byte[] key, byte[] value, long expire) throws IOException {
     int rank = getDefaultRankToInsert();
-    put(key, 0, key.length, value, 0, value.length, expire, rank, false);
+    return put(key, 0, key.length, value, 0, value.length, expire, rank, false);
   }
 
   /* Get API*/
+  
+  /**
+   * Get cached item (if any)
+   *
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param buffer buffer for item
+   * @param bufOffset buffer offset
+   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
+   *     adjusted buffer
+   * @throws IOException 
+   */
+  public long get(long keyPtr, int keySize, byte[] buffer, int bufOffset) throws IOException {
+    return get(keyPtr, keySize, true, buffer, bufOffset);
+  }
+
   /**
    * Get cached item (if any)
    *
@@ -1139,7 +1184,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException 
    */
   public long get(long keyPtr, int keySize, boolean hit, byte[] buffer, int bufOffset) throws IOException {
-    long result = engine.get(keyPtr, keySize, buffer, bufOffset);
+    long result = engine.get(keyPtr, keySize, hit, buffer, bufOffset);
     if (result <= buffer.length - bufOffset) {
       access();
       if (result >= 0) {
@@ -1165,6 +1210,22 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   /**
+   * Get cached item (with hit == true)
+   * @param key key buffer
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @param buffer buffer for item
+   * @param bufOffset buffer offset
+   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
+   *     adjusted buffer
+   * @throws IOException
+   */
+  public long get(byte[] key, int keyOffset, int keySize, byte[] buffer, int bufOffset) 
+      throws IOException {
+    return get(key, keyOffset, keySize, true, buffer, bufOffset);
+  }
+  
+  /**
    * Get cached item (if any)
    *
    * @param key key buffer
@@ -1179,7 +1240,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public long get(byte[] key, int keyOffset, int keySize, boolean hit, byte[] buffer, int bufOffset) 
       throws IOException {
-    long result = engine.get(key, keyOffset, keySize, buffer, bufOffset);
+    long result = engine.get(key, keyOffset, keySize, hit, buffer, bufOffset);
     if (result <= buffer.length - bufOffset) {
       access();
       if (result >= 0) {
@@ -1216,10 +1277,27 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *     adjusted buffer
    * @throws IOException 
    */
+  public long get(byte[] key, int keyOff, int keySize, ByteBuffer buffer) 
+      throws IOException {
+    return get(key, keyOff, keySize, true, buffer);
+  }
+  
+  /**
+   * Get cached item (if any)
+   *
+   * @param key key buffer
+   * @param keyOff key offset
+   * @param keySize key size
+   * @param hit if true - its a hit
+   * @param buffer byte buffer for item
+   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
+   *     adjusted buffer
+   * @throws IOException 
+   */
   public long get(byte[] key, int keyOff, int keySize, boolean hit, ByteBuffer buffer) 
       throws IOException {
     int rem = buffer.remaining();
-    long result = this.engine.get(key, keyOff, keySize,  buffer);
+    long result = this.engine.get(key, keyOff, keySize, hit, buffer);
     if (result <= rem) {
       access();
       if (result >= 0) {
@@ -1247,7 +1325,23 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /**
    * Get cached item (if any)
    *
-   * @param key key buffer
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param buffer byte buffer for item
+   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
+   *     adjusted buffer
+   * @throws IOException 
+   */
+  public long get(long keyPtr, int keySize,  ByteBuffer buffer) 
+      throws IOException  {
+    return get(keyPtr, keySize, true, buffer);
+  }
+  
+  /**
+   * Get cached item (if any)
+   *
+   * @param keyPtr key address
+   * @param keySize key size
    * @param hit if true - its a hit
    * @param buffer byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly

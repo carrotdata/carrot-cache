@@ -81,10 +81,7 @@ public class Segment implements Persistent {
     
     /* Total number of cached items in the segment */
     private AtomicInteger totalItems = new AtomicInteger(0);
-    
-    /* Total rank of all items in this segment */
-    private AtomicLong totalRank = new AtomicLong(0);
-    
+        
     /* Total items expected to expire */
     private AtomicInteger totalExpectedToExpireItems = new AtomicInteger(0);
     
@@ -102,6 +99,9 @@ public class Segment implements Persistent {
     
     /* Segment data size */
     private AtomicLong dataSize = new AtomicLong(0);
+    
+    /* Segment block data size - to support block - based writers*/
+    private AtomicLong blockDataSize = new AtomicLong(0);
     
     /* Is this segment off-heap. Every segment starts as offheap, but FileIOEngine it will be converted to a file*/
     private volatile boolean offheap;
@@ -124,11 +124,9 @@ public class Segment implements Persistent {
     /**
      * Update segment's statistics
      * @param itemIncrement total items to increment
-     * @param rankIncrement total rank to increment
      */
-    public void updateEvictedDeleted(int itemIncrement, int rankIncrement) {
-      this.totalItems.addAndGet(itemIncrement);
-      this.totalRank.addAndGet(rankIncrement);
+    public void updateEvictedDeleted(int itemIncrement) {
+      this.totalEvictedItems.addAndGet(itemIncrement);
     }
     
     /**
@@ -163,14 +161,6 @@ public class Segment implements Persistent {
       this.sealed = b;
     }
     
-    /**
-     * Get segments' (average) rank
-     * @return segment's average rank
-     */
-    
-    public double getAverageRank() {
-      return (double) this.totalRank.get() / this.totalItems.get();
-    }
     
     /**
      * Get total number of cached items in this segment
@@ -195,23 +185,7 @@ public class Segment implements Persistent {
     public void setTotalItems(int num) {
       this.totalItems.set(num);
     }
-    
-    /**
-     * Get total rank of the segment
-     * @return
-     */
-    public long getTotalRank() {
-      return this.totalRank.get();
-    }
-    
-    /**
-     * Set total rank
-     * @param totalRank total rank
-     */
-    public void setTotalRank(long totalRank) {
-      this.totalRank.set(totalRank);
-    }
-    
+        
     /**
      * Get segment size
      * @return segment size
@@ -241,6 +215,22 @@ public class Segment implements Persistent {
      * @param size segment data size
      */
     public void setSegmentDataSize(long size) {
+      this.dataSize.set(size);
+    }
+    
+    /**
+     * Get segment block data size
+     * @return segment block data size
+     */
+    public long getSegmentBlockDataSize() {
+      return this.blockDataSize.get();
+    }
+    
+    /**
+     * Sets segment block data size
+     * @param size segment data size
+     */
+    public void setSegmentBlockDataSize(long size) {
       this.dataSize.set(size);
     }
     
@@ -317,11 +307,9 @@ public class Segment implements Persistent {
     
     /**
      * Expire one item
-     * @param rank - rank of an item
      */
-    public void updateExpired(int rank) {
+    public void updateExpired() {
       this.totalExpiredItems.incrementAndGet();
-      this.totalRank.addAndGet(-rank);
     }
 
     /**
@@ -332,14 +320,14 @@ public class Segment implements Persistent {
     public long incrementDataSize(int incr) {
       return this.dataSize.addAndGet(incr);
     }
-    
+     
     /**
-     * Increment total rank
+     * Increment block data size
      * @param incr increment
-     * @return new total rank
+     * @return new data size
      */
-    public long incrementTotalRank(int incr) {
-      return this.totalRank.addAndGet(incr);
+    public long incrementBlockDataSize(int incr) {
+      return this.blockDataSize.addAndGet(incr);
     }
     
     /**
@@ -385,8 +373,6 @@ public class Segment implements Persistent {
         dos.writeLong(getSegmentDataSize());
         // Number of entries
         dos.writeInt(getTotalItems());
-        // Total rank
-        dos.writeLong(getTotalRank());
         // Total number of expected to expire items
         dos.writeInt(getNumberExpectedToExpireItems());
         //Total number of expired items
@@ -395,6 +381,8 @@ public class Segment implements Persistent {
         dos.writeInt(getNumberEvictedDeletedItems());
         // Off-heap
         dos.writeBoolean(isOffheap());
+        // Block data size
+        dos.writeLong(this.blockDataSize.get());
         dos.flush();
     }
 
@@ -408,11 +396,11 @@ public class Segment implements Persistent {
       this.size = dis.readLong();
       this.dataSize.set(dis.readLong());
       this.totalItems.set(dis.readInt());
-      this.totalRank.set(dis.readLong());
       this.totalExpectedToExpireItems.set(dis.readInt());
       this.totalExpiredItems.set(dis.readInt());
       this.totalEvictedItems.set(dis.readInt());
       this.offheap = dis.readBoolean();
+      this.blockDataSize.set(dis.readLong());
     }
   }
   
@@ -553,9 +541,14 @@ public class Segment implements Persistent {
   public long incrDataSize(int incr) {
     return this.info.incrementDataSize(incr);
   }
-  
-  public long incrTotalRank(int incr) {
-    return this.info.incrementTotalRank(incr);
+   
+  /**
+   * Increment block data size
+   * @param incr increment
+   * @return new data size
+   */
+  public long incrBlockDataSize(int incr) {
+    return this.info.incrementBlockDataSize(incr);
   }
   
   /**
@@ -656,14 +649,6 @@ public class Segment implements Persistent {
   }
   
   /**
-   * Get number of cached entries
-   * @return number of cached entries
-   */
-  public int numberOfEntries() {
-    return this.info.getTotalItems();
-  }
-  
-  /**
    * Get segment's data size
    * @return segment's data size
    */
@@ -672,11 +657,27 @@ public class Segment implements Persistent {
   }
   
   /**
+   * Get segment's block data size
+   * @return segment's data size
+   */
+  public long getSegmentBlockDataSize() {
+    return this.info.getSegmentBlockDataSize();
+  }
+  
+  /**
    * Get total number of cached items in this segment 
    * @return number
    */
   public int getTotalItems() {
     return this.info.getTotalItems();
+  }
+  
+  /**
+   * Get total number of alive items in the segment
+   * @return
+   */
+  public int getAliveItems() {
+    return getTotalItems() - getNumberEvictedDeletedItems() - getNumberExpiredItems();
   }
   
   /**
@@ -702,6 +703,7 @@ public class Segment implements Persistent {
   public int getNumberExpectedExpireItems() {
     return this.getNumberExpectedExpireItems();
   }
+  
   /**
    * Read lock the segment
    */
@@ -846,10 +848,9 @@ public class Segment implements Persistent {
   /**
    * Update segment's statistics
    * @param itemIncrement total items to increment
-   * @param rankIncrement total rank to increment
    */
-  public void updateEvictedDeleted(int itemIncrement, int rankIncrement) {
-    this.info.updateEvictedDeleted(itemIncrement, rankIncrement);
+  public void updateEvictedDeleted() {
+    this.info.updateEvictedDeleted(1);
   }
   
   /**
@@ -857,22 +858,13 @@ public class Segment implements Persistent {
    * @param rank rank of an expired item
    * @param expire expiration time
    */
-  public void updateExpired(int rank, long expire) {
+  public void updateExpired(long expire) {
     if (this.info.getCreationTime() > expire) {
       return; // do nothing - segment was recycled recently
     }
-    this.info.updateExpired(rank);
+    this.info.updateExpired();
   }
-  
-  /**
-   * Get segments' (average) rank
-   * @return segment's average rank
-   */
-  
-  public double getRank() {
-    return this.info.getAverageRank();
-  }
-  
+    
 
   @Override
   public void save(OutputStream os) throws IOException {

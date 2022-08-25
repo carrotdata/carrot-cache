@@ -88,8 +88,7 @@ public final class BlockMemorySegmentScanner implements SegmentScanner {
     }
     this.segment = s;
     this.blockSize = blockSize;
-    this.totalItems = s.numberOfEntries();
-    /*DEBUG*/ System.out.println("total items=" + totalItems);
+    this.totalItems = s.getTotalItems();
     s.readLock();
     this.currentBlockIndex = -1;
     initNextBlock();

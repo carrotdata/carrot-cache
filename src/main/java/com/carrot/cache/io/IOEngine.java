@@ -263,6 +263,7 @@ public abstract class IOEngine implements Persistent {
    * @return new storage allocation value
    */
   public long reportAllocation(long value) {
+    //*DEBUG*/ System.out.println("alloced: "+ value);
     long v = this.storageAllocated.addAndGet(value);
     if (this.aListener != null) {
       // This must the Cache
@@ -378,7 +379,7 @@ public abstract class IOEngine implements Persistent {
    * @return length of an item or -1
    * @throws IOException
    */
-  public long get(long keyPtr, int keySize, byte[] buffer, int bufOffset) throws IOException {
+  public long get(long keyPtr, int keySize, boolean hit, byte[] buffer, int bufOffset) throws IOException {
     IndexFormat format = this.index.getIndexFormat();
     // TODO: embedded entry case
     int entrySize = format.indexEntrySize();
@@ -387,14 +388,14 @@ public abstract class IOEngine implements Persistent {
     try {
       // Lock index for the key (slot)
       slot =  this.index.lock(keyPtr, keySize);
-      long result = index.find(keyPtr, keySize, true, buf, entrySize);
+      long result = index.find(keyPtr, keySize, hit, buf, entrySize);
       if (result < 0) {
         return NOT_FOUND;
       } else if (result > entrySize) {
         UnsafeAccess.free(buf);
         entrySize = (int) result;
         buf = UnsafeAccess.mallocZeroed(entrySize);
-        result = index.find(keyPtr, keySize, true, buf, entrySize);
+        result = index.find(keyPtr, keySize, hit, buf, entrySize);
         if (result < 0) {
           return NOT_FOUND;
         }
@@ -451,7 +452,7 @@ public abstract class IOEngine implements Persistent {
    * @return length of an item or -1
    * @throws IOException
    */
-  public long get(byte[] key, int keyOffset, int keySize, byte[] buffer, int bufOffset)
+  public long get(byte[] key, int keyOffset, int keySize, boolean hit, byte[] buffer, int bufOffset)
       throws IOException {
 
     IndexFormat format = this.index.getIndexFormat();
@@ -464,14 +465,14 @@ public abstract class IOEngine implements Persistent {
       // Lock index for the key (slot)
       slot = this.index.lock(key, keyOffset, keySize);
 
-      long result = index.find(key, keyOffset, keySize, true, buf, entrySize);
+      long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
       if (result < 0) {
         return NOT_FOUND;
       } else if (result > entrySize) {
         UnsafeAccess.free(buf);
         entrySize = (int) result;
         buf = UnsafeAccess.mallocZeroed(entrySize);
-        result = index.find(key, keyOffset, keySize, true, buf, entrySize);
+        result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
         if (result < 0) {
           return NOT_FOUND;
         }
@@ -611,7 +612,7 @@ public abstract class IOEngine implements Persistent {
    * @return length of an item or -1
    * @throws IOException
    */
-  public long get(byte[] key, int keyOffset, int keySize, ByteBuffer buffer) throws IOException {
+  public long get(byte[] key, int keyOffset, int keySize, boolean hit, ByteBuffer buffer) throws IOException {
 
     IndexFormat format = this.index.getIndexFormat();
     int entrySize = format.indexEntrySize();
@@ -619,14 +620,14 @@ public abstract class IOEngine implements Persistent {
     int slot = 0;
     try {
       slot = this.index.lock(key, keyOffset, keySize);
-      long result = index.find(key, keyOffset, keySize, true, buf, entrySize);
+      long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
       if (result < 0) {
         return NOT_FOUND;
       } else if (result > entrySize) {
         UnsafeAccess.free(buf);
         entrySize = (int) result;
         buf = UnsafeAccess.mallocZeroed(entrySize);
-        result = index.find(key, keyOffset, keySize, true, buf, entrySize);
+        result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
         if (result < 0) {
           return NOT_FOUND;
         }
@@ -1031,12 +1032,13 @@ public abstract class IOEngine implements Persistent {
    * @param id data segment id
    */
   public void disposeDataSegment(Segment seg) {
-    
+    long dataSize = seg.getInfo().getSegmentDataSize();
     try {
       seg.writeLock();
       seg.dispose();
       dataSegments[seg.getId()] = null;
       reportAllocation(- this.segmentSize);
+      reportUsage(-dataSize);
     } finally {
       seg.writeUnlock();
     }
@@ -1046,35 +1048,19 @@ public abstract class IOEngine implements Persistent {
    * for eviction, deletion
    *
    * @param id segment id
-   * @param itemIncrement number of items to increment
-   * @param rankIncrement total rank to increment
+   * @param expire expiration time (can be -1)
    */
-  public void updateStats(int id, int itemIncrement, int rankIncrement) {
+  public void updateStats(int id, long expire) {
     checkId(id);
     Segment s = this.dataSegments[id];
     if (s == null) {
       return; // possible when segment was recycled recently
     }
-    if (itemIncrement < 0) {
-      s.updateEvictedDeleted(itemIncrement, rankIncrement);
-    } else if (itemIncrement == 0) {
-      s.incrTotalRank(rankIncrement);
+    if (expire < 0) {
+      s.updateEvictedDeleted();
+    } else {
+      s.updateExpired(expire);
     }
-  }
-
-  /**
-   * Update expired stats
-   * @param id segment id
-   * @param rank rank of an expired item
-   * @param expire expiration time
-   */
-  public void updateExpiredStats(int id, int rank, long expire) {
-    checkId(id);
-    Segment s = dataSegments[id];
-    if (s == null) {
-      return; // possible, segment was recycled recently
-    }
-    s.updateExpired(rank, expire);
   }
   
   /**
@@ -1101,7 +1087,7 @@ public abstract class IOEngine implements Persistent {
   }
 
   private void checkId(int id) {
-    if (id < 0 || id >= dataSegments.length || dataSegments[id] == null) {
+    if (id < 0 || id >= dataSegments.length) {
       throw new IllegalArgumentException(String.format("illegal id %d ", id));
     }
   }

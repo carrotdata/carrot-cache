@@ -26,6 +26,7 @@ import java.util.Random;
 import org.junit.After;
 import org.junit.BeforeClass;
 
+import com.carrot.cache.Cache;
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MemoryIndex;
 import com.carrot.cache.util.TestUtils;
@@ -38,7 +39,7 @@ public abstract class IOTestBase {
   int numRecords = 10;
   int maxKeySize = 32;
   int maxValueSize = 5000;
-  Random r;
+  public Random r;
   
   byte[][] keys;
   byte[][] values;
@@ -77,7 +78,7 @@ public abstract class IOTestBase {
     expires = new long[numRecords];
     
     Random r = new Random();
-    long seed = System.currentTimeMillis();
+    long seed = 1661374488810L;//System.currentTimeMillis();
     r.setSeed(seed);
     System.out.println("seed="+ seed);
     
@@ -153,6 +154,32 @@ public abstract class IOTestBase {
     return count;
   }
   
+  protected int loadBytesCache(Cache cache) throws IOException {
+    int count = 0;
+    while(count < this.numRecords) {
+      long expire = expires[count];
+      byte[] key = keys[count];
+      byte[] value = values[count];      
+      boolean result = cache.put(key, value, expire);
+      if (!result) {
+        break;
+      }
+      count++;
+    }    
+    return count;
+  }
+  
+  protected int deleteBytesCache(Cache cache, int num) throws IOException {
+    int count = 0;
+    while(count < num) {
+      byte[] key = keys[count];
+      boolean result = cache.delete(key, 0, key.length);
+      assertTrue(result);
+      count++;
+    }    
+    return count;
+  }
+  
   protected int loadMemoryEngine(IOEngine engine) throws IOException {
     int count = 0;
     while(count < this.numRecords) {
@@ -176,6 +203,35 @@ public abstract class IOTestBase {
       int keySize = keys[count].length;
       long keyPtr = mKeys[count];
       boolean result = engine.delete(keyPtr, keySize);
+      assertTrue(result);
+      count++;
+    }    
+    return count;
+  }
+  
+  protected int loadMemoryCache(Cache cache) throws IOException {
+    int count = 0;
+    while(count < this.numRecords) {
+      long expire = expires[count];
+      long keyPtr = mKeys[count];
+      int keySize = keys[count].length;
+      long valuePtr = mValues[count];
+      int valueSize = values[count].length;
+      boolean result = cache.put(keyPtr, keySize, valuePtr, valueSize, expire);
+      if (!result) {
+        break;
+      }
+      count++;
+    }    
+    return count;
+  }
+  
+  protected int deleteMemoryCache(Cache cache, int num) throws IOException {
+    int count = 0;
+    while(count < num) {
+      int keySize = keys[count].length;
+      long keyPtr = mKeys[count];
+      boolean result = cache.delete(keyPtr, keySize);
       assertTrue(result);
       count++;
     }    
@@ -237,13 +293,13 @@ public abstract class IOTestBase {
   }
   
   protected void verifyBytesEngine(IOEngine engine, int num) throws IOException {
-    int kvSize = Utils.kvSize(maxKeySize, maxValueSize);
-    byte[] buffer = new byte[kvSize];
+    int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
+    byte[] buffer = new byte[bufferSize];
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);
-      long size = engine.get(key, 0, key.length, buffer, 0);
+      long size = engine.get(key, 0, key.length, true, buffer, 0);
       assertEquals(expSize, size);
       int kSize = Utils.readUVInt(buffer, 0);
       assertEquals(key.length, kSize);
@@ -259,13 +315,78 @@ public abstract class IOTestBase {
   }
   
   protected void verifyBytesEngineWithDeletes(IOEngine engine, int num, int deleted) throws IOException {
-    int kvSize = Utils.kvSize(maxKeySize, maxValueSize);
-    byte[] buffer = new byte[kvSize];
+    int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
+    byte[] buffer = new byte[bufferSize];
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);
-      long size = engine.get(key, 0, key.length, buffer, 0);
+      long size = engine.get(key, 0, key.length, true, buffer, 0);
+      if (i < deleted) {
+        assertTrue( size < 0);
+        continue;
+      }
+      assertEquals(expSize, size);
+      int kSize = Utils.readUVInt(buffer, 0);
+      assertEquals(key.length, kSize);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      int vSize = Utils.readUVInt(buffer, kSizeSize);
+      assertEquals(value.length, vSize);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      int off = kSizeSize + vSizeSize;
+      assertTrue( Utils.compareTo(buffer, off, kSize, key, 0, key.length) == 0);
+      off += kSize;
+      assertTrue( Utils.compareTo(buffer, off, vSize, value, 0, value.length) == 0);
+    }
+  }
+  
+  protected void verifyBytesCache(Cache cache, int num) throws IOException {
+    int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
+    byte[] buffer = new byte[bufferSize];
+    int failed = 0;
+    for (int i = 0; i < num; i++) {
+      byte[] key = keys[i];
+      byte[] value = values[i];
+      long expSize = Utils.kvSize(key.length, value.length);
+      long size = cache.get(key, 0, key.length, false, buffer, 0);
+      if (size != expSize) {
+        failed++;
+        continue;
+      }
+      assertEquals(expSize, size);
+      int kSize = Utils.readUVInt(buffer, 0);
+      assertEquals(key.length, kSize);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      int vSize = Utils.readUVInt(buffer, kSizeSize);
+      assertEquals(value.length, vSize);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      int off = kSizeSize + vSizeSize;
+      assertTrue( Utils.compareTo(buffer, off, kSize, key, 0, key.length) == 0);
+      off += kSize;
+      assertTrue( Utils.compareTo(buffer, off, vSize, value, 0, value.length) == 0);
+    }
+    System.out.println("verification failed=" + failed);
+  }
+  
+  
+  protected void verifyBytesCacheNot(Cache cache, int num) throws IOException {
+    int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
+    byte[] buffer = new byte[bufferSize];
+    for (int i = 0; i < num; i++) {
+      byte[] key = keys[i];
+      long size = cache.get(key, 0, key.length, true, buffer, 0);
+      assertEquals(-1L, size);
+    }
+  }
+  
+  protected void verifyBytesCacheWithDeletes(Cache cache, int num, int deleted) throws IOException {
+    int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
+    byte[] buffer = new byte[bufferSize];
+    for (int i = 0; i < num; i++) {
+      byte[] key = keys[i];
+      byte[] value = values[i];
+      long expSize = Utils.kvSize(key.length, value.length);
+      long size = cache.get(key, 0, key.length, true, buffer, 0);
       if (i < deleted) {
         assertTrue( size < 0);
         continue;
@@ -356,8 +477,8 @@ public abstract class IOTestBase {
   }
 
   protected void verifyMemoryEngine(IOEngine engine, int num) throws IOException {
-    int kvSize = Utils.kvSize(maxKeySize, maxValueSize);
-    ByteBuffer buffer = ByteBuffer.allocate(kvSize);
+    int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
+    ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
     
     for (int i = 0; i < num; i++) {
       int keySize = keys[i].length;
@@ -387,8 +508,8 @@ public abstract class IOTestBase {
   }
   
   protected void verifyMemoryEngineWithDeletes(IOEngine engine, int num, int deleted) throws IOException {
-    int kvSize = Utils.kvSize(maxKeySize, maxValueSize);
-    ByteBuffer buffer = ByteBuffer.allocate(kvSize);
+    int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
+    ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
     
     for (int i = 0; i < num; i++) {
       int keySize = keys[i].length;
@@ -398,6 +519,85 @@ public abstract class IOTestBase {
       
       long expSize = Utils.kvSize(keySize, valueSize);
       long size = engine.get(keyPtr, keySize, buffer);
+      if (i < deleted) {
+        assertTrue(size < 0);
+        continue;
+      }
+      assertEquals(expSize, size);
+      int kSize = Utils.readUVInt(buffer);
+      assertEquals(keySize, kSize);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      int off = kSizeSize;
+      buffer.position(off);
+      int vSize = Utils.readUVInt(buffer);
+      assertEquals(valueSize, vSize);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      off += vSizeSize;
+      buffer.position(off);
+      assertTrue( Utils.compareTo(buffer, kSize, keyPtr, keySize) == 0);
+      off += kSize;
+      buffer.position(off);
+      assertTrue( Utils.compareTo(buffer, vSize, valuePtr, valueSize) == 0);
+      buffer.clear();
+    }    
+  }
+  
+  protected void verifyMemoryCache(Cache cache, int num) throws IOException {
+    int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
+    ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
+    
+    for (int i = 0; i < num; i++) {
+      int keySize = keys[i].length;
+      int valueSize = values[i].length;
+      long keyPtr = mKeys[i];
+      long valuePtr = mValues[i];
+      
+      long expSize = Utils.kvSize(keySize, valueSize);
+      long size = cache.get(keyPtr, keySize, false, buffer);
+      assertEquals(expSize, size);
+      int kSize = Utils.readUVInt(buffer);
+      assertEquals(keySize, kSize);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      int off = kSizeSize;
+      buffer.position(off);
+      int vSize = Utils.readUVInt(buffer);
+      assertEquals(valueSize, vSize);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      off += vSizeSize;
+      buffer.position(off);
+      assertTrue( Utils.compareTo(buffer, kSize, keyPtr, keySize) == 0);
+      off += kSize;
+      buffer.position(off);
+      assertTrue( Utils.compareTo(buffer, vSize, valuePtr, valueSize) == 0);
+      buffer.clear();
+    }    
+  }
+  
+  protected void verifyMemoryCacheNot(Cache cache, int num) throws IOException {
+    int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
+    ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
+    
+    for (int i = 0; i < num; i++) {
+      int keySize = keys[i].length;
+      long keyPtr = mKeys[i];      
+      long size = cache.get(keyPtr, keySize, true, buffer);
+      assertEquals(-1L, size);
+      buffer.clear();
+    }    
+  }
+  
+  protected void verifyMemoryCacheWithDeletes(Cache cache, int num, int deleted) throws IOException {
+    int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
+    ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
+    
+    for (int i = 0; i < num; i++) {
+      int keySize = keys[i].length;
+      int valueSize = values[i].length;
+      long keyPtr = mKeys[i];
+      long valuePtr = mValues[i];
+      
+      long expSize = Utils.kvSize(keySize, valueSize);
+      long size = cache.get(keyPtr, keySize, true, buffer);
       if (i < deleted) {
         assertTrue(size < 0);
         continue;
