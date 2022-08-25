@@ -58,6 +58,7 @@ public class TestFileIOEngine extends IOTestBase{
     int loaded = loadBytesEngine(engine);
     /*DEBUG*/ System.out.println("loaded=" + loaded);
     verifyBytesEngine(engine, loaded);
+    verifyBytesEngineByteBuffer(engine, loaded);
   }
   
   @Test
@@ -78,6 +79,7 @@ public class TestFileIOEngine extends IOTestBase{
     int loaded = loadBytesEngine(engine);
     /*DEBUG*/ System.out.println("loaded=" + loaded);
     verifyBytesEngine(engine, loaded);
+    verifyBytesEngineByteBuffer(engine, loaded);
   }
   
   @Test
