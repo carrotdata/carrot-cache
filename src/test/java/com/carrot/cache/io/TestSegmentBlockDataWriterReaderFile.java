@@ -40,7 +40,7 @@ public class TestSegmentBlockDataWriterReaderFile extends IOTestBase{
     this.numRecords = 10000;
     
     this.r = new Random();
-    long seed = System.currentTimeMillis();
+    long seed = 1661456181831L;//System.currentTimeMillis();
     r.setSeed(seed);
     
     System.out.println("r.seed="+ seed);
@@ -74,6 +74,8 @@ public class TestSegmentBlockDataWriterReaderFile extends IOTestBase{
     Mockito.when(engine.getSegmentById(Mockito.anyInt())).thenReturn(segment);
     Mockito.when(engine.getFileFor(Mockito.anyInt())).thenReturn(file);
     verifyBytesWithReader(count, reader, engine);
+    verifyBytesWithReaderByteBuffer(count, reader, engine);
+
   }
   
   @Test
@@ -91,6 +93,7 @@ public class TestSegmentBlockDataWriterReaderFile extends IOTestBase{
     Mockito.when(engine.getSegmentById(Mockito.anyInt())).thenReturn(segment);
     Mockito.when(engine.getFileFor(Mockito.anyInt())).thenReturn(file);
     verifyMemoryWithReader(count, reader, engine);
+    verifyMemoryWithReaderByteBuffer(count, reader, engine);
 
   }
 

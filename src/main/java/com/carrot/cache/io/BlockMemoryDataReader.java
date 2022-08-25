@@ -114,7 +114,9 @@ public class BlockMemoryDataReader implements DataReader {
       if (requiredSize > avail) {
         return requiredSize;
       }
+      int pos = buffer.position();
       UnsafeAccess.copy(ptr, buffer, requiredSize);
+      buffer.position(pos);
       return requiredSize;
     }
   }
@@ -189,7 +191,9 @@ public class BlockMemoryDataReader implements DataReader {
       if (requiredSize > avail) {
         return requiredSize;
       }
+      int pos = buffer.position();
       UnsafeAccess.copy(ptr, buffer, requiredSize);
+      buffer.position(pos);
       return requiredSize;
     }
   }

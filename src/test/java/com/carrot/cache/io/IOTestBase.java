@@ -314,6 +314,35 @@ public abstract class IOTestBase {
     }
   }
   
+  protected void verifyBytesEngineByteBuffer(IOEngine engine, int num) throws IOException {
+    int bufferSize = safeBufferSize();
+    ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
+    
+    for (int i = 0; i < num; i++) {
+      byte[] key = keys[i];
+      byte[] value = values[i];
+      long expSize = Utils.kvSize(key.length, value.length);
+      long size = engine.get(key, 0, key.length, true, buffer);
+      assertEquals(expSize, size);
+      int kSize = Utils.readUVInt(buffer);
+      assertEquals(key.length, kSize);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      int off = kSizeSize;
+      buffer.position(off);
+      int vSize = Utils.readUVInt(buffer);
+      assertEquals(value.length, vSize);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      off += vSizeSize;
+      buffer.position(off);
+      
+      assertTrue( Utils.compareTo(buffer, kSize, key, 0, key.length) == 0);
+      off += kSize;
+      buffer.position(off);
+      assertTrue( Utils.compareTo(buffer, vSize, value, 0, value.length) == 0);
+      buffer.clear();
+    }
+  }
+  
   protected void verifyBytesEngineWithDeletes(IOEngine engine, int num, int deleted) throws IOException {
     int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
     byte[] buffer = new byte[bufferSize];
@@ -368,6 +397,34 @@ public abstract class IOTestBase {
     System.out.println("verification failed=" + failed);
   }
   
+  protected void verifyBytesCacheByteBuffer(Cache cache, int num) throws IOException {
+    int bufferSize = safeBufferSize();
+    ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
+    
+    for (int i = 0; i < num; i++) {
+      byte[] key = keys[i];
+      byte[] value = values[i];
+      long expSize = Utils.kvSize(key.length, value.length);
+      long size = cache.get(key, 0, key.length, true, buffer);
+      assertEquals(expSize, size);
+      int kSize = Utils.readUVInt(buffer);
+      assertEquals(key.length, kSize);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      int off = kSizeSize;
+      buffer.position(off);
+      int vSize = Utils.readUVInt(buffer);
+      assertEquals(value.length, vSize);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      off += vSizeSize;
+      buffer.position(off);
+      
+      assertTrue( Utils.compareTo(buffer, kSize, key, 0, key.length) == 0);
+      off += kSize;
+      buffer.position(off);
+      assertTrue( Utils.compareTo(buffer, vSize, value, 0, value.length) == 0);
+      buffer.clear();
+    }
+  }
   
   protected void verifyBytesCacheNot(Cache cache, int num) throws IOException {
     int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
@@ -433,9 +490,6 @@ public abstract class IOTestBase {
     while(scanner.hasNext()) {
       byte[] key = keys[n];
       byte[] value = values[n];
-      
-      //System.out.println(n+ " : " + Utils.kvSize(key.length, value.length));
-
       int keySize = scanner.keyLength();
       int valueSize = scanner.valueLength();
       assertEquals(key.length, keySize);
@@ -477,7 +531,7 @@ public abstract class IOTestBase {
   }
 
   protected void verifyMemoryEngine(IOEngine engine, int num) throws IOException {
-    int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
+    int bufferSize = safeBufferSize();
     ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
     
     for (int i = 0; i < num; i++) {
@@ -508,7 +562,7 @@ public abstract class IOTestBase {
   }
   
   protected void verifyMemoryEngineWithDeletes(IOEngine engine, int num, int deleted) throws IOException {
-    int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
+    int bufferSize = safeBufferSize();
     ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
     
     for (int i = 0; i < num; i++) {
@@ -661,6 +715,46 @@ public abstract class IOTestBase {
     UnsafeAccess.free(indexBuf);
   }
   
+  protected void verifyBytesWithReaderByteBuffer(int num, DataReader reader, IOEngine engine) 
+      throws IOException {
+    IndexFormat format = index.getIndexFormat();
+    int indexSize = format.indexEntrySize();
+    long indexBuf = UnsafeAccess.malloc(indexSize);
+    int bufSize = safeBufferSize();
+    ByteBuffer buf = ByteBuffer.allocate(bufSize);
+    int sid = segment.getId();
+    for (int i = 0; i < num; i++) {
+      byte[] key = keys[i];
+      byte[] value = values[i];
+      long result = index.find(key, 0, key.length, false, indexBuf, indexSize);
+      assertEquals(indexSize, (int) result);
+      
+      int offset = (int) format.getOffset(indexBuf);
+      int size = format.getKeyValueSize(indexBuf);
+      int expSize = Utils.kvSize(key.length, value.length);
+      assertEquals(expSize, size);
+      int read = reader.read(engine, key, 0, key.length, sid, offset, size, buf);
+      assertEquals(expSize, read);
+      
+      int keySize = Utils.readUVInt(buf);
+      int kSizeSize = Utils.sizeUVInt(keySize);
+      int off = kSizeSize;
+      buf.position(off);
+      int valueSize  = Utils.readUVInt(buf);
+      int vSizeSize = Utils.sizeUVInt(valueSize);
+      off += vSizeSize;
+      buf.position(off);
+      assertEquals(key.length, keySize);
+      assertEquals(value.length, valueSize);
+      assertTrue(Utils.compareTo(buf, keySize, key, 0, key.length) == 0);
+      off += keySize;
+      buf.position(off);
+      assertTrue(Utils.compareTo(buf, valueSize, value, 0, value.length) == 0);
+      buf.clear();
+    }
+    UnsafeAccess.free(indexBuf);
+  }
+  
   protected void verifyMemoryWithReader(int num, DataReader reader, IOEngine engine) throws IOException {
     
     IndexFormat format = index.getIndexFormat();
@@ -699,6 +793,51 @@ public abstract class IOTestBase {
     UnsafeAccess.free(indexBuf);
   }
 
+  protected void verifyMemoryWithReaderByteBuffer(int num, DataReader reader, IOEngine engine) throws IOException {
+    
+    IndexFormat format = index.getIndexFormat();
+    int indexSize = format.indexEntrySize();
+    long indexBuf = UnsafeAccess.malloc(indexSize);
+    int bufSize = safeBufferSize();
+    ByteBuffer buf = ByteBuffer.allocate(bufSize);
+    
+    int sid = segment.getId();
+    for (int i = 0; i < num; i++) {
+
+      int kSize = keys[i].length;
+      int vSize = values[i].length;
+      long keyPtr = mKeys[i];
+      long valuePtr = mValues[i];
+      long result = index.find(keyPtr, kSize, false, indexBuf, indexSize);
+      assertEquals(indexSize, (int) result);
+      
+      int offset = (int) format.getOffset(indexBuf);
+      int size = format.getKeyValueSize(indexBuf);
+      int expSize = Utils.kvSize(kSize, vSize);
+      assertEquals(expSize, size);
+      
+      int read = reader.read(engine, keyPtr, kSize, sid, offset, size, buf);
+      assertEquals(expSize, read);
+      
+      int keySize = Utils.readUVInt(buf);
+      int kSizeSize = Utils.sizeUVInt(keySize);
+      int off = kSizeSize;
+      buf.position(off);
+      int valueSize  = Utils.readUVInt(buf);
+      int vSizeSize = Utils.sizeUVInt(valueSize);
+      off += vSizeSize;
+      buf.position(off);
+      assertEquals(kSize, keySize);
+      assertEquals(vSize, valueSize);
+      assertTrue(Utils.compareTo(buf, keySize, keyPtr, kSize) == 0);
+      off += keySize;
+      buf.position(off);
+      assertTrue(Utils.compareTo(buf, valueSize, valuePtr, vSize) == 0);
+      buf.clear();
+    }
+    UnsafeAccess.free(indexBuf);
+  }
+  
   protected void verifyBytesBlock(int num, int blockSize) {
     long ptr = segment.getAddress();
     for (int i = 0; i < num; i++) {

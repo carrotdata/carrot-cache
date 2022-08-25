@@ -109,11 +109,17 @@ public class IOUtils {
   public static void readFully(RandomAccessFile file, long fileOffset, ByteBuffer buffer, int len)
       throws IOException {
     synchronized (file) {
-      FileChannel fc = file.getChannel();
-      fc.position(fileOffset);
-      int read = 0;
-      while (read < len) {
-        read += fc.read(buffer);
+      if (buffer.hasArray()) {
+        int pos = buffer.position();
+        byte[] arr = buffer.array();
+        readFully(file, fileOffset, arr, pos, len);
+      } else {
+        FileChannel fc = file.getChannel();
+        fc.position(fileOffset);
+        int read = 0;
+        while (read < len) {
+          read += fc.read(buffer);
+        }
       }
     }
   }

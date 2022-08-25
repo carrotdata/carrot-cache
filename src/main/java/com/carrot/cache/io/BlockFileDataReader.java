@@ -89,8 +89,6 @@ public class BlockFileDataReader implements DataReader {
       if (dataSize + META_SIZE > avail) {
         return dataSize + META_SIZE;
       }
-//      /*DEBUG*/ System.out.println(" file to end=" + (file.length() - offset - blockSize) + 
-//        " to read=" + (dataSize - blockSize + META_SIZE) + " avail=" + (avail - blockSize));
       readFully(file, offset + blockSize, buffer, bufOffset + blockSize, dataSize - blockSize + META_SIZE);
     }
 
@@ -103,7 +101,8 @@ public class BlockFileDataReader implements DataReader {
     return itemSize;
   }
 
-  //TODO: tests
+  // TODO: tests
+  // TODO: handle IOException upstream
   @Override
   public int read(
       IOEngine engine,
@@ -116,8 +115,8 @@ public class BlockFileDataReader implements DataReader {
       ByteBuffer buffer)
       throws IOException {
     // FIXME: Dirty hack
-    offset += Segment.META_SIZE; // add 8 bytes to 
-    
+    offset += Segment.META_SIZE; // add 8 bytes to
+
     int avail = buffer.remaining();
     // sanity check
     if (size > avail) {
@@ -138,62 +137,54 @@ public class BlockFileDataReader implements DataReader {
     byte[] buf = getBuffer();
     int pos = buffer.position();
     int off = pos;
+    boolean releaseBuffer = true;
     try {
       // TODO: make file read a separate method
       readFully(file, offset, buf, 0, buf.length);
-      
+
       int dataSize = UnsafeAccess.toInt(buf, 0);
       if (dataSize > blockSize - META_SIZE) {
         // means that this is a single item larger than a block
         if (dataSize + META_SIZE > avail) {
           return dataSize + META_SIZE;
         }
-        // copy from buf to buffer
-        buffer.put(buf, META_SIZE, buf.length - META_SIZE);
-        // Read the rest
-        readFully(file, offset + blockSize, buffer, dataSize - blockSize + META_SIZE);
-        
-        buffer.position(off);
-        // Format of a key-value pair in a buffer: key-size, value-size, key, value
-        int itemSize = getItemSize(buffer);
-        int $off = getKeyOffset(buf, off);
-        buffer.position(buffer.position() + $off);
-        // Now compare keys
-        if (Utils.compareTo(buffer, keySize, key, keyOffset, keySize) == 0) {
-          // If key is the same
-          buffer.position(off + itemSize);
-          return itemSize;
-        } else {
-          return IOEngine.NOT_FOUND;
-        }
-      } else {
-        // Now buffer contains both: key and value, we need to compare keys
-        // Format of a key-value pair in a buffer: key-size, value-size, key, value
-        off = (int) findInBlock(buf, 0, key, keyOffset, keySize);
-        if (off < 0) {
-          return IOEngine.NOT_FOUND;
-        }
 
-        int itemSize = getItemSize(buf, off);
-        int $off = getKeyOffset(buf, off);
-        off += $off;
-        
-        // Now compare keys
-        if (Utils.compareTo(buf, off, keySize, key, keyOffset, keySize) == 0) {
-          // If key is the same copy K-V to buffer
-          off -= $off;
-          buffer.put(buf, off, itemSize);
-          //TODO:rewind to start?
-          return itemSize;
-        } else {
-          return IOEngine.NOT_FOUND;
-        }
+        // couple bloats
+        byte[] bbuf = new byte[dataSize + META_SIZE];
+
+        System.arraycopy(buf, 0, bbuf, 0, blockSize);
+        releaseBuffer(buf);
+        releaseBuffer = false;
+        buf = bbuf;
+        readFully(file, offset + blockSize, buf, blockSize, dataSize - blockSize + META_SIZE);
       }
+      // Now buffer contains both: key and value, we need to compare keys
+      // Format of a key-value pair in a buffer: key-size, value-size, key, value
+      off = (int) findInBlock(buf, 0, key, keyOffset, keySize);
+      if (off < 0) {
+        return IOEngine.NOT_FOUND;
+      }
+
+      int itemSize = getItemSize(buf, off);
+      int $off = getKeyOffset(buf, off);
+      off += $off;
+
+      // Now compare keys
+      if (Utils.compareTo(buf, off, keySize, key, keyOffset, keySize) == 0) {
+        // If key is the same copy K-V to buffer
+        off -= $off;
+        buffer.put(buf, off, itemSize);
+        // TODO:rewind to start?
+        return itemSize;
+      } else {
+        return IOEngine.NOT_FOUND;
+      }
+
     } finally {
-      if (buf != null) {
+      if (buf != null && releaseBuffer) {
         releaseBuffer(buf);
       }
-      buffer.position(off);
+      buffer.position(pos);
     }
   }
 
@@ -258,10 +249,10 @@ public class BlockFileDataReader implements DataReader {
 
   @Override
   public int read(
-      IOEngine engine, long keyPtr, int keySize, int sid, 
-      long offset, int size, ByteBuffer buffer) throws IOException {
+      IOEngine engine, long keyPtr, int keySize, int sid, long offset, int size, ByteBuffer buffer)
+      throws IOException {
     // FIXME: Dirty hack
-    offset += Segment.META_SIZE; // add 8 bytes to 
+    offset += Segment.META_SIZE; // add 8 bytes to
     int avail = buffer.remaining();
     // sanity check
     if (size > avail) {
@@ -282,69 +273,54 @@ public class BlockFileDataReader implements DataReader {
     byte[] buf = getBuffer();
     int pos = buffer.position();
     int off = pos;
+    boolean releaseBuffer = true;
     try {
       // TODO: make file read a separate method
-
       readFully(file, offset, buf, 0, buf.length);
-      
       int dataSize = UnsafeAccess.toInt(buf, 0);
       if (dataSize > blockSize - META_SIZE) {
         // means that this is a single item larger than a block
         if (dataSize + META_SIZE > avail) {
           return dataSize + META_SIZE;
         }
-
-        // copy from buf to buffer
-        buffer.put(buf, META_SIZE, buf.length - META_SIZE);
-
-        // Read the rest
-        readFully(file, offset + blockSize, buffer, dataSize - blockSize + META_SIZE);
-        
-        buffer.position(pos);
-        // Format of a key-value pair in a buffer: key-size, value-size, key, value
-        int itemSize = getItemSize(buffer);
-        int $off = getKeyOffset(buf, off);
-        buffer.position(pos + $off);
-        
-        // Now compare keys
-        if (Utils.compareTo(buffer, keySize, keyPtr, keySize) == 0) {
-          // If key is the same
-          buffer.position(pos + itemSize);
-          return itemSize;
-        } else {
-          return IOEngine.NOT_FOUND;
-        }
-      } else {
-        // Now buffer contains both: key and value, we need to compare keys
-        // Format of a key-value pair in a buffer: key-size, value-size, key, value
-        off = (int) findInBlock(buf, 0, keyPtr, keySize);
-        if (off < 0) {
-          return IOEngine.NOT_FOUND;
-        }
-
-        int itemSize = getItemSize(buf, off);
-        int $off = getKeyOffset(buf, off);
-        off += $off;
-        
-        // Now compare keys
-        if (Utils.compareTo(buf, off, keySize, keyPtr, keySize) == 0) {
-          // If key is the same copy K-V to buffer
-          off -= $off;
-          buffer.put(buf, off, itemSize);
-          //TODO:rewind to start?
-          return itemSize;
-        } else {
-          return IOEngine.NOT_FOUND;
-        }
+        // couple bloats
+        byte[] bbuf = new byte[dataSize + META_SIZE];
+        System.arraycopy(buf, 0, bbuf, 0, blockSize);
+        releaseBuffer(buf);
+        releaseBuffer = false;
+        buf = bbuf;
+        readFully(file, offset + blockSize, buf, blockSize, dataSize - blockSize + META_SIZE);
       }
+      // Now buffer contains both: key and value, we need to compare keys
+      // Format of a key-value pair in a buffer: key-size, value-size, key, value
+      off = (int) findInBlock(buf, 0, keyPtr, keySize);
+      if (off < 0) {
+        return IOEngine.NOT_FOUND;
+      }
+
+      int itemSize = getItemSize(buf, off);
+      int $off = getKeyOffset(buf, off);
+      off += $off;
+
+      // Now compare keys
+      if (Utils.compareTo(buf, off, keySize, keyPtr, keySize) == 0) {
+        // If key is the same copy K-V to buffer
+        off -= $off;
+        buffer.put(buf, off, itemSize);
+        // TODO:rewind to start?
+        return itemSize;
+      } else {
+        return IOEngine.NOT_FOUND;
+      }
+
     } finally {
-      if (buf != null) {
+      if (buf != null && releaseBuffer) {
         releaseBuffer(buf);
       }
-      buffer.position(off);
+      buffer.position(pos);
     }
   }
-  
+
   private byte[] getBuffer() {
     byte[] buffer = buffers.poll();
     if (buffer == null) {

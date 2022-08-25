@@ -65,6 +65,8 @@ public class TestSegmentBaseDataWriterReaderFile extends IOTestBase{
     Mockito.when(engine.getSegmentById(Mockito.anyInt())).thenReturn(segment);
     Mockito.when(engine.getFileFor(Mockito.anyInt())).thenReturn(file);
     verifyBytesWithReader(count, reader, engine);
+    verifyBytesWithReaderByteBuffer(count, reader, engine);
+
   }
   
   @Test
@@ -81,7 +83,10 @@ public class TestSegmentBaseDataWriterReaderFile extends IOTestBase{
     Mockito.when(engine.getSegmentById(Mockito.anyInt())).thenReturn(segment);
     Mockito.when(engine.getFileFor(Mockito.anyInt())).thenReturn(file);
     verifyMemoryWithReader(count, reader, engine);
+    verifyMemoryWithReaderByteBuffer(count, reader, engine);
+
   }
+  
   
   @Test
   public void testSegmentScanner() throws IOException {
