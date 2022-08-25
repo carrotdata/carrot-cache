@@ -160,50 +160,26 @@ public class FileIOEngine extends IOEngine {
   
   @Override
   protected int getInternal(int sid, long offset, int size, byte[] key, 
-      int keyOffset, int keySize, byte[] buffer, int bufOffset)  {
-    try {
+      int keyOffset, int keySize, byte[] buffer, int bufOffset) throws IOException  {
       return this.fileDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset);
-    } catch (IOException e) {
-      LOG.error(e);
-      // THIS IS FOR TESTING
-      return NOT_FOUND;
-    }
   }
 
   @Override
   protected int getInternal(int sid, long offset, int size, byte[] key, 
       int keyOffset, int keySize, ByteBuffer buffer) throws IOException {
-    try {
       return this.fileDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
-    } catch (IOException e) {
-      LOG.error(e);
-      // THIS IS FOR TESTING
-      return NOT_FOUND;
-    }
   }
 
   @Override
   protected int getInternal(int sid, long offset, int size, long keyPtr, 
-      int keySize, byte[] buffer, int bufOffset)  {
-    try {
+      int keySize, byte[] buffer, int bufOffset) throws IOException  {
       return this.fileDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
-    } catch (IOException e) {
-      LOG.error(e);
-      // THIS IS FOR TESTING
-      return NOT_FOUND;
-    }
  }
 
   @Override
   protected int getInternal(int sid, long offset, int size, long keyPtr, 
       int keySize, ByteBuffer buffer) throws IOException {
-    try {
       return this.fileDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer);
-    } catch (IOException e) {
-      LOG.error(e);
-      // THIS IS FOR TESTING
-      return NOT_FOUND;
-    }
   }
   
   

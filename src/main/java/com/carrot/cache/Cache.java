@@ -1194,7 +1194,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException 
    */
   public long get(long keyPtr, int keySize, boolean hit, byte[] buffer, int bufOffset) throws IOException {
-    long result = engine.get(keyPtr, keySize, hit, buffer, bufOffset);
+    long result = -1;
+    
+    try {
+      result = this.engine.get(keyPtr, keySize, hit, buffer, bufOffset);
+    } catch (IOException e) {
+      // Try one more time, file could be closed by Scavenger
+      result = this.engine.get(keyPtr, keySize, hit, buffer, bufOffset);
+    }    
+    
     if (result <= buffer.length - bufOffset) {
       access();
       if (result >= 0) {
@@ -1250,7 +1258,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public long get(byte[] key, int keyOffset, int keySize, boolean hit, byte[] buffer, int bufOffset) 
       throws IOException {
-    long result = engine.get(key, keyOffset, keySize, hit, buffer, bufOffset);
+    
+    long result = -1;
+    try {
+      result = engine.get(key, keyOffset, keySize, hit, buffer, bufOffset);
+    } catch (IOException e) {
+      // Try one more time, file could be closed by Scavenger
+      result = engine.get(key, keyOffset, keySize, hit, buffer, bufOffset);
+    }
+    
     if (result <= buffer.length - bufOffset) {
       access();
       if (result >= 0) {
@@ -1307,7 +1323,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public long get(byte[] key, int keyOff, int keySize, boolean hit, ByteBuffer buffer) 
       throws IOException {
     int rem = buffer.remaining();
-    long result = this.engine.get(key, keyOff, keySize, hit, buffer);
+    long result = -1;
+    try {
+      result = this.engine.get(key, keyOff, keySize, hit, buffer);
+    } catch (IOException e) {
+      // Try one more time, file could be closed by Scavenger
+      result = this.engine.get(key, keyOff, keySize, hit, buffer);
+    }
+    
     if (result <= rem) {
       access();
       if (result >= 0) {
@@ -1361,7 +1384,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public long get(long keyPtr, int keySize, boolean hit, ByteBuffer buffer) 
       throws IOException {
     int rem = buffer.remaining();
-    long result = this.engine.get(keyPtr, keySize,  buffer);
+    
+    long result = -1;
+    
+    try {
+      result = this.engine.get(keyPtr, keySize,  buffer);
+    } catch(IOException e) {
+      // Try one more time, file could be closed by Scavenger
+      result = this.engine.get(keyPtr, keySize,  buffer);
+    }
+    
     if (result <= rem) {
       access();
       if (result >= 0) {
