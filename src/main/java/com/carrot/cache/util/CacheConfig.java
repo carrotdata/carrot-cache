@@ -16,6 +16,8 @@ package com.carrot.cache.util;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Properties;
 
 import com.carrot.cache.controllers.AdmissionController;
@@ -441,6 +443,27 @@ public class CacheConfig {
     this.props = props;
   }
 
+  /**
+   * Load configuration from an input stream
+   * @param is input stream
+   * @return cache configuration object
+   * @throws IOException
+   */
+  public static CacheConfig load(InputStream is) throws IOException {
+    Properties props = new Properties();
+    props.load(is);
+    return new CacheConfig(props);
+  }
+  
+  /**
+   * Save configuration
+   * @param os output stream
+   * @throws IOException
+   */
+  public void save(OutputStream os) throws IOException {
+    this.props.store(os, "Cache configuration properties");
+  }
+  
   public double getDoubleProperty(String name, double defValue) {
     String value = props.getProperty(name);
     if (value == null) return defValue;

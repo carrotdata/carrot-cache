@@ -698,6 +698,25 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /* Index embedded size */
   int indexEmbeddedSize;
   
+  
+  /**
+   *  Constructor to use 
+   *  when loading cache from a storage
+   *  
+   *  set cache name after that
+   */
+  
+  public Cache() {
+  }
+  
+  /**
+   * Sets cache name
+   * @param name name
+   */
+  public void setName(String name) {
+    this.cacheName = name;
+  }
+  
   /**
    * Constructor with configuration
    * 
@@ -738,6 +757,23 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.engine.getMemoryIndex().setEvictionListener(this);
   }
 
+  private void initAllAfterLoad() throws IOException {
+    //TODO finish initialization
+    this.writeRejectionThreshold = 
+        this.conf.getCacheWriteRejectionThreshold(this.cacheName);
+    this.indexEmdeddingSupported = 
+        this.conf.isIndexDataEmbeddedSupported(this.cacheName);
+    this.indexEmbeddedSize = this.conf.getIndexDataEmbeddedSize(this.cacheName);
+    updateMaxCacheSize();
+    //initAdmissionController();
+    //initThroughputController();
+    //initScavenger();
+    // Set eviction listener
+    this.engine.getMemoryIndex().setEvictionListener(this);
+ // set engine listener
+    this.engine.setListener(this);
+  }
+  
   private void initScavenger() {
     long interval = this.conf.getScavengerRunInterval(this.cacheName) * 1000;
     LOG.info("Started Scavenger, interval=%d sec", interval /1000);
@@ -1713,7 +1749,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       this.totalRejectedWrites.set(dis.readLong());
       Epoch.setEpochStartTime(dis.readLong());
       this.tcEnabled = dis.readBoolean();
+      this.conf = CacheConfig.load(dis);
       dis.close();
+    } else {
+      throw new IOException(String.format("Can not load cache. Path %s does not exists",
+        p.toString()));
     }
   }
   
@@ -1736,6 +1776,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     dos.writeLong(totalRejectedWrites.get());
     dos.writeLong(Epoch.getEpochStartTime());
     dos.writeBoolean(this.tcEnabled);
+    this.conf.save(dos);
     dos.close();
   }
     
@@ -1893,6 +1934,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public void load() throws IOException {
     //TODO: not complete yet
+    // Cache cache = new Cache();
+    // cache.setName(name);
+    // cache.load();
+    // ready to rumble
     LOG.info("Started loading cache ...");
     long startTime = System.currentTimeMillis();
     loadCache();
@@ -1901,6 +1946,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     loadEngine();
     loadScavengerStats();
     long endTime = System.currentTimeMillis();
+    initAllAfterLoad();
     LOG.info("Cache loaded in {}ms", endTime - startTime);
   }
 
