@@ -54,7 +54,7 @@ public abstract class IOTestBase {
   
   @BeforeClass
   public static void enableMallocDebug() {
-//    UnsafeAccess.setMallocDebugEnabled(true);
+    UnsafeAccess.setMallocDebugEnabled(true);
 //    UnsafeAccess.setMallocDebugStackTraceEnabled(true);
 //    UnsafeAccess.setStackTraceRecordingFilter(x -> x == 1024);
 //    UnsafeAccess.setStackTraceRecordingLimit(20000);
@@ -67,6 +67,7 @@ public abstract class IOTestBase {
     }
     Arrays.stream(mKeys).forEach(x -> UnsafeAccess.free(x));
     Arrays.stream(mValues).forEach(x -> UnsafeAccess.free(x));
+    UnsafeAccess.mallocStats.printStats();
   }
   
   protected void prepareData(int numRecords) {

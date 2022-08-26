@@ -1970,4 +1970,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return false;
   }
 
+  /**
+   * Dispose cache
+   */
+  public void dispose() {
+    this.engine.dispose();
+  }
 }

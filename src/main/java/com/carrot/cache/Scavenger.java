@@ -249,6 +249,7 @@ public class Scavenger extends Thread {
   
   @Override
   public void run() {
+    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + "- Scavenger started");
     long runStart = System.currentTimeMillis();
     IOEngine engine = this.cache.getEngine();
     DateFormat format = DateFormat.getDateInstance();

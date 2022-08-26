@@ -1391,6 +1391,9 @@ public abstract class IOEngine implements Persistent {
   public void dispose() {
     // 1. dispose memory segments
     for (Segment s : this.dataSegments) {
+      if (s == null) {
+        continue;
+      }
       s.dispose();
     }
     // 2. dispose memory index

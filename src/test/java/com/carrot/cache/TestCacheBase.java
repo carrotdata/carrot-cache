@@ -14,18 +14,13 @@
  */
 package com.carrot.cache;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
 
-import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.carrot.cache.controllers.MinAliveRecyclingSelector;
@@ -35,13 +30,13 @@ import com.carrot.cache.io.BlockFileDataReader;
 import com.carrot.cache.io.BlockMemoryDataReader;
 import com.carrot.cache.io.IOTestBase;
 
-public abstract class TestScavengerBase extends IOTestBase {
+public abstract class TestCacheBase extends IOTestBase {
   
   boolean offheap = true;
   Cache cache;
   int segmentSize = 4 * 1024 * 1024;
   long maxCacheSize = 100 * segmentSize;
-  int scavengerInterval = 10000; // seconds - disable it for test
+  int scavengerInterval = 10000; // seconds - disable for test
   long expireTime;
   double scavDumpBelowRatio = 0.5;
   double minActiveRatio = 0.90;
@@ -49,15 +44,9 @@ public abstract class TestScavengerBase extends IOTestBase {
   @Before
   public void setUp() throws IOException {
     this.r = new Random();
-    long seed = 1661531411359L;//System.currentTimeMillis();
+    long seed = System.currentTimeMillis();
     System.out.println("r.seed=" + seed);
     r.setSeed(seed);
-  }
-  
-  @After
-  public void tearDown() {
-    super.tearDown();
-    cache.dispose();
   }
   
   protected Cache createCache() throws IOException {
@@ -102,22 +91,19 @@ public abstract class TestScavengerBase extends IOTestBase {
     return System.currentTimeMillis() + expireTime;
   }
   
-  //@Ignore
   @Test
-  public void testAllExpired() throws IOException {
-    System.out.println("Test all expired");
+  public void testAllExpiredBytes() throws IOException {
+    System.out.println("Test all expired bytes");
     Scavenger.clear();
-
     // Create cache
     this.cache = createCache();
-    
     this.expireTime = 1000; 
     prepareData(300000);
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);
     // Wait expireTime
     try {
-      Thread.sleep(2 * expireTime);
+      Thread.sleep(expireTime);
     } catch(InterruptedException e) {
       
     }
@@ -138,33 +124,17 @@ public abstract class TestScavengerBase extends IOTestBase {
     System.out.println(String.format("After scan: allocated=%d, used=%d, size=%d, active=%d", 
       allocated, used, size, activeSize));
     
-    Scavenger scavenger = new Scavenger(cache);
-    scavenger.run();
-    
-    allocated = cache.getStorageAllocated();
-    used = cache.getStorageUsed();
-    size = cache.size();
-    activeSize = cache.activeSize();
-    System.out.println(String.format("After Scav run: allocated=%d, used=%d, size=%d, active=%d", 
-      allocated, used, size, activeSize));
-    // After Scavenger run we still have active segment, which is not sealed yet
-    assertEquals(0, (int) allocated);
-    assertEquals(0, (int) used);
-    assertEquals(0, activeSize);
   }
   
- //@Ignore
   @Test
-  public void testAllExpiredNoScan() throws IOException {
-    System.out.println("Test all expired - no scan");
+  public void testAllExpiredMemory() throws IOException {
+    System.out.println("Test all expired memory");
     Scavenger.clear();
-
     // Create cache
     this.cache = createCache();
-    
     this.expireTime = 1000; 
     prepareData(300000);
-    int loaded = loadBytesCache(cache);
+    int loaded = loadMemoryCache(cache);
     System.out.println("loaded=" + loaded);
     // Wait expireTime
     try {
@@ -176,29 +146,24 @@ public abstract class TestScavengerBase extends IOTestBase {
     long used = cache.getStorageUsed();
     long size = cache.size();
     long activeSize = cache.activeSize();
-    System.out.println(String.format(" allocated=%d, used=%d, size=%d, active=%d", 
+    System.out.println(String.format("Before scan: allocated=%d, used=%d, size=%d, active=%d", 
       allocated, used, size, activeSize));
     // Access all objects to remove them from memory index
     // and from data segments statistics
-    
-    Scavenger scavenger = new Scavenger(cache);
-    scavenger.run();
+    verifyMemoryCacheNot(cache, loaded);
     
     allocated = cache.getStorageAllocated();
     used = cache.getStorageUsed();
     size = cache.size();
     activeSize = cache.activeSize();
-    System.out.println(String.format("After Scav run: allocated=%d, used=%d, size=%d, active=%d", 
+    System.out.println(String.format("After scan: allocated=%d, used=%d, size=%d, active=%d", 
       allocated, used, size, activeSize));
-    // After Scavenger run we still have active segment, which is not sealed yet
-    assertEquals(0, (int) allocated);
-    assertEquals(0, (int) used);
-    assertEquals(0, activeSize);
+    
   }
   
   @Test
-  public void testNoExpiredRegularRun() throws IOException {
-    System.out.println("Test no expired - regular run");
+  public void testNoExpiredBytes() throws IOException {
+    System.out.println("Test no expired - bytes");
     Scavenger.clear();
     // Create cache
     this.cache = createCache();
@@ -218,6 +183,7 @@ public abstract class TestScavengerBase extends IOTestBase {
     // Access all objects to remove them from memory index
     // and from data segments statistics
     verifyBytesCache(cache, loaded);
+    verifyBytesCacheByteBuffer(cache, loaded);
     
     allocated = cache.getStorageAllocated();
     used = cache.getStorageUsed();
@@ -226,38 +192,43 @@ public abstract class TestScavengerBase extends IOTestBase {
     System.out.println(String.format("After scan: allocated=%d, used=%d, size=%d, active=%d", 
       allocated, used, size, activeSize));
     
-    long oldAllocated = allocated;
-    long oldUsed = used;
-    long oldSize = size;
-    long oldActiveSize = activeSize;
+  }
+  
+  @Test
+  public void testNoExpiredMemory() throws IOException {
+    System.out.println("Test no expired - memory");
+    Scavenger.clear();
+    // Create cache
+    this.cache = createCache();
     
-    Scavenger scavenger = new Scavenger(cache);
-    scavenger.run();
+    this.expireTime = 1000000; 
+    prepareData(300000);
+    // Fill cache completely (no eviction is enabled)
+    int loaded = loadMemoryCache(cache);
+    System.out.println("loaded=" + loaded);
+  
+    long allocated = cache.getStorageAllocated();
+    long used = cache.getStorageUsed();
+    long size = cache.size();
+    long activeSize = cache.activeSize();
+    System.out.println(String.format("Before scan: allocated=%d, used=%d, size=%d, active=%d", 
+      allocated, used, size, activeSize));
+    // Access all objects to remove them from memory index
+    // and from data segments statistics
+    verifyMemoryCache(cache, loaded);
     
     allocated = cache.getStorageAllocated();
     used = cache.getStorageUsed();
     size = cache.size();
     activeSize = cache.activeSize();
-    System.out.println(String.format("After Scav run: allocated=%d, used=%d, size=%d, active=%d", 
+    System.out.println(String.format("After scan: allocated=%d, used=%d, size=%d, active=%d", 
       allocated, used, size, activeSize));
-    // After Scavenger run we still have active segment, which is not sealed yet
-    double r1 = (double)(oldAllocated - allocated) / oldAllocated;
-    double r2 = (double)(oldUsed - used) / oldUsed;
-    double r3 = (double)(oldSize - size) / oldSize;
-    double r4 = (double) (oldActiveSize - activeSize) / oldActiveSize;
-    
-    System.out.printf("r1 =%f r2=%f r3=%f r4=%f\n", r1, r2, r3, r4);
-    assertTrue(r1 < 0.125);
-    assertTrue(r2 < 0.125);
-    assertTrue(r3 < 0.125);
-    assertTrue(r4 < 0.125);
     
   }
   
-  //@Ignore
   @Test
-  public void testNoExpiredWithDeletesRegularRun() throws IOException {
-    System.out.println("Test no expired with deletes - regular run");
+  public void testNoExpiredWithDeletesBytes() throws IOException {
+    System.out.println("Test no expired with deletes bytes");
     // Clear scavenger's statics
     Scavenger.clear();
     // Create cache
@@ -287,53 +258,24 @@ public abstract class TestScavengerBase extends IOTestBase {
     activeSize = cache.activeSize();
     System.out.println(String.format("After scan: allocated=%d, used=%d, size=%d, active=%d", 
       allocated, used, size, activeSize));
-    
-    long oldAllocated = allocated;
-    long oldUsed = used;
-    long oldSize = size;
-    long oldActiveSize = activeSize;
-    
-    Scavenger scavenger = new Scavenger(cache);
-    scavenger.run();
-    
-    allocated = cache.getStorageAllocated();
-    used = cache.getStorageUsed();
-    size = cache.size();
-    activeSize = cache.activeSize();
-    System.out.println(String.format("After Scav run: allocated=%d, used=%d, size=%d, active=%d", 
-      allocated, used, size, activeSize));
-    // After Scavenger run we still have active segment, which is not sealed yet
-    double r1 = (double)(oldAllocated - allocated) / oldAllocated;
-    double r2 = (double)(oldUsed - used) / oldUsed;
-    double r3 = (double)(oldSize - size) / oldSize;
-    double r4 = (double) (oldActiveSize - activeSize) / oldActiveSize;
-    
-    System.out.printf("r1 =%f r2=%f r3=%f r4=%f\n", r1, r2, r3, r4);
-    // // we delete 6% of data
-    assertTrue(r1 < 0.07); 
-    assertTrue(r2 < 0.07);
-    assertTrue(r3 < 0.07);
-    assertTrue(r4 == 0);
-    verifyBytesCacheWithDeletes(cache, loaded, deleted);
 
   }
   
-  //@Ignore
   @Test
-  public void testNoExpiredWithDeletesRegularRunMinActive() throws IOException {
-    System.out.println("Test no expired with deletes - regular run (min active)");
+  public void testNoExpiredWithDeletesMemory() throws IOException {
+    System.out.println("Test no expired with deletes memory");
     // Clear scavenger's statics
     Scavenger.clear();
     // Create cache
-    this.minActiveRatio = 0.97;
+    this.scavDumpBelowRatio = 0; // remove only deleted
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareData(30000);
+    prepareData(300000);
     // Fill cache completely (no eviction is enabled)
-    int loaded = loadBytesCache(cache);
+    int loaded = loadMemoryCache(cache);
     System.out.println("loaded=" + loaded);
-    int deleted = deleteBytesCache(cache, loaded / 7);
+    int deleted = deleteMemoryCache(cache, loaded / 17);
   
     long allocated = cache.getStorageAllocated();
     long used = cache.getStorageUsed();
@@ -343,7 +285,7 @@ public abstract class TestScavengerBase extends IOTestBase {
       allocated, used, size, activeSize));
     // Access all objects to remove them from memory index
     // and from data segments statistics
-    verifyBytesCacheWithDeletes(cache, loaded, deleted);
+    verifyMemoryCacheWithDeletes(cache, loaded, deleted);
     
     allocated = cache.getStorageAllocated();
     used = cache.getStorageUsed();
@@ -351,32 +293,30 @@ public abstract class TestScavengerBase extends IOTestBase {
     activeSize = cache.activeSize();
     System.out.println(String.format("After scan: allocated=%d, used=%d, size=%d, active=%d", 
       allocated, used, size, activeSize));
-    
-    long oldAllocated = allocated;
-    long oldUsed = used;
-    long oldSize = size;
-    long oldActiveSize = activeSize;
-    
-    Scavenger scavenger = new Scavenger(cache);
-    scavenger.run();
-    
-    allocated = cache.getStorageAllocated();
-    used = cache.getStorageUsed();
-    size = cache.size();
-    activeSize = cache.activeSize();
-    System.out.println(String.format("After Scav run: allocated=%d, used=%d, size=%d, active=%d", 
-      allocated, used, size, activeSize));
-    // After Scavenger run we still have active segment, which is not sealed yet
-    double r1 = (double)(oldAllocated - allocated) / oldAllocated;
-    double r2 = (double)(oldUsed - used) / oldUsed;
-    double r3 = (double)(oldSize - size) / oldSize;
-    double r4 = (double) (oldActiveSize - activeSize) / oldActiveSize;
-    double r5 = (double) activeSize / size;
-    System.out.printf("r1 =%f r2=%f r3=%f r4=%f r5=%f\n", r1, r2, r3, r4, r5);
-    // // we delete 6% of data
-    assertTrue(r5 > minActiveRatio);
-    verifyBytesCacheWithDeletes(cache, loaded, deleted);
-
   }
   
+  @Test
+  public void testSaveLoad() throws IOException {
+    System.out.println("Test save load");
+    Scavenger.clear();
+    // Create cache
+    this.cache = createCache();
+    
+    this.expireTime = 1000000; 
+    prepareData(300000);
+    // Fill cache completely (no eviction is enabled)
+    int loaded = loadBytesCache(cache);
+    System.out.println("loaded=" + loaded);
+    
+    String cacheName = cache.getName();
+    cache.save();
+    cache.getEngine().dispose();
+    
+    cache = new Cache();
+    cache.setName(cacheName);
+    cache.load();
+    
+    verifyBytesCache(cache, loaded);
+    
+  }
 }
