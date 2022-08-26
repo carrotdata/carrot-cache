@@ -242,6 +242,10 @@ public class CacheConfig {
   /* Bin value multiplier */
   public static final String CACHE_EXPIRATION_MULTIPLIER_VALUE_KEY = "cache.expire.multiplier.value";
   
+  /* Eviction disabled mode */
+  public static final String CACHE_EVICTION_DISABLED_MODE_KEY = "cache.eviction.disabled.mode";
+
+  
   /* Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
@@ -376,6 +380,9 @@ public class CacheConfig {
   
   /* Default minimum active data set ratio */
   public final static double DEFAULT_CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO = 0.9;
+  
+  /* Default cache disabled mode */
+  public final static boolean DEFAULT_CACHE_EVICTION_DISABLED_MODE = false;
   // Statics
   static CacheConfig instance;
 
@@ -1568,6 +1575,30 @@ public class CacheConfig {
   public void setMinimumActiveDatasetRatio (String cacheName, double ratio) {
     props.getProperty(cacheName + "." + CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO_KEY, 
       Double.toString(ratio));
+  }
+  
+  /**
+   * Get eviction disabled mode
+   * @param cacheName cache name
+   * @return true or false
+   */
+  public boolean getEvictionDisabledMode (String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_EVICTION_DISABLED_MODE_KEY);
+    if (value == null) {
+      return getBooleanProperty(CACHE_EVICTION_DISABLED_MODE_KEY, 
+        DEFAULT_CACHE_EVICTION_DISABLED_MODE);
+    } else {
+      return Boolean.parseBoolean(value);
+    }
+  }
+  
+  /**
+   * Set eviction disabled mode
+   * @param cacheName cache name
+   * @param true or false
+   */
+  public void setEvictionDisabledMode (String cacheName, boolean mode) {
+    props.setProperty(cacheName + "." + CACHE_EVICTION_DISABLED_MODE_KEY, Boolean.toString(mode));
   }
   
 }

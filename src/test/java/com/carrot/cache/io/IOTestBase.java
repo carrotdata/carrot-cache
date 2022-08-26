@@ -54,10 +54,10 @@ public abstract class IOTestBase {
   
   @BeforeClass
   public static void enableMallocDebug() {
-    UnsafeAccess.setMallocDebugEnabled(true);
+//    UnsafeAccess.setMallocDebugEnabled(true);
 //    UnsafeAccess.setMallocDebugStackTraceEnabled(true);
-//    UnsafeAccess.setStackTraceRecordingFilter(x -> x == 1024);
-//    UnsafeAccess.setStackTraceRecordingLimit(20000);
+//    UnsafeAccess.setStackTraceRecordingFilter(x -> x == 4194304);
+//    UnsafeAccess.setStackTraceRecordingLimit(200);
   }
   
   @After
@@ -67,7 +67,6 @@ public abstract class IOTestBase {
     }
     Arrays.stream(mKeys).forEach(x -> UnsafeAccess.free(x));
     Arrays.stream(mValues).forEach(x -> UnsafeAccess.free(x));
-    UnsafeAccess.mallocStats.printStats();
   }
   
   protected void prepareData(int numRecords) {
@@ -79,7 +78,7 @@ public abstract class IOTestBase {
     expires = new long[numRecords];
     
     Random r = new Random();
-    long seed = 1661374488810L;//System.currentTimeMillis();
+    long seed = System.currentTimeMillis();
     r.setSeed(seed);
     System.out.println("seed="+ seed);
     

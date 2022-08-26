@@ -475,8 +475,10 @@ public class Segment implements Persistent {
    * Used for testing
    */
   public void dispose() {
+    if (!this.valid) return;
     if (isOffheap()) {
       UnsafeAccess.free(this.address);
+      this.address = 0;
     }
     this.valid = false;
   }

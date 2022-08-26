@@ -619,6 +619,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return this;
     }
     
+    /**
+     * With eviction disabled mode
+     * @param mode 
+     * @return builder instance
+     */
+    public Builder withEvictionDisabledMode(boolean mode) {
+      conf.setEvictionDisabledMode(cacheName, mode);
+      return this;
+    }
+    
     private Cache build() throws IOException {
       Cache cache = new Cache(conf, cacheName);
       cache.setIOEngine(this.engine);
@@ -698,6 +708,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /* Index embedded size */
   int indexEmbeddedSize;
   
+  /* Eviction disabled mode */
+  boolean evictionDisabledMode;
   
   /**
    *  Constructor to use 
@@ -749,6 +761,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.indexEmdeddingSupported = 
         this.conf.isIndexDataEmbeddedSupported(this.cacheName);
     this.indexEmbeddedSize = this.conf.getIndexDataEmbeddedSize(this.cacheName);
+    this.evictionDisabledMode = this.conf.getEvictionDisabledMode(this.cacheName);
     updateMaxCacheSize();
     initAdmissionController();
     initThroughputController();
@@ -764,6 +777,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.indexEmdeddingSupported = 
         this.conf.isIndexDataEmbeddedSupported(this.cacheName);
     this.indexEmbeddedSize = this.conf.getIndexDataEmbeddedSize(this.cacheName);
+    this.evictionDisabledMode = this.conf.getEvictionDisabledMode(this.cacheName);
+
     updateMaxCacheSize();
     //initAdmissionController();
     //initThroughputController();
@@ -1710,19 +1725,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public void onEvent(IOEngine e, IOEngineEvent evt) {
     if (evt == IOEngineEvent.DATA_SIZE_CHANGED) {
       double used = this.engine.getStorageAllocatedRatio();
-      double activeRatio = this.engine.activeSizeRatio();
-      double minActiveSizeRatio = this.conf.getMinimumActiveDatasetRatio(cacheName);
       //TODO: performance
       double max = this.conf.getScavengerStartMemoryRatio(this.cacheName);
       double min = this.conf.getScavengerStopMemoryRatio(this.cacheName);
-      if ((used >= max || activeRatio < minActiveSizeRatio) && 
-          (this.scavenger == null || !this.scavenger.isAlive())) {
-        this.scavenger = new Scavenger(this);
-        this.scavenger.start();
+      if (this.evictionDisabledMode) {
+        return;
+      }
+      if (used >= max) {
         this.engine.setEvictionEnabled(true);
         this.tcEnabled = true;
-      } else if (used < min) {
-        // Disable eviction
+      } else if (used < min){
         this.engine.setEvictionEnabled(false);
       }
     }
@@ -1749,6 +1761,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       this.totalRejectedWrites.set(dis.readLong());
       Epoch.setEpochStartTime(dis.readLong());
       this.tcEnabled = dis.readBoolean();
+      this.evictionDisabledMode = dis.readBoolean();
       this.conf = CacheConfig.load(dis);
       dis.close();
     } else {
@@ -1776,6 +1789,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     dos.writeLong(totalRejectedWrites.get());
     dos.writeLong(Epoch.getEpochStartTime());
     dos.writeBoolean(this.tcEnabled);
+    dos.writeBoolean(this.evictionDisabledMode);
     this.conf.save(dos);
     dos.close();
   }

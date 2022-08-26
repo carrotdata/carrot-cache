@@ -34,6 +34,7 @@ import com.carrot.cache.io.BlockDataWriter;
 import com.carrot.cache.io.BlockFileDataReader;
 import com.carrot.cache.io.BlockMemoryDataReader;
 import com.carrot.cache.io.IOTestBase;
+import com.carrot.cache.util.UnsafeAccess;
 
 public abstract class TestScavengerBase extends IOTestBase {
   
@@ -49,7 +50,7 @@ public abstract class TestScavengerBase extends IOTestBase {
   @Before
   public void setUp() throws IOException {
     this.r = new Random();
-    long seed = 1661531411359L;//System.currentTimeMillis();
+    long seed = System.currentTimeMillis();
     System.out.println("r.seed=" + seed);
     r.setSeed(seed);
   }
@@ -58,6 +59,7 @@ public abstract class TestScavengerBase extends IOTestBase {
   public void tearDown() {
     super.tearDown();
     cache.dispose();
+    UnsafeAccess.mallocStats.printStats();
   }
   
   protected Cache createCache() throws IOException {
@@ -88,7 +90,8 @@ public abstract class TestScavengerBase extends IOTestBase {
       .withMainQueueIndexFormat(CompactWithExpireIndexFormat.class.getName())
       .withSnapshotDir(snapshotDir)
       .withDataDir(dataDir)
-      .withMinimumActiveDatasetRatio(minActiveRatio);
+      .withMinimumActiveDatasetRatio(minActiveRatio)
+      .withEvictionDisabledMode(true);
     
     if (offheap) {
       return builder.buildMemoryCache();
@@ -114,7 +117,8 @@ public abstract class TestScavengerBase extends IOTestBase {
     this.expireTime = 1000; 
     prepareData(300000);
     int loaded = loadBytesCache(cache);
-    System.out.println("loaded=" + loaded);
+    System.out.println("loaded=" + loaded + " cache size="+ cache.size() + 
+      " index size=" + cache.getEngine().getMemoryIndex().size());
     // Wait expireTime
     try {
       Thread.sleep(2 * expireTime);
@@ -153,7 +157,7 @@ public abstract class TestScavengerBase extends IOTestBase {
     assertEquals(0, activeSize);
   }
   
- //@Ignore
+  //@Ignore
   @Test
   public void testAllExpiredNoScan() throws IOException {
     System.out.println("Test all expired - no scan");
@@ -165,7 +169,8 @@ public abstract class TestScavengerBase extends IOTestBase {
     this.expireTime = 1000; 
     prepareData(300000);
     int loaded = loadBytesCache(cache);
-    System.out.println("loaded=" + loaded);
+    System.out.println("loaded=" + loaded + " cache size="+ cache.size() + 
+      " index size=" + cache.getEngine().getMemoryIndex().size());
     // Wait expireTime
     try {
       Thread.sleep(expireTime);
@@ -196,6 +201,7 @@ public abstract class TestScavengerBase extends IOTestBase {
     assertEquals(0, activeSize);
   }
   
+  //@Ignore
   @Test
   public void testNoExpiredRegularRun() throws IOException {
     System.out.println("Test no expired - regular run");
@@ -207,8 +213,8 @@ public abstract class TestScavengerBase extends IOTestBase {
     prepareData(300000);
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
-    System.out.println("loaded=" + loaded);
-  
+    System.out.println("loaded=" + loaded + " cache size="+ cache.size() + 
+      " index size=" + cache.getEngine().getMemoryIndex().size());  
     long allocated = cache.getStorageAllocated();
     long used = cache.getStorageUsed();
     long size = cache.size();
@@ -268,7 +274,9 @@ public abstract class TestScavengerBase extends IOTestBase {
     prepareData(300000);
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
-    System.out.println("loaded=" + loaded);
+    System.out.println("loaded=" + loaded + " cache size="+ cache.size() + 
+      " index size=" + cache.getEngine().getMemoryIndex().size());
+    
     int deleted = deleteBytesCache(cache, loaded / 17);
   
     long allocated = cache.getStorageAllocated();
@@ -332,7 +340,9 @@ public abstract class TestScavengerBase extends IOTestBase {
     prepareData(30000);
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
-    System.out.println("loaded=" + loaded);
+    System.out.println("loaded=" + loaded + " cache size="+ cache.size() + 
+      " index size=" + cache.getEngine().getMemoryIndex().size());
+    
     int deleted = deleteBytesCache(cache, loaded / 7);
   
     long allocated = cache.getStorageAllocated();
