@@ -1443,6 +1443,17 @@ public abstract class IOEngine implements Persistent {
   }
   
   /**
+   * Active size ratio
+   * @return active size ratio
+   */
+  public double activeSizeRatio() {
+    long size = size();
+    if (size == 0) return 1d;
+    long activeSize = activeSize();
+    return (double) activeSize / size;
+  }
+  
+  /**
    * Active data size (estimate)
    * @return active data size
    */

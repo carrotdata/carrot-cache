@@ -734,6 +734,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     initAdmissionController();
     initThroughputController();
     initScavenger();
+    // Set eviction listener
+    this.engine.getMemoryIndex().setEvictionListener(this);
   }
 
   private void initScavenger() {
@@ -1533,6 +1535,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return this.parentCache;
   }
 
+  @SuppressWarnings("unused")
   private boolean processPromotion(long ptr, long $ptr) {
     if (this.parentCache == null) {
      return false;
@@ -1620,7 +1623,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         int valueSize = Utils.readUVInt(ptr);
         int vSizeSize = Utils.sizeUVInt(valueSize);
         ptr += vSizeSize;
-        this.victimCache.put(ptr, keySize, ptr + keySize, valueSize, expire, rank, true);
+        // Do not force PUT, let victim's cache admission controller work
+        this.victimCache.put(ptr, keySize, ptr + keySize, valueSize, expire, rank, false);
       } else {
         // not supported yet
       }
@@ -1661,28 +1665,31 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     int vSize = Utils.readUVInt(indexPtr);
     int vSizeSize = Utils.sizeUVInt(vSize);
     indexPtr += vSizeSize;
-    
-    c.put(indexPtr, kSize, indexPtr + kSize, vSize, expire, rank, true);
+    // Do not force PUT, let victim's cache admission controller to work
+    c.put(indexPtr, kSize, indexPtr + kSize, vSize, expire, rank, false);
   }
 
   // IOEngine.Listener
   @Override
   public void onEvent(IOEngine e, IOEngineEvent evt) {
-//    if (evt == IOEngineEvent.DATA_SIZE_CHANGED) {
-//      double used = getMemoryUsedPct();
-//      //TODO: performance
-//      double max = this.conf.getScavengerStartMemoryRatio(this.cacheName);
-//      double min = this.conf.getScavengerStopMemoryRatio(this.cacheName);
-//      if (used >= max && (this.scavenger == null || !this.scavenger.isAlive())) {
-//        this.scavenger = new Scavenger(this);
-//        this.scavenger.start();
-//        this.engine.setEvictionEnabled(true);
-//        this.tcEnabled = true;
-//      } else if (used < min) {
-//        // Disable eviction
-//        this.engine.setEvictionEnabled(false);
-//      }
-//    }
+    if (evt == IOEngineEvent.DATA_SIZE_CHANGED) {
+      double used = this.engine.getStorageAllocatedRatio();
+      double activeRatio = this.engine.activeSizeRatio();
+      double minActiveSizeRatio = this.conf.getMinimumActiveDatasetRatio(cacheName);
+      //TODO: performance
+      double max = this.conf.getScavengerStartMemoryRatio(this.cacheName);
+      double min = this.conf.getScavengerStopMemoryRatio(this.cacheName);
+      if ((used >= max || activeRatio < minActiveSizeRatio) && 
+          (this.scavenger == null || !this.scavenger.isAlive())) {
+        this.scavenger = new Scavenger(this);
+        this.scavenger.start();
+        this.engine.setEvictionEnabled(true);
+        this.tcEnabled = true;
+      } else if (used < min) {
+        // Disable eviction
+        this.engine.setEvictionEnabled(false);
+      }
+    }
   }
   
   // Persistence section
@@ -1715,6 +1722,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException
    */
   private void saveCache() throws IOException {
+    // TODO: Save custom cache config
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
     String file = CacheConfig.CACHE_SNAPSHOT_NAME;
     Path p = Paths.get(snapshotDir, file);
@@ -1884,6 +1892,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException
    */
   public void load() throws IOException {
+    //TODO: not complete yet
     LOG.info("Started loading cache ...");
     long startTime = System.currentTimeMillis();
     loadCache();
@@ -1903,7 +1912,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   
   @Override
   public boolean onPromotion(long ibPtr, long ptr) {
-    return processPromotion(ibPtr, ptr);
+    // do nothing yet
+    // There are several approaches on how to promote items from
+    // victim cache back to the parent cache:
+    // 1. Promote on every access (GET) - this is what currently done
+    // 2. Promote only high ranking items
+    // 3. Do not promote back at all
+    // 4. Promote randomly
+    // ???
+    //return processPromotion(ibPtr, ptr);
+    return false;
   }
 
 }
