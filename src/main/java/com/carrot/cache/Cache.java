@@ -644,14 +644,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     MEMORY, DISK
   }
 
-  /*
-   * Total allocated memory (bytes)
-   */
-  private AtomicLong allocatedMemory = new AtomicLong(0);
-
-  /** Total used memory (bytes) */
-  private AtomicLong usedMemory = new AtomicLong(0);
-
   /* Total number of accesses (GET)*/
   private AtomicLong totalGets = new AtomicLong(0);
   
@@ -711,6 +703,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /* Eviction disabled mode */
   boolean evictionDisabledMode;
   
+  /* Cache type*/
+  Type type;
+  
   /**
    *  Constructor to use 
    *  when loading cache from a storage
@@ -741,6 +736,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.engine = IOEngine.getEngineForCache(this);
     // set engine listener
     this.engine.setListener(this);
+    this.type = engine instanceof OffheapIOEngine? Type.MEMORY: Type.DISK;
     initAll();
   }
 
@@ -753,6 +749,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.engine = engine;
     // set engine listener
     this.engine.setListener(this);
+    this.type = engine instanceof OffheapIOEngine? Type.MEMORY: Type.DISK;
   }
   
   private void initAll() throws IOException {
@@ -765,31 +762,30 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     updateMaxCacheSize();
     initAdmissionController();
     initThroughputController();
-    initScavenger();
+    
+    startThroughputController();
+    startScavenger();
     // Set eviction listener
     this.engine.getMemoryIndex().setEvictionListener(this);
   }
 
-  private void initAllAfterLoad() throws IOException {
-    //TODO finish initialization
+  private void initAllDuringLoad() throws IOException {
     this.writeRejectionThreshold = 
         this.conf.getCacheWriteRejectionThreshold(this.cacheName);
     this.indexEmdeddingSupported = 
         this.conf.isIndexDataEmbeddedSupported(this.cacheName);
     this.indexEmbeddedSize = this.conf.getIndexDataEmbeddedSize(this.cacheName);
     this.evictionDisabledMode = this.conf.getEvictionDisabledMode(this.cacheName);
-
-    updateMaxCacheSize();
-    //initAdmissionController();
-    //initThroughputController();
-    //initScavenger();
-    // Set eviction listener
-    this.engine.getMemoryIndex().setEvictionListener(this);
- // set engine listener
+    this.engine = this.type == Type.MEMORY? new OffheapIOEngine(this.cacheName): new FileIOEngine(this.cacheName);
+    // set engine listener
     this.engine.setListener(this);
+    updateMaxCacheSize();
+    initAdmissionController();
+    initThroughputController();
+    this.engine.getMemoryIndex().setEvictionListener(this);
   }
   
-  private void initScavenger() {
+  private void startScavenger() {
     long interval = this.conf.getScavengerRunInterval(this.cacheName) * 1000;
     LOG.info("Started Scavenger, interval=%d sec", interval /1000);
     /*DEBUG*/ System.out.println("Scavenger run interval =" + interval);
@@ -809,7 +805,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     this.timer.scheduleAtFixedRate(task, interval, interval);
   }
-
+  
+  
   private void adjustThroughput() {
     boolean result = this.throughputController.adjustParameters();
     LOG.info("Adjusted throughput controller =" + result);
@@ -859,18 +856,27 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return;
     }
     this.throughputController.setCache(this);
+ 
+  }
+
+  private void startThroughputController() {
+    if (this.throughputController == null) {
+      return;
+    }
     TimerTask task =
         new TimerTask() {
           public void run() {
             adjustThroughput();
           }
         };
-    this.timer = new Timer();
+    if (this.timer == null) {    
+      this.timer = new Timer();
+    }
     long interval = this.conf.getThroughputCheckInterval(this.cacheName);
     this.timer.scheduleAtFixedRate(task, interval, interval);
     LOG.info("Started throughput controller, interval=%d sec", interval /1000);
   }
-
+  
   private void updateMaxCacheSize() {
     this.maximumCacheSize = this.engine.getMaximumStorageSize();
   }
@@ -1747,14 +1753,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException
    */
   private void loadCache() throws IOException {
-    String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
+    CacheConfig conf = CacheConfig.getInstance();
+    String snapshotDir = conf.getSnapshotDir(this.cacheName);
     String file = CacheConfig.CACHE_SNAPSHOT_NAME;
     Path p = Paths.get(snapshotDir, file);
     if (Files.exists(p)) {
       FileInputStream fis = new FileInputStream(p.toFile());
       DataInputStream dis = new DataInputStream(fis);
-      this.allocatedMemory.set(dis.readLong());
-      this.usedMemory.set(dis.readLong());
+      this.cacheName = dis.readUTF();
+      this.type = Type.values()[dis.readInt()];
       this.totalGets.set(dis.readLong());
       this.totalHits.set(dis.readLong());
       this.totalWrites.set(dis.readLong());
@@ -1781,8 +1788,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     Path p = Paths.get(snapshotDir, file);
     FileOutputStream fos = new FileOutputStream(p.toFile());
     DataOutputStream dos = new DataOutputStream(fos);
-    dos.writeLong(allocatedMemory.get());
-    dos.writeLong(usedMemory.get());
+    dos.writeUTF(this.cacheName);
+    dos.writeInt(this.type.ordinal());
     dos.writeLong(totalGets.get());
     dos.writeLong(totalHits.get());
     dos.writeLong(totalWrites.get());
@@ -1955,12 +1962,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     LOG.info("Started loading cache ...");
     long startTime = System.currentTimeMillis();
     loadCache();
+    initAllDuringLoad();
     loadAdmissionControlller();
     loadThroughputControlller();
     loadEngine();
     loadScavengerStats();
+    startThroughputController();
+    startScavenger();
     long endTime = System.currentTimeMillis();
-    initAllAfterLoad();
+
     LOG.info("Cache loaded in {}ms", endTime - startTime);
   }
 

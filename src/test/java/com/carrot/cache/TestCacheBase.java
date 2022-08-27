@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.util.Random;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.carrot.cache.controllers.MinAliveRecyclingSelector;
@@ -35,7 +36,7 @@ public abstract class TestCacheBase extends IOTestBase {
   boolean offheap = true;
   Cache cache;
   int segmentSize = 4 * 1024 * 1024;
-  long maxCacheSize = 100 * segmentSize;
+  long maxCacheSize = 100L * segmentSize;
   int scavengerInterval = 10000; // seconds - disable for test
   long expireTime;
   double scavDumpBelowRatio = 0.5;
@@ -77,7 +78,8 @@ public abstract class TestCacheBase extends IOTestBase {
       .withMainQueueIndexFormat(CompactWithExpireIndexFormat.class.getName())
       .withSnapshotDir(snapshotDir)
       .withDataDir(dataDir)
-      .withMinimumActiveDatasetRatio(minActiveRatio);
+      .withMinimumActiveDatasetRatio(minActiveRatio)
+      .withEvictionDisabledMode(true);
     
     if (offheap) {
       return builder.buildMemoryCache();
@@ -98,7 +100,7 @@ public abstract class TestCacheBase extends IOTestBase {
     // Create cache
     this.cache = createCache();
     this.expireTime = 1000; 
-    prepareData(300000);
+    prepareData(150000);
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);
     // Wait expireTime
@@ -133,7 +135,7 @@ public abstract class TestCacheBase extends IOTestBase {
     // Create cache
     this.cache = createCache();
     this.expireTime = 1000; 
-    prepareData(300000);
+    prepareData(150000);
     int loaded = loadMemoryCache(cache);
     System.out.println("loaded=" + loaded);
     // Wait expireTime
@@ -169,7 +171,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareData(300000);
+    prepareData(150000);
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);
@@ -202,7 +204,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareData(300000);
+    prepareData(150000);
     // Fill cache completely (no eviction is enabled)
     int loaded = loadMemoryCache(cache);
     System.out.println("loaded=" + loaded);
@@ -236,7 +238,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareData(300000);
+    prepareData(150000);
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);
@@ -271,7 +273,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareData(300000);
+    prepareData(150000);
     // Fill cache completely (no eviction is enabled)
     int loaded = loadMemoryCache(cache);
     System.out.println("loaded=" + loaded);
@@ -303,19 +305,26 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareData(300000);
+    prepareData(150000);
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);
-    
+    verifyBytesCacheByteBuffer(cache, loaded);
+
     String cacheName = cache.getName();
+    long t1 = System.currentTimeMillis();
     cache.save();
-    cache.getEngine().dispose();
+    long t2 = System.currentTimeMillis();
+    System.out.printf("Saved %d in %d ms\n", cache.getStorageAllocated(), t2 - t1);
+    cache.dispose();
     
     cache = new Cache();
     cache.setName(cacheName);
+    t1 = System.currentTimeMillis();
     cache.load();
-    
+    t2 = System.currentTimeMillis();
+    System.out.printf("Loaded %d in %d ms\n", cache.getStorageAllocated(), t2 - t1);
+
     verifyBytesCache(cache, loaded);
     
   }
