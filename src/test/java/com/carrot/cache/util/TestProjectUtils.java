@@ -17,6 +17,7 @@ package com.carrot.cache.util;
 
 import static org.junit.Assert.assertEquals;
 
+import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -158,6 +159,16 @@ public class TestProjectUtils {
     assertEquals(vv, vvv);
   }
   
+  @Test
+  public void testZipfianDistribution() {
+    System.out.println("Zipf distribution");
+    ZipfDistribution zd = new ZipfDistribution(1000000, 0.9);
+    
+    for (int i = 0; i < 100; i++) {
+      System.out.println(zd.sample());
+    }
+  }
+  
   /**
    * Utility methods
    */
@@ -196,4 +207,6 @@ public class TestProjectUtils {
   public short hours2(short v) {
     return (short) (v | 0xc000);
   }
+  
+  
 }
