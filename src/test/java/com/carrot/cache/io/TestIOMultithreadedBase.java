@@ -41,9 +41,9 @@ public abstract class TestIOMultithreadedBase {
   static int maxKeySize = 32;
   static int maxValueSize = 5000;
     
-  int numRecords = 10;
-  int numThreads = 2;
-  
+  protected int numRecords = 10;
+  protected int numThreads = 2;
+  protected int blockSize = 4096;
   
   @BeforeClass
   public static void enableMallocDebug() {
@@ -75,7 +75,9 @@ public abstract class TestIOMultithreadedBase {
     long[] mValues = new long[numRecords];
     long[] expires = new long[numRecords];
 
-    Random r = new Random(Thread.currentThread().getId() * 100000 + System.currentTimeMillis());
+    long seed = Thread.currentThread().getId() * 100000 + System.currentTimeMillis();
+    Random r = new Random(seed);
+    System.out.println("seed=" + seed);
 
     for (int i = 0; i < numRecords; i++) {
       int keySize = nextKeySize(r);
@@ -94,7 +96,7 @@ public abstract class TestIOMultithreadedBase {
   }
   
   protected long getExpire(int n) {
-    return System.currentTimeMillis() + n * 100000;
+    return System.currentTimeMillis() + 1000000L;
   }
   
   protected int nextKeySize(Random r) {
@@ -172,7 +174,7 @@ public abstract class TestIOMultithreadedBase {
   protected abstract long get(long keyPtr, int keySize, ByteBuffer buffer) throws IOException;
   
   
-  protected int loadBytesEngine() throws IOException {
+  protected int loadBytes() throws IOException {
     int count = 0;
     byte[][] keys = keysTL.get();
     byte[][] values = valuesTL.get();
@@ -197,6 +199,11 @@ public abstract class TestIOMultithreadedBase {
     while(count < num) {
       byte[] key = keys[count];
       boolean result = delete(key, 0, key.length);
+      if (result == false) {
+        System.out.println("failed "+ count);
+        count++;
+        continue;
+      }
       assertTrue(result);
       count++;
     }    
@@ -234,6 +241,11 @@ public abstract class TestIOMultithreadedBase {
       int keySize = keys[count].length;
       long keyPtr = mKeys[count];
       boolean result = delete(keyPtr, keySize);
+      if (result == false) {
+        System.out.println("failed "+ count);
+        count++;
+        continue;
+      }
       assertTrue(result);
       count++;
     }    
@@ -241,7 +253,7 @@ public abstract class TestIOMultithreadedBase {
   }
   
   protected void verifyBytes(int num) throws IOException {
-    int kvSize = Utils.kvSize(maxKeySize, maxValueSize);
+    int kvSize = safeBufferSize();
     byte[] buffer = new byte[kvSize];
     byte[][] keys = keysTL.get();
     byte[][] values = valuesTL.get();
@@ -251,6 +263,10 @@ public abstract class TestIOMultithreadedBase {
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);
       long size = get(key, 0, key.length, buffer, 0);
+      if (size != expSize) {
+        System.out.println(Thread.currentThread().getName() + " i=" + i + " num=" + num);
+        continue;
+      }
       assertEquals(expSize, size);
       int kSize = Utils.readUVInt(buffer, 0);
       assertEquals(key.length, kSize);
@@ -266,7 +282,7 @@ public abstract class TestIOMultithreadedBase {
   }
   
   protected void verifyBytesWithDeletes(int num, int deleted) throws IOException {
-    int kvSize = Utils.kvSize(maxKeySize, maxValueSize);
+    int kvSize = safeBufferSize();
     byte[] buffer = new byte[kvSize];
     byte[][] keys = keysTL.get();
     byte[][] values = valuesTL.get();
@@ -277,7 +293,7 @@ public abstract class TestIOMultithreadedBase {
       long expSize = Utils.kvSize(key.length, value.length);
       long size = get(key, 0, key.length, buffer, 0);
       if (i < deleted) {
-        assertTrue( size < 0);
+        assertTrue(size < 0);
         continue;
       }
       assertEquals(expSize, size);
@@ -295,7 +311,7 @@ public abstract class TestIOMultithreadedBase {
   }
   
   protected void verifyMemory(int num) throws IOException {
-    int kvSize = Utils.kvSize(maxKeySize, maxValueSize);
+    int kvSize = safeBufferSize();
     ByteBuffer buffer = ByteBuffer.allocate(kvSize);
     byte[][] keys = keysTL.get();
     byte[][] values = valuesTL.get();
@@ -310,6 +326,10 @@ public abstract class TestIOMultithreadedBase {
       
       long expSize = Utils.kvSize(keySize, valueSize);
       long size = get(keyPtr, keySize, buffer);
+      if (size != expSize) {
+        System.out.println(Thread.currentThread().getName() + " i=" + i + " num=" + num);
+        continue;
+      }
       assertEquals(expSize, size);
       int kSize = Utils.readUVInt(buffer);
       assertEquals(keySize, kSize);
@@ -330,7 +350,7 @@ public abstract class TestIOMultithreadedBase {
   }
   
   protected void verifyMemoryWithDeletes(int num, int deleted) throws IOException {
-    int kvSize = Utils.kvSize(maxKeySize, maxValueSize);
+    int kvSize = safeBufferSize();
     ByteBuffer buffer = ByteBuffer.allocate(kvSize);
     byte[][] keys = keysTL.get();
     byte[][] values = valuesTL.get();
@@ -367,6 +387,11 @@ public abstract class TestIOMultithreadedBase {
     }    
   }
   
+  private int safeBufferSize() {
+    int bufSize = Utils.kvSize(maxKeySize, maxValueSize);
+    return (bufSize / blockSize + 1) * blockSize;
+  }
+  
   @Test
   public void testLoadReadBytesRun() {
     Runnable r = () -> {
@@ -385,7 +410,7 @@ public abstract class TestIOMultithreadedBase {
     /*DEBUG*/ System.out.println(Thread.currentThread().getName() + 
       ": testLoadReadBytes");
     prepareData();
-    int loaded = loadBytesEngine();
+    int loaded = loadBytes();
     /*DEBUG*/ System.out.println(Thread.currentThread().getName() + ": loaded=" + loaded);
     verifyBytes(loaded);
     /*DEBUG*/ System.out.println(Thread.currentThread().getName() + ": verified=" + loaded);
@@ -434,7 +459,7 @@ public abstract class TestIOMultithreadedBase {
     /*DEBUG*/ System.out.println(Thread.currentThread().getName() + 
       ": testLoadReadBytesWithDeletes");
     prepareData();
-    int loaded = loadBytesEngine();
+    int loaded = loadBytes();
     /*DEBUG*/ System.out.println(Thread.currentThread().getName() + ": loaded=" + loaded);
     deleteBytes(loaded / 2);
     verifyBytesWithDeletes(loaded, loaded / 2);

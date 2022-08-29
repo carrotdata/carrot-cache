@@ -378,10 +378,6 @@ public abstract class IOTestBase {
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);
       long size = cache.get(key, 0, key.length, false, buffer, 0);
-      if (size != expSize) {
-        failed++;
-        continue;
-      }
       assertEquals(expSize, size);
       int kSize = Utils.readUVInt(buffer, 0);
       assertEquals(key.length, kSize);
@@ -427,7 +423,7 @@ public abstract class IOTestBase {
   }
   
   protected void verifyBytesCacheNot(Cache cache, int num) throws IOException {
-    int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
+    int bufferSize = safeBufferSize();
     byte[] buffer = new byte[bufferSize];
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
@@ -437,7 +433,7 @@ public abstract class IOTestBase {
   }
   
   protected void verifyBytesCacheWithDeletes(Cache cache, int num, int deleted) throws IOException {
-    int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
+    int bufferSize = safeBufferSize();
     byte[] buffer = new byte[bufferSize];
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
