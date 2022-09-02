@@ -12,6 +12,23 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.carrot.cache.io;
 
-public class TestSegmentMultithreaded {}
+package com.carrot.cache;
+
+import java.io.IOException;
+
+import org.junit.Before;
+
+public class TestOffheapCacheMultithreadedStream extends TestCacheMultithreadedStreamBase {
+
+  @Before
+  public void setUp() throws IOException{
+    this.numRecords = 10000000;
+    this.numThreads = 4;
+    this.scavDumpBelowRatio = 0.1;
+    this.segmentSize = 64 * 1024 * 1024;
+    this.maxCacheSize = 500L * this.segmentSize;
+    this.offheap = true;
+  }
+  
+}

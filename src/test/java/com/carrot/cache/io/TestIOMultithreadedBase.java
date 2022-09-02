@@ -32,14 +32,14 @@ import com.carrot.cache.util.Utils;
 
 public abstract class TestIOMultithreadedBase {
   
-  static ThreadLocal<byte[][]> keysTL = new ThreadLocal<byte[][]>();
-  static ThreadLocal<byte[][]> valuesTL = new ThreadLocal<byte[][]>();
-  static ThreadLocal<long[]> mKeysTL = new ThreadLocal<long[]>();
-  static ThreadLocal<long[]> mValuesTL = new ThreadLocal<long[]>();
-  static ThreadLocal<long[]> mExpiresTL = new ThreadLocal<long[]>();
+  protected static ThreadLocal<byte[][]> keysTL = new ThreadLocal<byte[][]>();
+  protected static ThreadLocal<byte[][]> valuesTL = new ThreadLocal<byte[][]>();
+  protected static ThreadLocal<long[]> mKeysTL = new ThreadLocal<long[]>();
+  protected static ThreadLocal<long[]> mValuesTL = new ThreadLocal<long[]>();
+  protected static ThreadLocal<long[]> mExpiresTL = new ThreadLocal<long[]>();
   
-  static int maxKeySize = 32;
-  static int maxValueSize = 5000;
+  protected static int maxKeySize = 32;
+  protected static int maxValueSize = 5000;
     
   protected int numRecords = 10;
   protected int numThreads = 2;
@@ -93,6 +93,10 @@ public abstract class TestIOMultithreadedBase {
     mKeysTL.set(mKeys);
     mValuesTL.set(mValues);
     mExpiresTL.set(expires);
+  }
+  
+  protected long getExpireStream(long startTime, int n) {
+    return startTime + 1000000L;
   }
   
   protected long getExpire(int n) {
@@ -209,7 +213,9 @@ public abstract class TestIOMultithreadedBase {
     }    
     return count;
   }
-  
+
+
+
   protected int loadMemory() throws IOException {
     int count = 0;
     byte[][] keys = keysTL.get();
@@ -387,7 +393,7 @@ public abstract class TestIOMultithreadedBase {
     }    
   }
   
-  private int safeBufferSize() {
+  protected int safeBufferSize() {
     int bufSize = Utils.kvSize(maxKeySize, maxValueSize);
     return (bufSize / blockSize + 1) * blockSize;
   }

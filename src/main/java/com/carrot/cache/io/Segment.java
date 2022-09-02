@@ -30,7 +30,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.carrot.cache.util.CacheConfig;
 import com.carrot.cache.util.Persistent;
+import com.carrot.cache.util.RollingWindowCounter;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 
@@ -109,6 +111,9 @@ public class Segment implements Persistent {
     /* Tracks maximum item expiration time - absolute in ms since 01-01-1970 Jan 1st 12am*/
     private AtomicLong maxExpireAt = new AtomicLong(0);
     
+    /* Rolling access counter */
+    private RollingWindowCounter counter;
+    
     Info(){
     }
     
@@ -116,6 +121,7 @@ public class Segment implements Persistent {
      * Constructor
      */
     Info (int id, int rank, long creationTime) { 
+      this();
       this.id  = id;
       this.rank = rank;
       this.creationTime = creationTime;
@@ -348,6 +354,21 @@ public class Segment implements Persistent {
       return maxExpireAt.compareAndSet(expected, newValue);
     }
     
+    /**
+     * Record access to this segment
+     */
+    public void access() {
+      this.counter.increment();
+    }
+    
+    /**
+     * Get access count to this segment
+     * @return count
+     */
+    public long getAccessCount() {
+      return this.counter.count();
+    }
+    
     @Override
     /**
      * Save segment to output stream
@@ -383,6 +404,8 @@ public class Segment implements Persistent {
         dos.writeBoolean(isOffheap());
         // Block data size
         dos.writeLong(this.blockDataSize.get());
+        // Rolling Window Counter
+        this.counter.save(dos);
         dos.flush();
     }
 
@@ -401,6 +424,8 @@ public class Segment implements Persistent {
       this.totalEvictedItems.set(dis.readInt());
       this.offheap = dis.readBoolean();
       this.blockDataSize.set(dis.readLong());
+      this.counter = new RollingWindowCounter();
+      this.counter.load(dis);
     }
   }
   
@@ -453,6 +478,13 @@ public class Segment implements Persistent {
     this.info = new Info(id, rank, System.currentTimeMillis());
     this.info.setSegmentSize(size);
     setOffheap(true);
+  }
+  
+  public void init(String cacheName) {
+    CacheConfig conf = CacheConfig.getInstance();
+    int numBins = conf.getRollingWindowNumberBins(cacheName);
+    int windowsDuration = conf.getRollingWindowDuration(cacheName);
+    this.info.counter = new RollingWindowCounter(numBins, windowsDuration);
   }
   
   /**
@@ -808,7 +840,7 @@ public class Segment implements Persistent {
   }
   
   /**
-   * Checks if all items have expiration in thsi segments
+   * Checks if all items have expiration in this segments
    * @return true - yes, false - no
    */
   public boolean isAllExpireSegment() {
@@ -867,7 +899,21 @@ public class Segment implements Persistent {
     this.info.updateExpired();
   }
     
-
+  /**
+   * Record access to this segment
+   */
+  public void access() {
+    this.info.access();
+  }
+  
+  /**
+   * Get access count to this segment
+   * @return count
+   */
+  public long getAccessCount() {
+    return this.info.getAccessCount();
+  }
+  
   @Override
   public void save(OutputStream os) throws IOException {
 

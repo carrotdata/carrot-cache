@@ -1553,10 +1553,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     long result = -1;
     
     try {
-      result = this.engine.get(keyPtr, keySize,  buffer);
+      result = this.engine.get(keyPtr, keySize, hit, buffer);
     } catch(IOException e) {
       // Try one more time, file could be closed by Scavenger
-      result = this.engine.get(keyPtr, keySize,  buffer);
+      result = this.engine.get(keyPtr, keySize, hit, buffer);
     }
     
     if (result <= rem) {
@@ -2105,7 +2105,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * Dispose cache
    */
   public void dispose() {
+    // 1 cancel the timer
+    this.timer.cancel();
+    
     stopScavenger();
+    
     this.engine.dispose();
   }
 }

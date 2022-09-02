@@ -21,7 +21,6 @@ import java.nio.file.Path;
 import java.util.Random;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.carrot.cache.controllers.MinAliveRecyclingSelector;

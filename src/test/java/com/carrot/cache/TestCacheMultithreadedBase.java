@@ -23,24 +23,20 @@ import java.nio.file.Path;
 
 import org.junit.After;
 
-import com.carrot.cache.Cache;
 import com.carrot.cache.controllers.MinAliveRecyclingSelector;
-import com.carrot.cache.index.CompactIndexFormat;
-import com.carrot.cache.index.CompactWithExpireIndexFormat;
-import com.carrot.cache.io.BlockDataWriter;
-import com.carrot.cache.io.BlockFileDataReader;
-import com.carrot.cache.io.BlockMemoryDataReader;
 import com.carrot.cache.io.TestIOMultithreadedBase;
 
 public abstract class TestCacheMultithreadedBase extends TestIOMultithreadedBase {
 
   protected Cache cache;
   
-  boolean offheap = true;
+  protected boolean offheap = true;
   
-  int segmentSize = 4 * 1024 * 1024;
+  protected boolean evictionDisabled = false;
   
-  long maxCacheSize = 1000L * segmentSize;
+  protected int segmentSize = 4 * 1024 * 1024;
+  
+  protected long maxCacheSize = 1000L * segmentSize;
   
   int scavengerInterval = 10000; // seconds - disable for test
     
@@ -84,7 +80,7 @@ public abstract class TestCacheMultithreadedBase extends TestIOMultithreadedBase
       .withSnapshotDir(snapshotDir)
       .withDataDir(dataDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
-      .withEvictionDisabledMode(true);
+      .withEvictionDisabledMode(evictionDisabled);
     
     if (offheap) {
       return builder.buildMemoryCache();
@@ -124,4 +120,6 @@ public abstract class TestCacheMultithreadedBase extends TestIOMultithreadedBase
   protected long get(long keyPtr, int keySize, ByteBuffer buffer) throws IOException {
     return this.cache.get(keyPtr, keySize, true, buffer);
   }
+  
+  
 }

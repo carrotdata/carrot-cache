@@ -39,6 +39,7 @@ public class TestPrefetchBuffer extends IOTestBase {
   public void setUp() {
     this.segmentSize = 4 * 1024 * 1024;
     this.segment = Segment.newSegment(segmentSize, 1, 1);
+    this.segment.init("default");
     this.numRecords = 10000;
     this.r = new Random();
     long seed = System.currentTimeMillis();

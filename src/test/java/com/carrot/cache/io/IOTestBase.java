@@ -537,7 +537,7 @@ public abstract class IOTestBase {
       long valuePtr = mValues[i];
       
       long expSize = Utils.kvSize(keySize, valueSize);
-      long size = engine.get(keyPtr, keySize, buffer);
+      long size = engine.get(keyPtr, keySize, false, buffer);
       assertEquals(expSize, size);
       int kSize = Utils.readUVInt(buffer);
       assertEquals(keySize, kSize);
@@ -568,7 +568,7 @@ public abstract class IOTestBase {
       long valuePtr = mValues[i];
       
       long expSize = Utils.kvSize(keySize, valueSize);
-      long size = engine.get(keyPtr, keySize, buffer);
+      long size = engine.get(keyPtr, keySize, false, buffer);
       if (i < deleted) {
         assertTrue(size < 0);
         continue;

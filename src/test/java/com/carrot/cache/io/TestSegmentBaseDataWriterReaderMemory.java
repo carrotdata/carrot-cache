@@ -40,6 +40,7 @@ public class TestSegmentBaseDataWriterReaderMemory extends IOTestBase{
     this.numRecords = 10000;
     this.r = new Random();
     segment = Segment.newSegment(this.segmentSize, 1, 1);
+    segment.init("default");
     prepareData(this.numRecords);
     segment.setDataWriter(new BaseDataWriter());
   }

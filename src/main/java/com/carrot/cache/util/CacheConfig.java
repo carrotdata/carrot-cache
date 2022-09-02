@@ -178,11 +178,11 @@ public class CacheConfig {
   public static final String THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS_KEY = "throughput.adjustment.steps";
   
   /**
-   * Cache write rejection threshold - when cache size exceeds this fraction of a maximum cache size -
-   * all new writes will be rejected until cache size decreases below this threshold
+   * Cache write suspended threshold - when cache size exceeds this fraction of a maximum cache size -
+   * all new writes will be suspended until cache usage size decreases below this threshold
    */
   
-  public static final String CACHE_WRITE_REJECTION_THRESHOLD_KEY = "write.rejection.limit";
+  public static final String CACHE_WRITES_SUSPENDED_THRESHOLD_KEY = "cache.writes.suspended.threshold";
   
   /**
    * Does index support memory embedding
@@ -244,7 +244,13 @@ public class CacheConfig {
   
   /* Eviction disabled mode */
   public static final String CACHE_EVICTION_DISABLED_MODE_KEY = "cache.eviction.disabled.mode";
-
+  
+  /* Rolling Window Counter number of bins*/
+  public static final String CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY = "cache.rwc.bins";
+  
+  /* Rolling Window Counter window duration in seconds */
+  public static final String CACHE_ROLLING_WINDOW_COUNTER_DURATION_KEY = "cache.rwc.window";
+  
   
   /* Defaults section */
   
@@ -328,7 +334,7 @@ public class CacheConfig {
   public static final double DEFAULT_THROUGHPUT_CONTROLLER_TOLERANCE_LIMIT = 0.05;
   
   /* Cache write rejection threshold */
-  public static final double DEFAULT_CACHE_WRITE_REJECTION_THRESHOLD = 0.99;
+  public static final double DEFAULT_CACHE_WRITES_SUSPENDED_THRESHOLD = 0.98;
   
   /* Default cache write rate limit */
   public static final long DEFAULT_CACHE_WRITE_RATE_LIMIT = 50 * 1024 * 1024;
@@ -383,6 +389,13 @@ public class CacheConfig {
   
   /* Default cache disabled mode */
   public final static boolean DEFAULT_CACHE_EVICTION_DISABLED_MODE = false;
+  
+  /* Rolling window counter bins default */
+  public final static int DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_BINS = 60;
+  
+  /* Rolling window counter window size in seconds default */
+  public final static int DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_DURATION = 3600;
+  
   // Statics
   static CacheConfig instance;
 
@@ -1010,12 +1023,12 @@ public class CacheConfig {
    * @param cacheName cache name
    * @return threshold for a given cache name
    */
-  public double getCacheWriteRejectionThreshold(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ CACHE_WRITE_REJECTION_THRESHOLD_KEY);
+  public double getCacheWritesSuspendedThreshold(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ CACHE_WRITES_SUSPENDED_THRESHOLD_KEY);
     if (value != null) {
       return Double.parseDouble(value);
     }
-    return getDoubleProperty(CACHE_WRITE_REJECTION_THRESHOLD_KEY, DEFAULT_CACHE_WRITE_REJECTION_THRESHOLD);
+    return getDoubleProperty(CACHE_WRITES_SUSPENDED_THRESHOLD_KEY, DEFAULT_CACHE_WRITES_SUSPENDED_THRESHOLD);
   }
   
   /**
@@ -1023,8 +1036,8 @@ public class CacheConfig {
    * @param cacheName cache name
    * @param threshold for a given cache name
    */
-  public void setCacheWriteRejectionThreshold(String cacheName, double threshold) {
-    props.setProperty(cacheName + "."+ CACHE_WRITE_REJECTION_THRESHOLD_KEY, Double.toString(threshold));
+  public void setCacheWritesSuspendedThreshold(String cacheName, double threshold) {
+    props.setProperty(cacheName + "."+ CACHE_WRITES_SUSPENDED_THRESHOLD_KEY, Double.toString(threshold));
   }
   
   /**
@@ -1599,6 +1612,54 @@ public class CacheConfig {
    */
   public void setEvictionDisabledMode (String cacheName, boolean mode) {
     props.setProperty(cacheName + "." + CACHE_EVICTION_DISABLED_MODE_KEY, Boolean.toString(mode));
+  }
+  
+  /**
+   * Get rolling window number of bins
+   * @param cacheName cache name
+   * @return true or false
+   */
+  public int getRollingWindowNumberBins (String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY);
+    if (value == null) {
+      return (int) getLongProperty(CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY, 
+        DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_BINS);
+    } else {
+      return Integer.parseInt(value);
+    }
+  }
+  
+  /**
+   * Set rolling window number of bins
+   * @param cacheName cache name
+   * @param number of bins
+   */
+  public void setRollingWindowNumberBins (String cacheName, int n) {
+    props.setProperty(cacheName + "." + CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY, Integer.toString(n));
+  }
+  
+  /**
+   * Get rolling window duration in seconds
+   * @param cacheName cache name
+   * @return window duration in seconds
+   */
+  public int getRollingWindowDuration (String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_ROLLING_WINDOW_COUNTER_DURATION_KEY);
+    if (value == null) {
+      return (int) getLongProperty(CACHE_ROLLING_WINDOW_COUNTER_DURATION_KEY, 
+        DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_DURATION);
+    } else {
+      return Integer.parseInt(value);
+    }
+  }
+  
+  /**
+   * Set rolling window duration in seconds
+   * @param cacheName cache name
+   * @param n seconds
+   */
+  public void setRollingWindowDuration (String cacheName, int n) {
+    props.setProperty(cacheName + "." + DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_DURATION, Integer.toString(n));
   }
   
 }

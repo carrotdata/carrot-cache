@@ -62,11 +62,11 @@ public abstract class TestIOEngineMultithreadedBase extends TestIOMultithreadedB
 
   @Override
   protected long get(byte[] key, int off, int len, byte[] buffer, int bufferOffset) throws IOException {
-    return engine.get(key, off, len, false, buffer, bufferOffset);
+    return engine.get(key, off, len, true, buffer, bufferOffset);
   }
 
   @Override
   protected long get(long keyPtr, int keySize, ByteBuffer buffer) throws IOException {
-    return engine.get(keyPtr, keySize, buffer);
+    return engine.get(keyPtr, keySize, true, buffer);
   }
 }
