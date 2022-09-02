@@ -27,6 +27,7 @@ public class TestOffheapCacheMultithreadedStress extends TestCacheMultithreadedS
     this.numThreads = 4;
     this.scavDumpBelowRatio = 0.1;
     this.segmentSize = 64 * 1024 * 1024;
+    // 32 GB
     this.maxCacheSize = 500L * this.segmentSize;
     this.offheap = true;
   }

@@ -400,7 +400,6 @@ public abstract class TestCacheMultithreadedStreamBase {
     return true;
   }
   
-  @Ignore
   @Test
   public void testContinuosLoadBytesRun() throws IOException {
     long start = System.currentTimeMillis();
