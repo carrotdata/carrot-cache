@@ -76,7 +76,7 @@ public class SLRUEvictionPolicy implements EvictionPolicy {
   @Override
   public int getInsertIndex(long idbPtr, int totalItems) {
     // insert point is 0- based, 
-    return getStartIndexForRank(numSegments, insertPoint - 1, totalItems);
+    return getStartIndexForRank(numSegments, insertPoint, totalItems);
   }
   
   @Override
