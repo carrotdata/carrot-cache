@@ -26,6 +26,7 @@ public class TestFileCacheMultithreaded extends TestCacheMultithreadedBase {
     this.numRecords = 420000;
     this.numThreads = 4;
     this.offheap = false;
+    this.evictionDisabled = true;
     this.cache = createCache();
   }
   
