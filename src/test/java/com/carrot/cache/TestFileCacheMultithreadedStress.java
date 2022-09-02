@@ -19,16 +19,16 @@ import java.io.IOException;
 
 import org.junit.Before;
 
-public class TestOffheapCacheMultithreadedStream extends TestCacheMultithreadedStreamBase {
+public class TestFileCacheMultithreadedStress extends TestCacheMultithreadedStreamBase {
 
   @Before
   public void setUp() throws IOException{
-    this.numRecords = 10000000;
+    this.numRecords = 20000000;
     this.numThreads = 4;
     this.scavDumpBelowRatio = 0.1;
     this.segmentSize = 64 * 1024 * 1024;
     this.maxCacheSize = 500L * this.segmentSize;
-    this.offheap = true;
+    this.offheap = false;
   }
   
 }

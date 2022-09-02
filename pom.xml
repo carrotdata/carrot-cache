@@ -50,7 +50,35 @@
          </execution>
        </executions>
      </plugin>
-        </plugins>
+     <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.0.0-M5</version>
+                <configuration>
+                    <argLine>-Xmx4g --add-opens java.base/java.nio=ALL-UNNAMED</argLine>
+                    <redirectTestOutputToFile>true</redirectTestOutputToFile>
+                    <forkCount>1</forkCount>
+                    <reuseForks>false</reuseForks>
+                    <excludes>
+                        <exclude>**/TestFileCacheMultithreadedStress.java</exclude>
+                        <exclude>**/TestOffheapCacheMultithreadedStress.java</exclude>
+                        <exclude>**/TestMemoryIndexMQMultithreadedStress.java</exclude> 
+                    </excludes>
+                    <systemProperties>
+                        <property>
+                            <name>surefire</name>
+                            <value>true</value>
+                        </property>
+                    </systemProperties>
+                    <systemPropertyVariables>
+                        <property>
+                            <name>configurationFile</name>
+                            <value>${project.build.directory}/conf/log4j2-console.xml</value>
+                        </property>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+    </plugins>
     </build>
     <!--dependencyManagement-->
         <dependencies>
