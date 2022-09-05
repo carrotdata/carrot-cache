@@ -20,7 +20,6 @@ import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
-import org.junit.After;
 import org.junit.BeforeClass;
 
 import com.carrot.cache.index.MemoryIndex.MutationResult;
@@ -47,15 +46,12 @@ public class TestMemoryIndexMultithreadedBase {
   static int keySize = 16;
   static int valueSize = 16;
   
-  
-  
   @BeforeClass
   public static void enableMallocDebug() {
-    UnsafeAccess.setMallocDebugEnabled(true);
+    //UnsafeAccess.setMallocDebugEnabled(true);
   }
   
-  @After
-  public void tearDown() {
+  protected void tearDown() {
     memoryIndex.dispose();
     UnsafeAccess.mallocStats.printStats(false);
   }
@@ -121,16 +117,20 @@ public class TestMemoryIndexMultithreadedBase {
     byte[][] keys = keysTL.get();
     long start = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
-      boolean result = forceDelete(keys[i], 0, keySize);
+      boolean result = memoryIndex.delete(keys[i], 0, keySize);
       if (result != true) {
         failed++;
       }
     }
-    assertEquals(0, failed);
 
     long end = System.currentTimeMillis();
-    System.out.println(Thread.currentThread().getName() + " deleted "+ numRecords + 
-      " RPS=" + ((long) numRecords) * 1000 / (end - start));
+    if (failed == 0) {
+      System.out.println(Thread.currentThread().getName() + " deleted "+ numRecords + 
+        " RPS=" + ((long) numRecords) * 1000 / (end - start));
+    } else {
+      System.err.println(Thread.currentThread().getName() + " deleted "+ numRecords + 
+        " RPS=" + ((long) numRecords) * 1000 / (end - start) + " failed="+ failed);
+    }
     return failed;
   }
   
@@ -144,11 +144,15 @@ public class TestMemoryIndexMultithreadedBase {
         failed++;
       }
     }
-    assertEquals(0, failed);
 
     long end = System.currentTimeMillis();
-    System.out.println(Thread.currentThread().getName() + " deleted "+ numRecords + 
-      " RPS=" + ((long) numRecords) * 1000 / (end - start));
+    if (failed == 0) {
+      System.out.println(Thread.currentThread().getName() + " deleted "+ numRecords + 
+        " RPS=" + ((long) numRecords) * 1000 / (end - start));
+    } else {
+      System.err.println(Thread.currentThread().getName() + " deleted "+ numRecords + 
+        " RPS=" + ((long) numRecords) * 1000 / (end - start) +" failed="+ failed);
+    }
     return failed;
   }
   

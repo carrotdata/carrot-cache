@@ -23,25 +23,11 @@ import com.carrot.cache.util.Utils;
 
 /**
  * 
- * Compact index format takes only 8 bytes per cached entry:
- * 
- * First 4 bytes:
- * Bit 31th is used to keep "hit count" (only 1 hit can be recorded)
- * Bits 30 - 0 keep 31 bits of a hashed key 8 byte value starting with a bit L
- * L is defined in configuration file as 'index.slots.power', default value is 10
- * 
- * Memory index hash table size = 2**L
- * 
- * 2 bytes - segment id
- * 2 - bytes data block number which "potentially" stores this key-value
- * 
- * real offset is data block * block size. With 64K blocks addressed (2 bytes) and 4K block size 
- * We can address maximum 64K * 4K = 256MB size segments. 
+ * Index format for main queue (cache)
+ * It does not support expiration
  * 
  */
-public class CompactIndexFormat implements IndexFormat {
-  
-  int blockSize;
+public class SubCompactBaseIndexFormat implements IndexFormat {
   int  L; // index.slots.power from configuration
   
   /**
@@ -50,45 +36,44 @@ public class CompactIndexFormat implements IndexFormat {
    */
   public void setCacheName(String cacheName) {
     CacheConfig config = CacheConfig.getInstance();
-    this.blockSize = config.getBlockWriterBlockSize(cacheName);
     this.L = config.getStartIndexNumberOfSlotsPower(cacheName);
+  }
+  /*
+   * MQ Index item is 16 bytes:
+   * 4 bytes - hashed key value (high 6 bytes of an 8 byte hash)
+   * 4 bytes - total item size (key + value) - first bit is hit count
+   * 6 bytes - location in the storage - ( 2 - segment id, 4 offset in the segment) 
+   */
+  public SubCompactBaseIndexFormat() {
   }
   
   @Override
   public boolean equals(long ptr, long hash) {
     int off = hashOffset();
     int v = UnsafeAccess.toInt(ptr + off);
-    v &= 0x7fffffff;
-    hash = hash >>> (32 - L + 1);
-    hash &= 0x7fffffff;
+    hash = (int) (hash >>> (32 - L));
     return v == hash;
   }
 
   @Override
   public int indexEntrySize() {
-    return Utils.SIZEOF_INT + 2 * Utils.SIZEOF_SHORT;
+    return 14;
   }
 
   @Override
   public int fullEntrySize(long ptr) {
     return indexEntrySize();
   }
-
-  @Override
-  public int fullEntrySize(int keySize, int valueSize) {
-    return indexEntrySize();
-  }
-
+  
   @Override
   public long advance(long current) {
-    return current + indexEntrySize();
+    return current + fullEntrySize(current);
   }
-
 
   @Override
   public int getKeyValueSize(long buffer) {
-    // this index format does not store k-v size
-    return -1;
+    int off = sizeOffset();
+    return UnsafeAccess.toInt(buffer + off) & 0x7fffffff;
   }
 
   @Override
@@ -100,8 +85,19 @@ public class CompactIndexFormat implements IndexFormat {
   @Override
   public long getOffset(long buffer) {
     int off = dataOffsetOffset();
-    int blockNumber = UnsafeAccess.toShort(buffer + off) & 0xffff;
-    return blockNumber * this.blockSize;
+    return UnsafeAccess.toInt(buffer + off) & 0xffffffff;
+  }
+
+  @Override
+  public int getEmbeddedOffset() {
+    //TODO
+    return 0; 
+  }
+  
+  @Override
+  public long getExpire(long ibPtr, long buffer) {
+    // Does not support expiration
+    return -1;
   }
 
   @Override
@@ -109,32 +105,33 @@ public class CompactIndexFormat implements IndexFormat {
     return 3 * Utils.SIZEOF_SHORT;
   }
 
-  public int getHitCount(long ptr) {
-    int off = hashOffset();
-    int ref = UnsafeAccess.toInt(ptr + off);
+  @Override
+  public int getHitCount(long buffer) {
+    int off = sizeOffset();
+    int ref = UnsafeAccess.toInt(buffer + off);
     return  ref >>> 31;   
   }
 
   @Override
   public void hit(long ptr) {
-    int off = hashOffset();    
-    int v = UnsafeAccess.toInt(ptr + off);
+    ptr += sizeOffset();
+    int v = UnsafeAccess.toInt(ptr);
     v |= 0x80000000;
-    UnsafeAccess.putInt(ptr + off, v);
+    UnsafeAccess.putInt(ptr, v);
   }
 
   @Override
-  public int getEmbeddedOffset() {
-    return Utils.SIZEOF_INT;
+  public int fullEntrySize(int keySize, int valueSize) {
+    return indexEntrySize();
   }
 
   @Override
   public int getHashBit(long ptr, int n) {
     int off = hashOffset();
     // TODO:test
-    return (UnsafeAccess.toInt(ptr + off) >>> 32 - n + L - 1) & 1;
+    return (UnsafeAccess.toInt(ptr + off) >>> 32 - n + L) & 1;
   }
-
+  
   @Override
   public void writeIndex(
       long ibPtr,
@@ -148,12 +145,19 @@ public class CompactIndexFormat implements IndexFormat {
       int sid,
       int dataOffset,
       int dataSize,
-      long expire) {
+      long expire /* not supported here*/) 
+  {
     long hash = Utils.hash64(key, keyOffset, keySize);
-    int $hash = (int)(hash >>> 32 - L + 1) & 0x7fffffff;
-    UnsafeAccess.putInt(ptr + hashOffset(), $hash);
-    UnsafeAccess.putShort(ptr + sidOffset(), (short) (sid & 0xffff));
-    UnsafeAccess.putShort(ptr + dataOffsetOffset(),(short) ((dataOffset / this.blockSize) & 0xffff));    
+    int $hash = (int)(hash >>> 32 - L);
+
+    ptr += hashOffset();
+    UnsafeAccess.putInt(ptr, $hash);
+    ptr += Utils.SIZEOF_INT; 
+    UnsafeAccess.putInt(ptr, dataSize);
+    ptr += Utils.SIZEOF_INT;
+    UnsafeAccess.putShort(ptr, (short)sid);
+    ptr += Utils.SIZEOF_SHORT; 
+    UnsafeAccess.putInt(ptr, dataOffset);
   }
 
   @Override
@@ -167,12 +171,19 @@ public class CompactIndexFormat implements IndexFormat {
       int sid,
       int dataOffset,
       int dataSize,
-      long expire) {
+      long expire) 
+  {
     long hash = Utils.hash64(keyPtr, keySize);
-    int $hash = (int)(hash >>> 32 - L + 1) & 0x7fffffff;
-    UnsafeAccess.putInt(ptr + hashOffset(), $hash);
-    UnsafeAccess.putShort(ptr + sidOffset(), (short) (sid & 0xffff));
-    UnsafeAccess.putShort(ptr + dataOffsetOffset(), (short) ((dataOffset / this.blockSize) & 0xffff));        
+    int $hash = (int)(hash >>> 32 - L);
+
+    ptr += hashOffset();
+    UnsafeAccess.putInt(ptr, $hash);
+    ptr += Utils.SIZEOF_INT; 
+    UnsafeAccess.putInt(ptr, dataSize);
+    ptr += Utils.SIZEOF_INT;
+    UnsafeAccess.putShort(ptr, (short)sid);
+    ptr += Utils.SIZEOF_SHORT; 
+    UnsafeAccess.putInt(ptr, dataOffset);
   }
   
   /**
@@ -187,15 +198,24 @@ public class CompactIndexFormat implements IndexFormat {
    * @return offset
    */
   int sidOffset() {
-    return Utils.SIZEOF_INT;
+    return 8;
   }
   /**
    * Offsets in index field sections
    * @return offset
    */
   int dataOffsetOffset() {
-    return Utils.SIZEOF_INT + Utils.SIZEOF_SHORT;
+    return 10;
   }
+  
+  /**
+   * Size offset
+   * @return offset
+   */
+  int sizeOffset() {
+    return 4;
+  }
+  
   /**
    * Offsets in index field sections
    * @return offset
@@ -204,10 +224,4 @@ public class CompactIndexFormat implements IndexFormat {
     // Not supported
     return -1;
   }
-
-  @Override
-  public boolean isSizeSupported() {
-    return false;
-  }
-  
 }

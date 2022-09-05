@@ -28,7 +28,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.carrot.cache.controllers.MinAliveRecyclingSelector;
-import com.carrot.cache.index.CompactWithExpireIndexFormat;
+import com.carrot.cache.index.CompactBlockWithExpireIndexFormat;
 import com.carrot.cache.io.BlockDataWriter;
 import com.carrot.cache.io.BlockFileDataReader;
 import com.carrot.cache.io.BlockMemoryDataReader;
@@ -86,7 +86,7 @@ public abstract class TestScavengerBase extends IOTestBase {
       .withDataWriter(BlockDataWriter.class.getName())
       .withMemoryDataReader(BlockMemoryDataReader.class.getName())
       .withFileDataReader(BlockFileDataReader.class.getName())
-      .withMainQueueIndexFormat(CompactWithExpireIndexFormat.class.getName())
+      .withMainQueueIndexFormat(CompactBlockWithExpireIndexFormat.class.getName())
       .withSnapshotDir(snapshotDir)
       .withDataDir(dataDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)

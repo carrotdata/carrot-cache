@@ -30,7 +30,7 @@ public class TestMemoryIndexSubCompactFormatWithExpireSM extends TestMemoryIndex
     MemoryIndex index = new MemoryIndex("default");
     EvictionPolicy policy = new SLRUEvictionPolicy();
     index.setEvictionPolicy(policy);
-    SubCompactWithExpireIndexFormat format = new SubCompactWithExpireIndexFormat();
+    SubCompactBlockWithExpireIndexFormat format = new SubCompactBlockWithExpireIndexFormat();
     format.setCacheName("default");
     format.setExpireSupport(new ExpireSupportSecondsMinutes());
     index.setIndexFormat(format);

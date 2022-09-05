@@ -62,7 +62,8 @@
                     <excludes>
                         <exclude>**/TestFileCacheMultithreadedStress.java</exclude>
                         <exclude>**/TestOffheapCacheMultithreadedStress.java</exclude>
-                        <exclude>**/TestMemoryIndexMQMultithreadedStress.java</exclude> 
+                        <exclude>**/TestMemoryIndexMQMultithreadedStress.java</exclude>
+			<exclude>**/TestMemoryIndexAQMultithreadedStress.java</exclude> 
                     </excludes>
                     <systemProperties>
                         <property>

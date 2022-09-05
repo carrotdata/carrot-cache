@@ -26,7 +26,6 @@ import java.nio.file.Path;
 import java.util.Random;
 
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.carrot.cache.controllers.LRCRecyclingSelector;

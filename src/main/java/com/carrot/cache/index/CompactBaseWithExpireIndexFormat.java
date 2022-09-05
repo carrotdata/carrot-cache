@@ -21,19 +21,21 @@ import com.carrot.cache.expire.ExpireSupport;
 import com.carrot.cache.util.CacheConfig;
 
 /**
- * Format of an index entry (10 bytes):
+ * Format of an index entry (18 bytes):
  * expire - 2 bytes
- * hash -   4 bytes
+ * hash -   6 bytes
+ * size - 4 bytes
  * sid  -   2 bytes
- * offset - 2 bytes 
+ * offset - 4 bytes 
  * 
  *
  */
-public class CompactWithExpireIndexFormat extends CompactIndexFormat {
+public class CompactBaseWithExpireIndexFormat extends CompactBaseIndexFormat {
   
   ExpireSupport expireSupport;
   
-  public CompactWithExpireIndexFormat() {
+  public CompactBaseWithExpireIndexFormat() {
+    
   }
 
   @Override
@@ -52,7 +54,7 @@ public class CompactWithExpireIndexFormat extends CompactIndexFormat {
   public long getExpire(long ibPtr, long ptr) {
     ibPtr += super.getIndexBlockHeaderSize();
     ptr += expireOffset();
-    return this.expireSupport.getExpire(ibPtr , ptr);
+    return this.expireSupport.getExpire(ibPtr, ptr);
   }
 
   @Override
@@ -110,8 +112,8 @@ public class CompactWithExpireIndexFormat extends CompactIndexFormat {
     super.writeIndex(ibPtr, ptr, key, keyOffset, keySize, value, valueOffset,
       valueSize,sid,dataOffset,dataSize,expire);
     ibPtr += super.getIndexBlockHeaderSize();
-    ptr += expireOffset();
-    this.expireSupport.setExpire(ibPtr, ptr, expire);  
+    this.expireSupport.setExpire(ibPtr, ptr + expireOffset(), expire);
+    
   }
 
   @Override
@@ -129,8 +131,8 @@ public class CompactWithExpireIndexFormat extends CompactIndexFormat {
     super.writeIndex(ibPtr, ptr, keyPtr, keySize, valuePtr, 
       valueSize, sid, dataOffset, dataSize, expire);
     ibPtr += super.getIndexBlockHeaderSize();
-    ptr += expireOffset();
-    this.expireSupport.setExpire(ibPtr, ptr, expire);
+    this.expireSupport.setExpire(ibPtr, ptr + expireOffset(), expire);
+
   }
 
   @Override
@@ -154,7 +156,8 @@ public class CompactWithExpireIndexFormat extends CompactIndexFormat {
   }
   
   @Override
-  public boolean isSizeSupported() {
-    return false;
+  int sizeOffset() {
+    return super.sizeOffset() + ExpireSupport.FIELD_SIZE;
   }
+  
 }

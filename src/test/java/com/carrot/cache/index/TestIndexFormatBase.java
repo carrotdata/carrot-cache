@@ -34,7 +34,7 @@ import com.carrot.cache.util.Utils;
  */
 public abstract class TestIndexFormatBase {
   
- int numRecords = 10;
+ int numRecords = 1;
  byte[][] keys;
  byte[][] values;
  long[] mKeys;
@@ -176,7 +176,7 @@ public abstract class TestIndexFormatBase {
   protected abstract IndexFormat getIndexFormat();
   
   protected int getNumberOfRecords() {
-    return 10;
+    return 100;
   }
   
   protected int getDataOffset(Random r, int max) {

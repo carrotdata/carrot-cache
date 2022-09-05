@@ -21,20 +21,19 @@ import com.carrot.cache.expire.ExpireSupport;
 import com.carrot.cache.util.CacheConfig;
 
 /**
- * Format of an index entry (8 bytes):
+ * Format of an index entry (10 bytes):
  * expire - 2 bytes
- * hash -   2 bytes
+ * hash -   4 bytes
  * sid  -   2 bytes
  * offset - 2 bytes 
  * 
  *
  */
-public class SubCompactWithExpireIndexFormat extends CompactIndexFormat {
+public class CompactBlockWithExpireIndexFormat extends CompactBlockIndexFormat {
   
   ExpireSupport expireSupport;
   
-  public SubCompactWithExpireIndexFormat() {
-    
+  public CompactBlockWithExpireIndexFormat() {
   }
 
   @Override
@@ -53,7 +52,7 @@ public class SubCompactWithExpireIndexFormat extends CompactIndexFormat {
   public long getExpire(long ibPtr, long ptr) {
     ibPtr += super.getIndexBlockHeaderSize();
     ptr += expireOffset();
-    return this.expireSupport.getExpire(ibPtr, ptr);
+    return this.expireSupport.getExpire(ibPtr , ptr);
   }
 
   @Override
@@ -111,8 +110,8 @@ public class SubCompactWithExpireIndexFormat extends CompactIndexFormat {
     super.writeIndex(ibPtr, ptr, key, keyOffset, keySize, value, valueOffset,
       valueSize,sid,dataOffset,dataSize,expire);
     ibPtr += super.getIndexBlockHeaderSize();
-    this.expireSupport.setExpire(ibPtr, ptr + expireOffset(), expire);
-    
+    ptr += expireOffset();
+    this.expireSupport.setExpire(ibPtr, ptr, expire);  
   }
 
   @Override
@@ -130,8 +129,8 @@ public class SubCompactWithExpireIndexFormat extends CompactIndexFormat {
     super.writeIndex(ibPtr, ptr, keyPtr, keySize, valuePtr, 
       valueSize, sid, dataOffset, dataSize, expire);
     ibPtr += super.getIndexBlockHeaderSize();
-    this.expireSupport.setExpire(ibPtr, ptr + expireOffset(), expire);
-
+    ptr += expireOffset();
+    this.expireSupport.setExpire(ibPtr, ptr, expire);
   }
 
   @Override

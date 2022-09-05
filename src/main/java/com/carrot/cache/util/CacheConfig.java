@@ -28,7 +28,7 @@ import com.carrot.cache.eviction.SLRUEvictionPolicy;
 import com.carrot.cache.expire.ExpireSupport;
 import com.carrot.cache.index.AQIndexFormat;
 import com.carrot.cache.index.IndexFormat;
-import com.carrot.cache.index.MQIndexFormat;
+import com.carrot.cache.index.BaseIndexFormat;
 import com.carrot.cache.io.DataReader;
 import com.carrot.cache.io.DataWriter;
 
@@ -1200,7 +1200,7 @@ public class CacheConfig {
     }
     if (value == null) {
       // default implementation;
-      return new MQIndexFormat();
+      return new BaseIndexFormat();
     }
     @SuppressWarnings("unchecked")
     Class<IndexFormat> clz = (Class<IndexFormat>) Class.forName(value);

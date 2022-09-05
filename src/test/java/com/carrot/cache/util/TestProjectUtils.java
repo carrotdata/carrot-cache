@@ -28,7 +28,6 @@ public class TestProjectUtils {
   /**
    * Compare hash64 for byte arrays and direct memory version
    */
-  @Ignore
   @Test
   public void testHash64() {
     int keySize = 33;

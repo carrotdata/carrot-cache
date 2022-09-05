@@ -14,26 +14,14 @@
  */
 package com.carrot.cache.index;
 
-import java.util.Random;
+/**
+ * Main Queue index format tests
+ *
+ */
+public class TestBaseIndexFormat extends TestIndexFormatBase{
 
-import com.carrot.cache.util.CacheConfig;
-
-public class TestSubCompactIndexFormat extends TestIndexFormatBase {
-  int blockSize;
-  
   @Override
   protected IndexFormat getIndexFormat() {
-    SubCompactIndexFormat format = new SubCompactIndexFormat();
-    format.setCacheName("default");
-    return format;
-  }
-  
-  protected int getDataOffset(Random r, int max) {
-    if (this.blockSize == 0) {
-      CacheConfig config = CacheConfig.getInstance();
-      this.blockSize = config.getBlockWriterBlockSize("default");
-    }
-    int n = max / this.blockSize;
-    return r.nextInt(n) * this.blockSize;
+    return new BaseIndexFormat();
   }
 }

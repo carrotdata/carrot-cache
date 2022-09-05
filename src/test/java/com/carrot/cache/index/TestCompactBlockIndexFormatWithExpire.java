@@ -18,12 +18,12 @@ import java.util.Random;
 
 import com.carrot.cache.util.CacheConfig;
 
-public class TestSubCompactIndexFormatWithExpire extends TestIndexFormatBase {
+public class TestCompactBlockIndexFormatWithExpire extends TestIndexFormatBase {
   int blockSize;
   
   @Override
   protected IndexFormat getIndexFormat() {
-    SubCompactWithExpireIndexFormat format = new SubCompactWithExpireIndexFormat();
+    CompactBlockWithExpireIndexFormat format = new CompactBlockWithExpireIndexFormat();
     format.setCacheName("default");
     return format;
   }
@@ -36,5 +36,4 @@ public class TestSubCompactIndexFormatWithExpire extends TestIndexFormatBase {
     int n = max / this.blockSize;
     return r.nextInt(n) * this.blockSize;
   }
-  
 }

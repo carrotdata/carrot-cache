@@ -29,7 +29,7 @@ public class TestMemoryIndexSubCompactFormat extends TestMemoryIndexFormatBase {
     MemoryIndex index = new MemoryIndex("default");
     EvictionPolicy policy = new SLRUEvictionPolicy();
     index.setEvictionPolicy(policy);
-    IndexFormat format = new SubCompactIndexFormat();
+    IndexFormat format = new SubCompactBlockIndexFormat();
     format.setCacheName("default");
     index.setIndexFormat(format);
     return index;

@@ -14,36 +14,14 @@
  */
 package com.carrot.cache.index;
 
-import java.util.Random;
-
-import com.carrot.cache.eviction.EvictionPolicy;
-import com.carrot.cache.eviction.SLRUEvictionPolicy;
-import com.carrot.cache.util.CacheConfig;
-
-public class TestMemoryIndexCompactFormat extends TestMemoryIndexFormatBase {
-
+public class TestSubCompactBaseIndexFormatWithExpire extends TestIndexFormatBase {
   int blockSize;
   
   @Override
-  protected MemoryIndex getMemoryIndex() {
-    MemoryIndex index = new MemoryIndex("default");
-    EvictionPolicy policy = new SLRUEvictionPolicy();
-    index.setEvictionPolicy(policy);
-    IndexFormat format = new CompactBlockIndexFormat();
+  protected IndexFormat getIndexFormat() {
+    SubCompactBaseWithExpireIndexFormat format = new SubCompactBaseWithExpireIndexFormat();
     format.setCacheName("default");
-    index.setIndexFormat(format);
-    return index;
+    return format;
   }
-  
-  @Override
-  int nextOffset(Random r, int max) {
-    if (this.blockSize == 0) {
-      CacheConfig config = CacheConfig.getInstance();
-      this.blockSize = config.getBlockWriterBlockSize("default");
-    }
-    int n = max / this.blockSize;
-    return r.nextInt(n) * this.blockSize;
-  }
-  
   
 }

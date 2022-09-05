@@ -18,10 +18,12 @@ package com.carrot.cache.index;
  * Main Queue index format tests
  *
  */
-public class TestMQIndexFormat extends TestIndexFormatBase{
+public class TestSubCompactBasendexFormat extends TestIndexFormatBase{
 
   @Override
   protected IndexFormat getIndexFormat() {
-    return new MQIndexFormat();
+    IndexFormat format =  new SubCompactBaseIndexFormat();
+    format.setCacheName("default");
+    return format;
   }
 }

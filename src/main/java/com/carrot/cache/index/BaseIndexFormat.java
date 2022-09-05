@@ -26,14 +26,14 @@ import com.carrot.cache.util.Utils;
  * It does not support expiration
  * 
  */
-public class MQIndexFormat implements IndexFormat {
+public class BaseIndexFormat implements IndexFormat {
   /*
    * MQ Index item is 20 bytes:
    * 8 bytes - hashed key value
    * 4 bytes - total item size (key + value)
    * 8 bytes - location in the storage - information 
    */
-  public MQIndexFormat() {
+  public BaseIndexFormat() {
   }
   
   @Override

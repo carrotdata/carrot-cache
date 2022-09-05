@@ -50,13 +50,13 @@ public final class MemoryIndex implements Persistent {
   private static final Logger LOG = LogManager.getLogger(MemoryIndex.class);
   
   /** This is value which guarantees that rehashing won't break*/
-  private static final int MAX_INDEX_ENTRIES_PER_BLOCK = 200;
+  private static final int MAX_INDEX_ENTRIES_PER_BLOCK = 250;
   
   public static enum MutationResult{
     INSERTED, /* Operation succeeded */ 
     DELETED,  /* Operation succeeded (for AQ and MQ), but existing one was deleted in case of AQ*/
     UPDATED,  /* Insert was update, probably due to hash collision */
-    FAILED    /* Failed due to memory index full rehashing  */
+    FAILED    /* Failed - blocked rehashing is required  */
   }
   
   /**
@@ -676,6 +676,7 @@ public final class MemoryIndex implements Persistent {
    * @return slot number
    */
   public int lock(long keyPtr, int keySize) {
+    
     long hash = Utils.hash64(keyPtr, keySize);
     long[] index = ref_index_base.get();
     // Always != null - safe
@@ -691,6 +692,9 @@ public final class MemoryIndex implements Persistent {
         // when rehashing was completed during this method invocation
         index = ref_index_base.get();
       }
+      // index was not NULL ref_index_base_rehash.get();
+      // but now it can be?
+      // we will lock
       slot = getSlotNumber(hash, index.length);
       lock = locks[slot % locks.length];
       lock.lock();
@@ -1657,7 +1661,8 @@ public final class MemoryIndex implements Persistent {
       format.writeIndex(ibPtr, indexPtr, key, keyOffset, keyLength, value,  
         valueLength, valueOffset, sid, offset, dataSize, expire); 
       long hash = Utils.hash64(key, keyOffset, keyLength);
-      return insertInternal(hash, indexPtr, indexSize, rank);
+      MutationResult result = insertInternal(hash, indexPtr, indexSize, rank);
+      return result;
     } finally {
       unlock(slot);
       UnsafeAccess.free(indexPtr);
@@ -1742,7 +1747,8 @@ public final class MemoryIndex implements Persistent {
       format.writeIndex(ibPtr, indexPtr, keyPtr, keyLength, valuePtr,  valueLength, 
         sid, offset, dataSize, expire); 
       long hash = Utils.hash64(keyPtr, keyLength);
-      return insertInternal(hash, indexPtr, indexSize, rank);
+      MutationResult result = insertInternal(hash, indexPtr, indexSize, rank);
+      return result;
     } finally {
       unlock(slot);
       UnsafeAccess.free(indexPtr);
@@ -1827,6 +1833,10 @@ public final class MemoryIndex implements Persistent {
     int $slot = getSlotNumber(hash, index.length);
     long ptr = index[$slot];
     long $ptr = insert0(ptr, hash, indexPtr, indexSize, rank);
+    if ($ptr == FAILED) {
+      /*DEBUG*/ System.err.printf("Insert failed due to race condition during the index rehashing\n");
+      return MutationResult.FAILED;
+    }
     if (isUpdateOp($ptr)) {
       $ptr = clearUpdateFlag($ptr);
       result = MutationResult.UPDATED;
@@ -1889,11 +1899,13 @@ public final class MemoryIndex implements Persistent {
         retPtr = ptr;
       } else {
         // rehash slot
-        int $slot = getSlotNumber(hash, ref_index_base.get().length);
-
+        long[] index = ref_index_base.get();
+        int $slot = getSlotNumber(hash, index.length);
+        if (index[$slot] == 0) {
+          return FAILED;
+        }
         // This is done under write lock for the slot
         rehashSlot($slot);
-        long rehashed = rehashedSlots.incrementAndGet();
 
         $slot = getSlotNumber(hash, ref_index_base_rehash.get().length);
         retPtr = 0; // for rehash we return 0;
@@ -1909,6 +1921,8 @@ public final class MemoryIndex implements Persistent {
           ptr = $ptr;
           ref_index_base_rehash.get()[$slot] = ptr;
         }
+        
+        long rehashed = rehashedSlots.incrementAndGet();
         if (rehashed == ref_index_base.get().length) {
           // Rehash is complete
           ref_index_base.set(ref_index_base_rehash.get());
@@ -2028,33 +2042,10 @@ public final class MemoryIndex implements Persistent {
     } else {
       UnsafeAccess.copy(indexPtr, ptr + off, indexSize);
     }    
-//    int sid1 = this.indexFormat.getSegmentId(indexPtr);
-//    if (insert) {
-//      updateStats(ptr, sid1, rank, numEntries);
-//    } 
     return insert;
   
   }
 
-//  private void updateStats(long ptr, int sid1, int rank, int numEntries) {
-//    if (this.engine == null) {
-//      return;
-//    }
-//    // Update stats
-//    // we do not increase number of total items - segment does this
-//    this.engine.updateStats(sid1, 0, (numRanks - rank));
-//    if (numEntries >= numRanks) {
-//      int prev = -1;
-//      for (int r = rank + 1; r < numRanks; r++) {
-//        int idx = this.evictionPolicy.getStartIndexForRank(numRanks, r, numEntries);
-//        if (idx == prev) continue;
-//        prev = idx;
-//        int sid = getSegmentIdForEntry(ptr, idx);
-//        // decrement by total data segment rank by 1 
-//        this.engine.updateStats(sid, 0, -1);
-//      }
-//    }
-//  }
 
   private void rehashSlot(int slot) {
     // We keep write lock on parent slot - so we are safe to
@@ -2062,6 +2053,12 @@ public final class MemoryIndex implements Persistent {
     // confirm rehashing
     this.rehashInProgress = true;
     long ptr = ref_index_base.get()[slot];
+    /*DEBUG*/
+    if (ptr == 0) {
+      System.err.printf("FATAL rehashSlot ptr == 0");
+      Thread.dumpStack();
+    }
+    
     int numEntries = numEntries(ptr);
     // TODO: again variable sized indexes
     int blockSize = getMaximumBlockSize();
@@ -2138,26 +2135,40 @@ public final class MemoryIndex implements Persistent {
     this.indexFormat.updateMetaSection(ptr0);
     this.indexFormat.updateMetaSection(ptr1);
   }
-  
+
   /*
-   * This method is not thread safe 
+   * This method is not thread safe
    * TODO : test on save/load when rehasing is in progress
    */
   private void completeRehashing() {
+
     if (isRehashingInProgress() == false) return;
-    long[] index = ref_index_base.get();
-    for (int i = 0; i < index.length; i++) {
-      if (index[i] == 0) continue;
-      rehashSlot(i);
+
+    int currentSlot = 0;
+    try {
+      
+      long start = System.currentTimeMillis();
+      long[] index = ref_index_base.get();
+      for (int i = 0; i < index.length; i++) {
+        if (index[i] == 0) continue;
+        currentSlot = i;
+        lock(i);
+        rehashSlot(i);
+        unlock(i);
+      }
+
+      // Finalize
+      this.ref_index_base.set(this.ref_index_base_rehash.get());
+      this.ref_index_base_rehash.set(null);
+      this.rehashedSlots.set(0);
+      this.rehashInProgress = false;
+      long end = System.currentTimeMillis();
+      /*DEBUG*/ System.err.printf("Completed rehashing in %d ms\n", (end - start));
+    } finally {
+      unlock(currentSlot);
     }
-    
-    // Finalize
-    this.ref_index_base.set(this.ref_index_base_rehash.get());
-    this.ref_index_base_rehash.set(null);
-    this.rehashedSlots.set(0);
-    this.rehashInProgress = false;
   }
-  
+
   /**
    * Add-if Absent-Remove-if Present Atomic operation
    *
