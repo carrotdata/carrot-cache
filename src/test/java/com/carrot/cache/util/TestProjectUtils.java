@@ -18,7 +18,6 @@ package com.carrot.cache.util;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.commons.math3.distribution.ZipfDistribution;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.carrot.cache.expire.ExpireSupport;

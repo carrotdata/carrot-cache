@@ -62,9 +62,7 @@ public abstract class TestCacheMultithreadedStreamBase {
   protected int numThreads = 1;
   
   protected int blockSize = 4096;
-  
-  protected double writeSuspendedThreshold = 0.98;
-  
+    
   private static ThreadLocal<Percentile> perc = new ThreadLocal<Percentile>();
  
   @After  
@@ -102,7 +100,6 @@ public abstract class TestCacheMultithreadedStreamBase {
       .withSnapshotDir(snapshotDir)
       .withDataDir(dataDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
-      .withCacheWritesSuspendedThreshold(writeSuspendedThreshold)
       .withEvictionDisabledMode(evictionDisabled);
     
     if (offheap) {

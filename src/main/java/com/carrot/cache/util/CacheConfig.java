@@ -178,11 +178,10 @@ public class CacheConfig {
   public static final String THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS_KEY = "throughput.adjustment.steps";
   
   /**
-   * Cache write suspended threshold - when cache size exceeds this fraction of a maximum cache size -
-   * all new writes will be suspended until cache usage size decreases below this threshold
+   * Cache write maximum waiting time in milliseconds
    */
   
-  public static final String CACHE_WRITES_SUSPENDED_THRESHOLD_KEY = "cache.writes.suspended.threshold";
+  public static final String CACHE_WRITES_MAX_WAIT_TIME_MS_KEY = "cache.writes.max.wait.time.ms";
   
   /**
    * Does index support memory embedding
@@ -333,8 +332,8 @@ public class CacheConfig {
   /* Default throughput controller tolerance limit*/
   public static final double DEFAULT_THROUGHPUT_CONTROLLER_TOLERANCE_LIMIT = 0.05;
   
-  /* Cache write rejection threshold */
-  public static final double DEFAULT_CACHE_WRITES_SUSPENDED_THRESHOLD = 0.98;
+  /* Cache write maximum wait time in milliseconds */
+  public static final long DEFAULT_CACHE_WRITES_MAX_WAIT_TIME_MS = 10;
   
   /* Default cache write rate limit */
   public static final long DEFAULT_CACHE_WRITE_RATE_LIMIT = 50 * 1024 * 1024;
@@ -1019,25 +1018,25 @@ public class CacheConfig {
   }
   
   /**
-   * Get cache write rejection threshold for a given cache name
+   * Get cache write maximum wait time
    * @param cacheName cache name
-   * @return threshold for a given cache name
+   * @return maximum wait time for writes for a given cache name
    */
-  public double getCacheWritesSuspendedThreshold(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ CACHE_WRITES_SUSPENDED_THRESHOLD_KEY);
+  public long getCacheWritesMaxWaitTime(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ CACHE_WRITES_MAX_WAIT_TIME_MS_KEY);
     if (value != null) {
-      return Double.parseDouble(value);
+      return Long.parseLong(value);
     }
-    return getDoubleProperty(CACHE_WRITES_SUSPENDED_THRESHOLD_KEY, DEFAULT_CACHE_WRITES_SUSPENDED_THRESHOLD);
+    return getLongProperty(CACHE_WRITES_MAX_WAIT_TIME_MS_KEY, DEFAULT_CACHE_WRITES_MAX_WAIT_TIME_MS);
   }
   
   /**
-   * Set cache write rejection threshold for a given cache name
+   * Set cache write maximum wait time
    * @param cacheName cache name
-   * @param threshold for a given cache name
+   * @param max writes wait time for a given cache name
    */
-  public void setCacheWritesSuspendedThreshold(String cacheName, double threshold) {
-    props.setProperty(cacheName + "."+ CACHE_WRITES_SUSPENDED_THRESHOLD_KEY, Double.toString(threshold));
+  public void setCacheWritesMaxWaitTime(String cacheName, long max) {
+    props.setProperty(cacheName + "."+ CACHE_WRITES_MAX_WAIT_TIME_MS_KEY, Long.toString(max));
   }
   
   /**
