@@ -27,51 +27,11 @@ public class BaseAdmissionController implements AdmissionController {
   
   public BaseAdmissionController() {
   }
-    
+  
+  
   @Override
   public void setCache(Cache cache) throws IOException {
     this.cache = cache;
   }
-  
-  /**
-   * New items are always admitted
-   */
-  @Override
-  public boolean admit(long keyPtr, int keySize, int valueSize) {
-    return true;
-  }
-  
-  /**
-   * New items are always admitted
-   */
-  @Override
-  public boolean admit(byte[] key, int off, int size, int valueSize) {
-    return true;
-  }
-
-  @Override
-  public void access(byte[] key, int off, int size) {
-    // nothing yet
-  }
-  
-  @Override
-  public void access(long keyPtr, int keySize) {
-    // nothing yet
-  }
-
-  @Override
-  public int adjustRank(int rank, long expire /* relative - not absolute in ms*/) {
-    return rank;
-  }
-
-  @Override
-  public boolean decreaseThroughput() {
-    return false;
-  }
-
-  @Override
-  public boolean increaseThroughput() {
-    return false;
-  }
-  
+    
 }

@@ -443,12 +443,8 @@ public abstract class IOEngine implements Persistent {
         int sid = (int) format.getSegmentId(buf);
         // Read the data
         int res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer, bufOffset);
-        if (res > 0 && hit) {
-          Segment s = this.dataSegments[sid];
-          if (s != null) {
-            s.access();
-          }
-        }
+        Segment s = this.dataSegments[sid];
+        access(s, res, hit);
         return res;
       }
     } finally {
@@ -527,12 +523,8 @@ public abstract class IOEngine implements Persistent {
         int sid = (int) format.getSegmentId(buf);
         // Read the data
         int res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer, bufOffset);
-        if (res > 0 && hit) {
-          Segment s = this.dataSegments[sid];
-          if (s != null) {
-            s.access();
-          }
-        }
+        Segment s = this.dataSegments[sid];
+        access(s, res, hit);
         return res;
       }
     } finally {
@@ -541,6 +533,14 @@ public abstract class IOEngine implements Persistent {
     }
   }
 
+  private void access(Segment s, int result, boolean hit) {
+    if (result > 0 && hit) {
+      if (s != null) {
+        s.access();
+      }
+    }
+  }
+  
   /**
    * Get item into a given byte buffer
    *
@@ -619,12 +619,8 @@ public abstract class IOEngine implements Persistent {
         int sid = (int) format.getSegmentId(buf);
         // Finally, read the cached item
         int res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer);
-        if (res > 0 && hit) {
-          Segment s = this.dataSegments[sid];
-          if (s != null) {
-            s.access();
-          }
-        }
+        Segment s = this.dataSegments[sid];
+        access(s, res, hit);
         return res;
       }
     } finally {
@@ -697,12 +693,8 @@ public abstract class IOEngine implements Persistent {
         int sid = (int) format.getSegmentId(buf);
         // Read the data
         int res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer);
-        if (res > 0 && hit) {
-          Segment s = this.dataSegments[sid];
-          if (s != null) {
-            s.access();
-          }
-        }
+        Segment s = this.dataSegments[sid];
+        access(s, res, hit);
         return res;
       }
     } finally {
@@ -798,7 +790,7 @@ public abstract class IOEngine implements Persistent {
         }
         // OK it is in memory
         try {
-          return this.memoryDataReader.read(
+           this.memoryDataReader.read(
               this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset);
         } catch (IOException e) {
           // never happens

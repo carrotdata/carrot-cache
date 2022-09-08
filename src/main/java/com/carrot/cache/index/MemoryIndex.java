@@ -1279,7 +1279,7 @@ public final class MemoryIndex implements Persistent {
           } else {
             // Check popularity
             double popularity = ((double) (numEntries - count)) / numEntries;
-            if (popularity < dumpBelowRatio) {
+            if (popularity <= dumpBelowRatio) {
               // Delete item as having low popularity
               result.setResultRankExpire(Result.DELETED, rank, expire);
             } else {

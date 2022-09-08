@@ -77,7 +77,9 @@ public interface AdmissionController extends Persistent, ThroughputControllable 
    * @param expire expiration time in ms
    * @return new rank
    */
-  public int adjustRank(int rank, long expire);
+  public default int adjustRank(int rank, long expire) {
+    return rank;
+  }
   
   /**
    * Some controller can adjust expiration time (decrease)

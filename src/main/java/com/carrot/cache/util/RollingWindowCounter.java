@@ -54,12 +54,25 @@ public class RollingWindowCounter implements Persistent {
     }
   }
   
+  /**
+   * Get count
+   * @return count
+   */
   public long count() {
     long sum = 0;
     for(int i = 0; i < bins.length; i++) {
       sum += bins[i];
     }
     return sum;
+  }
+  
+  /**
+   * Get count for a given bin
+   * @param bin
+   * @return count for a given bin
+   */
+  public int binCount(int bin) {
+    return bins[bin];
   }
   
   @Override

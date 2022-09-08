@@ -25,17 +25,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
 
+import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.junit.After;
-import org.junit.Test;
 
+import com.carrot.cache.controllers.AdmissionController;
+import com.carrot.cache.controllers.BaseAdmissionController;
 import com.carrot.cache.controllers.LRCRecyclingSelector;
+import com.carrot.cache.controllers.RecyclingSelector;
+import com.carrot.cache.eviction.EvictionPolicy;
 import com.carrot.cache.eviction.LRUEvictionPolicy;
 import com.carrot.cache.util.Percentile;
 import com.carrot.cache.util.TestUtils;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 
-public abstract class TestCacheMultithreadedStreamBase {
+public abstract class TestCacheMultithreadedZipfBase {
 
   protected Cache cache;
   
@@ -45,7 +49,7 @@ public abstract class TestCacheMultithreadedStreamBase {
   
   protected long segmentSize = 4 * 1024 * 1024;
   
-  protected long maxCacheSize = 1000L * segmentSize;
+  protected long maxCacheSize = 100L * segmentSize;
   
   int scavengerInterval = 2; // seconds
     
@@ -62,8 +66,14 @@ public abstract class TestCacheMultithreadedStreamBase {
   protected int numThreads = 1;
   
   protected int blockSize = 4096;
+  
+  protected Class<? extends EvictionPolicy> epClz = LRUEvictionPolicy.class;
+  
+  protected Class<? extends RecyclingSelector> rsClz = LRCRecyclingSelector.class;
+  
+  protected Class<? extends AdmissionController> acClz = BaseAdmissionController.class;
     
-  private static ThreadLocal<Percentile> perc = new ThreadLocal<Percentile>();
+  protected double zipfAlpha = 0.9;
    
   @After  
   public void tearDown() {
@@ -91,17 +101,13 @@ public abstract class TestCacheMultithreadedStreamBase {
       .withCacheMaximumSize(maxCacheSize)
       .withScavengerRunInterval(scavengerInterval)
       .withScavengerDumpEntryBelowStart(scavDumpBelowRatio)
-      .withCacheEvictionPolicy(LRUEvictionPolicy.class.getName())
-      .withRecyclingSelector(LRCRecyclingSelector.class.getName())
-      //.withDataWriter(BlockDataWriter.class.getName())
-      //.withMemoryDataReader(BlockMemoryDataReader.class.getName())
-      //.withFileDataReader(BlockFileDataReader.class.getName())
-      //.withMainQueueIndexFormat(CompactWithExpireIndexFormat.class.getName())
+      .withCacheEvictionPolicy(epClz.getName())
+      .withRecyclingSelector(rsClz.getName())
       .withSnapshotDir(snapshotDir)
       .withDataDir(dataDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
-      .withEvictionDisabledMode(evictionDisabled);
-    
+      .withEvictionDisabledMode(evictionDisabled)
+      .withAdmissionController(acClz.getName());
     if (offheap) {
       return builder.buildMemoryCache();
     } else {
@@ -150,64 +156,69 @@ public abstract class TestCacheMultithreadedStreamBase {
     return size;
   }
   
-  
-  protected int loadBytesStreamWithoutExpire(int total) throws IOException {
-    long startTime = System.currentTimeMillis();
+  protected void runBytesStreamZipf(int total) throws IOException {
     int loaded = 0;
+    int hits = 0;
+    int kvSize = safeBufferSize();
+    byte[] buffer = new byte[kvSize];
+    ZipfDistribution dist = new ZipfDistribution(this.numRecords, this.zipfAlpha);
+    Percentile perc = new Percentile(10000, total);
     for(int i = 0; i < total; i++) {
-      if (loadBytesStream(startTime, i, total)) {
+      int n  = dist.sample();
+      long start = System.nanoTime();
+      if (verifyBytesStream(n, total, buffer)) {
+        hits++;
+      } else if(loadBytesStream(n, total)) {
         loaded++;
       }
-      if (loaded > 0 && loaded % 500000 == 0) {
-        System.out.printf("loaded=%d\n", loaded);
+      long end = System.nanoTime();
+      perc.add(end - start);
+      if (i > 0 && i % 500000 == 0) {
+        System.out.printf("%s - i=%d hit rate=%f\n", Thread.currentThread().getName(), i, (float) cache.getHitRate());
       }
     }
-    return loaded;
+    System.out.printf("%s - hit=%f loaded=%d\n", Thread.currentThread().getName(), 
+      (float) hits / total, loaded);
+    System.out.printf("Thread=%s latency: min=%dns max=%dns p50=%dns p90=%dns p99=%dns p999=%dns p9999=%dns\n",
+      Thread.currentThread().getName(), perc.min(), perc.max(), perc.value(0.5),
+      perc.value(0.9), perc.value(0.99), perc.value(0.999), perc.value(0.9999));
   }
   
-  protected int loadBytesStreamWithExpire(int total) throws IOException {
+  
+  protected void runMemoryStreamZipf(int total) throws IOException {
     int loaded = 0;
+    int hits = 0;
+    int kvSize = safeBufferSize();
+    ByteBuffer buffer = ByteBuffer.allocate(kvSize);
+    
+    ZipfDistribution dist = new ZipfDistribution(this.numRecords, this.zipfAlpha);
+    Percentile perc = new Percentile(10000, total);
+
     for(int i = 0; i < total; i++) {
-      if (loadBytesStream(i, total)) {
+      int n  = dist.sample();
+      long start = System.nanoTime();
+      if (verifyMemoryStream(n, total, buffer)) {
+        hits++;
+      } else if (loadMemoryStream(n, total)) {
         loaded++;
       }
-      if (loaded > 0 && loaded % 500000 == 0) {
-        System.out.printf("loaded=%d\n", loaded);
+      long end = System.nanoTime();
+      perc.add(end - start);
+      
+      if (i > 0 && i % 500000 == 0) {
+        System.out.printf("%s - i=%d hit rate=%f\n", Thread.currentThread().getName(), i, (float) cache.getHitRate());
       }
     }
-    return loaded;
+    System.out.printf("%s - hit=%f loaded=%d\n", Thread.currentThread().getName(), 
+      (float) hits / total, loaded);
+    System.out.printf("Thread=%s latency: min=%dns max=%dns p50=%dns p90=%dns p99=%dns p999=%dns p9999=%dns\n",
+      Thread.currentThread().getName(), perc.min(), perc.max(), perc.value(0.5),
+      perc.value(0.9), perc.value(0.99), perc.value(0.999), perc.value(0.9999));
   }
   
-  protected int loadMemoryStreamWithoutExpire(int total) throws IOException {
-    long startTime = System.currentTimeMillis();
-    int loaded = 0;
-    for(int i = 0; i < total; i++) {
-      if (loadMemoryStream(startTime, i, total)) {
-        loaded++;
-      }
-      if (loaded > 0 && loaded % 100000 == 0) {
-        System.out.printf("loaded=%d\n", loaded);
-      }
-    }
-    return loaded;
-  }
-  
-  protected int loadMemoryStreamWithExpire(int total) throws IOException {
-    int loaded = 0;
-    for(int i = 0; i < total; i++) {
-      if (loadMemoryStream(i, total)) {
-        loaded++;
-      }
-      if (loaded > 0 && loaded % 100000 == 0) {
-        System.out.printf("loaded=%d\n", loaded);
-      }
-    }
-    return loaded;
-  }
   
   protected final boolean loadBytesStream(int n, int max) throws IOException {
-    long id = Thread.currentThread().getId();
-    Random r = new Random(n + id * max);
+    Random r = new Random(n);
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);
     byte[] key = TestUtils.randomBytes(keySize, r);
@@ -218,46 +229,9 @@ public abstract class TestCacheMultithreadedStreamBase {
     return result;
   }
   
-  protected final boolean loadBytesStream(long startTime, int n, int max) throws IOException {
-    long id = Thread.currentThread().getId();
-    Random r = new Random(n + id * max);
-    int keySize = nextKeySize(r);
-    int valueSize = nextValueSize(r);
-    byte[] key = TestUtils.randomBytes(keySize, r);
-    // To improve performance
-    byte[] value = new byte[valueSize];
-    long expire = getExpireStream(startTime, n);
-    
-    long start = System.nanoTime();
-    boolean result = this.cache.put(key, value, expire);
-    long end = System.nanoTime();
-    Percentile p = perc.get();
-    p.add(end - start);
-    
-    return result;
-  }
-
-  protected final boolean deleteBytesStream(int n, int max) throws IOException {
-    long id = Thread.currentThread().getId();
-    Random r = new Random(n + id * max);
-    int keySize = nextKeySize(r);
-    @SuppressWarnings("unused")
-    int valueSize = nextValueSize(r);
-    byte[] key = TestUtils.randomBytes(keySize, r);
-    boolean result = this.cache.delete(key, 0, key.length);
-    return result;
-  }
-
-  protected final boolean verifyBytesStream(int n, int max) throws IOException {
-    int kvSize = safeBufferSize();
-    byte[] buffer = new byte[kvSize];
-    return verifyBytesStream(n, max, buffer);
-  }
-
   protected final boolean verifyBytesStream(int n, int max, byte[] buffer) throws IOException {
     
-    long id = Thread.currentThread().getId();
-    Random r = new Random(n + id * max);
+    Random r = new Random(n);
     
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);
@@ -285,56 +259,9 @@ public abstract class TestCacheMultithreadedStreamBase {
     return true;
   }
 
-  protected final int countAliveBytesBetween(int start, int end, int max) throws IOException {
-    int total = 0;
-    byte[] buffer = new byte[safeBufferSize()];
-    for (int i = start; i < end; i++) {
-      if (verifyBytesStream(i, max, buffer)) {
-        total ++;
-        if (total > 0 && total % 100000 == 0) {
-          System.out.printf("verified=%d\n", total);
-        }
-      }
-    }
-    return total;
-  }
-  
-  protected final int countAliveMemoryBetween(int start, int end, int max) throws IOException {
-    int total = 0;
-    ByteBuffer buf = ByteBuffer.allocate(safeBufferSize());
-    for (int i = start; i < end; i++) {
-      if (verifyMemoryStream(i, max, buf)) {
-        total ++;
-        if (total > 0 && total % 100000 == 0) {
-          System.out.printf("verified=%d\n", total);
-        }
-      }
-    }
-    return total;
-  }
-  
-  protected final boolean loadMemoryStream(long startTime, int n, int max) throws IOException {
-    long id = Thread.currentThread().getId();
-    Random r = new Random(n + id * max);
-    
-    int keySize = nextKeySize(r);
-    int valueSize = nextValueSize(r);
-    long keyPtr = TestUtils.randomMemory(keySize, r);
-    long valuePtr = UnsafeAccess.malloc(valueSize);
-    long expire = getExpireStream(startTime, n);
-    Percentile p = perc.get();
-    long start = System.nanoTime();
-    boolean result = this.cache.put(keyPtr, keySize, valuePtr, valueSize, expire);
-    long stop = System.nanoTime();
-    p.add(stop - start);
-    UnsafeAccess.free(keyPtr);
-    UnsafeAccess.free(valuePtr);
-    return result;
-  }
 
   protected final boolean loadMemoryStream(int n, int max) throws IOException {
-    long id = Thread.currentThread().getId();
-    Random r = new Random(n + id * max);
+    Random r = new Random(n);
     
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);
@@ -347,22 +274,9 @@ public abstract class TestCacheMultithreadedStreamBase {
     return result;
   }
   
-  protected final boolean deleteMemoryStream(int n, int max) throws IOException {
-    long id = Thread.currentThread().getId();
-    Random r = new Random(n + id * max);
-    int keySize = nextKeySize(r);
-    @SuppressWarnings("unused")
-    int valueSize = nextValueSize(r);
-    long keyPtr = TestUtils.randomMemory(keySize, r);
-    boolean result = this.cache.delete(keyPtr, keySize);
-    UnsafeAccess.free(keyPtr);
-    return result;
-  }
-
   protected final boolean verifyMemoryStream(int n, int max, ByteBuffer buffer) throws IOException {
 
-    long id = Thread.currentThread().getId();
-    Random r = new Random(n + id * max);
+    Random r = new Random(n);
     
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);
@@ -396,14 +310,32 @@ public abstract class TestCacheMultithreadedStreamBase {
     return true;
   }
   
-  @Test
-  public void testContinuosLoadBytesRun() throws IOException {
+  protected void testContinuosLoadBytesRun() throws IOException {
     long start = System.currentTimeMillis();
     // Create cache after setting is configuration parameters
     this.cache = createCache();
     Runnable r = () -> {
       try {
-        testContinuosLoadBytes();
+        runBytesStreamZipf(this.numRecords);
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+    }};
+    
+    Thread[] all = startAll(r);
+    joinAll(all);
+    long stop = System.currentTimeMillis();
+    Scavenger.printStats();
+    System.out.printf("Thread=%s time=%dms\n", Thread.currentThread().getName(), stop - start);
+  }
+  
+  protected void testContinuosLoadMemoryRun() throws IOException {
+    long start = System.currentTimeMillis();
+    // Create cache after setting is configuration parameters
+    this.cache = createCache();
+    Runnable r = () -> {
+      try {
+        runMemoryStreamZipf(this.numRecords);
       } catch (IOException e) {
         // TODO Auto-generated catch block
         e.printStackTrace();
@@ -414,64 +346,6 @@ public abstract class TestCacheMultithreadedStreamBase {
     long stop = System.currentTimeMillis();
     Scavenger.printStats();
     System.out.printf("Time=%dms\n", stop - start);
-  }
-  
-  @Test
-  public void testContinuosLoadMemoryRun() throws IOException {
-    long start = System.currentTimeMillis();
-    // Create cache after setting is configuration parameters
-    this.cache = createCache();
-    Runnable r = () -> {
-      try {
-        testContinuosLoadMemory();
-      } catch (IOException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
-    }};
-    
-    Thread[] all = startAll(r);
-    joinAll(all);
-    long stop = System.currentTimeMillis();
-    Scavenger.printStats();
-    System.out.printf("Time=%dms\n", stop - start);
-  }
-  
-  private void testContinuosLoadBytes() throws IOException {
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + 
-      ": testContinuosLoadBytes");
-    
-    Percentile p = new Percentile(1000, numRecords);
-    perc.set(p);
-    
-    int loaded = loadBytesStreamWithoutExpire(this.numRecords);
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + ": loaded=" + loaded);
-    long cacheSize = this.cache.size();
-    
-    int alive = countAliveBytesBetween((int)(this.numRecords - cacheSize / this.numThreads), this.numRecords, this.numRecords);
-    /*DEBUG*/ System.out.printf("%s : cache size=%d alive=%d\n", 
-      Thread.currentThread().getName(), cacheSize, alive);
-    System.out.printf("%s : min=%dns max=%dns p50=%dns p90=%dns p99=%dns p999=%dns\n",
-      Thread.currentThread().getName(),
-      p.min(), p.max(), p.value(0.5), p.value(0.9), p.value(0.99), p.value(0.999));
-  }
-  
-  private void testContinuosLoadMemory() throws IOException {
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + 
-      ": testContinuosLoadMemory");
-    
-    Percentile p = new Percentile(1000, numRecords);
-    perc.set(p);
-    
-    int loaded = loadMemoryStreamWithoutExpire(this.numRecords);
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + ": loaded=" + loaded);
-    long cacheSize = this.cache.size();
-    
-    int alive = countAliveMemoryBetween((int)(this.numRecords - cacheSize / this.numThreads), this.numRecords, this.numRecords);
-    /*DEBUG*/ System.out.printf("%s : cache size=%d alive=%d\n", 
-      Thread.currentThread().getName(), cacheSize, alive);
-    System.out.printf("%s : min=%dns max=%dns p50=%dns p90=%dns p99=%dns p999=%dns\n",
-      Thread.currentThread().getName(),
-      p.min(), p.max(), p.value(0.5), p.value(0.9), p.value(0.99), p.value(0.999));
   }
   
 }

@@ -274,8 +274,8 @@ public class Scavenger extends Thread {
         return;
       }
 //      System.out.printf(
-//        "%d - scavenger started at %s allocated storage=%d maximum storage=%d\n", Thread.currentThread().getId(),
-//        format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
+//        "%d - scavenger started at %s allocated storage=%d maximum storage=%d num-instances=%d max-instances=%d\n", Thread.currentThread().getId(),
+//        format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize(), numInstances.get(), maxInstances);
       LOG.info(
           "scavenger started at %s allocated storage=%d maximum storage=%d",
           format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
@@ -294,11 +294,8 @@ public class Scavenger extends Thread {
           return;
         }
         if (shouldStopOn(s)) {
-          //*DEBUG*/ System.out.printf("%d - should stop - exited\n", Thread.currentThread().getId());
           break;
         }
-        //*DEBUG*/LOG.error("recycl id=" + s.getId() + " created=" + s.getInfo().getCreationTime() + " s=" + s);
-
         engine.startRecycling(s);
         long maxExpire = s.getInfo().getMaxExpireAt();
         if (s.getInfo().getTotalActiveItems() == 0
@@ -341,24 +338,21 @@ public class Scavenger extends Thread {
     long n = s.getAliveItems();
     long currentTime = System.currentTimeMillis();
     IOEngine engine = cache.getEngine();
-    long size = engine.size();
     if (engine.size() == 0) {
       return true;
     }
     if ((expire > 0 && expire <= currentTime) || n == 0) {
       return false;
     }
-    
-    long activeSize = engine.activeSize();
-    double activeRatio = (double) activeSize / size;
+    double sratio = (double) s.getAliveItems() / s.getTotalItems();    
     double minActiveRatio = config.getMinimumActiveDatasetRatio(cache.getName());
-    
-    if (activeRatio >= minActiveRatio) {
+    if (sratio >= minActiveRatio) {
       cleanDeletedOnly = false;
     } else {
       cleanDeletedOnly = true;
     }
     double usage = engine.getStorageAllocatedRatio();
+    double activeRatio = engine.activeSizeRatio();
     return activeRatio >= minActiveRatio && usage < stopRatio;   
   }
 
