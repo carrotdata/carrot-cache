@@ -49,7 +49,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   
   protected long segmentSize = 4 * 1024 * 1024;
   
-  protected long maxCacheSize = 100L * segmentSize;
+  protected long maxCacheSize = 1000L * segmentSize;
   
   int scavengerInterval = 2; // seconds
     
@@ -74,25 +74,31 @@ public abstract class TestCacheMultithreadedZipfBase {
   protected Class<? extends AdmissionController> acClz = BaseAdmissionController.class;
     
   protected double zipfAlpha = 0.9;
-   
+  
+  protected long testStartTime = System.currentTimeMillis();
+  
+  protected Path dataDirPath;
+  
+  protected Path snapshotDirPath;
+  
   @After  
-  public void tearDown() {
+  public void tearDown() throws IOException {
     // UnsafeAccess.mallocStats.printStats(false);
+    this.cache.failedGets();
     this.cache.dispose();
+    // Delete temp data
+    TestUtils.deleteDir(dataDirPath);
+    TestUtils.deleteDir(snapshotDirPath);
   }
   
   protected  Cache createCache() throws IOException{
     String cacheName = "cache";
     // Data directory
-    Path path = Files.createTempDirectory(null);
-    File  dir = path.toFile();
-    dir.deleteOnExit();
-    String dataDir = dir.getAbsolutePath();
+    dataDirPath = Files.createTempDirectory(null);
+    String dataDir = dataDirPath.toFile().getAbsolutePath();
     
-    path = Files.createTempDirectory(null);
-    dir = path.toFile();
-    dir.deleteOnExit();
-    String snapshotDir = dir.getAbsolutePath();
+    snapshotDirPath = Files.createTempDirectory(null);
+    String snapshotDir = snapshotDirPath.toFile().getAbsolutePath();
     
     Cache.Builder builder = new Cache.Builder(cacheName);
     
@@ -218,7 +224,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   
   
   protected final boolean loadBytesStream(int n, int max) throws IOException {
-    Random r = new Random(n);
+    Random r = new Random(testStartTime + n);
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);
     byte[] key = TestUtils.randomBytes(keySize, r);
@@ -231,7 +237,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   
   protected final boolean verifyBytesStream(int n, int max, byte[] buffer) throws IOException {
     
-    Random r = new Random(n);
+    Random r = new Random(testStartTime + n);
     
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);
@@ -261,7 +267,7 @@ public abstract class TestCacheMultithreadedZipfBase {
 
 
   protected final boolean loadMemoryStream(int n, int max) throws IOException {
-    Random r = new Random(n);
+    Random r = new Random(testStartTime + n);
     
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);
@@ -276,7 +282,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   
   protected final boolean verifyMemoryStream(int n, int max, ByteBuffer buffer) throws IOException {
 
-    Random r = new Random(n);
+    Random r = new Random(testStartTime + n);
     
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);

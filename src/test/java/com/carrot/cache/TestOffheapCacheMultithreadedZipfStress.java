@@ -12,22 +12,16 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.carrot.cache;
 
-import java.io.IOException;
-
-import org.junit.Before;
-
-public class TestOffheapCacheMultithreaded extends TestCacheMultithreadedBase {
-
-  @Before
-  public void setUp() throws IOException{
-    this.numRecords = 42000;
-    this.numThreads = 4;
-    this.offheap = true;
-    this.evictionDisabled = true;
-    this.cache = createCache();
-  }
+public class TestOffheapCacheMultithreadedZipfStress extends TestOffheapCacheMultithreadedZipf {
   
+  @Override
+  public void setUp() {
+    this.offheap = true;
+    this.numRecords = 10000000;
+    this.numThreads = 4;
+    this.segmentSize = 16 * 1024 * 1024;
+    this.maxCacheSize = 1000 * this.segmentSize;
+  }
 }

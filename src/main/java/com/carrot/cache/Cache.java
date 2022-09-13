@@ -630,6 +630,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return this;
     }
     
+    /**
+     * With I/O storage pool size
+     * @param size pool size
+     * @return builder instance
+     */
+    public Builder withIOStoragePoolSize(int size) {
+      conf.setIOStoragePoolSize(cacheName, size);
+      return this;
+    }
+    
     private Cache build() throws IOException {
       Cache cache = new Cache(conf, cacheName);
       cache.setIOEngine(this.engine);
@@ -1121,7 +1131,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     // Otherwise wait for approximately 100 microseconds
     // to allow Scavenger to finish
     //TODO: make this configurable?
-    long waitTime = 100000; // 100 microsec
+    long waitTime = 20000; // 10 microsec
     long start = System.nanoTime();
     while(System.nanoTime() - start < waitTime) {
       Thread.onSpinWait();
@@ -1354,7 +1364,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       result = this.engine.get(keyPtr, keySize, hit, buffer, bufOffset);
     } catch (IOException e) {
       // Try one more time, file could be closed by Scavenger
-      result = this.engine.get(keyPtr, keySize, hit, buffer, bufOffset);
+      //result = this.engine.get(keyPtr, keySize, hit, buffer, bufOffset);
+      failedGets.incrementAndGet();
+      return result;
     }    
     
     if (result <= buffer.length - bufOffset) {
@@ -1397,6 +1409,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return get(key, keyOffset, keySize, true, buffer, bufOffset);
   }
   
+  private AtomicLong failedGets = new AtomicLong();
+  
   /**
    * Get cached item (if any)
    *
@@ -1418,7 +1432,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       result = engine.get(key, keyOffset, keySize, hit, buffer, bufOffset);
     } catch (IOException e) {
       // Try one more time, file could be closed by Scavenger
-      result = engine.get(key, keyOffset, keySize, hit, buffer, bufOffset);
+      //result = engine.get(key, keyOffset, keySize, hit, buffer, bufOffset);
+      failedGets.incrementAndGet();
+      return result;
     }
     
     if (result <= buffer.length - bufOffset) {
@@ -1482,7 +1498,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       result = this.engine.get(key, keyOff, keySize, hit, buffer);
     } catch (IOException e) {
       // Try one more time, file could be closed by Scavenger
-      result = this.engine.get(key, keyOff, keySize, hit, buffer);
+      //result = this.engine.get(key, keyOff, keySize, hit, buffer);
+      failedGets.incrementAndGet();
+      return result;
     }
     
     if (result <= rem) {
@@ -1545,7 +1563,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       result = this.engine.get(keyPtr, keySize, hit, buffer);
     } catch(IOException e) {
       // Try one more time, file could be closed by Scavenger
-      result = this.engine.get(keyPtr, keySize, hit, buffer);
+      //result = this.engine.get(keyPtr, keySize, hit, buffer);
+      failedGets.incrementAndGet();
+      return result;
     }
     
     if (result <= rem) {
@@ -2100,5 +2120,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     stopScavenger();
     
     this.engine.dispose();
+  }
+  
+  public void failedGets() {
+    System.out.printf("failed gets = %d\n", failedGets.get());
   }
 }

@@ -26,6 +26,7 @@ import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -394,10 +395,10 @@ public abstract class IOEngine implements Persistent {
     // TODO: embedded entry case
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
-    int slot = 0;
+    //int slot = 0;
     try {
       // Lock index for the key (slot)
-      slot = this.index.lock(keyPtr, keySize);
+      //slot = this.index.lock(keyPtr, keySize);
       long result = index.find(keyPtr, keySize, hit, buf, entrySize);
       if (result < 0) {
         return NOT_FOUND;
@@ -442,14 +443,31 @@ public abstract class IOEngine implements Persistent {
         // Segment id
         int sid = (int) format.getSegmentId(buf);
         // Read the data
-        int res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer, bufOffset);
         Segment s = this.dataSegments[sid];
-        access(s, res, hit);
-        return res;
+        if (s == null || !s.isValid()) {
+          return NOT_FOUND;
+        }
+        
+        try {
+          s.readLock();
+          int id = this.index.getSegmentId(keyPtr, keySize);
+          if (id < 0) {
+            return NOT_FOUND;
+          }
+          if (id != sid) {
+            return get(keyPtr, keySize, hit, buffer, bufOffset);
+          }
+          // Read the data
+          int res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer, bufOffset);
+          access(s, res, hit);
+          return res;
+        } finally {
+          s.readUnlock();
+        }
       }
     } finally {
       UnsafeAccess.free(buf);
-      this.index.unlock(slot);
+      //this.index.unlock(slot);
     }
   }
 
@@ -472,10 +490,10 @@ public abstract class IOEngine implements Persistent {
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     int bufferAvail = buffer.length - bufOffset;
-    int slot = 0;
+    //int slot = 0;
     try {
       // Lock index for the key (slot)
-      slot = this.index.lock(key, keyOffset, keySize);
+      //slot = this.index.lock(key, keyOffset, keySize);
 
       long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
       if (result < 0) {
@@ -521,15 +539,31 @@ public abstract class IOEngine implements Persistent {
         long offset = format.getOffset(buf);
         // segment id
         int sid = (int) format.getSegmentId(buf);
-        // Read the data
-        int res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer, bufOffset);
         Segment s = this.dataSegments[sid];
-        access(s, res, hit);
-        return res;
+        if (s == null || !s.isValid()) {
+          return NOT_FOUND;
+        }
+        
+        try {
+          s.readLock();
+          int id = this.index.getSegmentId(key, keyOffset, keySize);
+          if (id < 0) {
+            return NOT_FOUND;
+          }
+          if (id != sid) {
+            return get(key, keyOffset, keySize, hit, buffer, bufOffset);
+          }
+          // Read the data
+          int res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer, bufOffset);
+          access(s, res, hit);
+          return res;
+        } finally {
+          s.readUnlock();
+        }
       }
     } finally {
       UnsafeAccess.free(buf);
-      this.index.unlock(slot);
+      //this.index.unlock(slot);
     }
   }
 
@@ -555,12 +589,12 @@ public abstract class IOEngine implements Persistent {
     IndexFormat format = this.index.getIndexFormat();
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
-    int slot = 0;
+    //int slot = 0;
     try {
       // TODO: double locking?
       // Index locking  that segment will not be recycled
       //
-      slot = this.index.lock(keyPtr, keySize);
+      //slot = this.index.lock(keyPtr, keySize);
       long result = index.find(keyPtr, keySize, true, buf, entrySize);
       // result can be negative - OK
       // positive - OK b/c we hold read lock on key and key can't be deleted from index
@@ -618,14 +652,31 @@ public abstract class IOEngine implements Persistent {
         // Segment id
         int sid = (int) format.getSegmentId(buf);
         // Finally, read the cached item
-        int res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer);
         Segment s = this.dataSegments[sid];
-        access(s, res, hit);
-        return res;
+        if (s == null || !s.isValid()) {
+          return NOT_FOUND;
+        }
+        
+        try {
+          s.readLock();
+          int id = this.index.getSegmentId(keyPtr, keySize);
+          if (id < 0) {
+            return NOT_FOUND;
+          }
+          if (id != sid) {
+            return get(keyPtr, keySize, hit, buffer);
+          }
+          // Read the data
+          int res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer);
+          access(s, res, hit);
+          return res;
+        } finally {
+          s.readUnlock();
+        }
       }
     } finally {
       UnsafeAccess.free(buf);
-      this.index.unlock(slot);
+     // this.index.unlock(slot);
     }
   }
 
@@ -645,9 +696,9 @@ public abstract class IOEngine implements Persistent {
     IndexFormat format = this.index.getIndexFormat();
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
-    int slot = 0;
+    //int slot = 0;
     try {
-      slot = this.index.lock(key, keyOffset, keySize);
+      //slot = this.index.lock(key, keyOffset, keySize);
       long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
       if (result < 0) {
         return NOT_FOUND;
@@ -692,14 +743,31 @@ public abstract class IOEngine implements Persistent {
         // segment id
         int sid = (int) format.getSegmentId(buf);
         // Read the data
-        int res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer);
         Segment s = this.dataSegments[sid];
-        access(s, res, hit);
-        return res;
-      }
+        if (s == null || !s.isValid()) {
+          return NOT_FOUND;
+        }
+        
+        try {
+          s.readLock();
+          int id = this.index.getSegmentId(key, keyOffset, keySize);
+          if (id < 0) {
+            return NOT_FOUND;
+          }
+          if (id != sid) {
+            return get(key, keyOffset, keySize, hit, buffer);
+          }
+          // Read the data
+          int res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer);
+          access(s, res, hit);
+          return res;
+        } finally {
+          s.readUnlock();
+        }      
+        }
     } finally {
       UnsafeAccess.free(buf);
-      this.index.unlock(slot);
+      //this.index.unlock(slot);
     }
   }
 
@@ -730,8 +798,9 @@ public abstract class IOEngine implements Persistent {
       throw new IllegalArgumentException();
     }
     int len = getFromRAMBuffers(id, offset, size, key, keyOffset, keySize, buffer, bufOffset);
-    if (len > 0) return len;
-
+    if (len > 0) {
+      return len;
+    }
     return getInternal(id, offset, size, key, keyOffset, keySize, buffer, bufOffset);
   }
 
@@ -754,8 +823,9 @@ public abstract class IOEngine implements Persistent {
       throw new IllegalArgumentException();
     }
     int len = getFromRAMBuffers(id, offset, size, keyPtr, keySize, buffer, bufOffset);
-    if (len > 0) return len;
-
+    if (len > 0) {
+      return len;
+    }
     return getInternal(id, offset, size, keyPtr, keySize, buffer, bufOffset);
   }
 
@@ -971,7 +1041,9 @@ public abstract class IOEngine implements Persistent {
       throws IOException {
     if (buffer == null || buffer.remaining() < size) throw new IllegalArgumentException();
     int len = getFromRAMBuffers(id, offset, size, key, keyOffset, keySize, buffer);
-    if (len > 0) return len;
+    if (len > 0) {
+      return len;
+    }
     return getInternal(id, offset, size, key, keyOffset, keySize, buffer);
   }
 
@@ -989,7 +1061,9 @@ public abstract class IOEngine implements Persistent {
     if (buffer == null || buffer.remaining() < size) throw new IllegalArgumentException();
     int len = getFromRAMBuffers(id, offset, size, keyPtr, keySize, buffer);
 
-    if (len > 0) return len;
+    if (len > 0) {
+      return len;
+    }
     return getInternal(id, offset, size, keyPtr, keySize, buffer);
   }
   /**
@@ -1037,7 +1111,6 @@ public abstract class IOEngine implements Persistent {
       if (data.isSealed()) {
         return;
       }
-      // data.seal();
       // TODO: remove this. Move data to a main storage
       this.dataSegments[data.getId()] = data;
       this.ramBuffers[data.getInfo().getRank()] = null;
@@ -1046,7 +1119,6 @@ public abstract class IOEngine implements Persistent {
       // Can be costly - executed in a separate thread
       saveInternal(data);
       // seal only after we materialize segment in a file system
-      data.seal();
       // Notify listener
       if (this.aListener != null) {
         aListener.onEvent(this, IOEngineEvent.DATA_SIZE_CHANGED);
@@ -1264,7 +1336,9 @@ public abstract class IOEngine implements Persistent {
     // Offset must less 32bit
     long offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength, expire);
     if (offset < 0) {
-      save(s); // removes segment from RAM buffers
+      if(!s.isSealed()) {
+        save(s); // removes segment from RAM buffers
+      }
       s = getRAMSegmentByRank(rank);
       if (s == null) {
         // We silently ignore PUT operation due to lack of resources
@@ -1334,7 +1408,9 @@ public abstract class IOEngine implements Persistent {
     }
     long offset = s.append(keyPtr, keyLength, valuePtr, valueLength, expire);
     if (offset < 0) {
-      save(s); // removes segment from RAM buffers
+      if(!s.isSealed()) {
+        save(s); // removes segment from RAM buffers
+      }
       s = getRAMSegmentByRank(rank);
       if (s == null) {
         // We silently ignore PUT operation due to lack of resources
@@ -1351,10 +1427,13 @@ public abstract class IOEngine implements Persistent {
     return true;
   }
 
+  protected ReentrantLock ramBufferLock = new ReentrantLock();
+  
   protected Segment getRAMSegmentByRank(int rank) {
     Segment s = this.ramBuffers[rank];
     if (s == null) {
-      synchronized (this.ramBuffers) {
+      try {
+        ramBufferLock.lock();
         s = this.ramBuffers[rank];
         if (s != null) {
           return s;
@@ -1376,6 +1455,8 @@ public abstract class IOEngine implements Persistent {
           s.reuse(id, rank, System.currentTimeMillis());
         }
         this.ramBuffers[rank] = s;
+      } finally {
+        ramBufferLock.unlock();
       }
     }
     return s;

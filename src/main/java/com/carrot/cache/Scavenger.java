@@ -277,7 +277,7 @@ public class Scavenger extends Thread {
 //        "%d - scavenger started at %s allocated storage=%d maximum storage=%d num-instances=%d max-instances=%d\n", Thread.currentThread().getId(),
 //        format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize(), numInstances.get(), maxInstances);
       LOG.info(
-          "scavenger started at %s allocated storage=%d maximum storage=%d",
+          "scavenger {} started at {} allocated storage={} maximum storage={}", Thread.currentThread().getId(),
           format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
 
       boolean finished = false;
@@ -326,7 +326,7 @@ public class Scavenger extends Thread {
     // Update stats
     stats.totalRunTimes += (runEnd - runStart);
     LOG.info(
-        "scavenger finished at %s allocated storage=%d maximum storage=%d",
+        "scavenger{} finished at {} allocated storage={} maximum storage=%{}", Thread.currentThread().getId(),
         format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
 //    System.out.printf(
 //      "%d - scavenger finished at %s allocated storage=%d maximum storage=%d\n", Thread.currentThread().getId(),
@@ -353,6 +353,7 @@ public class Scavenger extends Thread {
     }
     double usage = engine.getStorageAllocatedRatio();
     double activeRatio = engine.activeSizeRatio();
+    cleanDeletedOnly = cleanDeletedOnly && usage < stopRatio;
     return activeRatio >= minActiveRatio && usage < stopRatio;   
   }
 

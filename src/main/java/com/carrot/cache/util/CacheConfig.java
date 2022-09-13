@@ -32,6 +32,7 @@ import com.carrot.cache.index.BaseIndexFormat;
 import com.carrot.cache.io.DataReader;
 import com.carrot.cache.io.DataWriter;
 
+@SuppressWarnings("deprecation")
 public class CacheConfig {
 
   /* List of all caches logical names, comma-separated*/
@@ -121,7 +122,8 @@ public class CacheConfig {
   /** Keep active data set fraction above this threshold */
   public static final String CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO_KEY = 
       "cache.minimum.active.dataset.ratio"; 
-  
+  /** IO storage pool size */
+  public static final String CACHE_IO_STORAGE_POOL_SIZE_KEY = "cache.storage.pool.size";
   
   /* New item insertion point for SLRU (segment number 1- based)*/
   public static final String SLRU_CACHE_INSERT_POINT_KEY = "eviction.slru.insert.point";
@@ -385,6 +387,9 @@ public class CacheConfig {
   
   /* Default minimum active data set ratio */
   public final static double DEFAULT_CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO = 0.9;
+  
+  /* Default IO pool size */
+  public final static int DEFAULT_CACHE_IO_STORAGE_POOL_SIZE = 32;
   
   /* Default cache disabled mode */
   public final static boolean DEFAULT_CACHE_EVICTION_DISABLED_MODE = false;
@@ -1661,4 +1666,28 @@ public class CacheConfig {
     props.setProperty(cacheName + "." + DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_DURATION, Integer.toString(n));
   }
   
+  
+  /**
+   * Get I/O storage pool size
+   * @param cacheName cache name
+   * @return size
+   */
+  public int getIOStoragePoolSize (String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_IO_STORAGE_POOL_SIZE_KEY);
+    if (value == null) {
+      return (int) getLongProperty(CACHE_IO_STORAGE_POOL_SIZE_KEY, 
+        DEFAULT_CACHE_IO_STORAGE_POOL_SIZE);
+    } else {
+      return Integer.parseInt(value);
+    }
+  }
+  
+  /**
+   * Set I/O storage pool size
+   * @param cacheName cache name
+   * @param n size
+   */
+  public void setIOStoragePoolSize (String cacheName, int n) {
+    props.setProperty(cacheName + "." + CACHE_IO_STORAGE_POOL_SIZE_KEY, Integer.toString(n));
+  }
 }

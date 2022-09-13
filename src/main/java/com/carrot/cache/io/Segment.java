@@ -457,6 +457,10 @@ public class Segment implements Persistent {
   
   /* Is valid segment */
   private volatile boolean valid = true;
+  
+  /* Save to file in progress - TESTs only*/
+  private volatile boolean sip = false;
+  
   /**
    * 
    * Default constructor
@@ -507,6 +511,10 @@ public class Segment implements Persistent {
    * Used for testing
    */
   public void dispose() {
+    if (this.sip) {
+      System.err.printf("Dispose");
+      Thread.dumpStack();
+    }
     if (!this.valid) return;
     if (isOffheap()) {
       UnsafeAccess.free(this.address);
@@ -671,6 +679,10 @@ public class Segment implements Persistent {
    * @param ptr address
    */
   public void setAddress(long ptr) {
+    if (this.sip) {
+      System.err.printf("Set address=%", ptr);
+      Thread.dumpStack();
+    }
     this.address = ptr;
   }
   
@@ -798,6 +810,9 @@ public class Segment implements Persistent {
     }
     try {
       writeLock();
+      if (isSealed()) {
+        return -1;
+      }
       long offset = this.dataWriter.append(this, key, keyOffset, keySize, item, itemOffset, itemSize);
       if (offset < 0) {
         return -1;
@@ -863,6 +878,9 @@ public class Segment implements Persistent {
     }
     try {
       writeLock();
+      if (isSealed()) {
+        return -1;
+      }
       long offset = (int) this.dataWriter.append(this, keyPtr, keySize, itemPtr, itemSize);
       if (offset < 0) {
         return -1;
@@ -949,8 +967,11 @@ public class Segment implements Persistent {
   public void save(RandomAccessFile file) throws IOException {
     try {
       readLock();
-      // Segment MUST be sealed
-      seal();
+      if (this.sip) {
+        System.err.printf("save sip = true");
+        Thread.dumpStack();
+      }
+      this.sip = true;
       // Write segment size
       long size = size();
       file.writeLong(size);
@@ -958,13 +979,20 @@ public class Segment implements Persistent {
       int bufSize = (int) Math.min(size, 1024 * 1024);
       byte[] buffer = new byte[bufSize];
       long written = 0;
+      long beforePtr = this.address;
+      boolean beforeSealed = isSealed();
       while (written < size) {
         int toCopy = (int) Math.min(bufSize, size - written);
+        if (this.address == 0) {
+          /*DEBUG*/ System.err.printf("address=0, written=%d sealed=%s before: addr=%d sealed=%s\n", written,
+            Boolean.toString(isSealed()), beforePtr, Boolean.toString(beforeSealed));
+        }
         UnsafeAccess.copy(this.address + written, buffer, 0, toCopy);
         written += toCopy;
         file.write(buffer, 0, toCopy);
       }
     } finally {
+      this.sip = false;
       readUnlock();
     }
   }

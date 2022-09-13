@@ -36,7 +36,7 @@ public abstract class TestCacheMultithreadedBase extends TestIOMultithreadedBase
   
   protected int segmentSize = 4 * 1024 * 1024;
   
-  protected long maxCacheSize = 1000L * segmentSize;
+  protected long maxCacheSize = 100L * segmentSize;
   
   int scavengerInterval = 10000; // seconds - disable for test
     

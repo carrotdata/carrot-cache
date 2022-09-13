@@ -34,43 +34,40 @@ public class BaseMemoryDataReader implements DataReader {
   }
 
   @Override
-  public int read(
-      IOEngine engine,
-      byte[] key,
-      int keyOffset,
-      int keySize,
-      int sid,
-      long offset,
-      int size, //TODO size can be -1
-      byte[] buffer,
-      int bufOffset) {
-    
+  public int read(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid, long offset,
+      int size, // TODO size can be -1
+      byte[] buffer, int bufOffset) {
+
     int avail = buffer.length - bufOffset;
 
     // Segment read lock is already held by this thread
     Segment s = engine.getSegmentById(sid);
     if (s == null) {
       // TODO: error
-      return IOEngine.NOT_FOUND; 
+      return IOEngine.NOT_FOUND;
     }
-    long ptr = s.getAddress(); 
-    
+
+    if (!s.isOffheap()) {
+      return IOEngine.NOT_FOUND;
+    }
+    long ptr = s.getAddress();
+
     if (size < 0) {
       size = getItemSize(ptr + offset);
     }
     if (size > avail) {
       return size;
     }
-    if ( s.getSegmentDataSize() < offset + size) {
+    if (s.getSegmentDataSize() < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
     UnsafeAccess.copy(ptr + offset, buffer, bufOffset, size);
     // Now buffer contains both: key and value, we need to compare keys
     // Format of a key-value pair in a buffer: key-size, value-size, key, value
-    
+
     bufOffset += getKeyOffset(buffer, bufOffset);
-    
+
     // Now compare keys
     if (Utils.compareTo(buffer, bufOffset, keySize, key, keyOffset, keySize) == 0) {
       // If key is the same
@@ -81,13 +78,7 @@ public class BaseMemoryDataReader implements DataReader {
   }
 
   @Override
-  public int read(
-      IOEngine engine,
-      byte[] key,
-      int keyOffset,
-      int keySize,
-      int sid,
-      long offset,
+  public int read(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid, long offset,
       int size, // can be < 0 - unknown
       ByteBuffer buffer) {
     int avail = buffer.remaining();
@@ -95,26 +86,30 @@ public class BaseMemoryDataReader implements DataReader {
     Segment s = engine.getSegmentById(sid);
     if (s == null) {
       // TODO: error
-      return IOEngine.NOT_FOUND; 
+      return IOEngine.NOT_FOUND;
     }
-    long ptr = s.getAddress(); 
-    
+
+    if (!s.isOffheap()) {
+      return IOEngine.NOT_FOUND;
+    }
+    long ptr = s.getAddress();
+
     if (size < 0) {
       size = getItemSize(ptr + offset);
     }
     if (size > avail) {
       return size;
     }
-    if ( s.getSegmentDataSize() < offset + size) {
+    if (s.getSegmentDataSize() < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
     int pos = buffer.position();
-    UnsafeAccess.copy(ptr + offset, buffer,  size);
+    UnsafeAccess.copy(ptr + offset, buffer, size);
     buffer.position(pos);
     // Now buffer contains both: key and value, we need to compare keys
     // Format of a key-value pair in a buffer: key-size, value-size, key, value
-    
+
     int $off = getKeyOffset(buffer);
     buffer.position(pos + $off);
     // Now compare keys
@@ -128,15 +123,8 @@ public class BaseMemoryDataReader implements DataReader {
   }
 
   @Override
-  public int read(
-      IOEngine engine,
-      long keyPtr,
-      int keySize,
-      int sid,
-      long offset,
-      int size,
-      byte[] buffer,
-      int bufOffset) {
+  public int read(IOEngine engine, long keyPtr, int keySize, int sid, long offset, int size,
+      byte[] buffer, int bufOffset) {
     int avail = buffer.length - bufOffset;
     // Sanity check
     if (size > avail) {
@@ -146,25 +134,29 @@ public class BaseMemoryDataReader implements DataReader {
     Segment s = engine.getSegmentById(sid);
     if (s == null) {
       // TODO: error
-      return IOEngine.NOT_FOUND; 
+      return IOEngine.NOT_FOUND;
     }
-    long ptr = s.getAddress(); 
+
+    if (!s.isOffheap()) {
+      return IOEngine.NOT_FOUND;
+    }
+    long ptr = s.getAddress();
     if (size < 0) {
       size = getItemSize(ptr + offset);
     }
     if (size > avail) {
       return size;
     }
-    if ( s.getSegmentDataSize() < offset + size) {
+    if (s.getSegmentDataSize() < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
-    
+
     UnsafeAccess.copy(ptr + offset, buffer, bufOffset, size);
     // Now buffer contains both: key and value, we need to compare keys
     // Format of a key-value pair in a buffer: key-size, value-size, key, value
-        
-    bufOffset += getKeyOffset(buffer, bufOffset);  
+
+    bufOffset += getKeyOffset(buffer, bufOffset);
     // Now compare keys
     if (Utils.compareTo(buffer, bufOffset, keySize, keyPtr, keySize) == 0) {
       // If key is the same
@@ -175,29 +167,32 @@ public class BaseMemoryDataReader implements DataReader {
   }
 
   @Override
-  public int read(
-      IOEngine engine, long keyPtr, int keySize, int sid, long offset, int size, ByteBuffer buffer) {
-    
+  public int read(IOEngine engine, long keyPtr, int keySize, int sid, long offset, int size,
+      ByteBuffer buffer) {
+
     int avail = buffer.remaining();
     // Segment read lock is already held by this thread
     Segment s = engine.getSegmentById(sid);
     if (s == null) {
       // TODO: error
-      return IOEngine.NOT_FOUND; 
+      return IOEngine.NOT_FOUND;
     }
-    long ptr = s.getAddress(); 
+    if (!s.isOffheap()) {
+      return IOEngine.NOT_FOUND;
+    }
+    long ptr = s.getAddress();
     if (size < 0) {
       size = getItemSize(ptr + offset);
     }
     if (size > avail) {
       return size;
     }
-    if ( s.getSegmentDataSize() < offset + size) {
+    if (s.getSegmentDataSize() < offset + size) {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
     int pos = buffer.position();
-    UnsafeAccess.copy(ptr + offset, buffer,  size);
+    UnsafeAccess.copy(ptr + offset, buffer, size);
     // Now buffer contains both: key and value, we need to compare keys
     // Format of a key-value pair in a buffer: key-size, value-size, key, value
     // rewind position back

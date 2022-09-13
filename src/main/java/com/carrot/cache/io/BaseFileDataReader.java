@@ -83,7 +83,15 @@ public class BaseFileDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
     if (!loaded) {
+      
+      //try {
       readFully(file, offset, buffer, bufOffset, size);
+//      } catch (IOException e) {
+//        System.err.printf("sid=%d segment sealed=%s, file length=%d offset=%d size=%d file open=%s\n",
+//          sid, Boolean.toString(engine.getSegmentById(sid).isSealed()), file.length(), offset, size, 
+//          Boolean.toString(file.getChannel().isOpen()));        
+//        throw e;
+//      }
     }
 
     // Now buffer contains both: key and value, we need to compare keys

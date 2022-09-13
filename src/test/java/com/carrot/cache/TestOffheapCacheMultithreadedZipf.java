@@ -1,8 +1,23 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ *
+ * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * <p>Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.carrot.cache;
 
 import java.io.IOException;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.carrot.cache.controllers.LRCRecyclingSelector;
@@ -26,40 +41,36 @@ public class TestOffheapCacheMultithreadedZipf extends TestCacheMultithreadedZip
   @Before
   public void setUp() {
     this.offheap = true;
+    this.numRecords = 1000000;
+    this.numThreads = 4;
+    this.maxCacheSize = 100 * this.segmentSize;
   }
+  
   
   @Test
   public void testNoEvictionBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=none, selector=null");
-
-    this.numRecords = 1000000;
     this.evictionDisabled = true;
     this.scavengerInterval = 100000; // disable scavenger
-    this.numThreads = 4;
     super.testContinuosLoadBytesRun();
   }
   
   @Test
   public void testNoEvictionMemoryAPI() throws IOException {
     System.out.println("Memory API: eviction=none, selector=null");
-
-    this.numRecords = 1000000;
     this.evictionDisabled = true;
     this.scavengerInterval = 100000; // disable scavenger
-    this.numThreads = 4;
     super.testContinuosLoadMemoryRun();
   }
   
   @Test
   public void testLRUEvictionAndLRCSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=LRU, selector=LRC");
-    this.numRecords = 1000000;
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = LRUEvictionPolicy.class;
     this.rsClz = LRCRecyclingSelector.class;
     this.scavDumpBelowRatio = 1.0;
-    this.numThreads = 4;
     super.testContinuosLoadBytesRun();
   }
   
@@ -67,26 +78,22 @@ public class TestOffheapCacheMultithreadedZipf extends TestCacheMultithreadedZip
   public void testLRUEvictionAndLRCSelectorMemoryAPI() throws IOException {
     System.out.println("Memory API: eviction=LRU, selector=LRC");
 
-    this.numRecords = 1000000;
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = LRUEvictionPolicy.class;
     this.rsClz = LRCRecyclingSelector.class;
     this.scavDumpBelowRatio = 1.0;
-    this.numThreads = 4;
     super.testContinuosLoadMemoryRun();
   }
   
   @Test
   public void testLRUEvictionAndMRCSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=LRU, selector=MRC");
-    this.numRecords = 1000000;
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = LRUEvictionPolicy.class;
     this.rsClz = MRCRecyclingSelector.class;
     this.scavDumpBelowRatio = 1.0;
-    this.numThreads = 4;
     super.testContinuosLoadBytesRun();
   }
   
@@ -94,26 +101,22 @@ public class TestOffheapCacheMultithreadedZipf extends TestCacheMultithreadedZip
   public void testLRUEvictionAndMRCSelectorMemoryAPI() throws IOException {
     System.out.println("Memory API: eviction=LRU, selector=MRC");
 
-    this.numRecords = 1000000;
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = LRUEvictionPolicy.class;
     this.rsClz = MRCRecyclingSelector.class;
     this.scavDumpBelowRatio = 1.0;
-    this.numThreads = 4;
     super.testContinuosLoadMemoryRun();
   }
   
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=LRU, selector=MinAlive");
-    this.numRecords = 1000000;
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = LRUEvictionPolicy.class;
     this.rsClz = MinAliveRecyclingSelector.class;
     this.scavDumpBelowRatio = 1.0;
-    this.numThreads = 4;
     super.testContinuosLoadBytesRun();
   }
   
@@ -121,26 +124,22 @@ public class TestOffheapCacheMultithreadedZipf extends TestCacheMultithreadedZip
   public void testLRUEvictionAndMinAliveSelectorMemoryAPI() throws IOException {
     System.out.println("Memory API: eviction=LRU, selector=MinAlive");
 
-    this.numRecords = 1000000;
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = LRUEvictionPolicy.class;
     this.rsClz = MinAliveRecyclingSelector.class;
     this.scavDumpBelowRatio = 1.0;
-    this.numThreads = 4;
     super.testContinuosLoadMemoryRun();
   }
   
   @Test
   public void testLRUEvictionAndLeastAccessedSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=LRU, selector=LeastAccessed");
-    this.numRecords = 1000000;
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = LRUEvictionPolicy.class;
     this.rsClz = LeastAccessedRecyclingSelector.class;
     this.scavDumpBelowRatio = 1.0;
-    this.numThreads = 4;
     super.testContinuosLoadBytesRun();
   }
   
@@ -148,26 +147,22 @@ public class TestOffheapCacheMultithreadedZipf extends TestCacheMultithreadedZip
   public void testLRUEvictionAndLeastAccessedSelectorMemoryAPI() throws IOException {
     System.out.println("Memory API: eviction=LRU, selector=LeastAccessed");
 
-    this.numRecords = 1000000;
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = LRUEvictionPolicy.class;
     this.rsClz = LeastAccessedRecyclingSelector.class;
     this.scavDumpBelowRatio = 1.0;
-    this.numThreads = 4;
     super.testContinuosLoadMemoryRun();
   }
   
   @Test
   public void testSLRUEvictionAndLRCSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=SLRU, selector=LRC");
-    this.numRecords = 1000000;
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = SLRUEvictionPolicy.class;
     this.rsClz = LRCRecyclingSelector.class;
     this.scavDumpBelowRatio = 1.0;
-    this.numThreads = 4;
     super.testContinuosLoadBytesRun();
   }
   
@@ -175,26 +170,22 @@ public class TestOffheapCacheMultithreadedZipf extends TestCacheMultithreadedZip
   public void testSLRUEvictionAndLRCSelectorMemoryAPI() throws IOException {
     System.out.println("Memory API: eviction=SLRU, selector=LRC");
 
-    this.numRecords = 1000000;
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = SLRUEvictionPolicy.class;
     this.rsClz = LRCRecyclingSelector.class;
     this.scavDumpBelowRatio = 1.0;
-    this.numThreads = 4;
     super.testContinuosLoadMemoryRun();
   }
   
   @Test
   public void testSLRUEvictionAndMRCSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=SLRU, selector=MRC");
-    this.numRecords = 1000000;
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = SLRUEvictionPolicy.class;
     this.rsClz = MRCRecyclingSelector.class;
     this.scavDumpBelowRatio = 1.0;
-    this.numThreads = 4;
     super.testContinuosLoadBytesRun();
   }
   
@@ -202,53 +193,61 @@ public class TestOffheapCacheMultithreadedZipf extends TestCacheMultithreadedZip
   public void testSLRUEvictionAndMRCSelectorMemoryAPI() throws IOException {
     System.out.println("Memory API: eviction=SLRU, selector=MRC");
 
-    this.numRecords = 1000000;
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = SLRUEvictionPolicy.class;
     this.rsClz = MRCRecyclingSelector.class;
     this.scavDumpBelowRatio = 1.0;
-    this.numThreads = 4;
     super.testContinuosLoadMemoryRun();
   }
   
   @Test
   public void testSLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=SLRU, selector=MinAlive");
-    this.numRecords = 1000000;
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = SLRUEvictionPolicy.class;
     this.rsClz = MinAliveRecyclingSelector.class;
     this.scavDumpBelowRatio = 1.0;
-    this.numThreads = 4;
     super.testContinuosLoadBytesRun();
+  }
+  
+  
+  @Ignore
+  @Test 
+  public void runLoop() throws IOException {
+    for (int i = 0; i < 200; i++) {
+      System.out.println("Run #" + (i+1));
+      if (i > 0) {
+        setUp();
+      }
+      testSLRUEvictionAndMinAliveSelectorMemoryAPI();
+      if (i < 99) {
+        tearDown();
+      }
+    }
   }
   
   @Test
   public void testSLRUEvictionAndMinAliveSelectorMemoryAPI() throws IOException {
     System.out.println("Memory API: eviction=SLRU, selector=MinAlive");
 
-    this.numRecords = 1000000;
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = SLRUEvictionPolicy.class;
     this.rsClz = MinAliveRecyclingSelector.class;
     this.scavDumpBelowRatio = 1.0;
-    this.numThreads = 4;
     super.testContinuosLoadMemoryRun();
   }
   
   @Test
   public void testSLRUEvictionAndLeastAccessedSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=SLRU, selector=LeastAccessed");
-    this.numRecords = 1000000;
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = SLRUEvictionPolicy.class;
     this.rsClz = LeastAccessedRecyclingSelector.class;
     this.scavDumpBelowRatio = 1.0;
-    this.numThreads = 4;
     super.testContinuosLoadBytesRun();
   }
   
@@ -256,13 +255,11 @@ public class TestOffheapCacheMultithreadedZipf extends TestCacheMultithreadedZip
   public void testSLRUEvictionAndLeastAccessedSelectorMemoryAPI() throws IOException {
     System.out.println("Memory API: eviction=SLRU, selector=LeastAccessed");
 
-    this.numRecords = 1000000;
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = SLRUEvictionPolicy.class;
     this.rsClz = LeastAccessedRecyclingSelector.class;
     this.scavDumpBelowRatio = 1.0;
-    this.numThreads = 4;
     super.testContinuosLoadMemoryRun();
   }
 }

@@ -31,9 +31,19 @@ public class LeastAccessedRecyclingSelector implements RecyclingSelector {
   public Segment selectForRecycling(Segment[] segments) {
     Segment selection = null;
     long minAccess = Long.MAX_VALUE;
+    int nulls = 0;
+    int notSealed = 0;
+    
     for(int i = 0; i < segments.length; i++) {
       Segment s = segments[i];
-      if (s == null || !s.isSealed()) continue;
+      if (s == null) {
+        nulls++;
+        continue;
+      }
+      if (!s.isSealed()) {
+        notSealed++;
+        continue;
+      }
       Segment.Info info = s.getInfo();
       long maxExpireAt = info.getMaxExpireAt();
       long currentTime = System.currentTimeMillis();
@@ -47,6 +57,10 @@ public class LeastAccessedRecyclingSelector implements RecyclingSelector {
         selection = s;
       }
     }
+    //if (selection == null) {
+      //*DEBUG*/ System.out.printf("Selection= nulls=%d not-sealed=%d total segments=%d\n",
+      //  nulls, notSealed, segments.length);
+    //}
     return selection;
   }
 }

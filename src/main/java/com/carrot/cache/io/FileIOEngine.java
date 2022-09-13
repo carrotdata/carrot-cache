@@ -28,10 +28,10 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
 import org.apache.logging.log4j.LogManager;
@@ -47,13 +47,14 @@ public class FileIOEngine extends IOEngine {
    * Maps data segment Id to a disk file Attention: System MUST provide support for reasonably large
    * number of open files Max = 64K
    */
-  Map<Integer, RandomAccessFile> dataFiles = new HashMap<Integer, RandomAccessFile>();
+  Map<Integer, RandomAccessFile> dataFiles = new ConcurrentHashMap<Integer, RandomAccessFile>();
 
   protected DataReader fileDataReader;
 
-  /** We use this buffer pool to avoid unnecessary large memory allocations */
-  protected ConcurrentLinkedQueue<Long> bufferPool = new ConcurrentLinkedQueue<Long>();
-
+  private AtomicInteger activeSaveTasks = new AtomicInteger(0);
+  
+  private int ioStoragePoolSize = 32; 
+    
   /**
    * Constructor
    *
@@ -61,15 +62,9 @@ public class FileIOEngine extends IOEngine {
    */
   public FileIOEngine(String cacheName) {
     super(cacheName);
-    try {
-      this.fileDataReader = this.config.getFileDataReader(this.cacheName);
-      this.fileDataReader.init(this.cacheName);
-    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-      LOG.fatal(e);
-      throw new RuntimeException(e);
-    }
+    initEngine();
   }
-
+  
   /**
    * Constructor
    *
@@ -77,15 +72,20 @@ public class FileIOEngine extends IOEngine {
    */
   public FileIOEngine(CacheConfig conf) {
     super(conf);
+    initEngine();
+  }
+
+  private void initEngine() {
     try {
       this.fileDataReader = this.config.getFileDataReader(this.cacheName);
       this.fileDataReader.init(this.cacheName);
+      this.ioStoragePoolSize = this.config.getIOStoragePoolSize(this.cacheName);
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
       LOG.fatal(e);
       throw new RuntimeException(e);
     }
   }
-
+  
   /**
    * IOEngine subclass can override this method
    *
@@ -93,74 +93,91 @@ public class FileIOEngine extends IOEngine {
    * @throws FileNotFoundException
    */
   protected void saveInternal(Segment data) throws IOException {
-    Runnable r =
-        () -> {
-          int id = data.getId();
-          try {
-            // First save segment data to file
-            RandomAccessFile file = getOrCreateFileFor(id);
-            // Save to file
-            data.save(file);
-            // Release segment
-            data.writeLock();
-            data.setOffheap(false);
-            // release memory buffer
-            long ptr = data.getAddress();
-            clearMemory(ptr);
-            this.bufferPool.offer(ptr);
-            data.setAddress(0);
-            data.seal();
+    Runnable r = () -> {
+      int id = data.getId();
+      try {
+        // WRITE_LOCK
+        data.writeLock();
+        if (data.isSealed()) {
+          return;
+        }
+        RandomAccessFile file = getFileFor(id);
+        if (file != null) {
+          return;
+        }
+        file = getOrCreateFileFor(id);
+        data.writeUnlock();
+        // WRITE_UNLOCK
 
-          } catch (IOException e) {
-            LOG.error("saveInternal segmentId=" + data.getId() + " s=" + data, e);
-          } finally {
-            data.writeUnlock();
-          }
-        };
+        // Save to file without locking
+        data.save(file);
+
+        // LOCK AGAIN
+        data.writeLock();
+        // Release segment
+        data.setOffheap(false);
+        // release memory buffer
+        long ptr = data.getAddress();
+        data.setAddress(0);
+        data.seal();
+        UnsafeAccess.free(ptr);
+      } catch (IOException e) {
+        LOG.error("saveInternal segmentId=" + data.getId() + " s=" + data, e);
+      } finally {
+        data.writeUnlock();
+        activeSaveTasks.decrementAndGet();
+      }
+    };
+    submitTask(r);
+  }
+
+  private void submitTask(Runnable r) {
+    while(activeSaveTasks.get() >= ioStoragePoolSize) {
+      Thread.onSpinWait();
+    }
+    activeSaveTasks.incrementAndGet();
     new Thread(r).start();
   }
 
-  private void clearMemory(long ptr) {
-    UnsafeAccess.setMemory(ptr, this.segmentSize, (byte) 0);
-  }
 
-  @Override
-  protected Segment getRAMSegmentByRank(int rank) {
-    Segment s = this.ramBuffers[rank];
-    if (s == null) {
-      synchronized (this.ramBuffers) {
-        s = this.ramBuffers[rank];
-        if (s != null) {
-          return s;
-        }
-        int id = getAvailableId();
-        if (id < 0) {
-          return null;
-        }
-        if (this.dataSegments[id] == null) {
-          Long ptr = this.bufferPool.poll();
-          if (ptr == null) {
-            ptr = UnsafeAccess.mallocZeroed(this.segmentSize);
-          }
-          s = Segment.newSegment(ptr, (int) this.segmentSize, id, rank);
-          s.init(this.cacheName);
-          // Set data appender
-
-          s.setDataWriter(this.dataWriter);
-          this.dataSegments[id] = s;
-          reportAllocation(this.segmentSize);
-          // LOG.error("created "+ id + " s=" + s);
-        } else {
-          // TODO: is it normal path of an execution?
-          // FIXME: check Scavenger
-          s = this.dataSegments[id];
-          s.reuse(id, rank, System.currentTimeMillis());
-        }
-        this.ramBuffers[rank] = s;
-      }
-    }
-    return s;
-  }
+//  @Override
+//  protected Segment getRAMSegmentByRank(int rank) {
+//    Segment s = this.ramBuffers[rank];
+//    if (s == null) {
+//      synchronized (this.ramBuffers) {
+//        s = this.ramBuffers[rank];
+//        if (s != null) {
+//          return s;
+//        }
+//        int id = getAvailableId();
+//        if (id < 0) {
+//          return null;
+//        }
+//        if (this.dataSegments[id] == null) {
+//          Long ptr = this.bufferPool.poll();
+//          if (ptr == null) {
+//            ptr = UnsafeAccess.mallocZeroed(this.segmentSize);
+//          }
+//          s = Segment.newSegment(ptr, (int) this.segmentSize, id, rank);
+//          s.init(this.cacheName);
+//          // Set data appender
+//
+//          s.setDataWriter(this.dataWriter);
+//          this.dataSegments[id] = s;
+//          reportAllocation(this.segmentSize);
+//          created.incrementAndGet();
+//          // LOG.error("created "+ id + " s=" + s);
+//        } else {
+//          // TODO: is it normal path of an execution?
+//          // FIXME: check Scavenger
+//          s = this.dataSegments[id];
+//          s.reuse(id, rank, System.currentTimeMillis());
+//        }
+//        this.ramBuffers[rank] = s;
+//      }
+//    }
+//    return s;
+//  }
 
   @Override
   protected int getInternal(
@@ -173,29 +190,67 @@ public class FileIOEngine extends IOEngine {
       byte[] buffer,
       int bufOffset)
       throws IOException {
-    return this.fileDataReader.read(
+    
+    Segment s = getSegmentById(sid);
+    if (s == null) {
+      return NOT_FOUND;
+    }
+    
+    if (s.isOffheap()) {
+       return this.memoryDataReader.read(
+         this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset); 
+    } else {
+      return this.fileDataReader.read(
         this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset);
+    }
   }
 
   @Override
   protected int getInternal(
       int sid, long offset, int size, byte[] key, int keyOffset, int keySize, ByteBuffer buffer)
       throws IOException {
-    return this.fileDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
+    Segment s = getSegmentById(sid);
+    if (s == null) {
+      return NOT_FOUND;
+    }
+    
+    if (s.isOffheap()) {
+      return this.memoryDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
+    } else {
+      return this.fileDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
+    }
   }
 
   @Override
   protected int getInternal(
       int sid, long offset, int size, long keyPtr, int keySize, byte[] buffer, int bufOffset)
       throws IOException {
-    return this.fileDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
+    Segment s = getSegmentById(sid);
+    if (s == null) {
+      return NOT_FOUND;
+    }
+    
+    if (s.isOffheap()) {
+      return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
+    } else {
+      return this.fileDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
+    }
   }
 
   @Override
   protected int getInternal(
       int sid, long offset, int size, long keyPtr, int keySize, ByteBuffer buffer)
       throws IOException {
-    return this.fileDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer);
+    Segment s = getSegmentById(sid);
+    if (s == null) {
+      return NOT_FOUND;
+    }
+    
+    if (s.isOffheap()) {
+      return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer);
+    } else {
+      return this.fileDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer);
+    }
   }
 
   OutputStream getOSFor(int id) throws FileNotFoundException {
@@ -228,7 +283,7 @@ public class FileIOEngine extends IOEngine {
   }
 
   @Override
-  public synchronized void disposeDataSegment(Segment data) {
+  public void disposeDataSegment(Segment data) {
     // TODO: is it a good idea to lock on file I/O?
     // TODO: make sure that we remove file before save to the same ID
     // That is the race condition
@@ -236,14 +291,15 @@ public class FileIOEngine extends IOEngine {
     RandomAccessFile f = dataFiles.get(data.getId());
     if (f != null) {
       try {
+        data.writeLock();
         f.close();
         Files.deleteIfExists(getPathForDataSegment(data.getId()));
-        // *DEBUG*/LOG.error("delete id=" + data.getId() + " s=" + data);
         dataFiles.remove(data.getId());
         super.disposeDataSegment(data);
       } catch (IOException e) {
-        // TODO
-        e.printStackTrace();
+        LOG.error(e);
+      } finally {
+        data.writeUnlock();
       }
     }
   }
@@ -278,6 +334,7 @@ public class FileIOEngine extends IOEngine {
 
   @Override
   public void save(OutputStream os) throws IOException {
+    waitForIoStoragePool();
     super.save(os);
   }
 
@@ -299,5 +356,32 @@ public class FileIOEngine extends IOEngine {
         this.dataFiles.put(sid, raf);
       }
     }
+  }
+  
+  private void waitForIoStoragePool() {
+    while(this.activeSaveTasks.get() > 0) {
+      try {
+        Thread.sleep(10);
+      } catch (InterruptedException e) {
+        // TODO Auto-generated catch block
+      }
+    }
+  }
+  
+  @Override
+  public void dispose() {
+    waitForIoStoragePool();
+    super.dispose();
+    int count = 0;
+    for (RandomAccessFile f: this.dataFiles.values()) {
+      try {
+        f.close();
+        count++;
+      } catch(IOException e) {
+        // swallow
+        LOG.error(e);
+      }
+    }
+    System.out.printf("Closed %d files\n", count);
   }
 }

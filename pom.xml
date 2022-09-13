@@ -64,7 +64,9 @@
                         <exclude>**/TestOffheapCacheMultithreadedStress.java</exclude>
                         <exclude>**/TestMemoryIndexMQMultithreadedStress.java</exclude>
 			<exclude>**/TestMemoryIndexAQMultithreadedStress.java</exclude> 
-                    </excludes>
+                        <exclude>**/TestOffheapCacheMultithreadedZipfStress.java</exclude>
+		 	<exclude>**/TestFileCacheMultithreadedZipfStress.java</exclude>
+		    </excludes>
                     <systemProperties>
                         <property>
                             <name>surefire</name>

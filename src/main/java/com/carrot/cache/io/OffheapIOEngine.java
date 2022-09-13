@@ -88,5 +88,9 @@ public class OffheapIOEngine extends IOEngine {
     return this.memoryDataReader.getSegmentScanner(this, s);
   }
 
+  @Override
+  protected void saveInternal(Segment data) throws IOException {
+    data.seal();
+  }
 
 }

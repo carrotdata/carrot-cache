@@ -23,31 +23,23 @@ import com.carrot.cache.util.UnsafeAccess;
 import static com.carrot.cache.io.BlockReaderWriterSupport.*;
 import static com.carrot.cache.util.Utils.getItemSize;
 
-
 public class BlockMemoryDataReader implements DataReader {
-  
+
   private int blockSize;
-  
+
   public BlockMemoryDataReader() {
   }
 
   @Override
   public void init(String cacheName) {
-    this.blockSize = CacheConfig.getInstance().getBlockWriterBlockSize(cacheName);    
+    this.blockSize = CacheConfig.getInstance().getBlockWriterBlockSize(cacheName);
   }
 
   @Override
-  public int read(
-      IOEngine engine,
-      byte[] key,
-      int keyOffset,
-      int keySize,
-      int sid,
-      long offset,
-      int size, /* can be unknown -1*/
-      byte[] buffer,
-      int bufOffset) {
-    
+  public int read(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid, long offset,
+      int size, /* can be unknown -1 */
+      byte[] buffer, int bufOffset) {
+
     int avail = buffer.length - bufOffset;
     // sanity check
     if (size > avail) {
@@ -57,6 +49,10 @@ public class BlockMemoryDataReader implements DataReader {
     Segment s = engine.getSegmentById(sid);
     if (s == null) {
       // TODO: error
+      return IOEngine.NOT_FOUND;
+    }
+
+    if (!s.isOffheap()) {
       return IOEngine.NOT_FOUND;
     }
     long dataSize = getFullDataSize(s, blockSize);
@@ -77,17 +73,10 @@ public class BlockMemoryDataReader implements DataReader {
       return requiredSize;
     }
   }
-  
+
   @Override
-  public int read(
-      IOEngine engine,
-      byte[] key,
-      int keyOffset,
-      int keySize,
-      int sid,
-      long offset,
-      int size,
-      ByteBuffer buffer) {
+  public int read(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid, long offset,
+      int size, ByteBuffer buffer) {
     // Segment read lock is already held by this thread
     int avail = buffer.remaining();
     // Sanity check
@@ -98,6 +87,10 @@ public class BlockMemoryDataReader implements DataReader {
     Segment s = engine.getSegmentById(sid);
     if (s == null) {
       // TODO: error
+      return IOEngine.NOT_FOUND;
+    }
+
+    if (!s.isOffheap()) {
       return IOEngine.NOT_FOUND;
     }
     long dataSize = getFullDataSize(s, blockSize);
@@ -122,15 +115,8 @@ public class BlockMemoryDataReader implements DataReader {
   }
 
   @Override
-  public int read(
-      IOEngine engine,
-      long keyPtr,
-      int keySize,
-      int sid,
-      long offset,
-      int size,
-      byte[] buffer,
-      int bufOffset) {
+  public int read(IOEngine engine, long keyPtr, int keySize, int sid, long offset, int size,
+      byte[] buffer, int bufOffset) {
     // Segment read lock is already held by this thread
     int avail = buffer.length - bufOffset;
     // Sanity check
@@ -141,6 +127,10 @@ public class BlockMemoryDataReader implements DataReader {
     Segment s = engine.getSegmentById(sid);
     if (s == null) {
       // TODO: error
+      return IOEngine.NOT_FOUND;
+    }
+
+    if (!s.isOffheap()) {
       return IOEngine.NOT_FOUND;
     }
     long dataSize = getFullDataSize(s, blockSize);
@@ -163,8 +153,8 @@ public class BlockMemoryDataReader implements DataReader {
   }
 
   @Override
-  public int read(
-      IOEngine engine, long keyPtr, int keySize, int sid, long offset, int size, ByteBuffer buffer) {
+  public int read(IOEngine engine, long keyPtr, int keySize, int sid, long offset, int size,
+      ByteBuffer buffer) {
     // Segment read lock is already held by this thread
     int avail = buffer.remaining();
     // Sanity check
@@ -175,6 +165,10 @@ public class BlockMemoryDataReader implements DataReader {
     Segment s = engine.getSegmentById(sid);
     if (s == null) {
       // TODO: error
+      return IOEngine.NOT_FOUND;
+    }
+
+    if (!s.isOffheap()) {
       return IOEngine.NOT_FOUND;
     }
     long dataSize = getFullDataSize(s, blockSize);

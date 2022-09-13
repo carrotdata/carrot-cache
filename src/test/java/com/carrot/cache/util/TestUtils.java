@@ -24,6 +24,7 @@ import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
+import java.util.stream.Stream;
 
 import org.mockito.Mockito;
 
@@ -145,4 +146,23 @@ public class TestUtils {
     return mock;
   }
   
+  
+  public static void deleteDir(Path dir) throws IOException {
+    Stream<Path> stream = Files.list(dir);
+    stream.forEach( x -> {
+      try {
+        Files.delete(x);
+      } catch (IOException e) {
+        // TODO Auto-generated catch block
+        e.printStackTrace();
+      }
+    });
+    Files.delete(dir);
+    if(Files.exists(dir)) {
+      System.err.printf("Could not delete dir=%s\n", dir.toString());
+    } else {
+      System.out.printf("Deleted dir=%s\n", dir.toString());
+    }
+    stream.close();
+  }
 }

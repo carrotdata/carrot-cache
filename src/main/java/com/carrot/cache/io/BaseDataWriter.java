@@ -60,6 +60,11 @@ public class BaseDataWriter implements DataWriter {
     if (requiredSize + s.getSegmentDataSize() > s.size()) {
       return -1;
     }
+    if (s.getAddress() == 0){
+      /*DEBUG*/ System.err.printf("PTR=NULL sid=%d dataSize=%d isSealed=%s isValid=%s isOffheap=%s\n",
+            s.getId(), s.getSegmentDataSize(), Boolean.toString(s.isSealed()), Boolean.toString(s.isValid()),
+            Boolean.toString(s.isOffheap()));
+    }
     long addr = s.getAddress() + s.getSegmentDataSize();
     // Key size
     Utils.writeUVInt(addr, keySize);
