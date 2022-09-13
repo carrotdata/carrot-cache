@@ -18,7 +18,6 @@ package com.carrot.cache;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
@@ -62,6 +61,8 @@ public abstract class TestCacheMultithreadedZipfBase {
   protected int maxValueSize = 5000;
   
   protected int numRecords = 10;
+  
+  protected int numIterations = 0;
   
   protected int numThreads = 1;
   
@@ -172,15 +173,16 @@ public abstract class TestCacheMultithreadedZipfBase {
     for(int i = 0; i < total; i++) {
       int n  = dist.sample();
       long start = System.nanoTime();
-      if (verifyBytesStream(n, total, buffer)) {
+      if (verifyBytesStream(n, buffer)) {
         hits++;
-      } else if(loadBytesStream(n, total)) {
+      } else if(loadBytesStream(n)) {
         loaded++;
       }
       long end = System.nanoTime();
       perc.add(end - start);
       if (i > 0 && i % 500000 == 0) {
-        System.out.printf("%s - i=%d hit rate=%f\n", Thread.currentThread().getName(), i, (float) cache.getHitRate());
+        System.out.printf("%s - i=%d hit rate=%f\n", Thread.currentThread().getName(), i, 
+          (float) cache.getOverallHitRate());
       }
     }
     System.out.printf("%s - hit=%f loaded=%d\n", Thread.currentThread().getName(), 
@@ -198,21 +200,22 @@ public abstract class TestCacheMultithreadedZipfBase {
     ByteBuffer buffer = ByteBuffer.allocate(kvSize);
     
     ZipfDistribution dist = new ZipfDistribution(this.numRecords, this.zipfAlpha);
-    Percentile perc = new Percentile(10000, total);
+    Percentile perc = new Percentile(10000, this.numRecords);
 
     for(int i = 0; i < total; i++) {
       int n  = dist.sample();
       long start = System.nanoTime();
-      if (verifyMemoryStream(n, total, buffer)) {
+      if (verifyMemoryStream(n, buffer)) {
         hits++;
-      } else if (loadMemoryStream(n, total)) {
+      } else if (loadMemoryStream(n)) {
         loaded++;
       }
       long end = System.nanoTime();
       perc.add(end - start);
       
       if (i > 0 && i % 500000 == 0) {
-        System.out.printf("%s - i=%d hit rate=%f\n", Thread.currentThread().getName(), i, (float) cache.getHitRate());
+        System.out.printf("%s - i=%d hit rate=%f\n", Thread.currentThread().getName(), i, 
+          (float) cache.getOverallHitRate());
       }
     }
     System.out.printf("%s - hit=%f loaded=%d\n", Thread.currentThread().getName(), 
@@ -223,7 +226,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   }
   
   
-  protected final boolean loadBytesStream(int n, int max) throws IOException {
+  protected final boolean loadBytesStream(int n) throws IOException {
     Random r = new Random(testStartTime + n);
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);
@@ -235,7 +238,7 @@ public abstract class TestCacheMultithreadedZipfBase {
     return result;
   }
   
-  protected final boolean verifyBytesStream(int n, int max, byte[] buffer) throws IOException {
+  protected final boolean verifyBytesStream(int n, byte[] buffer) throws IOException {
     
     Random r = new Random(testStartTime + n);
     
@@ -266,7 +269,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   }
 
 
-  protected final boolean loadMemoryStream(int n, int max) throws IOException {
+  protected final boolean loadMemoryStream(int n) throws IOException {
     Random r = new Random(testStartTime + n);
     
     int keySize = nextKeySize(r);
@@ -280,7 +283,7 @@ public abstract class TestCacheMultithreadedZipfBase {
     return result;
   }
   
-  protected final boolean verifyMemoryStream(int n, int max, ByteBuffer buffer) throws IOException {
+  protected final boolean verifyMemoryStream(int n, ByteBuffer buffer) throws IOException {
 
     Random r = new Random(testStartTime + n);
     
@@ -320,9 +323,10 @@ public abstract class TestCacheMultithreadedZipfBase {
     long start = System.currentTimeMillis();
     // Create cache after setting is configuration parameters
     this.cache = createCache();
+    this.numIterations = this.numIterations > 0? this.numIterations: this.numRecords;
     Runnable r = () -> {
       try {
-        runBytesStreamZipf(this.numRecords);
+        runBytesStreamZipf(this.numIterations);
       } catch (IOException e) {
         // TODO Auto-generated catch block
         e.printStackTrace();
@@ -339,9 +343,11 @@ public abstract class TestCacheMultithreadedZipfBase {
     long start = System.currentTimeMillis();
     // Create cache after setting is configuration parameters
     this.cache = createCache();
+    this.numIterations = this.numIterations > 0? this.numIterations: this.numRecords;
+
     Runnable r = () -> {
       try {
-        runMemoryStreamZipf(this.numRecords);
+        runMemoryStreamZipf(this.numIterations);
       } catch (IOException e) {
         // TODO Auto-generated catch block
         e.printStackTrace();

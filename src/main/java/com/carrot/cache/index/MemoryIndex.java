@@ -1988,11 +1988,6 @@ public final class MemoryIndex implements Persistent {
       // This MUST implements ALL the eviction-related logic
       this.evictionListener.onEviction(slotPtr, ptr);
     }
-    int sid = indexFormat.getSegmentId(ptr);
-    if (sid == 8192) {
-    /*DEBUG*/  System.out.printf("%s slotPtr=%d sid=%d numEntries=%d evict=%d expired=%s\n", 
-        Thread.currentThread().getName(), slotPtr, sid, numEntries, toEvict, Boolean.toString(expired));
-    }
     int rank = this.evictionPolicy.getRankForIndex(numRanks, toEvict, numEntries);
     deleteAt(slotPtr, ptr, rank, expire);
   }

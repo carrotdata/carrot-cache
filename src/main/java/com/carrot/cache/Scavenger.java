@@ -269,27 +269,28 @@ public class Scavenger extends Thread {
       if (numInstances.incrementAndGet() > maxInstances) {
         numInstances.decrementAndGet();
         System.out.printf(
-            "%d - scavenger skips run - number of maximum instances %d exceeded\n", 
-            Thread.currentThread().getId(), maxInstances);
+            "Cache [%s] - scavenger skips run - number of maximum instances %d exceeded\n", 
+            cache.getName(), maxInstances);
         return;
       }
 //      System.out.printf(
 //        "%d - scavenger started at %s allocated storage=%d maximum storage=%d num-instances=%d max-instances=%d\n", Thread.currentThread().getId(),
 //        format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize(), numInstances.get(), maxInstances);
       LOG.info(
-          "scavenger {} started at {} allocated storage={} maximum storage={}", Thread.currentThread().getId(),
+          "scavenger [{}] started at {} allocated storage={} maximum storage={}", cache.getName(),
           format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
 
       boolean finished = false;
 
       while (!finished) {
         if (Thread.currentThread().isInterrupted()) {
-          /*DEBUG*/ System.out.printf("%s - interrupted - exited\n", Thread.currentThread().getName());
+          /*DEBUG*/ System.out.printf("Scavenger [%s] - interrupted - exited\n", cache.getName());
           break;
         }
         Segment s = engine.getSegmentForRecycling();
         if (s == null) {
-          /*DEBUG*/ System.out.printf("%d - no segments to process - exited\n", Thread.currentThread().getId());
+          /*DEBUG*/ System.out.printf("Scavenger [%s] - no segments to process - exited\n", 
+            cache.getName());
           LOG.warn(Thread.currentThread().getName() + ": empty segment");
           return;
         }
@@ -326,7 +327,7 @@ public class Scavenger extends Thread {
     // Update stats
     stats.totalRunTimes += (runEnd - runStart);
     LOG.info(
-        "scavenger{} finished at {} allocated storage={} maximum storage=%{}", Thread.currentThread().getId(),
+        "scavenger [{}] finished at {} allocated storage={} maximum storage=%{}", cache.getName(),
         format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
 //    System.out.printf(
 //      "%d - scavenger finished at %s allocated storage=%d maximum storage=%d\n", Thread.currentThread().getId(),

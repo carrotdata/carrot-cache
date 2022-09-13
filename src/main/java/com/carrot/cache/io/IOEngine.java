@@ -395,11 +395,10 @@ public abstract class IOEngine implements Persistent {
     // TODO: embedded entry case
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
-    //int slot = 0;
     try {
-      // Lock index for the key (slot)
-      //slot = this.index.lock(keyPtr, keySize);
+
       long result = index.find(keyPtr, keySize, hit, buf, entrySize);
+      
       if (result < 0) {
         return NOT_FOUND;
       } else if (result > entrySize) {
@@ -467,7 +466,6 @@ public abstract class IOEngine implements Persistent {
       }
     } finally {
       UnsafeAccess.free(buf);
-      //this.index.unlock(slot);
     }
   }
 
@@ -490,10 +488,7 @@ public abstract class IOEngine implements Persistent {
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     int bufferAvail = buffer.length - bufOffset;
-    //int slot = 0;
     try {
-      // Lock index for the key (slot)
-      //slot = this.index.lock(key, keyOffset, keySize);
 
       long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
       if (result < 0) {
@@ -563,7 +558,6 @@ public abstract class IOEngine implements Persistent {
       }
     } finally {
       UnsafeAccess.free(buf);
-      //this.index.unlock(slot);
     }
   }
 
@@ -696,9 +690,7 @@ public abstract class IOEngine implements Persistent {
     IndexFormat format = this.index.getIndexFormat();
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
-    //int slot = 0;
     try {
-      //slot = this.index.lock(key, keyOffset, keySize);
       long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
       if (result < 0) {
         return NOT_FOUND;
@@ -767,7 +759,6 @@ public abstract class IOEngine implements Persistent {
         }
     } finally {
       UnsafeAccess.free(buf);
-      //this.index.unlock(slot);
     }
   }
 

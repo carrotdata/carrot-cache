@@ -148,6 +148,9 @@ public class TestUtils {
   
   
   public static void deleteDir(Path dir) throws IOException {
+    if (!Files.exists(dir)) {
+      return;
+    }
     Stream<Path> stream = Files.list(dir);
     stream.forEach( x -> {
       try {

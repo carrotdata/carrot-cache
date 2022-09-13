@@ -42,6 +42,7 @@ public class TestOffheapCacheMultithreadedZipf extends TestCacheMultithreadedZip
   public void setUp() {
     this.offheap = true;
     this.numRecords = 1000000;
+    this.numIterations = this.numRecords;
     this.numThreads = 4;
     this.maxCacheSize = 100 * this.segmentSize;
   }
@@ -97,7 +98,6 @@ public class TestOffheapCacheMultithreadedZipf extends TestCacheMultithreadedZip
     super.testContinuosLoadBytesRun();
   }
   
-  @Test
   public void testLRUEvictionAndMRCSelectorMemoryAPI() throws IOException {
     System.out.println("Memory API: eviction=LRU, selector=MRC");
 

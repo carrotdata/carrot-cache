@@ -1077,6 +1077,17 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return (double) totalHits.get() / totalGets.get();
   }
   
+  /**
+   * For hybrid caches
+   * @return hybrid cache hit rate
+   */
+  public double getOverallHitRate() {
+    if (this.victimCache == null) {
+      return getHitRate();
+    }
+    return (double) (totalHits.get() + this.victimCache.totalHits.get()) / totalGets.get();
+  }
+  
   private void access() {
     this.totalGets.incrementAndGet();
   }
@@ -1431,8 +1442,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     try {
       result = engine.get(key, keyOffset, keySize, hit, buffer, bufOffset);
     } catch (IOException e) {
-      // Try one more time, file could be closed by Scavenger
-      //result = engine.get(key, keyOffset, keySize, hit, buffer, bufOffset);
+      // IOException is possible
+      //TODO: better mitigation 
       failedGets.incrementAndGet();
       return result;
     }
@@ -1449,6 +1460,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       }
     }
     if(result < 0 && this.victimCache != null) {
+      //TODO: optimize it
+      // getWithExpire and getWithExpireAndDelete API
+      // one call instead of three
       result = this.victimCache.get(key, keyOffset, keySize, hit, buffer, bufOffset);
       if (result >=0 && result <= buffer.length - bufOffset) {
         // put k-v into this cache, remove it from the victim cache
@@ -1497,8 +1511,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     try {
       result = this.engine.get(key, keyOff, keySize, hit, buffer);
     } catch (IOException e) {
-      // Try one more time, file could be closed by Scavenger
-      //result = this.engine.get(key, keyOff, keySize, hit, buffer);
       failedGets.incrementAndGet();
       return result;
     }
@@ -1562,8 +1574,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     try {
       result = this.engine.get(keyPtr, keySize, hit, buffer);
     } catch(IOException e) {
-      // Try one more time, file could be closed by Scavenger
-      //result = this.engine.get(keyPtr, keySize, hit, buffer);
       failedGets.incrementAndGet();
       return result;
     }
@@ -1746,6 +1756,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     try {
       // Check embedded mode
       //FIXME: this calls are expensive 
+      //FIXME: this code is wrong
       if (this.indexEmdeddingSupported) {
         if (size <= this.indexEmbeddedSize) {
           transferEmbeddedToCache(this.victimCache, ptr, $ptr);
@@ -1769,10 +1780,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (getCacheType() == Type.DISK) {
       LOG.error("Attempt to transfer cached item from cache type = DISK");
       throw new IllegalArgumentException("Victim cache is not supported for DISK type cache");
-    }
-    if (this.victimCache == null) {
-      LOG.error("Attempt to transfer cached item when victim cache is null");
-      return;
     }
 
     // Cache is off-heap 
@@ -2120,6 +2127,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     stopScavenger();
     
     this.engine.dispose();
+    if (this.victimCache != null) {
+      this.victimCache.dispose();
+    }
   }
   
   public void failedGets() {
