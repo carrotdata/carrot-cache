@@ -21,6 +21,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.DateFormat;
 import java.util.Date;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.logging.log4j.LogManager;
@@ -57,7 +59,10 @@ public class Scavenger extends Thread {
   private static final Logger LOG = LogManager.getLogger(Scavenger.class);
   
   static class Stats implements Persistent {
-
+    
+    /** Cache name */
+    String cacheName;
+    
     /** Total times scavenger ran */
     long totalRuns;
 
@@ -85,7 +90,26 @@ public class Scavenger extends Thread {
     /** Total bytes expired */
     long totalBytesExpired;
 
-    Stats() {}
+    double dumpBelowRatioMin;
+    
+    double dumpBelowRatioMax;
+    
+    double dumpBelowRatio;
+
+    double adjStep;
+    
+    double stopRatio;
+    
+    Stats(String cacheName) {
+      this.cacheName = cacheName;
+      CacheConfig conf = CacheConfig.getInstance();
+      dumpBelowRatio = conf.getScavengerDumpEntryBelowStart(cacheName);
+      dumpBelowRatioMin = dumpBelowRatio;
+      dumpBelowRatioMax = conf.getScavengerDumpEntryBelowStop(cacheName);
+      adjStep = conf.getScavengerDumpEntryBelowAdjStep(cacheName);
+      stopRatio =  conf.getScavengerStopMemoryRatio(cacheName);
+    }
+    
     /**
      * Get total runs
      *
@@ -169,6 +193,7 @@ public class Scavenger extends Thread {
     @Override
     public void save(OutputStream os) throws IOException {
       DataOutputStream dos = Utils.toDataOutputStream(os);
+      dos.writeUTF(cacheName);
       dos.writeLong(totalBytesExpired);
       dos.writeLong(totalBytesFreed);
       dos.writeLong(totalBytesScanned);
@@ -178,11 +203,17 @@ public class Scavenger extends Thread {
       dos.writeLong(totalItemsScanned);
       dos.writeLong(totalRuns);
       dos.writeLong(totalRunTimes);
+      dos.writeDouble(dumpBelowRatioMin);
+      dos.writeDouble(dumpBelowRatioMax);
+      dos.writeDouble(dumpBelowRatio);
+      dos.writeDouble(adjStep);
+      dos.writeDouble(stopRatio);
     }
     
     @Override
     public void load(InputStream is) throws IOException {
       DataInputStream dis = Utils.toDataInputStream(is);
+      cacheName = dis.readUTF();
       totalBytesExpired = dis.readLong();
       totalBytesFreed = dis.readLong();
       totalBytesScanned = dis.readLong();
@@ -192,25 +223,50 @@ public class Scavenger extends Thread {
       totalItemsScanned  = dis.readLong();
       totalRuns = dis.readLong();
       totalRunTimes = dis.readLong();
+      dumpBelowRatioMin = dis.readDouble();
+      dumpBelowRatioMax = dis.readDouble();
+      dumpBelowRatio = dis.readDouble();
+      adjStep = dis.readDouble();
+      stopRatio = dis.readDouble();
     }
   }
 
-  static Stats stats = new Stats();
+  static ConcurrentHashMap<String, Stats> statsMap = new ConcurrentHashMap<String, Stats>();
 
   /**
    * Get scavenger statistics
    *
    * @return scavenger statistics;
    */
-  public static Stats stats() {
+  public static Stats getStatisticsForCache(String cacheName) {
+    Stats stats = statsMap.get(cacheName);
+    if (stats == null) {
+      stats = new Stats(cacheName);
+      statsMap.put(cacheName, stats);
+    }
     return stats;
   }
 
-  public static void printStats() {
-    System.out.printf("Scavenger: runs=%d scanned=%d freed=%d written back=%d\n", 
-      stats.getTotalRuns(), stats.getTotalBytesScanned(), 
-      stats.getTotalBytesFreed(), stats.getTotalBytesScanned() - stats.getTotalBytesFreed());
+  /**
+   *  Set scavenger statistics
+   * @param cacheName cache name
+   * @param stats stats
+   */
+  public static void setStatisticsForCache(String cacheName, Stats stats){
+    statsMap.put(cacheName,  stats);
   }
+  
+  public static void printStats() {
+    for(Map.Entry<String,Stats> entry: statsMap.entrySet()) {
+      String name = entry.getKey();
+      Stats stats = entry.getValue();
+      System.out.printf("Scavenger [%s]: runs=%d scanned=%d freed=%d written back=%d\n", 
+        name, stats.getTotalRuns(), stats.getTotalBytesScanned(), 
+        stats.getTotalBytesFreed(), stats.getTotalBytesScanned() - stats.getTotalBytesFreed());
+    }
+  }
+  
+  private Stats stats;
   
   private final Cache cache;
   
@@ -218,15 +274,15 @@ public class Scavenger extends Thread {
 
   private volatile long runStartTime = System.currentTimeMillis();
 
-  private static double dumpBelowRatioMin;
+  private double dumpBelowRatioMin;
   
-  private static double dumpBelowRatioMax;
+  private double dumpBelowRatioMax;
   
-  private static double dumpBelowRatio = -1;
+  private double dumpBelowRatio = -1;
 
-  private static double adjStep = 0.05;
+  private double adjStep = 0.05;
   
-  private static double stopRatio;
+  private double stopRatio;
   
   private static AtomicInteger numInstances = new AtomicInteger();
   
@@ -239,23 +295,40 @@ public class Scavenger extends Thread {
     super("c2 scavenger");
     this.cache = cache;
     this.config = CacheConfig.getInstance();
-    // Update stats
-    stats.totalRuns++;
     String cacheName = this.cache.getName();
-    if (dumpBelowRatio < 0) {
+
+    // Update stats
+    stats = statsMap.get(cache.getName());
+    
+    if (stats == null) {
+      stats = new Stats(cache.getName());
+      statsMap.put(cache.getName(), stats);
       dumpBelowRatio = this.config.getScavengerDumpEntryBelowStart(cacheName);
       dumpBelowRatioMin = dumpBelowRatio;
       dumpBelowRatioMax = this.config.getScavengerDumpEntryBelowStop(cacheName);
       adjStep = this.config.getScavengerDumpEntryBelowAdjStep(cacheName);
+      stopRatio =  this.config.getScavengerStopMemoryRatio(cacheName);
+      stats.dumpBelowRatio = dumpBelowRatio;
+      stats.dumpBelowRatioMin = dumpBelowRatioMin;
+      stats.dumpBelowRatioMax = dumpBelowRatioMax;
+      stats.adjStep = adjStep;
+      stats.stopRatio = stopRatio;
+    } else {
+      dumpBelowRatio = stats.dumpBelowRatio;
+      dumpBelowRatioMin = stats.dumpBelowRatioMin;
+      dumpBelowRatioMax = stats.dumpBelowRatioMax;
+      adjStep = stats.adjStep;
+      stopRatio = stats.stopRatio;
     }
-    stopRatio =  this.config.getScavengerStopMemoryRatio(cacheName);
+    stats.totalRuns++;
+    
   }
   
   /**
    * Used for testing
    */
   public static void clear() {
-    dumpBelowRatio = -1;
+    statsMap.clear();
   }
 
   @Override
@@ -534,19 +607,27 @@ public class Scavenger extends Thread {
     return (long) stats.totalBytesFreed * 1000 / (System.currentTimeMillis() - runStartTime); 
   }
 
-  public static boolean decreaseThroughput() {
-    if (dumpBelowRatio + adjStep > dumpBelowRatioMax) {
+  public static boolean decreaseThroughput(String cacheName) {
+    Stats stats = statsMap.get(cacheName);
+    if (stats == null) {
       return false;
     }
-    dumpBelowRatio += adjStep;
+    if (stats.dumpBelowRatio + stats.adjStep > stats.dumpBelowRatioMax) {
+      return false;
+    }
+    stats.dumpBelowRatio += stats.adjStep;
     return true;
   }
 
-  public static boolean increaseThroughput() {
-    if (dumpBelowRatio - adjStep < dumpBelowRatioMin) {
+  public static boolean increaseThroughput(String cacheName) {
+    Stats stats = statsMap.get(cacheName);
+    if (stats == null) {
       return false;
     }
-    dumpBelowRatio -= adjStep;
+    if (stats.dumpBelowRatio - stats.adjStep < stats.dumpBelowRatioMin) {
+      return false;
+    }
+    stats.dumpBelowRatio -= stats.adjStep;
     return true;  
   }
 }

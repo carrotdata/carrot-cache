@@ -139,7 +139,7 @@ public abstract class BaseThroughputController implements ThroughputController {
 
   protected boolean decreaseThroughput() {
     // Check scavenger first
-    if (Scavenger.decreaseThroughput()) { 
+    if (Scavenger.decreaseThroughput(this.cacheName)) { 
       return true; 
     } else {
       // Then admission controller
@@ -152,7 +152,7 @@ public abstract class BaseThroughputController implements ThroughputController {
     if (this.admissionController.increaseThroughput()) {
       return true;
     } else {
-      return Scavenger.increaseThroughput();
+      return Scavenger.increaseThroughput(this.cacheName);
     }
   }
 }

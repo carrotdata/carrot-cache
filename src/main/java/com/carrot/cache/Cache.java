@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.carrot.cache.Scavenger.Stats;
 import com.carrot.cache.controllers.AdmissionController;
 import com.carrot.cache.controllers.ThroughputController;
 import com.carrot.cache.eviction.EvictionListener;
@@ -2020,7 +2021,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (Files.exists(p) && Files.size(p) > 0) {
       FileInputStream fis = new FileInputStream(p.toFile());
       DataInputStream dis = new DataInputStream(fis);
-      Scavenger.stats.load(dis);
+      Stats stats = new Stats(this.cacheName);
+      stats.load(dis);
+      Scavenger.setStatisticsForCache(this.cacheName, stats);
       dis.close();
     }
   }
@@ -2035,7 +2038,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     Path p = Paths.get(snapshotDir, file);
     FileOutputStream fos = new FileOutputStream(p.toFile());
     DataOutputStream dos = new DataOutputStream(fos);
-    Scavenger.stats.save(dos);
+    Stats stats = Scavenger.getStatisticsForCache(this.cacheName);
+    stats.save(dos);
     dos.close();
   }
   
