@@ -640,6 +640,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return this;
     }
     
+    /**
+     * With victim cache promote on hit
+     * @param v true or false
+     * @return builder instance
+     */
+    public Builder withVictimCachePromoteOnHit(boolean v) {
+      conf.setVictimCachePromotionOnHit(cacheName, v);
+      return this;
+    }
+    
     private Cache build() throws IOException {
       Cache cache = new Cache(conf, cacheName);
       cache.setIOEngine(this.engine);
@@ -720,6 +730,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /* Scavenger stop memory ratio*/
   double scavengerStopMemoryRatio;
   
+  /* Victim cache promote on hit */
+  boolean victimCachePromote;
+  
   /* Cache type*/
   Type type;
   
@@ -781,7 +794,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     updateMaxCacheSize();
     initAdmissionController();
     initThroughputController();
-    
     startThroughputController();
     initScavenger();
     // Set eviction listener
@@ -1393,7 +1405,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     if(result < 0 && this.victimCache != null) {
       result = this.victimCache.get(keyPtr, keySize, hit, buffer, bufOffset);
-      if (result >=0 && result <= buffer.length - bufOffset) {
+      if (this.victimCachePromote && result >=0 && result <= buffer.length - bufOffset) {
         // put k-v into this cache, remove it from the victim cache
         MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
         long expire = mi.getExpire(keyPtr, keySize);
@@ -1464,7 +1476,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       // getWithExpire and getWithExpireAndDelete API
       // one call instead of three
       result = this.victimCache.get(key, keyOffset, keySize, hit, buffer, bufOffset);
-      if (result >=0 && result <= buffer.length - bufOffset) {
+      if (this.victimCachePromote && result >=0 && result <= buffer.length - bufOffset) {
         // put k-v into this cache, remove it from the victim cache
         MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
         long expire = mi.getExpire(key, bufOffset, keySize);
@@ -1528,7 +1540,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     if(result < 0 && this.victimCache != null) {
       result = this.victimCache.get(key, keyOff, keySize, hit, buffer);
-      if (result >= 0 && result <= rem) {
+      if (this.victimCachePromote && result >= 0 && result <= rem) {
         // put k-v into this cache, remove it from the victim cache
         MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
         long expire = mi.getExpire(key, keyOff, keySize);
@@ -1591,7 +1603,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     if(result < 0 && this.victimCache != null) {
       result = this.victimCache.get(keyPtr, keySize, hit, buffer);
-      if (result >=0 && result <= rem) {
+      if (this.victimCachePromote && result >=0 && result <= rem) {
         // put k-v into this cache, remove it from the victim cache
         MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
         long expire = mi.getExpire(keyPtr, keySize);
@@ -1699,6 +1711,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       throw new IllegalArgumentException("Victim cache is not supported for DISK type cache");
     }
     this.victimCache = c;
+    this.victimCachePromote = this.conf.getVictimCachePromotionOnHit(c.getName());
   }
   
   /**

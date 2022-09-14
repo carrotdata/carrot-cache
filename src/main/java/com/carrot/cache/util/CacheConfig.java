@@ -147,6 +147,9 @@ public class CacheConfig {
   /* Cumulative average write rate limit  (bytes/sec) */
   public static final String CACHE_WRITE_RATE_LIMIT_KEY = "cache.write.avg.rate.limit";
   
+  /** Promotion on hit from victim to main cache */
+  public static final String CACHE_VICTIM_PROMOTION_ON_HIT_KEY = "cache.victim.promotion.on.hit";
+  
   /*
    * Some file systems : ext4, xfs, APFS etc supports sparse files and so called 
    * "hole punching" - discarding  regions of files. We use different algorithm of compaction when file system 
@@ -399,6 +402,9 @@ public class CacheConfig {
   
   /* Rolling window counter window size in seconds default */
   public final static int DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_DURATION = 3600;
+  
+  /* Victim cache promotion on hit default value*/
+  public final static boolean DEFAULT_CACHE_VICTIM_PROMOTION_ON_HIT = true;
   
   // Statics
   static CacheConfig instance;
@@ -1689,5 +1695,29 @@ public class CacheConfig {
    */
   public void setIOStoragePoolSize (String cacheName, int n) {
     props.setProperty(cacheName + "." + CACHE_IO_STORAGE_POOL_SIZE_KEY, Integer.toString(n));
+  }
+  
+  /**
+   * Get promotion on hit for victim cache
+   * @param cacheName cache name
+   * @return true promote to main cache, false - do not
+   */
+  public boolean getVictimCachePromotionOnHit (String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_VICTIM_PROMOTION_ON_HIT_KEY);
+    if (value == null) {
+      return getBooleanProperty(CACHE_VICTIM_PROMOTION_ON_HIT_KEY, 
+        DEFAULT_CACHE_VICTIM_PROMOTION_ON_HIT);
+    } else {
+      return Boolean.parseBoolean(value);
+    }
+  }
+  
+  /**
+   * Set promotion on hit for victim cache
+   * @param cacheName cache name
+   * @param v true or false
+   */
+  public void setVictimCachePromotionOnHit (String cacheName, boolean v) {
+    props.setProperty(cacheName + "." + CACHE_VICTIM_PROMOTION_ON_HIT_KEY, Boolean.toString(v));
   }
 }

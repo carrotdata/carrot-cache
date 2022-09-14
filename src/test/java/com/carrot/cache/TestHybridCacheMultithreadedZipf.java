@@ -39,6 +39,8 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
   int victim_scavengerInterval = 10; // seconds
   
   double victim_scavDumpBelowRatio = 0.5;
+  
+  boolean victim_promoteOnHit = true;
     
   protected Class<? extends EvictionPolicy> victim_epClz = FIFOEvictionPolicy.class;
   
@@ -65,6 +67,7 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
     this.victim_minActiveRatio = 0.5;
     this.victim_scavDumpBelowRatio = 0.5;
     this.victim_scavengerInterval = 10;
+    this.victim_promoteOnHit = true;
     this.victim_epClz = FIFOEvictionPolicy.class;
     this.victim_rsClz = LRCRecyclingSelector.class;
     this.victim_acClz = BaseAdmissionController.class;
@@ -109,6 +112,7 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
       .withSnapshotDir(snapshotDir)
       .withDataDir(dataDir)
       .withMinimumActiveDatasetRatio(victim_minActiveRatio)
+      .withVictimCachePromoteOnHit(victim_promoteOnHit)
       .withAdmissionController(victim_acClz.getName());
     
     Cache victim = builder.buildDiskCache();
