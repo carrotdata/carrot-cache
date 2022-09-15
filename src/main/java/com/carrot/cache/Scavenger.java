@@ -292,6 +292,8 @@ public class Scavenger extends Thread {
   /* Clean deleted only items - do not purge low ranks*/
   private boolean cleanDeletedOnly = true;
   
+  private long maxSegmentsBeforeStallDetected;
+  
   public Scavenger(Cache cache) {
     super("c2 scavenger");
     this.cache = cache;
@@ -321,6 +323,8 @@ public class Scavenger extends Thread {
       adjStep = stats.adjStep;
       stopRatio = stats.stopRatio;
     }
+    this.maxSegmentsBeforeStallDetected = 
+        this.config.getScavengerMaxSegmentsBeforeStall(cacheName);
     stats.totalRuns++;
     
   }
@@ -355,7 +359,9 @@ public class Scavenger extends Thread {
           format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
 
       boolean finished = false;
-
+      
+      int segmentsProcessed = 0;
+      
       while (!finished) {
         if (Thread.currentThread().isInterrupted()) {
           /*DEBUG*/ System.out.printf("Scavenger [%s] - interrupted - exited\n", cache.getName());
@@ -370,6 +376,10 @@ public class Scavenger extends Thread {
         }
         if (shouldStopOn(s)) {
           break;
+        }
+        if (segmentsProcessed >= maxSegmentsBeforeStallDetected) {
+          dumpBelowRatio = 1.0;// improve scavenger's performance - dump everything
+          cleanDeletedOnly = false;
         }
         engine.startRecycling(s);
         long maxExpire = s.getInfo().getMaxExpireAt();
@@ -392,6 +402,7 @@ public class Scavenger extends Thread {
         }
         // Update admission controller statistics
         engine.finishRecycling(s);
+        segmentsProcessed++;
       }
     } finally {
       numInstances.decrementAndGet();
@@ -460,7 +471,7 @@ public class Scavenger extends Thread {
     }
     return buffer;
   }
-  
+    
   private boolean cleanSegmentInternal(Segment s) throws IOException {
     IOEngine engine = this.cache.getEngine();
     MemoryIndex index = engine.getMemoryIndex();

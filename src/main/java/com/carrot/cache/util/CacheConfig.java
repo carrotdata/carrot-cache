@@ -115,6 +115,9 @@ public class CacheConfig {
   
   /* Adjustment step for scavenger */
   public static final String SCAVENGER_DUMP_ENTRY_BELOW_STEP_KEY = "scavenger.dump.entry.below.step";
+  
+  /* Scavenger number of segment processed before stall mode activated*/
+  public static final String SCAVENGER_MAX_SEGMENTS_BEFORE_STALL_KEY = "scavenger.max.segments.before.stall";
     
   /* Number of popularity ranks ( default - 8) */
   public static final String CACHE_POPULARITY_NUMBER_RANKS_KEY = "cache.popularity.number.ranks";
@@ -284,6 +287,12 @@ public class CacheConfig {
    */
   public static final double DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_STEP = 0.1;
   
+  /**
+   * 
+   * Default value for scavenger max segments before stall mode activated
+   * 
+   * */
+  public static final int DEFAULT_SCAVENGER_MAX_SEGMENTS_BEFORE_STALL = 10;
   /**
    * Limits write speed during scavenger run to 0.9 of scavenger cleaning memory rate Suppose
    * Scavenger frees memory with a rate of 900MB/sec. Incoming cache write requests will be limited
@@ -1719,5 +1728,29 @@ public class CacheConfig {
    */
   public void setVictimCachePromotionOnHit (String cacheName, boolean v) {
     props.setProperty(cacheName + "." + CACHE_VICTIM_PROMOTION_ON_HIT_KEY, Boolean.toString(v));
+  }
+  
+  /**
+   * Get maximum number of processed segments before activation of a stall mode
+   * @param cacheName cache name
+   * @return number of segments
+   */
+  public int getScavengerMaxSegmentsBeforeStall(String cacheName) {
+    String value = props.getProperty(cacheName + "." + SCAVENGER_MAX_SEGMENTS_BEFORE_STALL_KEY);
+    if (value == null) {
+      return (int) getLongProperty(SCAVENGER_MAX_SEGMENTS_BEFORE_STALL_KEY, 
+        DEFAULT_SCAVENGER_MAX_SEGMENTS_BEFORE_STALL);
+    } else {
+      return Integer.parseInt(value);
+    }
+  }
+  
+  /**
+   * Set maximum number of processed segments before activation of a stall mode
+   * @param cacheName cache name
+   * @param n number of segments
+   */
+  public void setScavengerMaxSegmentsBeforeStall (String cacheName, int n) {
+    props.setProperty(cacheName + "." + SCAVENGER_MAX_SEGMENTS_BEFORE_STALL_KEY, Integer.toString(n));
   }
 }

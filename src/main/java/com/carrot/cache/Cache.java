@@ -651,6 +651,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return this;
     }
     
+    /**
+     * With scavenger maximum number of segments before stall mode is activated
+     * @param n max segments
+     * @return builder instance
+     */
+    public Builder withScavengerMaxSegmentsBeforeStall(int n) {
+      conf.setScavengerMaxSegmentsBeforeStall(cacheName, n);
+      return this;
+    }
+    
     private Cache build() throws IOException {
       Cache cache = new Cache(conf, cacheName);
       cache.setIOEngine(this.engine);

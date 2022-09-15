@@ -52,7 +52,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   
   int scavengerInterval = 2; // seconds
     
-  double scavDumpBelowRatio = 1.0;
+  double scavDumpBelowRatio = 0.5;
   
   double minActiveRatio = 0.90;
   
