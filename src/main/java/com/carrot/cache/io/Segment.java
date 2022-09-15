@@ -761,7 +761,9 @@ public class Segment implements Persistent {
    * Read unlock the segment
    */
   public void readUnlock() {
-    lock.readLock().unlock();
+    if (lock.getReadHoldCount() > 0) {
+      lock.readLock().unlock();
+    }
   }
   
   /**

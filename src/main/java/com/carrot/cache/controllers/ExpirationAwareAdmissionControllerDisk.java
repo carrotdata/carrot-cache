@@ -78,11 +78,11 @@ public class ExpirationAwareAdmissionControllerDisk extends AQBasedAdmissionCont
   
   private void sanityCheck() {
     if (binStart <= 0) {
-      LOG.error(String.format("Wrong value for  expiration bin start value %d, assigning 1", binStart));
+      LOG.error(String.format("Wrong value for  expiration bin start value {}, assigning 1", binStart));
       binStart = 1;
     }
     if (multiplier <= 1.0) {
-      LOG.error(String.format("Wrong value for  expiration bin multiplier value %f, assigning 2.", multiplier));
+      LOG.error(String.format("Wrong value for  expiration bin multiplier value {}, assigning 2.", multiplier));
       multiplier = 2.0;
     }
   }
@@ -95,6 +95,7 @@ public class ExpirationAwareAdmissionControllerDisk extends AQBasedAdmissionCont
     long currentTime = System.currentTimeMillis();
     long relExpireSec = (expire - currentTime) / 1000;
     if (relExpireSec < 0) {
+      //FIXME
       return ttlBins.length - 1;
     }
     int newRank = ttlBins.length - 1; // set to minimum

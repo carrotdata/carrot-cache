@@ -454,6 +454,7 @@ public abstract class IOEngine implements Persistent {
             return NOT_FOUND;
           }
           if (id != sid) {
+            s.readUnlock();
             return get(keyPtr, keySize, hit, buffer, bufOffset);
           }
           // Read the data
@@ -546,6 +547,7 @@ public abstract class IOEngine implements Persistent {
             return NOT_FOUND;
           }
           if (id != sid) {
+            s.readUnlock();
             return get(key, keyOffset, keySize, hit, buffer, bufOffset);
           }
           // Read the data
@@ -658,6 +660,7 @@ public abstract class IOEngine implements Persistent {
             return NOT_FOUND;
           }
           if (id != sid) {
+            s.readUnlock();
             return get(keyPtr, keySize, hit, buffer);
           }
           // Read the data
@@ -739,7 +742,7 @@ public abstract class IOEngine implements Persistent {
         if (s == null || !s.isValid()) {
           return NOT_FOUND;
         }
-        
+
         try {
           s.readLock();
           int id = this.index.getSegmentId(key, keyOffset, keySize);
@@ -747,6 +750,7 @@ public abstract class IOEngine implements Persistent {
             return NOT_FOUND;
           }
           if (id != sid) {
+            s.readUnlock();
             return get(key, keyOffset, keySize, hit, buffer);
           }
           // Read the data
@@ -755,8 +759,8 @@ public abstract class IOEngine implements Persistent {
           return res;
         } finally {
           s.readUnlock();
-        }      
         }
+      }
     } finally {
       UnsafeAccess.free(buf);
     }

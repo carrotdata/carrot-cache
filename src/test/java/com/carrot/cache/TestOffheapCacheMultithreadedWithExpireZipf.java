@@ -14,4 +14,50 @@
  */
 package com.carrot.cache;
 
-public class TestOffheapCacheMultithreadedWithExpireZipf {}
+import java.util.Random;
+
+import org.junit.Before;
+
+import com.carrot.cache.controllers.ExpirationAwareAdmissionControllerMemory;
+
+public abstract class TestOffheapCacheMultithreadedWithExpireZipf extends TestOffheapCacheMultithreadedZipf {
+  
+  protected int binStartValue = 1;
+  
+  protected double binMultiplier = 2.0;
+  
+  protected int numberOfBins = 10; // number of ranks
+  
+  protected int[] expArray = new int[] {2, 2, 2, 2, 2, 2, 2, 100, 100, 100, 100, 100};
+  
+  Random r;
+  
+  @Override
+  @Before
+  public void setUp() {
+    super.setUp();
+    this.binStartValue = 1;
+    this.binMultiplier = 2.0;
+    this.numberOfBins = 10;
+    this.numThreads = 4;
+    this.numRecords = 1000000;
+    this.numIterations = 2 * this.numRecords;
+    this.scavDumpBelowRatio = 0.5;
+    this.minActiveRatio = 0.9;
+    this.acClz = ExpirationAwareAdmissionControllerMemory.class;
+    r = new Random();
+  }
+  
+  @Override
+  protected Cache.Builder withAddedConfigurations(Cache.Builder b) {
+     b = b.withExpireStartBinValue(binStartValue)
+         .withExpireBinMultiplier(binMultiplier)
+         .withNumberOfPopularityRanks(numberOfBins);
+     return b;
+  }
+  
+  protected long getExpire(int n) {
+    int index = r.nextInt(expArray.length);
+    return System.currentTimeMillis() + 1000L * expArray[index];
+  }
+}

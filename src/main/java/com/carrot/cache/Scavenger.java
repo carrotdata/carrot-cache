@@ -260,9 +260,10 @@ public class Scavenger extends Thread {
     for(Map.Entry<String,Stats> entry: statsMap.entrySet()) {
       String name = entry.getKey();
       Stats stats = entry.getValue();
-      System.out.printf("Scavenger [%s]: runs=%d scanned=%d freed=%d written back=%d\n", 
+      System.out.printf("Scavenger [%s]: runs=%d scanned=%d freed=%d written back=%d empty segments=%d\n", 
         name, stats.getTotalRuns(), stats.getTotalBytesScanned(), 
-        stats.getTotalBytesFreed(), stats.getTotalBytesScanned() - stats.getTotalBytesFreed());
+        stats.getTotalBytesFreed(), stats.getTotalBytesScanned() - stats.getTotalBytesFreed(),
+        stats.getTotalEmptySegments());
     }
   }
   
@@ -443,6 +444,7 @@ public class Scavenger extends Thread {
       long dataSize = info.getSegmentDataSize();
       // Update stats
       stats.totalBytesFreed += dataSize;
+      stats.totalBytesScanned += dataSize;
       return false; // not finished yet
     } else {
       return cleanSegmentInternal(s);

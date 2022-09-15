@@ -63,8 +63,8 @@ public class ExpirationAwareAdmissionControllerMemory implements AdmissionContro
     // Number of ranks is the number of expiration bins
     this.ttlBins = new long[numRanks];
     
-    long binStart = conf.getExpireStartBinValue(cache.getName());
-    double multiplier = conf.getExpireBinMultiplier(cache.getName());
+    this.binStart = conf.getExpireStartBinValue(cache.getName());
+    this.multiplier = conf.getExpireBinMultiplier(cache.getName());
     sanityCheck();
     /**
      * This is the minimum expiration time supported by the Cache

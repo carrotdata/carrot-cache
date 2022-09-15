@@ -1534,7 +1534,7 @@ public class CacheConfig {
    * @param cacheName cache name
    * @return value
    */
-  public long getExpireStartBinValue(String cacheName) {
+  public int getExpireStartBinValue(String cacheName) {
     String value = props.getProperty(cacheName + "." + CACHE_EXPIRATION_BIN_START_VALUE_KEY);
     if (value == null) {
       return (int) getLongProperty(CACHE_EXPIRATION_BIN_START_VALUE_KEY, DEFAULT_CACHE_EXPIRATION_BIN_START_VALUE);

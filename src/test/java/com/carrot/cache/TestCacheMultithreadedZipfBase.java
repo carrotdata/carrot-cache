@@ -52,7 +52,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   
   int scavengerInterval = 2; // seconds
     
-  double scavDumpBelowRatio = 0.5;
+  double scavDumpBelowRatio = 1.0;
   
   double minActiveRatio = 0.90;
   
@@ -90,6 +90,7 @@ public abstract class TestCacheMultithreadedZipfBase {
     // Delete temp data
     TestUtils.deleteDir(dataDirPath);
     TestUtils.deleteDir(snapshotDirPath);
+    Scavenger.clear();
   }
   
   protected  Cache createCache() throws IOException{
@@ -115,11 +116,21 @@ public abstract class TestCacheMultithreadedZipfBase {
       .withMinimumActiveDatasetRatio(minActiveRatio)
       .withEvictionDisabledMode(evictionDisabled)
       .withAdmissionController(acClz.getName());
+    builder = withAddedConfigurations(builder);
     if (offheap) {
       return builder.buildMemoryCache();
     } else {
       return builder.buildDiskCache();
     }
+  }
+  
+  /**
+   * Subclasses may override
+   * @param b builder instance
+   * @return builder instance
+   */
+  protected Cache.Builder withAddedConfigurations(Cache.Builder b) {
+    return b;
   }
   
   protected int safeBufferSize() {
