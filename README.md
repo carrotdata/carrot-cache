@@ -33,13 +33,110 @@ Features which are not implemented yet but are being planned (TBI):
 - Maven 3.x
 - Git client
 
-To build:
+To build:\
 ```git clone https://github.com/VladRodionov/carrot-cache.git```\
 ```mvn install -DskipTests```
 
 To run unit tests:
-```mvn surefire:test```\
+```mvn surefire:test```
 
+## How to use
+
+### Create in-memory cache
+
+```
+ protected  Cache createInMemoryCache(String cacheName) throws IOException{
+    // Data directory is needed even for in-memory cache, this is where 
+    // data from memory can be saved to
+    Path dataDirPath = Files.createTempDirectory(null);
+    Path String dataDir = dataDirPath.toFile().getAbsolutePath();
+    // Snapshot directory contains saved meta information
+    snapshotDirPath = Files.createTempDirectory(null);
+    String snapshotDir = snapshotDirPath.toFile().getAbsolutePath();
+    
+    Cache.Builder builder = new Cache.Builder(cacheName);
+    
+    builder
+      .withCacheDataSegmentSize(19726336); // 16MB
+      .withCacheMaximumSize(1024 * 19726336) // 16GB 
+      .withScavengerRunInterval(10) // in seconds
+      .withCacheEvictionPolicy(LRUEvictionPolicy.class.getName())
+      .withRecyclingSelector(MinAliveRecyclingSelector.class.getName())
+      .withSnapshotDir(snapshotDir)
+      .withDataDir(dataDir)
+      .withAdmissionController(ExpirationAwareAdmissionController.class.getName());
+      
+      return builder.buildMemoryCache();
+  }
+```
+
+### Create disk-based cache
+
+```
+ protected  Cache createDiskCache(String cacheName) throws IOException{
+    
+    Path dataDirPath = Files.createTempDirectory(null);
+    String dataDir = dataDirPath.toFile().getAbsolutePath();
+    // Snapshot directory contains saved meta information
+    Path snapshotDirPath = Files.createTempDirectory(null);
+    String snapshotDir = snapshotDirPath.toFile().getAbsolutePath();
+    
+    Cache.Builder builder = new Cache.Builder(cacheName);
+    
+    builder
+      .withCacheDataSegmentSize(78905344); // 64MB
+      .withCacheMaximumSize(10 * 1024 * 78905344) // 640GB 
+      .withScavengerRunInterval(10) // in seconds
+      .withCacheEvictionPolicy(LRUEvictionPolicy.class.getName()) // Specify eviction policy
+      .withRecyclingSelector(MinAliveRecyclingSelector.class.getName()) // Specify recycling selector type
+      .withSnapshotDir(snapshotDir)
+      .withDataDir(dataDir)
+      .withAdmissionController(ExpirationAwareAdmissionController.class.getName()); // Specify cache admission controller
+      
+      return builder.buildDiskCache();
+  }
+```
+
+### Create hybrid cache (RAM -> SSD)
+
+```
+protected Cache createHybridCache(String ramCacheName, String diskCacheName) throws IOException {
+  Cache ramCache = createInMemoryCache(ramCacheName);
+  Cache diskCache = createDiskCache(diskCacheName);
+  ramCache.setVictimCache(diskCache);
+  return ramCache;
+}
+```
+
+### Cache configuration
+
+At minimum you need to provide the maximum cache size, data segment size (if you do not like default - 4MB), data directory and snapshot directory, all other parameters wiil be default ones. It is a good idea browse ```com.carrot.cache.util.CacheConfig``` class, which contains all configuration parameters with annotations and default values.
+
+### Simple code example
+
+```
+Cache cache = createInMemoryCache("ram1");
+
+byte[] key1 = "key1".getBytes();
+byte[] value1 = "value1".getBytes();
+
+// Put key - value without expiration time
+cache.put(key1, value1, 0);
+
+byte[] key2 = "key2".getBytes();
+byte[] value2 = "value2".getBytes();
+
+// Put key - value with expiration time 1 minute
+cache.put(key2, value2, System.currentTimeMillis() + 60 * 1000);
+
+byte[] buffer = new byte[value2.length];
+
+int size = cache.get(key2, 0, key2.length, buffer, 0);
+String result = new String(buffer, 0, size);
+
+System.out.printf("Value for key %s is %s", key2, result);
+
+```
 
 
 
