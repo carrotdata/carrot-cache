@@ -33,7 +33,7 @@ Features which are not implemented yet but are being planned (TBI):
 - Maven 3.x
 - Git client
 
-To build:\
+To build:
 ```
 git clone https://github.com/VladRodionov/carrot-cache.git
 cd carrot-cache
@@ -168,7 +168,7 @@ Bear in mind that allocations tracking is expensive and slows down the appliacti
 UnsafeAccess.mallocStats.printStats();
 ```
 
-Hapy using and testing, folks.
+Happy using and testing, folks.
 
 Best regards,
 Vladimir Rodionov
