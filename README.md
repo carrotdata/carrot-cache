@@ -1,5 +1,5 @@
 # Carrot Cache (C2) Framework
-The project goal is to modernize data caching and to allow users to build custom caching solutions by providing pluggable components to the C2 framework. C2 is 100% Java solution, which extensively utilizes java off heap memory and virually has no impact on Java GC.
+The project goal is to modernize data caching and to allow users to build custom caching solutions by providing pluggable components to the C2 framework. C2 is 100% Java solution, which extensively utilizes java off heap memory and virtually has no impact on Java GC.
 
 ## Features
 
@@ -34,11 +34,11 @@ Features which are not implemented yet but are being planned (TBI):
 - Git client
 
 To build:
-```git clone ```
+```git clone https://github.com/VladRodionov/carrot-cache.git```\
 ```mvn install -DskipTests```
 
 To run unit tests:
-```mvn surefire:test```
+```mvn surefire:test```\
 
 
 
