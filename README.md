@@ -67,8 +67,8 @@ To run unit tests:
       .withRecyclingSelector(MinAliveRecyclingSelector.class.getName())
       .withSnapshotDir(snapshotDir)
       .withDataDir(dataDir)
-      .withAdmissionController(ExpirationAwareAdmissionController.class.getName());
-      
+      .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName()) // This index format supports cache expiration 
+      .withAdmissionController(ExpirationAwareAdmissionController.class.getName()); // This controller does some smart things :)
       return builder.buildMemoryCache();
   }
 ```
@@ -94,8 +94,8 @@ To run unit tests:
       .withRecyclingSelector(MinAliveRecyclingSelector.class.getName()) // Specify recycling selector type
       .withSnapshotDir(snapshotDir)
       .withDataDir(dataDir)
+      .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName()); // This index format supports cache expiration 
       .withAdmissionController(ExpirationAwareAdmissionController.class.getName()); // Specify cache admission controller
-      
       return builder.buildDiskCache();
   }
 ```
@@ -113,7 +113,7 @@ protected Cache createHybridCache(String ramCacheName, String diskCacheName) thr
 
 ### Cache configuration
 
-At minimum you need to provide the maximum cache size, data segment size (if you do not like default - 4MB), data directory and snapshot directory, all other parameters wiil be default ones. It is a good idea to read ```com.carrot.cache.util.CacheConfig``` class, which contains all configuration parameters with annotations and default values.
+At minimum you need to provide the maximum cache size, the data segment size (if you do not like default - 4MB), the data directory and the snapshot directory names, all other parameters wiil be default ones. It is a good idea to read ```com.carrot.cache.util.CacheConfig``` class, which contains all configuration parameters with annotations and default values.
 
 ### Simple code example
 
@@ -143,8 +143,8 @@ System.out.printf("Value for key %s is %s", key2, result);
 
 ### Important - core dumps are possible
 
-Because the code has direct access to native memory via ```sun.misc.Unsafe``` class and this is the alpha-version.
-To debug possible core dumps you need to activate debug mode in the memory allocator
+... because the code has direct access to the native memory via ```sun.misc.Unsafe``` class and this is the alpha-version.
+To debug possible core dumps you need to activate the debug mode in the memory allocator
 
 ```
   UnsafeAccess.setMallocDebugEnabled(true);
@@ -152,7 +152,7 @@ To debug possible core dumps you need to activate debug mode in the memory alloc
 
 This will prevents core dumps and will throw exception on memory corruption. 
 
-To track potential memory leaks, for example allocations of a size 64, you need additionally to enable allocations stack track 
+To track the potential memory leaks, for example an allocations of a size 64, you need additionally to enable the allocations stack track 
 monitoring
 
 ```
@@ -162,7 +162,7 @@ UnsafeAccess.setStackTraceRecordingLimit(100); // record first 100 allocations o
 
 ```
 
-Bear in mind that allocations tracking is expensive and slows down the appliaction by factor 20-30. To check code on memory leaks you need to enable debug mode (described above) and use provided API to print memory allocator statistics:
+Bear in mind that allocations tracking is expensive and slows down the appliaction by factor 20-30. To check the code on memory leaks you need to enable the debug mode (described above) and use the provided API to print the memory allocator statistics:
 
 ```
 UnsafeAccess.mallocStats.printStats();
