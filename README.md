@@ -34,8 +34,11 @@ Features which are not implemented yet but are being planned (TBI):
 - Git client
 
 To build:\
-```git clone https://github.com/VladRodionov/carrot-cache.git```\
-```mvn install -DskipTests```
+```
+git clone https://github.com/VladRodionov/carrot-cache.git
+cd carrot-cache
+mvn install -DskipTests
+```
 
 To run unit tests:
 ```mvn surefire:test```
@@ -137,6 +140,43 @@ String result = new String(buffer, 0, size);
 System.out.printf("Value for key %s is %s", key2, result);
 
 ```
+
+### Important - core dumps are possible
+
+Because the code has direct access to native memory via ```sun.misc.Unsafe``` class and this is the alpha-version.
+To debug possible core dumps you need to activate debug mode in the memory allocator
+
+```
+  UnsafeAccess.setMallocDebugEnabled(true);
+```
+
+This will prevents core dumps and will throw exception on memory corruption. 
+
+To track potential memory leaks, for example allocations of a size 64, you need additionally to enable allocations stack track 
+monitoring
+
+```
+UnsafeAccess.setMallocDebugStackTraceEnabled(true);
+UnsafeAccess.setStackTraceRecordingFilter(x -> x == 64);
+UnsafeAccess.setStackTraceRecordingLimit(100); // record first 100 allocations only
+
+```
+
+Bear in mind that allocations tracking is expensive and slows down the appliaction by factor 20-30. To check code on memory leaks you need to enable debug mode (described above) and use provided API to print memory allocator statistics:
+
+```
+UnsafeAccess.mallocStats.printStats();
+```
+
+Hapy using and testing, folks.
+
+Best regards,
+Vladimir Rodionov
+
+You can reach me easily at
+vladrodionov@gmail.com
+
+
 
 
 
