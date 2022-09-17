@@ -113,7 +113,7 @@ protected Cache createHybridCache(String ramCacheName, String diskCacheName) thr
 
 ### Cache configuration
 
-At minimum you need to provide the maximum cache size, data segment size (if you do not like default - 4MB), data directory and snapshot directory, all other parameters wiil be default ones. It is a good idea browse ```com.carrot.cache.util.CacheConfig``` class, which contains all configuration parameters with annotations and default values.
+At minimum you need to provide the maximum cache size, data segment size (if you do not like default - 4MB), data directory and snapshot directory, all other parameters wiil be default ones. It is a good idea to read ```com.carrot.cache.util.CacheConfig``` class, which contains all configuration parameters with annotations and default values.
 
 ### Simple code example
 
