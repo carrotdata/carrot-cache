@@ -16,12 +16,15 @@ package com.carrot.cache;
 
 public class TestFileCacheMultithreadedZipfStress extends TestOffheapCacheMultithreadedZipf {
   
-  @Override
+  protected double startSizeRatio = 0.5;
+  
   public void setUp() {
+    super.setUp();
     this.offheap = false;
     this.numRecords = 10000000;
+    this.numIterations = 10 * this.numRecords;
     this.numThreads = 4;
     this.segmentSize = 16 * 1024 * 1024;
     this.maxCacheSize = 1000 * this.segmentSize;
-  }
+  }  
 }

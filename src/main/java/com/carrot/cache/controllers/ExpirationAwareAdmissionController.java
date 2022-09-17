@@ -46,14 +46,14 @@ import com.carrot.cache.util.CacheConfig;
  *
  */
 
-public class ExpirationAwareAdmissionControllerMemory implements AdmissionController{
+public class ExpirationAwareAdmissionController implements AdmissionController{
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(ExpirationAwareAdmissionControllerMemory.class);
+  private static final Logger LOG = LogManager.getLogger(ExpirationAwareAdmissionController.class);
   long[] ttlBins;
   long binStart;
   double multiplier;
   
-  public ExpirationAwareAdmissionControllerMemory() {
+  public ExpirationAwareAdmissionController() {
   }
   
   @Override
@@ -92,7 +92,9 @@ public class ExpirationAwareAdmissionControllerMemory implements AdmissionContro
   
   @Override
   public int adjustRank(int rank, long expire) {
-    if (expire <= 0) return 0; // maximum
+    if (expire <= 0) {
+      return 0; // maximum
+    }
     long currentTime = System.currentTimeMillis();
     long relExpireSec = (expire - currentTime) / 1000;
     if (relExpireSec < 0) {
@@ -111,14 +113,16 @@ public class ExpirationAwareAdmissionControllerMemory implements AdmissionContro
 
   @Override
   public long adjustExpirationTime(long expire) {
-    if (expire <= 0) return ttlBins[0]; // maximum
     long currentTime = System.currentTimeMillis();
+    if (expire <= 0) {
+      return ttlBins[0] * 1000 + currentTime; // maximum
+    }
     long relExpireSec = (expire - currentTime) / 1000;
     if (relExpireSec < 0) {
       // Log warning
-      return ttlBins[ttlBins.length -1] * 1000 + currentTime;
+      return ttlBins[ttlBins.length - 1] * 1000 + currentTime;
     }
-    long newExpire = ttlBins[ttlBins.length -1]; // set to minimum
+    long newExpire = ttlBins[ttlBins.length - 1]; // set to minimum
     for (int i = 0; i < ttlBins.length; i++) {
       if (ttlBins[i] < relExpireSec) {
         newExpire = ttlBins[i];

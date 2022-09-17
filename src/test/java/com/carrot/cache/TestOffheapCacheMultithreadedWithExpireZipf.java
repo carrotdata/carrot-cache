@@ -14,13 +14,19 @@
  */
 package com.carrot.cache;
 
+import java.io.IOException;
 import java.util.Random;
 
 import org.junit.Before;
+import org.junit.Test;
 
-import com.carrot.cache.controllers.ExpirationAwareAdmissionControllerMemory;
+import com.carrot.cache.controllers.AQBasedExpirationAwareAdmissionController;
+import com.carrot.cache.controllers.MinAliveRecyclingSelector;
+import com.carrot.cache.eviction.LRUEvictionPolicy;
+import com.carrot.cache.eviction.SLRUEvictionPolicy;
+import com.carrot.cache.index.CompactBaseWithExpireIndexFormat;
 
-public abstract class TestOffheapCacheMultithreadedWithExpireZipf extends TestOffheapCacheMultithreadedZipf {
+public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultithreadedZipfBase {
   
   protected int binStartValue = 1;
   
@@ -28,23 +34,24 @@ public abstract class TestOffheapCacheMultithreadedWithExpireZipf extends TestOf
   
   protected int numberOfBins = 10; // number of ranks
   
-  protected int[] expArray = new int[] {2, 2, 2, 2, 2, 2, 2, 100, 100, 100, 100, 100};
+  protected int[] expArray = new int[] {2, 2, 2, 2, 500, 500, 500, 1000, 1000, 1000, 1000, 1000};
   
   Random r;
   
-  @Override
   @Before
   public void setUp() {
-    super.setUp();
+    this.offheap = true;
+    this.segmentSize = 4 * 1024 * 1024;
+    this.maxCacheSize = 100 * this.segmentSize;
     this.binStartValue = 1;
     this.binMultiplier = 2.0;
     this.numberOfBins = 10;
-    this.numThreads = 4;
+    this.numThreads = 1;
     this.numRecords = 1000000;
-    this.numIterations = 2 * this.numRecords;
-    this.scavDumpBelowRatio = 0.5;
-    this.minActiveRatio = 0.9;
-    this.acClz = ExpirationAwareAdmissionControllerMemory.class;
+    this.numIterations = 10 * this.numRecords;
+    this.scavDumpBelowRatio = 0.2;
+    this.minActiveRatio = 0.0;
+    this.acClz = AQBasedExpirationAwareAdmissionController.class;
     r = new Random();
   }
   
@@ -52,12 +59,33 @@ public abstract class TestOffheapCacheMultithreadedWithExpireZipf extends TestOf
   protected Cache.Builder withAddedConfigurations(Cache.Builder b) {
      b = b.withExpireStartBinValue(binStartValue)
          .withExpireBinMultiplier(binMultiplier)
-         .withNumberOfPopularityRanks(numberOfBins);
+         .withNumberOfPopularityRanks(numberOfBins)
+         .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName());
      return b;
   }
   
   protected long getExpire(int n) {
     int index = r.nextInt(expArray.length);
     return System.currentTimeMillis() + 1000L * expArray[index];
+  }
+  
+  @Test
+  public void testLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
+    System.out.println("Bytes API: eviction=LRU, selector=MinAlive");
+    this.evictionDisabled = false;
+    this.scavengerInterval = 2; // scavenger interval in sec
+    this.epClz = LRUEvictionPolicy.class;
+    this.rsClz = MinAliveRecyclingSelector.class;
+    super.testContinuosLoadBytesRun();
+  }
+  
+  @Test
+  public void testSLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
+    System.out.println("Bytes API: eviction=SLRU, selector=MinAlive");
+    this.evictionDisabled = false;
+    this.scavengerInterval = 2; // scavenger interval in sec
+    this.epClz = SLRUEvictionPolicy.class;
+    this.rsClz = MinAliveRecyclingSelector.class;
+    super.testContinuosLoadBytesRun();
   }
 }

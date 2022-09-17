@@ -214,9 +214,11 @@ public class AdmissionQueue implements Persistent {
     double avgItemSize = (double) this.totalSize.get() / this.totalPuts.get();
     long maxItems = (long) (this.maxCacheSize * this.currentMaxSizeRatio / avgItemSize);
     if (maxItems <= this.index.size() && !this.index.isEvictionEnabled()) {
+      //*DEBUG*/ System.out.printf("Eviction ON index size=%d\n", this.index.size());
       this.index.setEvictionEnabled(true);
     } else if (maxItems * 0.95 >= this.index.size() && this.index.isEvictionEnabled()) {
       this.index.setEvictionEnabled(false);
+      //*DEBUG*/ System.out.printf("Eviction OFF index size=%d\n", this.index.size());
 
     }
   }

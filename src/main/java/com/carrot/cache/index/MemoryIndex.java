@@ -1502,6 +1502,27 @@ public final class MemoryIndex implements Persistent {
   }
   
   /**
+   * If hash exists in the index block
+   *
+   * @param ptr index block address
+   * @param hash key's hash
+   * @return true or false
+   */
+  private boolean exists(long ptr, long hash) {
+    int numEntries = numEntries(ptr);
+    long $ptr = ptr + indexBlockHeaderSize;
+    int count = 0;
+    while (count < numEntries) {
+      if (this.indexFormat.equals($ptr, hash)) {
+        return true;
+      }
+      count++;
+      $ptr += this.indexFormat.fullEntrySize($ptr);
+    }
+    return false;
+  }
+  
+  /**
    * Internal API: used by Scavenger Get key's popularity for a given key
    *
    * @param key key buffer
@@ -2239,7 +2260,7 @@ public final class MemoryIndex implements Persistent {
       ptr = index[$slot];
     }
     // try to delete first
-    boolean result = delete(hash);
+    boolean result = delete(hash);//exists(ptr, hash);
     if (result) {
       return MutationResult.DELETED; // Deleted
     }

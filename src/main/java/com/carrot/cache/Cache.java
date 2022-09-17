@@ -685,6 +685,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /* Total writes */
   private AtomicLong totalWrites = new AtomicLong(0);
   
+  /* Total writes size */
+  private AtomicLong totalWritesSize = new AtomicLong(0);
+  
   /* Total rejected writes */
   private AtomicLong totalRejectedWrites = new AtomicLong(0);
   
@@ -1085,6 +1088,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   /**
+   * Get total writes size
+   * @return total writes size
+   */
+  public long getTotalWritesSize() {
+    return this.totalWritesSize.get();
+  }
+  
+  /**
    * Get total rejected writes
    * @return total rejected writes
    */
@@ -1165,7 +1176,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     // Otherwise wait for approximately 100 microseconds
     // to allow Scavenger to finish
     //TODO: make this configurable?
-    long waitTime = 20000; // 10 microsec
+    long waitTime = 50000; // 50 microsec
     long start = System.nanoTime();
     while(System.nanoTime() - start < waitTime) {
       Thread.onSpinWait();
@@ -1200,6 +1211,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     spinWaitOnHighPressure(scavenger);
     this.totalWrites.incrementAndGet();
+    this.totalWritesSize.addAndGet(Utils.kvSize(keySize, valSize));
+
     // Adjust rank taking into account item's expiration time
     rank = adjustRank(rank, expire);
     expire = adjustExpirationTime(expire);
@@ -1295,6 +1308,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     spinWaitOnHighPressure(scavenger);
     this.totalWrites.incrementAndGet();
+    this.totalWritesSize.addAndGet(Utils.kvSize(keySize, valSize));
     // Check rank
     checkRank(rank);
       // Adjust rank
@@ -1912,6 +1926,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       this.totalGets.set(dis.readLong());
       this.totalHits.set(dis.readLong());
       this.totalWrites.set(dis.readLong());
+      this.totalWritesSize.set(dis.readLong());
       this.totalRejectedWrites.set(dis.readLong());
       Epoch.setEpochStartTime(dis.readLong());
       this.tcEnabled = dis.readBoolean();
@@ -1940,6 +1955,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     dos.writeLong(totalGets.get());
     dos.writeLong(totalHits.get());
     dos.writeLong(totalWrites.get());
+    dos.writeLong(totalWritesSize.get());
     dos.writeLong(totalRejectedWrites.get());
     dos.writeLong(Epoch.getEpochStartTime());
     dos.writeBoolean(this.tcEnabled);
@@ -2159,7 +2175,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
   }
   
-  public void failedGets() {
-    System.out.printf("failed gets = %d\n", failedGets.get());
+  public void printStats() {
+    System.out.printf("Cache[%s]: hit rate=%f, puts=%d, bytes written=%d, failed gets = %d\n",
+      this.cacheName, getHitRate(), getTotalWrites(), getTotalWritesSize(),  failedGets.get());
   }
 }

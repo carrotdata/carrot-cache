@@ -52,7 +52,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   
   int scavengerInterval = 2; // seconds
     
-  double scavDumpBelowRatio = 0.5;
+  double scavDumpBelowRatio = 1.0;
   
   double minActiveRatio = 0.90;
   
@@ -85,7 +85,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   @After  
   public void tearDown() throws IOException {
     // UnsafeAccess.mallocStats.printStats(false);
-    this.cache.failedGets();
+    this.cache.printStats();
     this.cache.dispose();
     // Delete temp data
     TestUtils.deleteDir(dataDirPath);
