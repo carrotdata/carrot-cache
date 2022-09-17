@@ -3,7 +3,7 @@ The project goal is to modernize data caching and to allow users to build custom
 
 ## Features
 
-- Multiple modes of operations: Only RAM, Only SSD, Hybrid mode (RAM -> SSD) are supported. 
+- Supports multiple modes of operations: Only RAM, Only SSD, Hybrid mode (RAM -> SSD). 
 - Highly configurable (customizable):  Cache Admission policy (important for SSD), eviction policy  and throughput controller are three major policies which can be replaced by users. Other customizable components : memory index formats, internal GC recycling selector, data writers/data readers. 
 - ML (Machine Learning) ready. Custom cache admission and eviction policies can utilize sophisticated ML models, trained to a customer specific workloads.   
 - **CacheGuard (tm)** protected. It is the combination of a Cache Admission Policy and scan resistant cache eviction algorithm - significantly reduces SSD wearing and increases its longevity.  
