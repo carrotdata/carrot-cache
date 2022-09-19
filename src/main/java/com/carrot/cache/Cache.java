@@ -661,6 +661,31 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return this;
     }
     
+    /**
+     * With victim cache promotion threshold
+     * @param v threshold
+     * @return builder instance
+     */
+    public Builder withVictimCachePromotionThreshold(double v) {
+      conf.setVictimPromotionThreshold(cacheName, v);
+      return this;
+    }
+    
+    /**
+     * With hybrid cache inverse mode
+     * @param b mode
+     * @return builder instance
+     */
+    public Builder withCacheHybridInverseMode(boolean b) {
+      conf.setCacheHybridInverseMode(cacheName, b);
+      return this;
+    }
+    
+    /**
+     * Build cache
+     * @return
+     * @throws IOException
+     */
     private Cache build() throws IOException {
       Cache cache = new Cache(conf, cacheName);
       cache.setIOEngine(this.engine);
@@ -745,7 +770,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   double scavengerStopMemoryRatio;
   
   /* Victim cache promote on hit */
-  boolean victimCachePromote;
+  boolean victimCachePromoteOnHit;
+  
+  /* Victim cache promote threshold */
+  double victimCachePromoteThreshold;
+  
+  /* Hybrid cache inverse mode */
+  boolean hybridCacheInverseMode;
   
   /* Cache type*/
   Type type;
@@ -1204,6 +1235,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       long keyPtr, int keySize, long valPtr, int valSize, long expire, int rank, boolean force, boolean scavenger)
       throws IOException {
 
+    if (this.victimCache != null && this.hybridCacheInverseMode) {
+      return this.victimCache.put(keyPtr, keySize, valPtr, valSize, expire, rank, force, scavenger);
+    } else {
+      return putDirectly(keyPtr, keySize, valPtr, valSize, expire, rank, force, scavenger);
+    }
+
+  }
+
+  private boolean putDirectly(long keyPtr, int keySize, long valPtr, int valSize, long expire,
+      int rank, boolean force, boolean scavenger) throws IOException {
     // Check rank
     checkRank(rank);
     if (!shouldAdmitToMainQueue(keyPtr, keySize, valSize, force)) {
@@ -1302,6 +1343,27 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       boolean force,
       boolean scavenger)
       throws IOException {
+    
+    if (this.victimCache != null && this.hybridCacheInverseMode) {
+      return this.victimCache.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, force, scavenger);
+    } else {
+      return putDirectly(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, force, scavenger);
+    }
+    
+  }
+
+  public boolean putDirectly(
+      byte[] key,
+      int keyOffset,
+      int keySize,
+      byte[] value,
+      int valOffset,
+      int valSize,
+      long expire,
+      int rank,
+      boolean force,
+      boolean scavenger)
+      throws IOException {
 
     if (!shouldAdmitToMainQueue(key, keyOffset, keySize, valSize, force)) {
       return false;
@@ -1332,14 +1394,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return result;
   }
 
+  
   private boolean put (byte[] buf, int off, long expire) throws IOException {
     int rank = getDefaultRankToInsert();
     int keySize = Utils.readUVInt(buf, off);
     int kSizeSize = Utils.sizeUVInt(keySize);
     int valueSize = Utils.readUVInt(buf, off + kSizeSize);
     int vSizeSize = Utils.sizeUVInt(valueSize);
-    return put(buf, off + kSizeSize + vSizeSize, keySize, buf, 
-      off + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, true);
+    return putDirectly(buf, off + kSizeSize + vSizeSize, keySize, buf, 
+      off + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, true, false);
   }
   
   private boolean put(long bufPtr, long expire) throws IOException {
@@ -1348,8 +1411,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     int kSizeSize = Utils.sizeUVInt(keySize);
     int valueSize = Utils.readUVInt(bufPtr + kSizeSize);
     int vSizeSize = Utils.sizeUVInt(valueSize);
-    return put(bufPtr + kSizeSize + vSizeSize, keySize, bufPtr 
-      + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, true);
+    return putDirectly(bufPtr + kSizeSize + vSizeSize, keySize, bufPtr 
+      + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, true, false);
   }
   
   private boolean put(ByteBuffer buf, long expire) throws IOException {
@@ -1430,12 +1493,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     if(result < 0 && this.victimCache != null) {
       result = this.victimCache.get(keyPtr, keySize, hit, buffer, bufOffset);
-      if (this.victimCachePromote && result >=0 && result <= buffer.length - bufOffset) {
+      if (this.victimCachePromoteOnHit && result >=0 && result <= buffer.length - bufOffset) {
         // put k-v into this cache, remove it from the victim cache
         MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
-        long expire = mi.getExpire(keyPtr, keySize);
-        put(buffer, bufOffset, expire);
-        this.victimCache.delete(keyPtr, keySize);
+        double popularity = mi.popularity(keyPtr, keySize);
+        if (popularity > this.victimCachePromoteThreshold) {
+          long expire = mi.getExpire(keyPtr, keySize);
+          put(buffer, bufOffset, expire);
+          this.victimCache.delete(keyPtr, keySize);
+        }
       } 
     }
     return result;
@@ -1501,12 +1567,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       // getWithExpire and getWithExpireAndDelete API
       // one call instead of three
       result = this.victimCache.get(key, keyOffset, keySize, hit, buffer, bufOffset);
-      if (this.victimCachePromote && result >=0 && result <= buffer.length - bufOffset) {
+      if (this.victimCachePromoteOnHit && result >= 0 && result <= buffer.length - bufOffset) {
         // put k-v into this cache, remove it from the victim cache
         MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
-        long expire = mi.getExpire(key, bufOffset, keySize);
-        put(buffer, bufOffset, expire);
-        this.victimCache.delete(key, keyOffset, keySize);
+        double popularity = mi.popularity(key, keyOffset, keySize);
+        // Promote only popular items
+        if (popularity > this.victimCachePromoteThreshold) {
+          long expire = mi.getExpire(key, keyOffset, keySize);
+          put(buffer, bufOffset, expire);
+          this.victimCache.delete(key, keyOffset, keySize);
+        }
       } 
     }
     return result;
@@ -1565,12 +1635,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     if(result < 0 && this.victimCache != null) {
       result = this.victimCache.get(key, keyOff, keySize, hit, buffer);
-      if (this.victimCachePromote && result >= 0 && result <= rem) {
+      if (this.victimCachePromoteOnHit && result >= 0 && result <= rem) {
         // put k-v into this cache, remove it from the victim cache
         MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
-        long expire = mi.getExpire(key, keyOff, keySize);
-        put(buffer, expire);
-        this.victimCache.delete(key, keyOff, keySize);
+        double popularity = mi.popularity(key, keyOff, keySize);
+        if (popularity > this.victimCachePromoteThreshold) {
+          long expire = mi.getExpire(key, keyOff, keySize);
+          put(buffer, expire);
+          this.victimCache.delete(key, keyOff, keySize);
+        }
       } 
     }
     return result;
@@ -1628,12 +1701,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     if(result < 0 && this.victimCache != null) {
       result = this.victimCache.get(keyPtr, keySize, hit, buffer);
-      if (this.victimCachePromote && result >=0 && result <= rem) {
+      if (this.victimCachePromoteOnHit && result >=0 && result <= rem) {
         // put k-v into this cache, remove it from the victim cache
         MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
-        long expire = mi.getExpire(keyPtr, keySize);
-        put(buffer, expire);
-        this.victimCache.delete(keyPtr, keySize);
+        double popularity = mi.popularity(keyPtr, keySize);
+        if (popularity > this.victimCachePromoteThreshold) {
+          long expire = mi.getExpire(keyPtr, keySize);
+          put(buffer, expire);
+          this.victimCache.delete(keyPtr, keySize);
+        }
       } 
     }
     return result;
@@ -1736,7 +1812,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       throw new IllegalArgumentException("Victim cache is not supported for DISK type cache");
     }
     this.victimCache = c;
-    this.victimCachePromote = this.conf.getVictimCachePromotionOnHit(c.getName());
+    this.victimCachePromoteOnHit = this.conf.getVictimCachePromotionOnHit(c.getName());
+    this.victimCachePromoteThreshold = this.conf.getVictimPromotionThreshold(c.getName());
+    this.hybridCacheInverseMode = this.conf.getCacheHybridInverseMode(cacheName);
+    this.victimCache.setParentCache(this);
   }
   
   /**
@@ -2178,5 +2257,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public void printStats() {
     System.out.printf("Cache[%s]: hit rate=%f, puts=%d, bytes written=%d, failed gets = %d\n",
       this.cacheName, getHitRate(), getTotalWrites(), getTotalWritesSize(),  failedGets.get());
+    if (this.victimCache != null) {
+      System.out.printf("Cache[%s]: hit rate=%f, puts=%d, bytes written=%d, failed gets = %d\n",
+        this.victimCache.cacheName, this.victimCache.getHitRate(), 
+        this.victimCache.getTotalWrites(), this.victimCache.getTotalWritesSize(),  
+        this.victimCache.failedGets.get());
+    }
   }
 }

@@ -35,7 +35,7 @@ public class TestFileCacheMultithreadedZipfWithAQ extends TestCacheMultithreaded
     this.numIterations = 10 * this.numRecords;
     this.numThreads = 1;
     this.segmentSize = 16 * 1024 * 1024;
-    this.maxCacheSize = 1000 * this.segmentSize;
+    this.maxCacheSize = 500 * this.segmentSize;
   }
   
   @Override
@@ -44,6 +44,7 @@ public class TestFileCacheMultithreadedZipfWithAQ extends TestCacheMultithreaded
      return b;
   }
   
+  //@Ignore
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPIWithAQ() throws IOException {
     System.out.println("Bytes API: eviction=LRU, selector=MinAlive - AQ");
@@ -55,7 +56,7 @@ public class TestFileCacheMultithreadedZipfWithAQ extends TestCacheMultithreaded
     super.testContinuosLoadBytesRun();
   }
   
-  @Ignore
+  //@Ignore
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=LRU, selector=MinAlive");

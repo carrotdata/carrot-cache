@@ -346,9 +346,9 @@ public class Scavenger extends Thread {
       
       if (numInstances.incrementAndGet() > maxInstances) {
         numInstances.decrementAndGet();
-        System.out.printf(
-            "Cache [%s] - scavenger skips run - number of maximum instances %d exceeded\n", 
-            cache.getName(), maxInstances);
+//        System.out.printf(
+//            "Cache [%s] - scavenger skips run - number of maximum instances %d exceeded\n", 
+//            cache.getName(), maxInstances);
         return;
       }
 //      System.out.printf(
@@ -369,9 +369,9 @@ public class Scavenger extends Thread {
         }
         Segment s = engine.getSegmentForRecycling();
         if (s == null) {
-          /*DEBUG*/ System.out.printf("Scavenger [%s] - no segments to process - exited\n", 
-            cache.getName());
-          LOG.warn(Thread.currentThread().getName() + ": empty segment");
+//          /*DEBUG*/ System.out.printf("Scavenger [%s] - no segments to process - exited\n", 
+//            cache.getName());
+//          LOG.warn(Thread.currentThread().getName() + ": empty segment");
           return;
         }
         if (shouldStopOn(s)) {

@@ -258,6 +258,11 @@ public class CacheConfig {
   /* Rolling Window Counter window duration in seconds */
   public static final String CACHE_ROLLING_WINDOW_COUNTER_DURATION_KEY = "cache.rwc.window";
   
+  /* Hybrid cache mode of operation */
+  public static final String CACHE_HYBRID_INVERSE_MODE_KEY = "cache.hybrid.inverse.mode";
+  
+  /* Victim cache promotion threshold  */
+  public static final String CACHE_VICTIM_PROMOTION_THRESHOLD_KEY = "cache.victim.promotion.threshold";
   
   /* Defaults section */
   
@@ -414,6 +419,12 @@ public class CacheConfig {
   
   /* Victim cache promotion on hit default value*/
   public final static boolean DEFAULT_CACHE_VICTIM_PROMOTION_ON_HIT = true;
+  
+  /* Default hybrid inverse mode of operation */
+  public final static boolean DEFAULT_CACHE_HYBRID_INVERSE_MODE = false;
+  
+  /* Default victim promotion threshold */
+  public final static double DEFAULT_CACHE_VICTIM_PROMOTION_THRESHOLD = 0.9;
   
   // Statics
   static CacheConfig instance;
@@ -1752,5 +1763,54 @@ public class CacheConfig {
    */
   public void setScavengerMaxSegmentsBeforeStall (String cacheName, int n) {
     props.setProperty(cacheName + "." + SCAVENGER_MAX_SEGMENTS_BEFORE_STALL_KEY, Integer.toString(n));
+  }
+  
+  /**
+   * Get hybrid cache inverse mode
+   * @param cacheName cache name
+   * @return true if inverse mode ON, false - otherwise
+   */
+  public boolean getCacheHybridInverseMode (String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_HYBRID_INVERSE_MODE_KEY);
+    if (value == null) {
+      return getBooleanProperty(CACHE_HYBRID_INVERSE_MODE_KEY, 
+        DEFAULT_CACHE_HYBRID_INVERSE_MODE);
+    } else {
+      return Boolean.parseBoolean(value);
+    }
+  }
+  
+  /**
+   * Set hybrid cache inverse mode
+   * @param cacheName cache name
+   * @param v true or false
+   */
+  public void setCacheHybridInverseMode (String cacheName, boolean v) {
+    props.setProperty(cacheName + "." + CACHE_HYBRID_INVERSE_MODE_KEY, Boolean.toString(v));
+  }
+  
+  /**
+   * Get victim cache promotion threshold
+   * @param cacheName cache name
+   * @return threshold
+   */
+  public double getVictimPromotionThreshold (String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_VICTIM_PROMOTION_THRESHOLD_KEY);
+    if (value == null) {
+      return getDoubleProperty(CACHE_VICTIM_PROMOTION_THRESHOLD_KEY, 
+        DEFAULT_CACHE_VICTIM_PROMOTION_THRESHOLD);
+    } else {
+      return Double.parseDouble(value);
+    }
+  }
+  
+  /**
+   * Set victim cache promotion threshold
+   * @param cacheName cache name
+   * @param promotion threshold
+   */
+  public void setVictimPromotionThreshold (String cacheName, double v) {
+    props.setProperty(cacheName + "." + CACHE_VICTIM_PROMOTION_THRESHOLD_KEY, 
+      Double.toString(v));
   }
 }

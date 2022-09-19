@@ -23,9 +23,11 @@ import org.junit.After;
 import com.carrot.cache.controllers.AdmissionController;
 import com.carrot.cache.controllers.BaseAdmissionController;
 import com.carrot.cache.controllers.LRCRecyclingSelector;
+import com.carrot.cache.controllers.MinAliveRecyclingSelector;
 import com.carrot.cache.controllers.RecyclingSelector;
 import com.carrot.cache.eviction.EvictionPolicy;
 import com.carrot.cache.eviction.FIFOEvictionPolicy;
+import com.carrot.cache.eviction.LRUEvictionPolicy;
 import com.carrot.cache.util.TestUtils;
 
 public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithreadedZipf {
@@ -67,9 +69,9 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
     this.victim_minActiveRatio = 0.5;
     this.victim_scavDumpBelowRatio = 0.5;
     this.victim_scavengerInterval = 10;
-    this.victim_promoteOnHit = true;
-    this.victim_epClz = FIFOEvictionPolicy.class;
-    this.victim_rsClz = LRCRecyclingSelector.class;
+    this.victim_promoteOnHit = false;
+    this.victim_epClz = LRUEvictionPolicy.class;
+    this.victim_rsClz = MinAliveRecyclingSelector.class;
     this.victim_acClz = BaseAdmissionController.class;
     
   }
