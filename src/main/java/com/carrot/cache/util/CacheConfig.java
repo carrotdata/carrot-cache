@@ -264,6 +264,9 @@ public class CacheConfig {
   /* Victim cache promotion threshold  */
   public static final String CACHE_VICTIM_PROMOTION_THRESHOLD_KEY = "cache.victim.promotion.threshold";
   
+  /* Spin wait time on high pressure in nanoseconds */
+  public static final String CACHE_SPIN_WAIT_TIME_NS_KEY = "cache.spin.wait.time.ns";
+  
   /* Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
@@ -425,6 +428,9 @@ public class CacheConfig {
   
   /* Default victim promotion threshold */
   public final static double DEFAULT_CACHE_VICTIM_PROMOTION_THRESHOLD = 0.9;
+  
+  /* Default cache spin wait time on high pressure - PUT operation*/
+  public final static long DEFAULT_CACHE_SPIN_WAIT_TIME_NS = 50000;// 50000 nanoseconds
   
   // Statics
   static CacheConfig instance;
@@ -1812,5 +1818,30 @@ public class CacheConfig {
   public void setVictimPromotionThreshold (String cacheName, double v) {
     props.setProperty(cacheName + "." + CACHE_VICTIM_PROMOTION_THRESHOLD_KEY, 
       Double.toString(v));
+  }
+  
+  /**
+   * Get cache spin wait time on high pressure (in nanoseconds)
+   * @param cacheName cache name
+   * @return time
+   */
+  public long getCacheSpinWaitTimeOnHighPressure (String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_SPIN_WAIT_TIME_NS_KEY);
+    if (value == null) {
+      return getLongProperty(CACHE_SPIN_WAIT_TIME_NS_KEY, 
+        DEFAULT_CACHE_SPIN_WAIT_TIME_NS);
+    } else {
+      return Long.parseLong(value);
+    }
+  }
+  
+  /**
+   * Set cache spin wait time on high pressure (in nanoseconds)
+   * @param cacheName cache name
+   * @param v wait time
+   */
+  public void setCacheSpinWaitTimeOnHighPressure  (String cacheName, long v) {
+    props.setProperty(cacheName + "." + CACHE_SPIN_WAIT_TIME_NS_KEY, 
+      Long.toString(v));
   }
 }

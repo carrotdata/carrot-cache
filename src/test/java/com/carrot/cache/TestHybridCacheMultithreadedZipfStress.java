@@ -71,7 +71,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
     this.offheap = true;
     this.numRecords = 10000000;
     this.numIterations = 10 * this.numRecords;
-    this.numThreads = 1;
+    this.numThreads = 4;
     this.minActiveRatio = 0.9;
     this.segmentSize = 4 * 1024 * 1024;
     this.maxCacheSize = 1000L * this.segmentSize;

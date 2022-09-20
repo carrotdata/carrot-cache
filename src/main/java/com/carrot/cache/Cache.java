@@ -682,6 +682,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     
     /**
+     * With cache spin wait time on high pressure
+     * @param time wait time (in nanoseconds)
+     * @return builder instance
+     */
+    public Builder withCacheSpinWaitTimeOnHighPressure(long time) {
+      conf.setCacheSpinWaitTimeOnHighPressure(cacheName, time);
+      return this;
+    }
+    
+    /**
      * Build cache
      * @return
      * @throws IOException
@@ -778,6 +788,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /* Hybrid cache inverse mode */
   boolean hybridCacheInverseMode;
   
+  /* Cache spin wait time */
+  long spinWaitTime;
+  
   /* Cache type*/
   Type type;
   
@@ -827,7 +840,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.type = engine instanceof OffheapIOEngine? Type.MEMORY: Type.DISK;
   }
   
-  private void initAll() throws IOException {
+  private void initFromConfiguration() {
     this.indexEmdeddingSupported = 
         this.conf.isIndexDataEmbeddedSupported(this.cacheName);
     this.indexEmbeddedSize = this.conf.getIndexDataEmbeddedSize(this.cacheName);
@@ -835,7 +848,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.writesMaxWaitTime = this.conf.getCacheWritesMaxWaitTime(this.cacheName);
     this.scavengerStartMemoryRatio = this.conf.getScavengerStartMemoryRatio(this.cacheName);
     this.scavengerStopMemoryRatio = this.conf.getScavengerStopMemoryRatio(this.cacheName);
-    
+    this.spinWaitTime = this.conf.getCacheSpinWaitTimeOnHighPressure(this.cacheName);
+  }
+  
+  private void initAll() throws IOException {
+ 
+    initFromConfiguration();
     updateMaxCacheSize();
     initAdmissionController();
     initThroughputController();
@@ -846,15 +864,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   private void initAllDuringLoad() throws IOException {
-    this.indexEmdeddingSupported = 
-        this.conf.isIndexDataEmbeddedSupported(this.cacheName);
-    this.indexEmbeddedSize = this.conf.getIndexDataEmbeddedSize(this.cacheName);
-    this.evictionDisabledMode = this.conf.getEvictionDisabledMode(this.cacheName);
-    this.writesMaxWaitTime = this.conf.getCacheWritesMaxWaitTime(this.cacheName);
-    this.scavengerStartMemoryRatio = this.conf.getScavengerStartMemoryRatio(this.cacheName);
-    this.scavengerStopMemoryRatio = this.conf.getScavengerStopMemoryRatio(this.cacheName);
-
-    this.engine = this.type == Type.MEMORY? new OffheapIOEngine(this.cacheName): new FileIOEngine(this.cacheName);
+    initFromConfiguration();
+    this.engine = this.type == Type.MEMORY?
+        new OffheapIOEngine(this.cacheName): new FileIOEngine(this.cacheName);
     // set engine listener
     this.engine.setListener(this);
     updateMaxCacheSize();
@@ -1206,10 +1218,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     // Otherwise wait for approximately 100 microseconds
     // to allow Scavenger to finish
-    //TODO: make this configurable?
-    long waitTime = 50000; // 50 microsec
     long start = System.nanoTime();
-    while(System.nanoTime() - start < waitTime) {
+    while(System.nanoTime() - start < this.spinWaitTime) {
       Thread.onSpinWait();
     }
   }
