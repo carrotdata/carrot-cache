@@ -1486,7 +1486,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     } catch (IOException e) {
       // Try one more time, file could be closed by Scavenger
       //result = this.engine.get(keyPtr, keySize, hit, buffer, bufOffset);
-      failedGets.incrementAndGet();
       return result;
     }    
     
@@ -1532,9 +1531,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       throws IOException {
     return get(key, keyOffset, keySize, true, buffer, bufOffset);
   }
-  
-  private AtomicLong failedGets = new AtomicLong();
-  
+    
   /**
    * Get cached item (if any)
    *
@@ -1557,7 +1554,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     } catch (IOException e) {
       // IOException is possible
       //TODO: better mitigation 
-      failedGets.incrementAndGet();
       return result;
     }
     
@@ -1628,7 +1624,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     try {
       result = this.engine.get(key, keyOff, keySize, hit, buffer);
     } catch (IOException e) {
-      failedGets.incrementAndGet();
       return result;
     }
     
@@ -1694,7 +1689,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     try {
       result = this.engine.get(keyPtr, keySize, hit, buffer);
     } catch(IOException e) {
-      failedGets.incrementAndGet();
       return result;
     }
     
@@ -2209,7 +2203,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException
    */
   public void load() throws IOException {
-    //TODO: not complete yet
     // Cache cache = new Cache();
     // cache.setName(name);
     // cache.load();
@@ -2255,9 +2248,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public void dispose() {
     // 1 cancel the timer
     this.timer.cancel();
-    
     stopScavenger();
-    
     this.engine.dispose();
     if (this.victimCache != null) {
       this.victimCache.dispose();
@@ -2265,13 +2256,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   public void printStats() {
-    System.out.printf("Cache[%s]: hit rate=%f, puts=%d, bytes written=%d, failed gets = %d\n",
-      this.cacheName, getHitRate(), getTotalWrites(), getTotalWritesSize(),  failedGets.get());
+    System.out.printf("Cache[%s]: storage size=%d data size=%d items=%d hit rate=%f, puts=%d, bytes written=%d\n",
+      this.cacheName, getStorageAllocated(), getStorageUsed(), size(), 
+      getHitRate(), getTotalWrites(), getTotalWritesSize());
+    
     if (this.victimCache != null) {
-      System.out.printf("Cache[%s]: hit rate=%f, puts=%d, bytes written=%d, failed gets = %d\n",
-        this.victimCache.cacheName, this.victimCache.getHitRate(), 
-        this.victimCache.getTotalWrites(), this.victimCache.getTotalWritesSize(),  
-        this.victimCache.failedGets.get());
+        System.out.printf("Cache[%s]: storage size=%d data size=%d items=%d hit rate=%f, puts=%d, bytes written=%d\n",
+        this.victimCache.cacheName, this.victimCache.getStorageAllocated(), 
+        this.victimCache.getStorageUsed(), this.victimCache.size(),
+        this.victimCache.getHitRate(), 
+        this.victimCache.getTotalWrites(), this.victimCache.getTotalWritesSize());
     }
   }
 }
