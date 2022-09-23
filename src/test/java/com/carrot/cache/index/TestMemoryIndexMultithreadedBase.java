@@ -25,6 +25,7 @@ import org.junit.BeforeClass;
 import com.carrot.cache.index.MemoryIndex.MutationResult;
 import com.carrot.cache.util.TestUtils;
 import com.carrot.cache.util.UnsafeAccess;
+import com.carrot.cache.util.Utils;
 
 public class TestMemoryIndexMultithreadedBase {
   MemoryIndex memoryIndex;
@@ -209,7 +210,8 @@ public class TestMemoryIndexMultithreadedBase {
     while(result == false) {
       result = memoryIndex.delete(key, offset, size);
       if (!result) {
-        Thread.onSpinWait();
+        //Thread.onSpinWait();
+        Utils.onSpinWait(1000);
       }
     }
     return true;
@@ -225,7 +227,8 @@ public class TestMemoryIndexMultithreadedBase {
     while(result == false) {
       result = memoryIndex.delete(key, size);
       if (!result) {
-        Thread.onSpinWait();
+//        Thread.onSpinWait();
+        Utils.onSpinWait(1000);
       }
     }
     return true;
@@ -242,7 +245,8 @@ public class TestMemoryIndexMultithreadedBase {
     while(result != MutationResult.INSERTED) {
       result = memoryIndex.aarp(key, offset, size);
       if (result != MutationResult.INSERTED) {
-        Thread.onSpinWait();
+//        Thread.onSpinWait();
+        Utils.onSpinWait(1000);
       }
     }
     return result;
@@ -258,7 +262,8 @@ public class TestMemoryIndexMultithreadedBase {
     while(result != MutationResult.INSERTED) {
       result = memoryIndex.aarp(key, size);
       if (result != MutationResult.INSERTED) {
-        Thread.onSpinWait();
+//        Thread.onSpinWait();
+        Utils.onSpinWait(1000);
       }
     }
     return result;
@@ -275,7 +280,8 @@ public class TestMemoryIndexMultithreadedBase {
     while(result != MutationResult.DELETED) {
       result = memoryIndex.aarp(key, offset, size);
       if (result != MutationResult.DELETED) {
-        Thread.onSpinWait();
+//        Thread.onSpinWait();
+        Utils.onSpinWait(1000);
       }
     }
     return result;
@@ -291,7 +297,8 @@ public class TestMemoryIndexMultithreadedBase {
     while(result != MutationResult.DELETED) {
       result = memoryIndex.aarp(key, size);
       if (result != MutationResult.DELETED) {
-        Thread.onSpinWait();
+//        Thread.onSpinWait();
+        Utils.onSpinWait(1000);
       }
     }
     return result;
@@ -308,7 +315,8 @@ public class TestMemoryIndexMultithreadedBase {
     while(result != MutationResult.INSERTED) {
       result = memoryIndex.insert(key, offset, size, buf, bufSize);
       if (result != MutationResult.INSERTED) {
-        Thread.onSpinWait();
+//        Thread.onSpinWait();
+        Utils.onSpinWait(1000);
       }
     }
     return MutationResult.INSERTED;
@@ -324,7 +332,8 @@ public class TestMemoryIndexMultithreadedBase {
     while(result != MutationResult.INSERTED) {
       result = memoryIndex.insert(key, size, buf, bufSize);
       if (result != MutationResult.INSERTED) {
-        Thread.onSpinWait();
+//        Thread.onSpinWait();
+        Utils.onSpinWait(1000);
       }
     }
     return MutationResult.INSERTED;

@@ -18,6 +18,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
@@ -36,7 +38,18 @@ public class Utils {
   public static final int SIZEOF_BYTE = 1;
 
   public static final int BITS_PER_BYTE = 8;
+  
+  public static int javaVersion = getJavaVersion();
 
+  static Class<Thread> clz = Thread.class;
+  static Method onSpinWait;
+  
+  static {
+    try {
+      onSpinWait = clz.getDeclaredMethod("onSpinWait");
+    } catch (NoSuchMethodException | SecurityException e) {      
+    }
+  }
   /**
    * Returns true if x1 is less than x2, when both values are treated as unsigned long. Both values
    * are passed as is read by Unsafe. When platform is Little Endian, have to convert to
@@ -932,5 +945,31 @@ public class Utils {
     int vSizeSize = Utils.sizeUVInt(vSize);
     buffer.position(pos);
     return kSizeSize + vSizeSize;
+  }
+  
+  public static int getJavaVersion() {
+    String version = System.getProperty("java.version");
+    if(version.startsWith("1.")) {
+        version = version.substring(2, 3);
+    } else {
+        int dot = version.indexOf(".");
+        if(dot != -1) { version = version.substring(0, dot); }
+    } return Integer.parseInt(version);
+  }
+  
+  
+  public static void onSpinWait(long waitNs) {
+    
+    long start = System.nanoTime();
+    
+    while(System.nanoTime() - start < waitNs) {
+      if (onSpinWait != null) {
+        try {
+          onSpinWait.invoke(null);
+        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+          e.printStackTrace();
+        }
+      } 
+    }
   }
 }

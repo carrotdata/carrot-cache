@@ -39,6 +39,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.carrot.cache.util.CacheConfig;
 import com.carrot.cache.util.UnsafeAccess;
+import com.carrot.cache.util.Utils;
 
 public class FileIOEngine extends IOEngine {
   /** Logger */
@@ -133,7 +134,8 @@ public class FileIOEngine extends IOEngine {
 
   private void submitTask(Runnable r) {
     while(activeSaveTasks.get() >= ioStoragePoolSize) {
-      Thread.onSpinWait();
+ //     Thread.onSpinWait();
+      Utils.onSpinWait(10000);
     }
     activeSaveTasks.incrementAndGet();
     new Thread(r).start();

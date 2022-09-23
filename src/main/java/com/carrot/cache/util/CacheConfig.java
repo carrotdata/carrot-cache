@@ -430,7 +430,7 @@ public class CacheConfig {
   public final static double DEFAULT_CACHE_VICTIM_PROMOTION_THRESHOLD = 0.9;
   
   /* Default cache spin wait time on high pressure - PUT operation*/
-  public final static long DEFAULT_CACHE_SPIN_WAIT_TIME_NS = 50000;// 50000 nanoseconds
+  public final static long DEFAULT_CACHE_SPIN_WAIT_TIME_NS = 10000;// 10000 nanoseconds
   
   // Statics
   static CacheConfig instance;

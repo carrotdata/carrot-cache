@@ -529,8 +529,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return this;
     }
     
-    
-    
     /**
      * With data writer
      * @param className class name
@@ -790,7 +788,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   
   /* Cache spin wait time */
   long spinWaitTime;
-  
+
   /* Cache type*/
   Type type;
   
@@ -1216,12 +1214,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (storageUsed < this.scavengerStopMemoryRatio || !isScavengerActive()) {
       return;
     }
-    // Otherwise wait for approximately 100 microseconds
-    // to allow Scavenger to finish
-    long start = System.nanoTime();
-    while(System.nanoTime() - start < this.spinWaitTime) {
-      Thread.onSpinWait();
-    }
+    Utils.onSpinWait(this.spinWaitTime);
   }
   
   public boolean put(
@@ -1269,16 +1262,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     expire = adjustExpirationTime(expire);
     // Add to the cache
     boolean result = false;
-    long start = System.currentTimeMillis();
-    while(!result) {
+//    long start = System.currentTimeMillis();
+//    while(!result) {
       result = engine.put(keyPtr, keySize, valPtr, valSize, expire, rank);
-      if (!result && evictionDisabledMode == false && 
-          (System.currentTimeMillis() - start) <= this.writesMaxWaitTime) {
-        Thread.onSpinWait();
-      } else {
-        break;
-      }
-    }
+//      if (!result && evictionDisabledMode == false && 
+//          (System.currentTimeMillis() - start) <= this.writesMaxWaitTime) {
+//        Thread.onSpinWait();
+//      } else {
+//        break;
+//      }
+//    }
     if (result) {
       reportThroughputController(Utils.kvSize(keySize, valSize));
     }
@@ -1388,16 +1381,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     expire = adjustExpirationTime(expire);
     // Add to the cache
     boolean result = false;
-    long start = System.currentTimeMillis();
-    while(!result) {
+//    long start = System.currentTimeMillis();
+//    while(!result) {
       result = engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank);
-      if (!result && evictionDisabledMode == false && 
-          (System.currentTimeMillis() - start) <= this.writesMaxWaitTime) {
-        Thread.onSpinWait();
-      } else {
-        break;
-      }
-    }
+//      if (!result && evictionDisabledMode == false && 
+//          (System.currentTimeMillis() - start) <= this.writesMaxWaitTime) {
+//        Thread.onSpinWait();
+//      } else {
+//        break;
+//      }
+//    }
     if (result) {
       reportThroughputController(Utils.kvSize(keySize, valSize));
     }
@@ -1484,8 +1477,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     try {
       result = this.engine.get(keyPtr, keySize, hit, buffer, bufOffset);
     } catch (IOException e) {
-      // Try one more time, file could be closed by Scavenger
-      //result = this.engine.get(keyPtr, keySize, hit, buffer, bufOffset);
       return result;
     }    
     
