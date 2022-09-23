@@ -1455,12 +1455,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *     adjusted buffer
    * @throws IOException 
    */
-  public long get(long keyPtr, int keySize, byte[] buffer, int bufOffset) throws IOException {
-    return get(keyPtr, keySize, true, buffer, bufOffset);
+  long get_kv(long keyPtr, int keySize, byte[] buffer, int bufOffset) throws IOException {
+    return get_kv(keyPtr, keySize, true, buffer, bufOffset);
   }
 
   /**
-   * Get cached item (if any)
+   * Get cached item and key (if any)
    *
    * @param keyPtr key address
    * @param keySize key size
@@ -1471,7 +1471,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *     adjusted buffer
    * @throws IOException 
    */
-  public long get(long keyPtr, int keySize, boolean hit, byte[] buffer, int bufOffset) throws IOException {
+  long get_kv(long keyPtr, int keySize, boolean hit, byte[] buffer, int bufOffset) throws IOException {
     long result = -1;
     
     try {
@@ -1492,7 +1492,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       }
     }
     if(result < 0 && this.victimCache != null) {
-      result = this.victimCache.get(keyPtr, keySize, hit, buffer, bufOffset);
+      result = this.victimCache.get_kv(keyPtr, keySize, hit, buffer, bufOffset);
       if (this.victimCachePromoteOnHit && result >=0 && result <= buffer.length - bufOffset) {
         // put k-v into this cache, remove it from the victim cache
         MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
@@ -1508,6 +1508,27 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   /**
+   * Get cached item only (if any)
+   *
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param hit if true - its a hit
+   * @param buffer buffer for item
+   * @param bufOffset buffer offset
+   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
+   *     adjusted buffer
+   * @throws IOException 
+   */
+  public long get(long keyPtr, int keySize, boolean hit, byte[] buffer, int bufOffset) throws IOException {
+    int rem = buffer.length - bufOffset;
+    long result = get_kv(keyPtr, keySize, hit, buffer, bufOffset);
+    if (result > 0 && result <= rem) {
+      result = Utils.extractValue(buffer, bufOffset);
+    }
+    return result;
+  }
+  
+  /**
    * Get cached item (with hit == true)
    * @param key key buffer
    * @param keyOffset key offset
@@ -1518,13 +1539,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *     adjusted buffer
    * @throws IOException
    */
-  public long get(byte[] key, int keyOffset, int keySize, byte[] buffer, int bufOffset) 
+  long get_kv(byte[] key, int keyOffset, int keySize, byte[] buffer, int bufOffset) 
       throws IOException {
-    return get(key, keyOffset, keySize, true, buffer, bufOffset);
+    return get_kv(key, keyOffset, keySize, true, buffer, bufOffset);
   }
     
   /**
-   * Get cached item (if any)
+   * Get cached item and key (if any)
    *
    * @param key key buffer
    * @param keyOfset key offset
@@ -1536,7 +1557,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *     adjusted buffer
    * @throws IOException 
    */
-  public long get(byte[] key, int keyOffset, int keySize, boolean hit, byte[] buffer, int bufOffset) 
+  long get_kv(byte[] key, int keyOffset, int keySize, boolean hit, byte[] buffer, int bufOffset) 
       throws IOException {
     
     long result = -1;
@@ -1563,7 +1584,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       //TODO: optimize it
       // getWithExpire and getWithExpireAndDelete API
       // one call instead of three
-      result = this.victimCache.get(key, keyOffset, keySize, hit, buffer, bufOffset);
+      result = this.victimCache.get_kv(key, keyOffset, keySize, hit, buffer, bufOffset);
       if (this.victimCachePromoteOnHit && result >= 0 && result <= buffer.length - bufOffset) {
         // put k-v into this cache, remove it from the victim cache
         MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
@@ -1580,21 +1601,29 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   /**
-   * Get cached item (if any)
+   * Get cached item only (if any)
    *
    * @param key key buffer
-   * @param keyOff key offset
+   * @param keyOfset key offset
    * @param keySize key size
    * @param hit if true - its a hit
-   * @param buffer byte buffer for item
+   * @param buffer buffer for item
+   * @param bufSize buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
    * @throws IOException 
    */
-  public long get(byte[] key, int keyOff, int keySize, ByteBuffer buffer) 
+  public long get(byte[] key, int keyOffset, int keySize, boolean hit, byte[] buffer, int bufOffset) 
       throws IOException {
-    return get(key, keyOff, keySize, true, buffer);
+    
+    int rem = buffer.length - bufOffset;
+    long result = get_kv(key, keyOffset, keySize, hit, buffer, bufOffset);
+    if (result > 0 && result <= rem) {
+      result = Utils.extractValue(buffer, bufOffset);
+    }
+    return result;
   }
+
   
   /**
    * Get cached item (if any)
@@ -1608,7 +1637,24 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *     adjusted buffer
    * @throws IOException 
    */
-  public long get(byte[] key, int keyOff, int keySize, boolean hit, ByteBuffer buffer) 
+  long get_kv(byte[] key, int keyOff, int keySize, ByteBuffer buffer) 
+      throws IOException {
+    return get_kv(key, keyOff, keySize, true, buffer);
+  }
+  
+  /**
+   * Get cached item and key (if any)
+   *
+   * @param key key buffer
+   * @param keyOff key offset
+   * @param keySize key size
+   * @param hit if true - its a hit
+   * @param buffer byte buffer for item
+   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
+   *     adjusted buffer
+   * @throws IOException 
+   */
+  long get_kv(byte[] key, int keyOff, int keySize, boolean hit, ByteBuffer buffer) 
       throws IOException {
     int rem = buffer.remaining();
     long result = -1;
@@ -1630,7 +1676,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       }
     }
     if(result < 0 && this.victimCache != null) {
-      result = this.victimCache.get(key, keyOff, keySize, hit, buffer);
+      result = this.victimCache.get_kv(key, keyOff, keySize, hit, buffer);
       if (this.victimCachePromoteOnHit && result >= 0 && result <= rem) {
         // put k-v into this cache, remove it from the victim cache
         MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
@@ -1646,6 +1692,28 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   /**
+   * Get cached item value only (if any)
+   *
+   * @param key key buffer
+   * @param keyOff key offset
+   * @param keySize key size
+   * @param hit if true - its a hit
+   * @param buffer byte buffer for item
+   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
+   *     adjusted buffer
+   * @throws IOException 
+   */
+  public long get(byte[] key, int keyOff, int keySize, boolean hit, ByteBuffer buffer) 
+      throws IOException {
+    int rem = buffer.remaining();
+    long result = get_kv(key, keyOff, keySize, hit, buffer);
+    if (result > 0 && result <= rem) {
+      result = Utils.extractValue(buffer);
+    }
+    return result;
+  }
+  
+  /**
    * Get cached item (if any)
    *
    * @param keyPtr key address
@@ -1655,13 +1723,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *     adjusted buffer
    * @throws IOException 
    */
-  public long get(long keyPtr, int keySize,  ByteBuffer buffer) 
+  long get_kv(long keyPtr, int keySize,  ByteBuffer buffer) 
       throws IOException  {
-    return get(keyPtr, keySize, true, buffer);
+    return get_kv(keyPtr, keySize, true, buffer);
   }
   
   /**
-   * Get cached item (if any)
+   * Get cached item and key (if any)
    *
    * @param keyPtr key address
    * @param keySize key size
@@ -1671,7 +1739,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *     adjusted buffer
    * @throws IOException 
    */
-  public long get(long keyPtr, int keySize, boolean hit, ByteBuffer buffer) 
+  long get_kv(long keyPtr, int keySize, boolean hit, ByteBuffer buffer) 
       throws IOException {
     int rem = buffer.remaining();
     
@@ -1695,7 +1763,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       }
     }
     if(result < 0 && this.victimCache != null) {
-      result = this.victimCache.get(keyPtr, keySize, hit, buffer);
+      result = this.victimCache.get_kv(keyPtr, keySize, hit, buffer);
       if (this.victimCachePromoteOnHit && result >=0 && result <= rem) {
         // put k-v into this cache, remove it from the victim cache
         MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
@@ -1710,6 +1778,28 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return result;
   }
 
+  /**
+   * Get cached item only (if any)
+   *
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param hit if true - its a hit
+   * @param buffer byte buffer for item
+   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
+   *     adjusted buffer
+   * @throws IOException 
+   */
+  public long get(long keyPtr, int keySize, boolean hit, ByteBuffer buffer) 
+      throws IOException {
+    int rem = buffer.remaining();
+    
+    long result = get_kv(keyPtr, keySize, hit, buffer);
+    if (result <= rem && result > 0) {
+      result = Utils.extractValue(buffer);
+    }
+    return result;
+  }
+  
   /* Delete API*/
 
   /**
@@ -1718,9 +1808,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyPtr key address
    * @param keySize key size
    * @return true - success, false - does not exist
+   * @throws IOException 
    */
-  public boolean delete(long keyPtr, int keySize) {
-    boolean result = engine.getMemoryIndex().delete(keyPtr, keySize);
+  public boolean delete(long keyPtr, int keySize) throws IOException {
+    boolean result = engine.delete(keyPtr, keySize);
     if (!result && this.victimCache != null) {
       return this.victimCache.delete(keyPtr, keySize);
     }
@@ -1734,9 +1825,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyOffset key offset
    * @param keySize key size
    * @return true - success, false - does not exist
+   * @throws IOException 
    */
-  public boolean delete(byte[] key, int keyOffset, int keySize) {
-    boolean result = engine.getMemoryIndex().delete(key, keyOffset, keySize);
+  public boolean delete(byte[] key, int keyOffset, int keySize) throws IOException {
+    boolean result = engine.delete(key, keyOffset, keySize);
     if (!result && this.victimCache != null) {
       return this.victimCache.delete(key, keyOffset, keySize);
     }
@@ -1750,8 +1842,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyOffset key offset
    * @param keyLength key size
    * @return true - success, false - does not exist
+   * @throws IOException 
    */
-  public boolean delete(byte[] key) {
+  public boolean delete(byte[] key) throws IOException {
     return delete(key, 0, key.length);
   }
   
@@ -1761,8 +1854,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyPtr key address
    * @param keySize key size
    * @return true - success, false - does not exist
+   * @throws IOException 
    */
-  public boolean expire(long keyPtr, int keySize) {
+  public boolean expire(long keyPtr, int keySize) throws IOException {
     return delete(keyPtr, keySize);
   }
 
@@ -1773,8 +1867,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyOffset key offset
    * @param keySize key size
    * @return true - success, false - does not exist
+   * @throws IOException 
    */
-  public boolean expire(byte[] key, int keyOffset, int keySize) {
+  public boolean expire(byte[] key, int keyOffset, int keySize) throws IOException {
     return delete(key, keyOffset, keySize);
   }
 
@@ -1785,8 +1880,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyOffset key offset
    * @param keyLength key size
    * @return true - success, false - does not exist
+   * @throws IOException 
    */
-  public boolean expire(byte[] key) {
+  public boolean expire(byte[] key) throws IOException {
     return delete(key, 0, key.length);
   }
   

@@ -23,6 +23,19 @@ import org.junit.Test;
 import com.carrot.cache.expire.ExpireSupport;
 
 public class TestProjectUtils {
+
+  @Test
+  public void testCopyBuffer() {
+    
+    byte[] buf = TestUtils.randomBytes(1000000 + 30);
+    long start = System.nanoTime();
+    for(int i = 0; i < 1000; i++) {
+      System.arraycopy(buf, 30, buf, 0, 1000000);
+    }
+    long end = System.nanoTime();
+    
+    System.out.printf("time=%d\n", (end - start) / 1000);
+  }
   
   /**
    * Compare hash64 for byte arrays and direct memory version

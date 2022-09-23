@@ -912,7 +912,6 @@ public class Utils {
     return kSizeSize + vSizeSize;
   }
   
-  
   /**
    * Reads item size from a byte buffer
    * 
@@ -945,6 +944,74 @@ public class Utils {
     int vSizeSize = Utils.sizeUVInt(vSize);
     buffer.position(pos);
     return kSizeSize + vSizeSize;
+  }
+  
+  /**
+   * Reads value offset from a byte buffer
+   * 
+   * @param ptr memory address
+   * @return value offset
+   */
+  public static int getValueOffset(ByteBuffer buffer) {
+    int pos = buffer.position();
+    int kSize = Utils.readUVInt(buffer);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    buffer.position(pos + kSizeSize);
+    int vSize = Utils.readUVInt(buffer);
+    int vSizeSize = Utils.sizeUVInt(vSize);
+    buffer.position(pos);
+    
+    return kSizeSize + vSizeSize + kSize;
+  }
+  
+  /**
+   * Reads value size from a byte buffer
+   * 
+   * @param ptr memory address
+   * @return size
+   */
+  public static int getValueSize(ByteBuffer buffer) {
+    int pos = buffer.position();
+    int kSize = Utils.readUVInt(buffer);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    buffer.position(pos + kSizeSize);
+    int vSize = Utils.readUVInt(buffer);
+    buffer.position(pos);
+    return vSize;
+  }
+  
+  public static int extractValue(ByteBuffer buffer) {
+    int pos = buffer.position();
+    int kSize = Utils.readUVInt(buffer);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    buffer.position(pos + kSizeSize);
+    int vSize = Utils.readUVInt(buffer);
+    int vSizeSize = Utils.sizeUVInt(vSize);
+    buffer.position(pos);
+
+    int toMove = kSizeSize + vSizeSize + kSize;
+
+    if (buffer.hasArray()) {
+      byte[] array = buffer.array();
+      System.arraycopy(array, pos + toMove, array, pos, vSize);
+    } else {
+      long ptr = UnsafeAccess.address(buffer);
+      ptr += pos;
+      UnsafeAccess.copy(ptr + toMove, ptr, vSize);
+    }
+    return vSize;
+  }
+  
+  public static int extractValue(byte[] buffer, int off) {
+    int pos = off;
+    int kSize = Utils.readUVInt(buffer, pos);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    pos += kSizeSize;
+    int vSize = Utils.readUVInt(buffer, pos);
+    int vSizeSize = Utils.sizeUVInt(vSize);   
+    int toMove = kSizeSize + vSizeSize + kSize;
+    System.arraycopy(buffer, off + toMove, buffer, off, vSize);
+    return vSize;
   }
   
   public static int getJavaVersion() {

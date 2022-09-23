@@ -258,7 +258,7 @@ public abstract class TestCacheMultithreadedZipfBase {
     byte[] key = TestUtils.randomBytes(keySize, r);
 
     long expSize = Utils.kvSize(keySize, valueSize);
-    long size = this.cache.get(key, 0, key.length, false, buffer, 0);
+    long size = this.cache.get_kv(key, 0, key.length, false, buffer, 0);
     if (size < 0) {
       return false;
     }
@@ -303,7 +303,7 @@ public abstract class TestCacheMultithreadedZipfBase {
     long keyPtr = TestUtils.randomMemory(keySize, r);
 
     long expSize = Utils.kvSize(keySize, valueSize);
-    long size = this.cache.get(keyPtr, keySize, buffer);
+    long size = this.cache.get_kv(keyPtr, keySize, buffer);
     if (size < 0) {
       UnsafeAccess.free(keyPtr);
       return false;
