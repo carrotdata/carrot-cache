@@ -93,4 +93,52 @@ public class OffheapIOEngine extends IOEngine {
     data.seal();
   }
 
+  @Override
+  protected int getRangeInternal(int sid, long offset, int size, byte[] key, int keyOffset,
+      int keySize, int rangeStart, int rangeSize, byte[] buffer, int bufOffset) throws IOException {
+    try {
+      return this.memoryDataReader.readValueRange(this, key, keyOffset, keySize, sid, offset, size,
+        buffer, bufOffset, rangeStart, rangeSize);
+    } catch (IOException e) {
+      // never happens
+    }
+    return NOT_FOUND;
+  }
+
+  @Override
+  protected int getRangeInternal(int sid, long offset, int size, long keyPtr, int keySize,
+      int rangeStart, int rangeSize, byte[] buffer, int bufOffset) throws IOException {
+    try {
+      return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, offset, size,
+        buffer, bufOffset, rangeStart, rangeSize);
+    } catch (IOException e) {
+      // never happens
+    }
+    return NOT_FOUND;
+  }
+
+  @Override
+  protected int getRangeInternal(int sid, long offset, int size, byte[] key, int keyOffset,
+      int keySize, int rangeStart, int rangeSize, ByteBuffer buffer) throws IOException {
+    try {
+      return this.memoryDataReader.readValueRange(this, key, keyOffset, keySize, sid, offset, size,
+        buffer, rangeStart, rangeSize);
+    } catch (IOException e) {
+      // never happens
+    }
+    return NOT_FOUND;
+  }
+
+  @Override
+  protected int getRangeInternal(int sid, long offset, int size, long keyPtr, int keySize,
+      int rangeStart, int rangeSize, ByteBuffer buffer) throws IOException {
+    try {
+      return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, offset, size,
+        buffer,  rangeStart, rangeSize);
+    } catch (IOException e) {
+      // never happens
+    }
+    return NOT_FOUND;
+  }
+
 }

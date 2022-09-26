@@ -471,6 +471,100 @@ public abstract class IOEngine implements Persistent {
   }
 
   /**
+   * Get value range into a given byte buffer
+   *
+   * @param keyPtr key address
+   * @param keySize size of a key
+   * @param rangeStart range start
+   * @param rangeSize range size
+   * @param buffer buffer
+   * @param bufOffset buffer offset
+   * @return length of an item or -1
+   * @throws IOException
+   */
+  public long getRange(long keyPtr, int keySize, int rangeStart, int rangeSize, boolean hit, 
+       byte[] buffer, int bufOffset)
+      throws IOException {
+    IndexFormat format = this.index.getIndexFormat();
+    // TODO: embedded entry case
+    int entrySize = format.indexEntrySize();
+    long buf = UnsafeAccess.mallocZeroed(entrySize);
+    try {
+
+      long result = index.find(keyPtr, keySize, hit, buf, entrySize);
+      
+      if (result < 0) {
+        return NOT_FOUND;
+      } else if (result > entrySize) {
+        UnsafeAccess.free(buf);
+        entrySize = (int) result;
+        buf = UnsafeAccess.mallocZeroed(entrySize);
+        result = index.find(keyPtr, keySize, hit, buf, entrySize);
+        if (result < 0) {
+          return NOT_FOUND;
+        }
+      }
+      // This call returns TOTAL size: key + value + kSize + vSize
+      int keyValueSize = format.getKeyValueSize(buf);
+      // TODO: actually, not correct IT CAN RETURN -1
+      if (keyValueSize > buffer.length - bufOffset) {
+        return keyValueSize;
+      }
+      boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
+      if (dataEmbedded) {
+        // Return embedded data
+        int off = format.getEmbeddedOffset();
+        int kSize = Utils.readUVInt(buf + off);
+        if (kSize != keySize) {
+          return NOT_FOUND;
+        }
+        int kSizeSize = Utils.sizeUVInt(kSize);
+        off += kSizeSize;
+        int vSize = Utils.readUVInt(buf + off);
+        int vSizeSize = Utils.sizeUVInt(vSize);
+        off += vSizeSize;
+        if (Utils.compareTo(keyPtr, keySize, buf + off, kSize) != 0) {
+          return NOT_FOUND;
+        }
+        off -= kSizeSize + vSizeSize;
+        // Copy data to buffer
+        UnsafeAccess.copy(buf + off, buffer, bufOffset, keyValueSize);
+        return keyValueSize;
+      } else {
+        // Cached item offset in a data segment
+        long offset = format.getOffset(buf);
+        // Segment id
+        int sid = (int) format.getSegmentId(buf);
+        // Read the data
+        Segment s = this.dataSegments[sid];
+        if (s == null || !s.isValid()) {
+          return NOT_FOUND;
+        }
+        
+        try {
+          s.readLock();
+          int id = this.index.getSegmentId(keyPtr, keySize);
+          if (id < 0) {
+            return NOT_FOUND;
+          }
+          if (id != sid) {
+            s.readUnlock();
+            return getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
+          }
+          // Read the data
+          int res = getRange(sid, offset, keyValueSize, keyPtr, keySize, 
+            rangeStart, rangeSize, buffer, bufOffset);
+          access(s, res, hit);
+          return res;
+        } finally {
+          s.readUnlock();
+        }
+      }
+    } finally {
+      UnsafeAccess.free(buf);
+    }
+  }
+  /**
    * Get item into a given byte buffer
    *
    * @param key key buffer
@@ -562,6 +656,104 @@ public abstract class IOEngine implements Persistent {
       UnsafeAccess.free(buf);
     }
   }
+
+  /**
+   * Get value range into a given byte buffer
+   *
+   * @param key key buffer
+   * @param keyOffset offset
+   * @param keySize size of a key
+   * @param rangeStart range start
+   * @param rangeSize range size
+   * @param buffer buffer
+   * @param bufOffset buffer offset
+   * @return length of a range or -1
+   * @throws IOException
+   */
+  public long getRange(byte[] key, int keyOffset, int keySize, int rangeStart, int rangeSize, 
+      boolean hit, byte[] buffer, int bufOffset)
+      throws IOException {
+
+    IndexFormat format = this.index.getIndexFormat();
+    // TODO: embedded entry case
+    int entrySize = format.indexEntrySize();
+    long buf = UnsafeAccess.mallocZeroed(entrySize);
+    int bufferAvail = buffer.length - bufOffset;
+    try {
+
+      long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
+      if (result < 0) {
+        return NOT_FOUND;
+      } else if (result > entrySize) {
+        UnsafeAccess.free(buf);
+        entrySize = (int) result;
+        buf = UnsafeAccess.mallocZeroed(entrySize);
+        result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
+        if (result < 0) {
+          return NOT_FOUND;
+        }
+      }
+      // This call returns TOTAL size: key + value + kSize + vSize
+      int keyValueSize = format.getKeyValueSize(buf);
+      // can be negative
+      if (keyValueSize > bufferAvail) {
+        return keyValueSize;
+      }
+      boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
+      if (dataEmbedded) {
+        // For index formats which supports embedding
+        // Return embedded data
+        int off = format.getEmbeddedOffset();
+        int kSize = Utils.readUVInt(buf + off);
+        if (kSize != keySize) {
+          return NOT_FOUND;
+        }
+        int kSizeSize = Utils.sizeUVInt(kSize);
+        off += kSizeSize;
+        int vSize = Utils.readUVInt(buf + off);
+        int vSizeSize = Utils.sizeUVInt(vSize);
+        off += vSizeSize;
+        if (Utils.compareTo(key, keyOffset, keySize, buf + off, kSize) != 0) {
+          return NOT_FOUND;
+        }
+        off -= kSizeSize + vSizeSize;
+        // Copy data to buffer
+        UnsafeAccess.copy(buf + off, buffer, bufOffset, keyValueSize);
+        return keyValueSize;
+      } else {
+        // Cached item offset in a data segment
+        long offset = format.getOffset(buf);
+        // segment id
+        int sid = (int) format.getSegmentId(buf);
+        Segment s = this.dataSegments[sid];
+        if (s == null || !s.isValid()) {
+          return NOT_FOUND;
+        }
+        
+        try {
+          s.readLock();
+          int id = this.index.getSegmentId(key, keyOffset, keySize);
+          if (id < 0) {
+            return NOT_FOUND;
+          }
+          if (id != sid) {
+            s.readUnlock();
+            return getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
+          }
+          // Read the data
+          int res = getRange(sid, offset, keyValueSize, key, keyOffset, keySize, rangeStart, rangeSize,  buffer, bufOffset);
+          access(s, res, hit);
+          return res;
+        } finally {
+          s.readUnlock();
+        }
+      }
+    } finally {
+      UnsafeAccess.free(buf);
+    }
+  }
+  
+
 
   private void access(Segment s, int result, boolean hit) {
     if (result > 0 && hit) {
@@ -678,6 +870,102 @@ public abstract class IOEngine implements Persistent {
   }
 
   /**
+   * Get value range into a given byte buffer
+   *
+   * @param keyPtr key address
+   * @param keySize size of a key
+   * @param rangeStart range start
+   * @param rangeSize range size
+   * @param hit
+   * @param buffer byte buffer
+   * @return length of an item or -1
+   * @throws IOException
+   */
+  public long getRange(long keyPtr, int keySize, int rangeStart, int rangeSize, boolean hit, 
+       ByteBuffer buffer) throws IOException {
+    IndexFormat format = this.index.getIndexFormat();
+    int entrySize = format.indexEntrySize();
+    long buf = UnsafeAccess.mallocZeroed(entrySize);
+    try {
+      // TODO: double locking?
+      // Index locking  that segment will not be recycled
+      //
+      long result = index.find(keyPtr, keySize, true, buf, entrySize);
+ 
+      if (result < 0) {
+        return NOT_FOUND;
+      } else if (result > entrySize) {
+        UnsafeAccess.free(buf);
+        entrySize = (int) result;
+        buf = UnsafeAccess.mallocZeroed(entrySize);
+        result = index.find(keyPtr, keySize, true, buf, entrySize);
+        if (result < 0) {
+          return NOT_FOUND;
+        }
+      }
+      // This call returns TOTAL size: key + value + kSize + vSize
+      int keyValueSize = format.getKeyValueSize(buf);
+      // TODO: actually, not correct
+      if (keyValueSize > buffer.remaining()) {
+        return keyValueSize;
+      }
+
+      boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
+      if (dataEmbedded) {
+        // Return embedded data
+        int off = format.getEmbeddedOffset();
+        int kSize = Utils.readUVInt(buf + off);
+        if (kSize != keySize) {
+          return NOT_FOUND;
+        }
+        int kSizeSize = Utils.sizeUVInt(kSize);
+        off += kSizeSize;
+        int vSize = Utils.readUVInt(buf + off);
+        int vSizeSize = Utils.sizeUVInt(vSize);
+        off += vSizeSize;
+        if (Utils.compareTo(keyPtr, keySize, buf + off, kSize) != 0) {
+          return NOT_FOUND;
+        }
+        off -= kSizeSize + vSizeSize;
+        // Copy data to buffer
+        UnsafeAccess.copy(buf + off, buffer, keyValueSize);
+        return keyValueSize;
+      } else {
+        // Cached item offset in a data segment
+        long offset = format.getOffset(buf);
+        // Segment id
+        int sid = (int) format.getSegmentId(buf);
+        // Finally, read the cached item
+        Segment s = this.dataSegments[sid];
+        if (s == null || !s.isValid()) {
+          return NOT_FOUND;
+        }
+        
+        try {
+          s.readLock();
+          int id = this.index.getSegmentId(keyPtr, keySize);
+          if (id < 0) {
+            return NOT_FOUND;
+          }
+          if (id != sid) {
+            s.readUnlock();
+            return getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer);
+          }
+          // Read the data
+          int res = getRange(sid, offset, keyValueSize, keyPtr, keySize, rangeStart, rangeSize, buffer);
+          access(s, res, hit);
+          return res;
+        } finally {
+          s.readUnlock();
+        }
+      }
+    } finally {
+      UnsafeAccess.free(buf);
+    }
+  }
+
+  
+  /**
    * Get item into a given byte buffer
    *
    * @param key key buffer
@@ -767,6 +1055,99 @@ public abstract class IOEngine implements Persistent {
   }
 
   /**
+   * Get item into a given byte buffer
+   *
+   * @param key key buffer
+   * @param off offset
+   * @param size size of a key
+   * @param rangeStart range start
+   * @param rangeSize range size
+   * @param buffer buffer
+   * @return length of an item or -1
+   * @throws IOException
+   */
+  public long getRange(byte[] key, int keyOffset, int keySize, 
+      int rangeStart, int rangeSize, boolean hit, ByteBuffer buffer)
+      throws IOException {
+
+    IndexFormat format = this.index.getIndexFormat();
+    int entrySize = format.indexEntrySize();
+    long buf = UnsafeAccess.mallocZeroed(entrySize);
+    try {
+      long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
+      if (result < 0) {
+        return NOT_FOUND;
+      } else if (result > entrySize) {
+        UnsafeAccess.free(buf);
+        entrySize = (int) result;
+        buf = UnsafeAccess.mallocZeroed(entrySize);
+        result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
+        if (result < 0) {
+          return NOT_FOUND;
+        }
+      }
+      // This call returns TOTAL size: key + value + kSize + vSize
+      int keyValueSize = format.getKeyValueSize(buf);
+      // TODO: actually, not correct
+      if (keyValueSize > buffer.remaining()) {
+        return keyValueSize;
+      }
+      boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
+      if (dataEmbedded) {
+        // Return embedded data
+        int off = format.getEmbeddedOffset();
+        int kSize = Utils.readUVInt(buf + off);
+        if (kSize != keySize) {
+          return NOT_FOUND;
+        }
+        int kSizeSize = Utils.sizeUVInt(kSize);
+        off += kSizeSize;
+        int vSize = Utils.readUVInt(buf + off);
+        int vSizeSize = Utils.sizeUVInt(vSize);
+        off += vSizeSize;
+        if (Utils.compareTo(key, keyOffset, keySize, buf + off, kSize) != 0) {
+          return NOT_FOUND;
+        }
+        off -= kSizeSize + vSizeSize;
+        // Copy data to buffer
+        UnsafeAccess.copy(buf + off, buffer, keyValueSize);
+        return keyValueSize;
+      } else {
+        // Cached item offset in a data segment
+        long offset = format.getOffset(buf);
+        // segment id
+        int sid = (int) format.getSegmentId(buf);
+        // Read the data
+        Segment s = this.dataSegments[sid];
+        if (s == null || !s.isValid()) {
+          return NOT_FOUND;
+        }
+
+        try {
+          s.readLock();
+          int id = this.index.getSegmentId(key, keyOffset, keySize);
+          if (id < 0) {
+            return NOT_FOUND;
+          }
+          if (id != sid) {
+            s.readUnlock();
+            return getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit,  buffer);
+          }
+          // Read the data
+          int res = getRange(sid, offset, keyValueSize, key, keyOffset, keySize, 
+            rangeStart, rangeSize, buffer);
+          access(s, res, hit);
+          return res;
+        } finally {
+          s.readUnlock();
+        }
+      }
+    } finally {
+      UnsafeAccess.free(buf);
+    }
+  }
+  
+  /**
    * Get cached item
    *
    * @param id data segment id to read from
@@ -779,7 +1160,7 @@ public abstract class IOEngine implements Persistent {
    * @param bufOffset offset
    * @return size of a K-V pair or -1 (if not found)
    */
-  public int get(
+  private int get(
       int id,
       long offset,
       int size,
@@ -800,7 +1181,35 @@ public abstract class IOEngine implements Persistent {
   }
 
   /**
-   * Get cached item
+   * Get cached item range
+   *
+   * @param id data segment id to read from
+   * @param offset data segment offset
+   * @param size size of an item in bytes
+   * @param key key buffer
+   * @param keyOffset offset in a key buffer
+   * @param keySize key size
+   * @param rangeStart range start
+   * @param rangeSize range size
+   * @param buffer memory buffer to load data to
+   * @param bufOffset offset
+   * @return size of a K-V pair or -1 (if not found)
+   */
+  private int getRange(int sid, long offset, int keyValueSize, byte[] key, int keyOffset,
+      int keySize, int rangeStart, int rangeSize, byte[] buffer, int bufOffset) throws IOException {
+    if (buffer == null || keyValueSize > 0 && (buffer.length - bufOffset) < keyValueSize) {
+      throw new IllegalArgumentException();
+    }
+    int len = getRangeFromRAMBuffers(sid, offset, keyValueSize, key, keyOffset, keySize, 
+      rangeStart, rangeSize, buffer, bufOffset);
+    if (len > 0) {
+      return len;
+    }
+    return getRangeInternal(sid, offset, keyValueSize, key, keyOffset, keySize, rangeStart, rangeSize, buffer, bufOffset);
+  }
+  
+  /**
+   * Get cached item 
    *
    * @param id data segment id to read from
    * @param offset data segment offset
@@ -811,7 +1220,7 @@ public abstract class IOEngine implements Persistent {
    * @param bufOffset offset
    * @return size of a K-V pair or -1 (if not found)
    */
-  public int get(
+  private int get(
       int id, long offset, int size, long keyPtr, int keySize, byte[] buffer, int bufOffset)
       throws IOException {
     if (buffer == null || size > 0 && (buffer.length - bufOffset) < size) {
@@ -824,6 +1233,35 @@ public abstract class IOEngine implements Persistent {
     return getInternal(id, offset, size, keyPtr, keySize, buffer, bufOffset);
   }
 
+  /**
+   * Get cached item range
+   *
+   * @param id data segment id to read from
+   * @param offset data segment offset
+   * @param size size of an item in bytes
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param rangeStart range start
+   * @param rangeSize range size
+   * @param buffer memory buffer to load data to
+   * @param bufOffset offset
+   * @return size of a K-V pair or -1 (if not found)
+   */
+  private int getRange(
+      int id, long offset, int size, long keyPtr, int keySize, int rangeStart, 
+      int rangeSize, byte[] buffer, int bufOffset)
+      throws IOException {
+    if (buffer == null || size > 0 && (buffer.length - bufOffset) < size) {
+      throw new IllegalArgumentException();
+    }
+    int len = getRangeFromRAMBuffers(id, offset, size, keyPtr, keySize, rangeStart, 
+      rangeSize, buffer, bufOffset);
+    if (len > 0) {
+      return len;
+    }
+    return getRangeInternal(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer, bufOffset);
+  }
+  
   /**
    * Try to get data from RAM buffers
    *
@@ -870,6 +1308,55 @@ public abstract class IOEngine implements Persistent {
     return NOT_FOUND;
   }
 
+ 
+  /**
+   * Try to get data from RAM buffers
+   *
+   * @param id segment's id
+   * @param offset offset in a segment (0 - based)
+   * @param size size of an cached item (can be negative - unknown)
+   * @param key key buffer
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @param buffer buffer to load data to
+   * @return size of a K-V pair or -1 (if not found)
+   */
+  private int getRangeFromRAMBuffers(
+      int sid,
+      long offset,
+      int size,
+      byte[] key,
+      int keyOffset,
+      int keySize,
+      int rangeStart,
+      int rangeSize,
+      byte[] buffer,
+      int bufOffset) {
+    Segment s = getSegmentById(sid);
+    try {
+      if (s != null) {
+        s.readLock();
+        // now check s again
+        if (!s.isOffheap()) {
+          return NOT_FOUND;
+        }
+        // OK it is in memory
+        try {
+           this.memoryDataReader.readValueRange(
+              this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset, rangeStart, rangeSize);
+        } catch (IOException e) {
+          // never happens
+        }
+        return NOT_FOUND;
+      }
+    } finally {
+      if (s != null) {
+        s.readUnlock();
+      }
+    }
+    return NOT_FOUND;
+  }
+  
   /**
    * Try to get data from RAM buffers
    *
@@ -893,6 +1380,45 @@ public abstract class IOEngine implements Persistent {
         try {
           return this.memoryDataReader.read(
               this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
+        } catch (IOException e) {
+          // never happens
+        }
+        return NOT_FOUND;
+      }
+    } finally {
+      if (s != null) {
+        s.readUnlock();
+      }
+    }
+    return NOT_FOUND;
+  }
+  
+  /**
+   * Try to get data from RAM buffers
+   *
+   * @param id segment's id
+   * @param offset offset in a segment (0 - based)
+   * @param size size of an cached item (can be negative - unknown)
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param rangeStart range start
+   * @param rangeSize,
+   * @param buffer buffer to load data to
+   * @return size of a K-V pair or -1 (if not found)
+   */
+  private int getRangeFromRAMBuffers(
+      int sid, long offset, int size, long keyPtr, int keySize, int rangeStart, int rangeSize, 
+      byte[] buffer, int bufOffset) {
+    Segment s = getSegmentById(sid);
+    try {
+      if (s != null) {
+        s.readLock();
+        // now check s again
+        if (!s.isOffheap()) return NOT_FOUND;
+        // OK it is in memory
+        try {
+          return this.memoryDataReader.readValueRange(
+              this, keyPtr, keySize, sid, offset, size, buffer, bufOffset, rangeStart, rangeSize);
         } catch (IOException e) {
           // never happens
         }
@@ -948,6 +1474,47 @@ public abstract class IOEngine implements Persistent {
    * @param id segment's id
    * @param offset offset in a segment (0 - based)
    * @param size size of an cached item
+   * @param key key buffer
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @param rangeStart range start
+   * @param rangeSize
+   * @param buffer buffer to load data to
+   * @return full size required or -1
+   */
+  private int getRangeFromRAMBuffers(
+      int sid, long offset, int size, byte[] key, int keyOffset, int keySize, 
+      int rangeStart, int rangeSize, ByteBuffer buffer) {
+    Segment s = getSegmentById(sid);
+    try {
+      if (s != null) {
+        s.readLock();
+        // now check s again
+        if (!s.isOffheap()) return NOT_FOUND;
+        // OK it is in memory
+        try {
+          return this.memoryDataReader.readValueRange(
+              this, key, keyOffset, keySize, sid, offset, size, buffer, rangeStart, rangeSize);
+        } catch (IOException e) {
+          // never happens
+        }
+        return NOT_FOUND;
+      }
+    } finally {
+      if (s != null) {
+        s.readUnlock();
+      }
+    }
+    return NOT_FOUND;
+  }
+
+  
+  /**
+   * Try to get data from RAM buffers
+   *
+   * @param id segment's id
+   * @param offset offset in a segment (0 - based)
+   * @param size size of an cached item
    * @param keyPtr key address
    * @param keySize key size
    * @param buffer buffer to load data to
@@ -977,6 +1544,45 @@ public abstract class IOEngine implements Persistent {
     return NOT_FOUND;
   }
 
+  /**
+   * Try to get data from RAM buffers
+   *
+   * @param id segment's id
+   * @param offset offset in a segment (0 - based)
+   * @param size size of an cached item
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param rangeStart range start
+   * @param rangeSize range size
+   * @param buffer buffer to load data to
+   * @return full size required or -1
+   */
+  private int getRangeFromRAMBuffers(
+      int sid, long offset, int size, long keyPtr, int keySize, 
+      int rangeStart, int rangeSize, ByteBuffer buffer) {
+    Segment s = getSegmentById(sid);
+    try {
+      if (s != null) {
+        s.readLock();
+        // now check s again
+        if (!s.isOffheap()) return NOT_FOUND;
+        // OK it is in memory
+        try {
+          return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, 
+            offset, size, buffer, rangeStart, rangeSize);
+        } catch (IOException e) {
+          // never happens
+        }
+        return NOT_FOUND;
+      }
+    } finally {
+      if (s != null) {
+        s.readUnlock();
+      }
+    }
+    return NOT_FOUND;
+  }
+  
   /**
    * Get cached item from underlying IOEngine implementation
    *
@@ -1020,48 +1626,6 @@ public abstract class IOEngine implements Persistent {
       throws IOException;
 
   /**
-   * Get cached item
-   *
-   * @param id data segment id to read from
-   * @param offset data segment offset
-   * @param size size of an item in bytes
-   * @param key key buffer
-   * @param keyOffset offset in a key buffer
-   * @param keySize key size
-   * @param buffer byte buffer to load data to
-   * @return full size required or -1
-   */
-  public int get(
-      int id, long offset, int size, byte[] key, int keyOffset, int keySize, ByteBuffer buffer)
-      throws IOException {
-    if (buffer == null || buffer.remaining() < size) throw new IllegalArgumentException();
-    int len = getFromRAMBuffers(id, offset, size, key, keyOffset, keySize, buffer);
-    if (len > 0) {
-      return len;
-    }
-    return getInternal(id, offset, size, key, keyOffset, keySize, buffer);
-  }
-
-  /**
-   * Get cached item
-   *
-   * @param id data segment id to read from
-   * @param offset data segment offset
-   * @param size size of an item in bytes
-   * @param buffer byte buffer to load data to
-   * @return true - on success, false - otherwise
-   */
-  public int get(int id, long offset, int size, long keyPtr, int keySize, ByteBuffer buffer)
-      throws IOException {
-    if (buffer == null || buffer.remaining() < size) throw new IllegalArgumentException();
-    int len = getFromRAMBuffers(id, offset, size, keyPtr, keySize, buffer);
-
-    if (len > 0) {
-      return len;
-    }
-    return getInternal(id, offset, size, keyPtr, keySize, buffer);
-  }
-  /**
    * Get cached item from underlying IOEngine implementation
    *
    * @param id segment id
@@ -1093,7 +1657,185 @@ public abstract class IOEngine implements Persistent {
   protected abstract int getInternal(
       int id, long offset, int size, long keyPtr, int keySize, ByteBuffer buffer)
       throws IOException;
+  
+ 
+  /**
+   * Get cached item from underlying IOEngine implementation
+   *
+   * @param id segment id
+   * @param offset offset in a segment
+   * @param size size of an item
+   * @param key key buffer
+   * @param keyOffset key offset
+   * @param keySize key Size
+   * @param rangeStart range start
+   * @param rangeSize range size
+   * @param buffer buffer to load data to
+   * @param bufOffset offset
+   * @return full size required or -1
+   * @throws IOException
+   */
+  protected abstract int getRangeInternal(
+      int id,
+      long offset,
+      int size,
+      byte[] key,
+      int keyOffset,
+      int keySize,
+      int rangeStart,
+      int rangeSize,
+      byte[] buffer,
+      int bufOffset)
+      throws IOException;
 
+  /**
+   * Get cached item range from underlying IOEngine implementation
+   *
+   * @param id segment id
+   * @param offset offset in a segment
+   * @param size size of an item
+   * @param keyPtr key address
+   * @param keySize key Size
+   * @param rangeStart range start
+   * @param rangeSize range size
+   * @param buffer buffer to load data to
+   * @param bufOffset offset
+   * @return full size required or -1
+   * @throws IOException
+   */
+  protected abstract int getRangeInternal(
+      int id, long offset, int size, long keyPtr, int keySize, int rangeStart, int rangeSize, 
+      byte[] buffer, int bufOffset)
+      throws IOException;
+
+  /**
+   * Get cached item range from underlying IOEngine implementation
+   *
+   * @param id segment id
+   * @param offset offset in a segment
+   * @param size size of an item
+   * @param key key buffer
+   * @param keyOffset offset
+   * @param keySize key size
+   * @param rangeStart range start
+   * @param rangeSize range size
+   * @param buffer buffer to load data to
+   * @return full size required or -1
+   * @throws IOException
+   */
+  protected abstract int getRangeInternal(
+      int id, long offset, int size, byte[] key, int keyOffset, int keySize, int rangeStart, 
+      int rangeSize, ByteBuffer buffer)
+      throws IOException;
+
+  /**
+   * Get cached item range from underlying IOEngine implementation
+   *
+   * @param id segment id
+   * @param offset offset in a segment
+   * @param size size of an item
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param rangeStart range start
+   * @param rangeSize range size
+   * @param buffer buffer to load data to
+   * @return full size required or -1
+   * @throws IOException
+   */
+  protected abstract int getRangeInternal(
+      int id, long offset, int size, long keyPtr, int keySize, int rangeStart, int rangeSize,  ByteBuffer buffer)
+      throws IOException;
+  
+  
+  /**
+   * Get cached item
+   *
+   * @param id data segment id to read from
+   * @param offset data segment offset
+   * @param size size of an item in bytes
+   * @param key key buffer
+   * @param keyOffset offset in a key buffer
+   * @param keySize key size
+   * @param buffer byte buffer to load data to
+   * @return full size required or -1
+   */
+  private int get(
+      int id, long offset, int size, byte[] key, int keyOffset, int keySize, ByteBuffer buffer)
+      throws IOException {
+    if (buffer == null || buffer.remaining() < size) throw new IllegalArgumentException();
+    int len = getFromRAMBuffers(id, offset, size, key, keyOffset, keySize, buffer);
+    if (len > 0) {
+      return len;
+    }
+    return getInternal(id, offset, size, key, keyOffset, keySize, buffer);
+  }
+
+  /**
+   * Get cached item range
+   *
+   * @param id data segment id to read from
+   * @param offset data segment offset
+   * @param size size of an item in bytes
+   * @param key key buffer
+   * @param keyOffset offset in a key buffer
+   * @param keySize key size
+   * @param rangeStart range start
+   * @param rangeSize range size
+   * @param buffer byte buffer to load data to
+   * @return full size required or -1
+   */
+  private int getRange(
+      int id, long offset, int size, byte[] key, int keyOffset, int keySize, 
+      int rangeStart, int rangeSize, ByteBuffer buffer)
+      throws IOException {
+    if (buffer == null || buffer.remaining() < size) throw new IllegalArgumentException();
+    int len = getRangeFromRAMBuffers(id, offset, size, key, keyOffset, keySize, rangeStart, rangeSize, buffer);
+    if (len > 0) {
+      return len;
+    }
+    return getRangeInternal(id, offset, size, key, keyOffset, keySize, rangeStart, rangeSize, buffer);
+  }
+  
+  /**
+   * Get cached item
+   *
+   * @param id data segment id to read from
+   * @param offset data segment offset
+   * @param size size of an item in bytes
+   * @param buffer byte buffer to load data to
+   * @return true - on success, false - otherwise
+   */
+  private int get(int id, long offset, int size, long keyPtr, int keySize, ByteBuffer buffer)
+      throws IOException {
+    if (buffer == null || buffer.remaining() < size) throw new IllegalArgumentException();
+    int len = getFromRAMBuffers(id, offset, size, keyPtr, keySize, buffer);
+
+    if (len > 0) {
+      return len;
+    }
+    return getInternal(id, offset, size, keyPtr, keySize, buffer);
+  }
+
+  /**
+   * Get cached itemrange
+   *
+   * @param id data segment id to read from
+   * @param offset data segment offset
+   * @param size size of an item in bytes
+   * @param buffer byte buffer to load data to
+   * @return true - on success, false - otherwise
+   */
+  private int getRange(int id, long offset, int size, long keyPtr, int keySize, 
+      int rangeStart, int rangeSize, ByteBuffer buffer)
+      throws IOException {
+    if (buffer == null || buffer.remaining() < size) throw new IllegalArgumentException();
+    int len = getRangeFromRAMBuffers(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer);
+
+    if (len > 0) {
+      return len;
+    }
+    return getRangeInternal(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer);
+  }
   /**
    * Save data segment
    *

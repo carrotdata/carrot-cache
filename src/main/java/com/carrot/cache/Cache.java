@@ -1455,8 +1455,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *     adjusted buffer
    * @throws IOException 
    */
-  long get_kv(long keyPtr, int keySize, byte[] buffer, int bufOffset) throws IOException {
-    return get_kv(keyPtr, keySize, true, buffer, bufOffset);
+  public long getKeyValue(long keyPtr, int keySize, byte[] buffer, int bufOffset) throws IOException {
+    return getKeyValue(keyPtr, keySize, true, buffer, bufOffset);
   }
 
   /**
@@ -1471,7 +1471,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *     adjusted buffer
    * @throws IOException 
    */
-  long get_kv(long keyPtr, int keySize, boolean hit, byte[] buffer, int bufOffset) throws IOException {
+  public long getKeyValue(long keyPtr, int keySize, boolean hit, byte[] buffer, int bufOffset) throws IOException {
     long result = -1;
     
     try {
@@ -1492,7 +1492,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       }
     }
     if(result < 0 && this.victimCache != null) {
-      result = this.victimCache.get_kv(keyPtr, keySize, hit, buffer, bufOffset);
+      result = this.victimCache.getKeyValue(keyPtr, keySize, hit, buffer, bufOffset);
       if (this.victimCachePromoteOnHit && result >=0 && result <= buffer.length - bufOffset) {
         // put k-v into this cache, remove it from the victim cache
         MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
@@ -1521,9 +1521,53 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public long get(long keyPtr, int keySize, boolean hit, byte[] buffer, int bufOffset) throws IOException {
     int rem = buffer.length - bufOffset;
-    long result = get_kv(keyPtr, keySize, hit, buffer, bufOffset);
+    long result = getKeyValue(keyPtr, keySize, hit, buffer, bufOffset);
     if (result > 0 && result <= rem) {
       result = Utils.extractValue(buffer, bufOffset);
+    }
+    return result;
+  }
+  
+  /**
+   * Get cached value range (if any)
+   *
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param rangeStart range start
+   * @param rangeSize range size
+   * @param hit if true - its a hit
+   * @param buffer buffer for item
+   * @param bufOffset buffer offset
+   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
+   *     adjusted buffer
+   * @throws IOException 
+   */
+  public long getRange(long keyPtr, int keySize, int rangeStart, int rangeSize, boolean hit, 
+      byte[] buffer, int bufOffset) throws IOException {
+    long result = -1;
+    try {
+      result = engine.getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
+    } catch (IOException e) {
+      // IOException is possible
+      //TODO: better mitigation 
+      return result;
+    }
+    
+    if (result <= buffer.length - bufOffset) {
+      access();
+      if (result >= 0) {
+        hit();
+      }
+    }
+    if (result >= 0 && result <= buffer.length - bufOffset) {
+      if (this.admissionController != null) {
+        this.admissionController.access(keyPtr, keySize);
+      }
+    }
+
+    if(result < 0 && this.victimCache != null) {
+      result = this.victimCache.getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
+      // For range queries we do not promote item to the parent cache
     }
     return result;
   }
@@ -1539,9 +1583,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *     adjusted buffer
    * @throws IOException
    */
-  long get_kv(byte[] key, int keyOffset, int keySize, byte[] buffer, int bufOffset) 
+  public long getKeyValue(byte[] key, int keyOffset, int keySize, byte[] buffer, int bufOffset) 
       throws IOException {
-    return get_kv(key, keyOffset, keySize, true, buffer, bufOffset);
+    return getKeyValue(key, keyOffset, keySize, true, buffer, bufOffset);
   }
     
   /**
@@ -1557,7 +1601,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *     adjusted buffer
    * @throws IOException 
    */
-  long get_kv(byte[] key, int keyOffset, int keySize, boolean hit, byte[] buffer, int bufOffset) 
+  public long getKeyValue(byte[] key, int keyOffset, int keySize, boolean hit, byte[] buffer, int bufOffset) 
       throws IOException {
     
     long result = -1;
@@ -1584,7 +1628,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       //TODO: optimize it
       // getWithExpire and getWithExpireAndDelete API
       // one call instead of three
-      result = this.victimCache.get_kv(key, keyOffset, keySize, hit, buffer, bufOffset);
+      result = this.victimCache.getKeyValue(key, keyOffset, keySize, hit, buffer, bufOffset);
       if (this.victimCachePromoteOnHit && result >= 0 && result <= buffer.length - bufOffset) {
         // put k-v into this cache, remove it from the victim cache
         MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
@@ -1600,6 +1644,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return result;
   }
 
+
+  
   /**
    * Get cached item only (if any)
    *
@@ -1617,13 +1663,59 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       throws IOException {
     
     int rem = buffer.length - bufOffset;
-    long result = get_kv(key, keyOffset, keySize, hit, buffer, bufOffset);
+    long result = getKeyValue(key, keyOffset, keySize, hit, buffer, bufOffset);
     if (result > 0 && result <= rem) {
       result = Utils.extractValue(buffer, bufOffset);
     }
     return result;
   }
 
+  /**
+   * Get cached value range
+   *
+   * @param key key buffer
+   * @param keyOfset key offset
+   * @param keySize key size
+   * @param rangeStart range start
+   * @param rangeSize range size
+   * @param hit if true - its a hit
+   * @param buffer buffer for item
+   * @param bufSize buffer offset
+   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
+   *     adjusted buffer
+   * @throws IOException 
+   */
+  public long getRange(byte[] key, int keyOffset, int keySize,
+      int rangeStart, int rangeSize, boolean hit, byte[] buffer, int bufOffset) 
+      throws IOException {
+    
+    long result = -1;
+    try {
+      result = engine.getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
+    } catch (IOException e) {
+      // IOException is possible
+      //TODO: better mitigation 
+      return result;
+    }
+    
+    if (result <= buffer.length - bufOffset) {
+      access();
+      if (result >= 0) {
+        hit();
+      }
+    }
+    if (result >= 0 && result <= buffer.length - bufOffset) {
+      if (this.admissionController != null) {
+        this.admissionController.access(key, keyOffset, keySize);
+      }
+    }
+
+    if(result < 0 && this.victimCache != null) {
+      result = this.victimCache.getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
+      // For range queries we do not promote item to the parent cache
+    }
+    return result;
+  }
   
   /**
    * Get cached item (if any)
@@ -1637,9 +1729,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *     adjusted buffer
    * @throws IOException 
    */
-  long get_kv(byte[] key, int keyOff, int keySize, ByteBuffer buffer) 
+  public long getKeyValue(byte[] key, int keyOff, int keySize, ByteBuffer buffer) 
       throws IOException {
-    return get_kv(key, keyOff, keySize, true, buffer);
+    return getKeyValue(key, keyOff, keySize, true, buffer);
   }
   
   /**
@@ -1654,7 +1746,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *     adjusted buffer
    * @throws IOException 
    */
-  long get_kv(byte[] key, int keyOff, int keySize, boolean hit, ByteBuffer buffer) 
+  public long getKeyValue(byte[] key, int keyOff, int keySize, boolean hit, ByteBuffer buffer) 
       throws IOException {
     int rem = buffer.remaining();
     long result = -1;
@@ -1676,7 +1768,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       }
     }
     if(result < 0 && this.victimCache != null) {
-      result = this.victimCache.get_kv(key, keyOff, keySize, hit, buffer);
+      result = this.victimCache.getKeyValue(key, keyOff, keySize, hit, buffer);
       if (this.victimCachePromoteOnHit && result >= 0 && result <= rem) {
         // put k-v into this cache, remove it from the victim cache
         MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
@@ -1706,9 +1798,54 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public long get(byte[] key, int keyOff, int keySize, boolean hit, ByteBuffer buffer) 
       throws IOException {
     int rem = buffer.remaining();
-    long result = get_kv(key, keyOff, keySize, hit, buffer);
+    long result = getKeyValue(key, keyOff, keySize, hit, buffer);
     if (result > 0 && result <= rem) {
       result = Utils.extractValue(buffer);
+    }
+    return result;
+  }
+  
+  /**
+   * Get cached value range (if any)
+   *
+   * @param key key buffer
+   * @param keyOff key offset
+   * @param keySize key size
+   * @param rangeStart range start
+   * @param rangeSize range size
+   * @param hit if true - its a hit
+   * @param buffer byte buffer for item
+   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
+   *     adjusted buffer
+   * @throws IOException 
+   */
+  public long getRange(byte[] key, int keyOffset, int keySize, int rangeStart, int rangeSize, boolean hit, ByteBuffer buffer) 
+      throws IOException {
+    long result = -1;
+    int rem = buffer.remaining();
+    try {
+      result = engine.getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer);
+    } catch (IOException e) {
+      // IOException is possible
+      //TODO: better mitigation 
+      return result;
+    }
+    
+    if (result <= rem) {
+      access();
+      if (result >= 0) {
+        hit();
+      }
+    }
+    if (result >= 0 && result <= rem) {
+      if (this.admissionController != null) {
+        this.admissionController.access(key, keyOffset, keySize);
+      }
+    }
+
+    if(result < 0 && this.victimCache != null) {
+      result = this.victimCache.getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer);
+      // For range queries we do not promote item to the parent cache
     }
     return result;
   }
@@ -1723,9 +1860,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *     adjusted buffer
    * @throws IOException 
    */
-  long get_kv(long keyPtr, int keySize,  ByteBuffer buffer) 
+  public long getKeyValue(long keyPtr, int keySize,  ByteBuffer buffer) 
       throws IOException  {
-    return get_kv(keyPtr, keySize, true, buffer);
+    return getKeyValue(keyPtr, keySize, true, buffer);
   }
   
   /**
@@ -1739,7 +1876,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *     adjusted buffer
    * @throws IOException 
    */
-  long get_kv(long keyPtr, int keySize, boolean hit, ByteBuffer buffer) 
+  public long getKeyValue(long keyPtr, int keySize, boolean hit, ByteBuffer buffer) 
       throws IOException {
     int rem = buffer.remaining();
     
@@ -1763,7 +1900,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       }
     }
     if(result < 0 && this.victimCache != null) {
-      result = this.victimCache.get_kv(keyPtr, keySize, hit, buffer);
+      result = this.victimCache.getKeyValue(keyPtr, keySize, hit, buffer);
       if (this.victimCachePromoteOnHit && result >=0 && result <= rem) {
         // put k-v into this cache, remove it from the victim cache
         MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
@@ -1793,9 +1930,54 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       throws IOException {
     int rem = buffer.remaining();
     
-    long result = get_kv(keyPtr, keySize, hit, buffer);
+    long result = getKeyValue(keyPtr, keySize, hit, buffer);
     if (result <= rem && result > 0) {
       result = Utils.extractValue(buffer);
+    }
+    return result;
+  }
+  
+  
+  /**
+   * Get cached value range (if any)
+   *
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param rangeStart range start
+   * @param rangeSize range size
+   * @param hit if true - its a hit
+   * @param buffer byte buffer for item
+   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
+   *     adjusted buffer
+   * @throws IOException 
+   */
+  public long getRange(long keyPtr, int keySize, int rangeStart, int rangeSize, boolean hit, ByteBuffer buffer) 
+      throws IOException {
+    long result = -1;
+    int rem = buffer.remaining();
+    try {
+      result = engine.getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer);
+    } catch (IOException e) {
+      // IOException is possible
+      //TODO: better mitigation 
+      return result;
+    }
+    
+    if (result <= rem) {
+      access();
+      if (result >= 0) {
+        hit();
+      }
+    }
+    if (result >= 0 && result <= rem) {
+      if (this.admissionController != null) {
+        this.admissionController.access(keyPtr, keySize);
+      }
+    }
+
+    if(result < 0 && this.victimCache != null) {
+      result = this.victimCache.getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer);
+      // For range queries we do not promote item to the parent cache
     }
     return result;
   }

@@ -113,12 +113,12 @@ public abstract class TestCacheMultithreadedBase extends TestIOMultithreadedBase
   @Override
   protected long get(byte[] key, int off, int len, byte[] buffer, int bufferOfset)
       throws IOException {
-    return this.cache.get_kv(key, off, len, true, buffer, bufferOfset);
+    return this.cache.getKeyValue(key, off, len, true, buffer, bufferOfset);
   }
 
   @Override
   protected long get(long keyPtr, int keySize, ByteBuffer buffer) throws IOException {
-    return this.cache.get_kv(keyPtr, keySize, true, buffer);
+    return this.cache.getKeyValue(keyPtr, keySize, true, buffer);
   }
   
   

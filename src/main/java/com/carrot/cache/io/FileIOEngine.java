@@ -134,7 +134,6 @@ public class FileIOEngine extends IOEngine {
 
   private void submitTask(Runnable r) {
     while(activeSaveTasks.get() >= ioStoragePoolSize) {
- //     Thread.onSpinWait();
       Utils.onSpinWait(10000);
     }
     activeSaveTasks.incrementAndGet();
@@ -208,6 +207,34 @@ public class FileIOEngine extends IOEngine {
   }
 
   @Override
+  protected int getRangeInternal(
+      int sid,
+      long offset,
+      int size,
+      byte[] key,
+      int keyOffset,
+      int keySize,
+      int rangeStart,
+      int rangeSize,
+      byte[] buffer,
+      int bufOffset)
+      throws IOException {
+    
+    Segment s = getSegmentById(sid);
+    if (s == null) {
+      return NOT_FOUND;
+    }
+    
+    if (s.isOffheap()) {
+       return this.memoryDataReader.readValueRange(
+         this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset, rangeStart, rangeSize); 
+    } else {
+      return this.fileDataReader.readValueRange(
+        this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset, rangeStart, rangeSize);
+    }
+  }
+  
+  @Override
   protected int getInternal(
       int sid, long offset, int size, byte[] key, int keyOffset, int keySize, ByteBuffer buffer)
       throws IOException {
@@ -223,6 +250,25 @@ public class FileIOEngine extends IOEngine {
     }
   }
 
+  @Override
+  protected int getRangeInternal(
+      int sid, long offset, int size, byte[] key, int keyOffset, int keySize,
+      int rangeStart, int rangeSize, ByteBuffer buffer)
+      throws IOException {
+    Segment s = getSegmentById(sid);
+    if (s == null) {
+      return NOT_FOUND;
+    }
+    
+    if (s.isOffheap()) {
+      return this.memoryDataReader.readValueRange(this, key, keyOffset, keySize, 
+        sid, offset, size, buffer, rangeStart, rangeSize);
+    } else {
+      return this.fileDataReader.readValueRange(this, key, keyOffset, keySize, 
+        sid, offset, size, buffer, rangeStart, rangeSize);
+    }
+  }
+  
   @Override
   protected int getInternal(
       int sid, long offset, int size, long keyPtr, int keySize, byte[] buffer, int bufOffset)
@@ -240,6 +286,25 @@ public class FileIOEngine extends IOEngine {
   }
 
   @Override
+  protected int getRangeInternal(
+      int sid, long offset, int size, long keyPtr, int keySize, int rangeStart, 
+      int rangeSize, byte[] buffer, int bufOffset)
+      throws IOException {
+    Segment s = getSegmentById(sid);
+    if (s == null) {
+      return NOT_FOUND;
+    }
+    
+    if (s.isOffheap()) {
+      return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, offset,
+        size, buffer, bufOffset, rangeStart, rangeSize);
+    } else {
+      return this.fileDataReader.readValueRange(this, keyPtr, keySize, sid, offset, 
+        size, buffer, bufOffset, rangeStart, rangeSize);
+    }
+  }
+  
+  @Override
   protected int getInternal(
       int sid, long offset, int size, long keyPtr, int keySize, ByteBuffer buffer)
       throws IOException {
@@ -255,6 +320,25 @@ public class FileIOEngine extends IOEngine {
     }
   }
 
+  @Override
+  protected int getRangeInternal(
+      int sid, long offset, int size, long keyPtr, int keySize, 
+      int rangeStart, int rangeSize, ByteBuffer buffer)
+      throws IOException {
+    Segment s = getSegmentById(sid);
+    if (s == null) {
+      return NOT_FOUND;
+    }
+    
+    if (s.isOffheap()) {
+      return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, 
+        offset, size, buffer, rangeStart, rangeSize);
+    } else {
+      return this.fileDataReader.readValueRange(this, keyPtr, keySize, sid, offset, 
+        size, buffer, rangeStart, rangeSize);
+    }
+  }
+  
   OutputStream getOSFor(int id) throws FileNotFoundException {
     Path p = getPathForDataSegment(id);
     FileOutputStream fos = new FileOutputStream(p.toFile());

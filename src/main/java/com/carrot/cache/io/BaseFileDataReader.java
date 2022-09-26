@@ -82,16 +82,8 @@ public class BaseFileDataReader implements DataReader {
       // Rare situation - wrong segment - hash collision
       return IOEngine.NOT_FOUND;
     }
-    if (!loaded) {
-      
-      //try {
+    if (!loaded) {      
       readFully(file, offset, buffer, bufOffset, size);
-//      } catch (IOException e) {
-//        System.err.printf("sid=%d segment sealed=%s, file length=%d offset=%d size=%d file open=%s\n",
-//          sid, Boolean.toString(engine.getSegmentById(sid).isSealed()), file.length(), offset, size, 
-//          Boolean.toString(file.getChannel().isOpen()));        
-//        throw e;
-//      }
     }
 
     // Now buffer contains both: key and value, we need to compare keys
@@ -303,6 +295,343 @@ public class BaseFileDataReader implements DataReader {
     } else {
       return IOEngine.NOT_FOUND;
     }
+  }
+
+  @Override
+  public int readValueRange(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid,
+      long offset, int size, byte[] buffer, int bufOffset, int rangeStart, int rangeSize)
+      throws IOException {
+    
+    offset += Segment.META_SIZE; // add 8 bytes to the offset
+
+    int avail = buffer.length - bufOffset;
+    // Sanity check
+    if (avail < 8) {
+      // 8 bytes will allow to read at least key size and value size
+      //TODO: is it safe? The caller might not expect this
+      return blockSize;
+    }
+
+    // sanity check
+    if (rangeSize > avail) {
+      rangeSize = avail;
+    }
+
+    // TODO prevent file from being closed/deleted
+    FileIOEngine fileEngine = (FileIOEngine) engine;
+    RandomAccessFile file = fileEngine.getFileFor(sid);
+
+    if (file == null) {
+      return IOEngine.NOT_FOUND;
+    }
+
+    boolean loaded = false;
+    int toRead = (int) Math.min(blockSize, file.length() - offset);
+    toRead = Math.min(toRead, avail);
+    
+    readFully(file, offset, buffer, bufOffset, toRead);
+    
+    int valueSize = Utils.getValueSize(buffer, bufOffset);
+    int valueOffset = Utils.getValueOffset(buffer, bufOffset);
+
+    if (size < 0) {
+      size = Utils.getItemSize(buffer, bufOffset);
+    }
+    
+    if (file.length() < offset + size) {
+      // Rare situation - wrong segment - hash collision
+      return IOEngine.NOT_FOUND;
+    }
+    
+    if (size < toRead) {
+      loaded = true;
+    }
+    
+    if(rangeStart > valueSize) {
+      return IOEngine.NOT_FOUND;
+    }
+    
+    if (rangeStart + rangeSize > valueSize) {
+      rangeSize = valueSize - rangeStart;
+    }
+    
+    // Now buffer contains both: key and value, we need to compare keys
+    // Format of a key-value pair in a buffer: key-size, value-size, key, value
+    int kSize = Utils.getKeySize(buffer, bufOffset);
+    int kOffset = Utils.getKeyOffset(buffer, bufOffset);
+    
+    if (kSize != keySize) {
+      // Hash collision
+      return IOEngine.NOT_FOUND;
+    }
+    // Now compare keys
+    if (Utils.compareTo(buffer, bufOffset + kOffset, kSize, key, keyOffset, keySize) != 0) {
+      // Hash collision
+      return IOEngine.NOT_FOUND;
+    }
+    
+    if (!loaded) {
+      readFully(file, offset + valueOffset + rangeStart, buffer, bufOffset, rangeSize);
+    } else {
+      Utils.extractValueRange(buffer, bufOffset, rangeStart, rangeSize);
+    }
+    
+    return rangeSize;
+  }
+
+  @Override
+  public int readValueRange(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid,
+      long offset, int size, ByteBuffer buffer, int rangeStart, int rangeSize) throws IOException {
+
+    int pos = buffer.position();
+
+    offset += Segment.META_SIZE; // add 8 bytes to the offset
+
+    int avail = buffer.remaining();
+    // Sanity check
+    if (avail < 8) {
+      // 8 bytes will allow to read at least key size and value size
+      //TODO: is it safe? The caller might not expect this
+      return blockSize;
+    }
+
+    // sanity check
+    if (rangeSize > avail) {
+      rangeSize = avail;
+    }
+
+    // TODO prevent file from being closed/deleted
+    FileIOEngine fileEngine = (FileIOEngine) engine;
+    RandomAccessFile file = fileEngine.getFileFor(sid);
+
+    if (file == null) {
+      return IOEngine.NOT_FOUND;
+    }
+    
+    boolean loaded = false;
+
+    int toRead = (int) Math.min(blockSize, file.length() - offset);
+    toRead = Math.min(toRead, avail);
+    
+    readFully(file, offset, buffer,toRead);
+    
+    int valueSize = Utils.getValueSize(buffer);
+    int valueOffset = Utils.getValueOffset(buffer);
+
+    if (size < 0) {
+      size = Utils.getItemSize(buffer);
+    }
+    
+    if (file.length() < offset + size) {
+      // Rare situation - wrong segment - hash collision
+      return IOEngine.NOT_FOUND;
+    }
+    
+    if (size < toRead) {
+      loaded = true;
+    }
+    
+    if(rangeStart > valueSize) {
+      return IOEngine.NOT_FOUND;
+    }
+    
+    if (rangeStart + rangeSize > valueSize) {
+      rangeSize = valueSize - rangeStart;
+    }
+    
+    // Now buffer contains both: key and value, we need to compare keys
+    // Format of a key-value pair in a buffer: key-size, value-size, key, value
+    int kSize = Utils.getKeySize(buffer);
+    int kOffset = Utils.getKeyOffset(buffer);
+    
+    if (kSize != keySize) {
+      // Hash collision
+      return IOEngine.NOT_FOUND;
+    }
+    // Now compare keys
+    buffer.position(pos + kOffset);
+    if (Utils.compareTo(buffer, kSize, key, keyOffset, keySize) != 0) {
+      // Hash collision
+      return IOEngine.NOT_FOUND;
+    }
+
+    buffer.position(pos);
+
+    if (!loaded) {
+      readFully(file, offset + valueOffset + rangeStart, buffer, rangeSize);
+    } else {
+      Utils.extractValueRange(buffer, rangeStart, rangeSize);
+    }
+    buffer.position(pos);
+    
+    return rangeSize;
+  }
+
+  @Override
+  public int readValueRange(IOEngine engine, long keyPtr, int keySize, int sid, long offset,
+      int size, byte[] buffer, int bufOffset, int rangeStart, int rangeSize) throws IOException {
+    offset += Segment.META_SIZE; // add 8 bytes to the offset
+
+    int avail = buffer.length - bufOffset;
+    // Sanity check
+    if (avail < 8) {
+      // 8 bytes will allow to read at least key size and value size
+      //TODO: is it safe? The caller might not expect this
+      return blockSize;
+    }
+
+    // sanity check
+    if (rangeSize > avail) {
+      rangeSize = avail;
+    }
+
+    // TODO prevent file from being closed/deleted
+    FileIOEngine fileEngine = (FileIOEngine) engine;
+    RandomAccessFile file = fileEngine.getFileFor(sid);
+
+    if (file == null) {
+      return IOEngine.NOT_FOUND;
+    }
+
+    boolean loaded = false;
+    int toRead = (int) Math.min(blockSize, file.length() - offset);
+    toRead = Math.min(toRead, avail);
+    
+    readFully(file, offset, buffer, bufOffset, toRead);
+    
+    int valueSize = Utils.getValueSize(buffer, bufOffset);
+    int valueOffset = Utils.getValueOffset(buffer, bufOffset);
+
+    if (size < 0) {
+      size = Utils.getItemSize(buffer, bufOffset);
+    }
+    
+    if (file.length() < offset + size) {
+      // Rare situation - wrong segment - hash collision
+      return IOEngine.NOT_FOUND;
+    }
+    
+    if (size < toRead) {
+      loaded = true;
+    }
+    
+    if(rangeStart > valueSize) {
+      return IOEngine.NOT_FOUND;
+    }
+    
+    if (rangeStart + rangeSize > valueSize) {
+      rangeSize = valueSize - rangeStart;
+    }
+    
+    // Now buffer contains both: key and value, we need to compare keys
+    // Format of a key-value pair in a buffer: key-size, value-size, key, value
+    int kSize = Utils.getKeySize(buffer, bufOffset);
+    int kOffset = Utils.getKeyOffset(buffer, bufOffset);
+    
+    if (kSize != keySize) {
+      // Hash collision
+      return IOEngine.NOT_FOUND;
+    }
+    // Now compare keys
+    if (Utils.compareTo(buffer, bufOffset + kOffset, kSize, keyPtr, keySize) != 0) {
+      // Hash collision
+      return IOEngine.NOT_FOUND;
+    }
+    
+    if (!loaded) {
+      readFully(file, offset + valueOffset + rangeStart, buffer, bufOffset, rangeSize);
+    } else {
+      Utils.extractValueRange(buffer, bufOffset, rangeStart, rangeSize);
+    }
+    
+    return rangeSize;
+  }
+
+  @Override
+  public int readValueRange(IOEngine engine, long keyPtr, int keySize, int sid, long offset,
+      int size, ByteBuffer buffer, int rangeStart, int rangeSize) throws IOException {
+    int pos = buffer.position();
+
+    offset += Segment.META_SIZE; // add 8 bytes to the offset
+
+    int avail = buffer.remaining();
+    // Sanity check
+    if (avail < 8) {
+      // 8 bytes will allow to read at least key size and value size
+      //TODO: is it safe? The caller might not expect this
+      return blockSize;
+    }
+
+    // sanity check
+    if (rangeSize > avail) {
+      rangeSize = avail;
+    }
+
+    // TODO prevent file from being closed/deleted
+    FileIOEngine fileEngine = (FileIOEngine) engine;
+    RandomAccessFile file = fileEngine.getFileFor(sid);
+
+    if (file == null) {
+      return IOEngine.NOT_FOUND;
+    }
+    
+    boolean loaded = false;
+
+    int toRead = (int) Math.min(blockSize, file.length() - offset);
+    toRead = Math.min(toRead, avail);
+    
+    readFully(file, offset, buffer,toRead);
+    
+    int valueSize = Utils.getValueSize(buffer);
+    int valueOffset = Utils.getValueOffset(buffer);
+
+    if (size < 0) {
+      size = Utils.getItemSize(buffer);
+    }
+    
+    if (file.length() < offset + size) {
+      // Rare situation - wrong segment - hash collision
+      return IOEngine.NOT_FOUND;
+    }
+    
+    if (size < toRead) {
+      loaded = true;
+    }
+    
+    if(rangeStart > valueSize) {
+      return IOEngine.NOT_FOUND;
+    }
+    
+    if (rangeStart + rangeSize > valueSize) {
+      rangeSize = valueSize - rangeStart;
+    }
+    
+    // Now buffer contains both: key and value, we need to compare keys
+    // Format of a key-value pair in a buffer: key-size, value-size, key, value
+    int kSize = Utils.getKeySize(buffer);
+    int kOffset = Utils.getKeyOffset(buffer);
+    
+    if (kSize != keySize) {
+      // Hash collision
+      return IOEngine.NOT_FOUND;
+    }
+    // Now compare keys
+    buffer.position(pos + kOffset);
+    if (Utils.compareTo(buffer, kSize, keyPtr, keySize) != 0) {
+      // Hash collision
+      return IOEngine.NOT_FOUND;
+    }
+
+    buffer.position(pos);
+
+    if (!loaded) {
+      readFully(file, offset + valueOffset + rangeStart, buffer, rangeSize);
+    } else {
+      Utils.extractValueRange(buffer, rangeStart, rangeSize);
+    }
+    buffer.position(pos);
+    
+    return rangeSize;
   }
 
   @Override

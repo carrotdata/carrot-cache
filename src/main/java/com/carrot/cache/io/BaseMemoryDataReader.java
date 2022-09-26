@@ -210,6 +210,249 @@ public class BaseMemoryDataReader implements DataReader {
   }
 
   @Override
+  public int readValueRange(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid,
+      long offset, int size, byte[] buffer, int bufOffset, int rangeStart, int rangeSize)
+      throws IOException {
+    int avail = buffer.length - bufOffset;
+
+    if (rangeSize > avail) {
+      rangeSize = avail;
+    }
+
+    // Segment read lock is already held by this thread
+    Segment s = engine.getSegmentById(sid);
+    if (s == null) {
+      // TODO: error
+      return IOEngine.NOT_FOUND;
+    }
+
+    if (!s.isOffheap()) {
+      return IOEngine.NOT_FOUND;
+    }
+    long ptr = s.getAddress();
+    
+    int valueSize = Utils.getValueSize(ptr + offset);
+    
+    if (valueSize < rangeStart) {
+      // TODO: better handling
+      return IOEngine.NOT_FOUND;
+    }
+    
+    if (valueSize < rangeStart + rangeSize) {
+      rangeSize = valueSize - rangeStart;
+    }
+    
+    int valueOffset = Utils.getValueOffset(ptr + offset);
+    
+    valueOffset += rangeStart;
+    
+    if (s.getSegmentDataSize() < offset + valueOffset + rangeSize) {
+      // Rare situation - wrong segment - hash collision
+      return IOEngine.NOT_FOUND;
+    }
+    UnsafeAccess.copy(ptr + offset + valueOffset, buffer, bufOffset, rangeSize);
+    // Now buffer contains both: key and value, we need to compare keys
+    // Format of a key-value pair in a buffer: key-size, value-size, key, value
+
+    int kSize = Utils.getKeySize(ptr + offset);
+    if (kSize != keySize) {
+      return IOEngine.NOT_FOUND;
+    }
+    
+    int kOffset = Utils.getKeyOffset(ptr + offset);
+    // Now compare keys
+    if (Utils.compareTo(key, keyOffset, keySize, ptr + offset + kOffset, kSize) == 0) {
+      // If key is the same
+      return rangeSize;
+    } else {
+      return IOEngine.NOT_FOUND;
+    }
+    
+  }
+
+  @Override
+  public int readValueRange(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid,
+      long offset, int size, ByteBuffer buffer, int rangeStart, int rangeSize) throws IOException {
+    int avail = buffer.remaining();
+    if (rangeSize > avail) {
+      rangeSize = avail;
+    }
+
+    // Segment read lock is already held by this thread
+    Segment s = engine.getSegmentById(sid);
+    if (s == null) {
+      // TODO: error
+      return IOEngine.NOT_FOUND;
+    }
+
+    if (!s.isOffheap()) {
+      return IOEngine.NOT_FOUND;
+    }
+    long ptr = s.getAddress();
+    
+    int valueSize = Utils.getValueSize(ptr + offset);
+    
+    if (valueSize < rangeStart) {
+      // TODO: better handling
+      return IOEngine.NOT_FOUND;
+    }
+    
+    if (valueSize < rangeStart + rangeSize) {
+      rangeSize = valueSize - rangeStart;
+    }
+    
+    int valueOffset = Utils.getValueOffset(ptr + offset);
+    
+    valueOffset += rangeStart;
+    
+    if (s.getSegmentDataSize() < offset + valueOffset + rangeSize) {
+      // Rare situation - wrong segment - hash collision
+      return IOEngine.NOT_FOUND;
+    }
+    int pos = buffer.position();
+    
+    UnsafeAccess.copy(ptr + offset + valueOffset, buffer, rangeSize);
+    buffer.position(pos);
+
+    int kSize = Utils.getKeySize(ptr + offset);
+    
+    if (kSize != keySize) {
+      return IOEngine.NOT_FOUND;
+    }
+    
+    int kOffset = Utils.getKeyOffset(ptr + offset);
+    
+    // Now compare keys
+    if (Utils.compareTo(key, keyOffset, keySize, ptr + offset + kOffset, keySize) == 0) {
+      // If key is the same
+      return rangeSize;
+    } else {
+      return IOEngine.NOT_FOUND;
+    }
+  }
+
+  @Override
+  public int readValueRange(IOEngine engine, long keyPtr, int keySize, int sid, long offset,
+      int size, byte[] buffer, int bufOffset, int rangeStart, int rangeSize) throws IOException {
+    int avail = buffer.length - bufOffset;
+
+    if (rangeSize > avail) {
+      rangeSize = avail;
+    }
+
+    // Segment read lock is already held by this thread
+    Segment s = engine.getSegmentById(sid);
+    if (s == null) {
+      // TODO: error
+      return IOEngine.NOT_FOUND;
+    }
+
+    if (!s.isOffheap()) {
+      return IOEngine.NOT_FOUND;
+    }
+    long ptr = s.getAddress();
+    
+    int valueSize = Utils.getValueSize(ptr + offset);
+    
+    if (valueSize < rangeStart) {
+      // TODO: better handling
+      return IOEngine.NOT_FOUND;
+    }
+    
+    if (valueSize < rangeStart + rangeSize) {
+      rangeSize = valueSize - rangeStart;
+    }
+    
+    int valueOffset = Utils.getValueOffset(ptr + offset);
+    
+    valueOffset += rangeStart;
+    
+    if (s.getSegmentDataSize() < offset + valueOffset + rangeSize) {
+      // Rare situation - wrong segment - hash collision
+      return IOEngine.NOT_FOUND;
+    }
+    
+    UnsafeAccess.copy(ptr + offset + valueOffset, buffer, bufOffset, rangeSize);
+    // Now buffer contains both: key and value, we need to compare keys
+    // Format of a key-value pair in a buffer: key-size, value-size, key, value
+    
+    int kSize = Utils.getKeySize(ptr + offset);
+    if (kSize != keySize) {
+      return IOEngine.NOT_FOUND;
+    }
+    
+    int kOffset = Utils.getKeyOffset(ptr + offset);
+    
+    // Now compare keys
+    if (Utils.compareTo(ptr + offset + kOffset, kSize, keyPtr, keySize) == 0) {
+      // If key is the same
+      return rangeSize;
+    } else {
+      return IOEngine.NOT_FOUND;
+    }
+  }
+
+  @Override
+  public int readValueRange(IOEngine engine, long keyPtr, int keySize, int sid, long offset,
+      int size, ByteBuffer buffer, int rangeStart, int rangeSize) throws IOException {
+    int avail = buffer.remaining();
+    
+    if (rangeSize > avail) {
+      rangeSize = avail;
+    }
+    
+    // Segment read lock is already held by this thread
+    Segment s = engine.getSegmentById(sid);
+    if (s == null) {
+      // TODO: error
+      return IOEngine.NOT_FOUND;
+    }
+    if (!s.isOffheap()) {
+      return IOEngine.NOT_FOUND;
+    }
+    long ptr = s.getAddress();
+    
+    int valueSize = Utils.getValueSize(ptr + offset);
+    
+    if (valueSize < rangeStart) {
+      // TODO: better handling
+      return IOEngine.NOT_FOUND;
+    }
+    
+    if (valueSize < rangeStart + rangeSize) {
+      rangeSize = valueSize - rangeStart;
+    }
+    
+    int valueOffset = Utils.getValueOffset(ptr + offset);
+    
+    valueOffset += rangeStart;
+    
+    if (s.getSegmentDataSize() < offset + valueOffset + rangeSize) {
+      // Rare situation - wrong segment - hash collision
+      return IOEngine.NOT_FOUND;
+    }
+    
+    int pos = buffer.position();
+    UnsafeAccess.copy(ptr + offset + valueOffset, buffer, rangeSize);
+
+    buffer.position(pos);
+    
+    int kSize = Utils.getKeySize(ptr + offset);
+    
+    if (kSize != keySize) {
+      return IOEngine.NOT_FOUND;
+    }
+    int kOffset = Utils.getKeyOffset(ptr + offset);
+    // Now compare keys
+    if (Utils.compareTo(ptr + offset + kOffset, kSize, keyPtr, keySize) == 0) {
+      // If key is the same
+      return rangeSize;
+    } else {
+      return IOEngine.NOT_FOUND;
+    }
+  }
+
+  @Override
   public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
     return new BaseMemorySegmentScanner(s);
   }

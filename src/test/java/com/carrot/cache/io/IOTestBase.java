@@ -29,6 +29,8 @@ import org.junit.BeforeClass;
 import com.carrot.cache.Cache;
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MemoryIndex;
+import com.carrot.cache.io.IOEngine;
+import com.carrot.cache.io.Segment;
 import com.carrot.cache.util.TestUtils;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
@@ -377,7 +379,7 @@ public abstract class IOTestBase {
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);
-      long size = cache.get_kv(key, 0, key.length, false, buffer, 0);
+      long size = cache.getKeyValue(key, 0, key.length, false, buffer, 0);
       assertEquals(expSize, size);
       int kSize = Utils.readUVInt(buffer, 0);
       assertEquals(key.length, kSize);
@@ -401,7 +403,7 @@ public abstract class IOTestBase {
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);
-      long size = cache.get_kv(key, 0, key.length, true, buffer);
+      long size = cache.getKeyValue(key, 0, key.length, true, buffer);
       assertEquals(expSize, size);
       int kSize = Utils.readUVInt(buffer);
       assertEquals(key.length, kSize);
@@ -427,7 +429,7 @@ public abstract class IOTestBase {
     byte[] buffer = new byte[bufferSize];
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
-      long size = cache.get_kv(key, 0, key.length, true, buffer, 0);
+      long size = cache.getKeyValue(key, 0, key.length, true, buffer, 0);
       assertEquals(-1L, size);
     }
   }
@@ -439,7 +441,7 @@ public abstract class IOTestBase {
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);
-      long size = cache.get_kv(key, 0, key.length, true, buffer, 0);
+      long size = cache.getKeyValue(key, 0, key.length, true, buffer, 0);
       if (i < deleted) {
         assertTrue( size < 0);
         continue;
@@ -603,7 +605,7 @@ public abstract class IOTestBase {
       long valuePtr = mValues[i];
       
       long expSize = Utils.kvSize(keySize, valueSize);
-      long size = cache.get_kv(keyPtr, keySize, false, buffer);
+      long size = cache.getKeyValue(keyPtr, keySize, false, buffer);
       assertEquals(expSize, size);
       int kSize = Utils.readUVInt(buffer);
       assertEquals(keySize, kSize);
@@ -630,7 +632,7 @@ public abstract class IOTestBase {
     for (int i = 0; i < num; i++) {
       int keySize = keys[i].length;
       long keyPtr = mKeys[i];      
-      long size = cache.get_kv(keyPtr, keySize, true, buffer);
+      long size = cache.getKeyValue(keyPtr, keySize, true, buffer);
       assertEquals(-1L, size);
       buffer.clear();
     }    
@@ -647,7 +649,7 @@ public abstract class IOTestBase {
       long valuePtr = mValues[i];
       
       long expSize = Utils.kvSize(keySize, valueSize);
-      long size = cache.get_kv(keyPtr, keySize, true, buffer);
+      long size = cache.getKeyValue(keyPtr, keySize, true, buffer);
       if (i < deleted) {
         assertTrue(size < 0);
         continue;

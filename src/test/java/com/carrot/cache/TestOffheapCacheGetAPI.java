@@ -30,7 +30,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.carrot.cache.controllers.MinAliveRecyclingSelector;
-import com.carrot.cache.index.CompactBlockIndexFormat;
 import com.carrot.cache.index.CompactBlockWithExpireIndexFormat;
 import com.carrot.cache.io.BlockDataWriter;
 import com.carrot.cache.io.BlockFileDataReader;
@@ -39,7 +38,7 @@ import com.carrot.cache.util.TestUtils;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 
-public class TestCacheGetAPI {
+public class TestOffheapCacheGetAPI {
   
   int blockSize = 4096;
   int numRecords = 10;
@@ -61,32 +60,38 @@ public class TestCacheGetAPI {
   long expireTime;
   double scavDumpBelowRatio = 0.5;
   double minActiveRatio = 0.90;
+  Path dataDirPath;
+  Path snapshotDirPath;
   
   @Before
   public void setUp() throws IOException {
+    this.offheap = true;
     cache = createCache();
-    this.numRecords = 1;
+    this.numRecords = 100000;
     this.r = new Random();
+    long seed = System.currentTimeMillis();
+    r.setSeed(seed);
+    System.out.printf("r.seed=%d\n", seed);
   }
   
   @After
-  public void tearDown() {
+  public void tearDown() throws IOException {
     cache.dispose();
     Arrays.stream(mKeys).forEach(x -> UnsafeAccess.free(x));
     Arrays.stream(mValues).forEach(x -> UnsafeAccess.free(x));
+    TestUtils.deleteDir(this.dataDirPath);
+    TestUtils.deleteDir(this.snapshotDirPath);
   }
   
   protected Cache createCache() throws IOException {
     String cacheName = "cache";
     // Data directory
-    Path path = Files.createTempDirectory(null);
-    File  dir = path.toFile();
-    dir.deleteOnExit();
+    this.dataDirPath = Files.createTempDirectory(null);
+    File  dir = this.dataDirPath.toFile();
     String dataDir = dir.getAbsolutePath();
     
-    path = Files.createTempDirectory(null);
-    dir = path.toFile();
-    dir.deleteOnExit();
+    this.snapshotDirPath = Files.createTempDirectory(null);
+    dir = this.snapshotDirPath.toFile();
     String snapshotDir = dir.getAbsolutePath();
     
     Cache.Builder builder = new Cache.Builder(cacheName);
@@ -201,6 +206,30 @@ public class TestCacheGetAPI {
     }
   }
   
+  protected void verifyKeyValueBytesCache(int num) throws IOException {
+    int bufferSize = safeBufferSize();
+    byte[] buffer = new byte[bufferSize];
+    for (int i = 0; i < num; i++) {
+     // System.out.printf("Bytes %d\n", i);
+      byte[] key = keys[i];
+      byte[] value = values[i];
+      long expSize = Utils.kvSize(key.length, value.length);
+      long size = cache.getKeyValue(key, 0, key.length, false, buffer, 0);
+      assertEquals(expSize, size);
+      int kSize = Utils.getKeySize(buffer, 0);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      assertEquals(key.length, kSize);
+      int vSize = Utils.getValueSize(buffer, 0);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      int off = kSizeSize + vSizeSize;
+      assertEquals(value.length, vSize);
+      assertTrue( Utils.compareTo(buffer, off, kSize, key, 0, key.length) == 0);
+      off += kSize;
+      assertTrue( Utils.compareTo(buffer, off, vSize, value, 0, value.length) == 0);
+
+    }
+  }
+  
   protected void verifyBytesCacheBuffer(int num) throws IOException {
     int bufferSize = safeBufferSize();
     ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
@@ -236,7 +265,7 @@ public class TestCacheGetAPI {
   }
   
   protected long getExpire(int n) {
-    return System.currentTimeMillis() + (n + 1) * 100000L;
+    return System.currentTimeMillis() + 1000000L;
   }
   
   protected int nextKeySize() {
@@ -259,6 +288,7 @@ public class TestCacheGetAPI {
     prepareData(numRecords);
     int loaded = loadBytes();
     assertEquals(this.numRecords, loaded);
+    //verifyKeyValueBytesCache(loaded);
     verifyBytesCache(loaded);
     verifyBytesCacheBuffer(loaded);
   }

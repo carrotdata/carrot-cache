@@ -897,6 +897,55 @@ public class Utils {
     return kSize + kSizeSize + vSize + vSizeSize;
   }
   
+ 
+  /**
+   * Get item key size 
+   * 
+   * @param ptr memory address
+   * @return key size
+   */
+  public static int getKeySize(long ptr) {
+    int kSize = Utils.readUVInt(ptr);
+    return kSize;
+  }
+  
+  /**
+   * Get item key size 
+   * 
+   * @param buffer byte buffer
+   * @return key size
+   */
+  public static int getKeySize(ByteBuffer buffer) {
+    int kSize = Utils.readUVInt(buffer);
+    return kSize;
+  }
+  
+  /**
+   * Get item key size 
+   * 
+   * @param buf buffer
+   * @param offset offset in the buffer
+   * @return key size
+   */
+  public static int getKeySize(byte[] buf, int offset) {
+    int kSize = Utils.readUVInt(buf, offset);
+    return kSize;
+  }
+  
+  /**
+   * Get item key offset 
+   * 
+   * @param ptr memory address
+   * @return key offset
+   */
+  public static int getKeyOffset(long ptr) {
+    int kSize = Utils.readUVInt(ptr);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    int vSize = Utils.readUVInt(ptr + kSizeSize);
+    int vSizeSize = Utils.sizeUVInt(vSize);
+    return kSizeSize + vSizeSize;
+  }
+  
   /**
    * Get item key offset 
    * 
@@ -965,6 +1014,64 @@ public class Utils {
   }
   
   /**
+   * Reads value offset from a byte array
+   * 
+   * @param buffer byte array
+   * @param off array offset
+   * @return value offset
+   */
+  public static int getValueOffset(byte[] buffer, int off) {
+    int kSize = Utils.readUVInt(buffer, off);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    off += kSizeSize;
+    int vSize = Utils.readUVInt(buffer, off);
+    int vSizeSize = Utils.sizeUVInt(vSize);    
+    return kSizeSize + vSizeSize + kSize;
+  }
+  
+  /**
+   * Reads value offset from a memory address
+   * 
+   * @param ptr memory address
+   * @return value offset
+   */
+  public static int getValueOffset(long ptr) {
+    int kSize = Utils.readUVInt(ptr);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    ptr += kSizeSize;
+    int vSize = Utils.readUVInt(ptr);
+    int vSizeSize = Utils.sizeUVInt(vSize);    
+    return kSizeSize + vSizeSize + kSize;
+  }
+  
+  /**
+   * Reads value size from a byte array
+   * 
+   * @param buffer byte array
+   * @param off array offset
+   * @return value size
+   */
+  public static int getValueSize(byte[] buffer, int off) {
+    int kSize = Utils.readUVInt(buffer, off);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    int vSize = Utils.readUVInt(buffer, off + kSizeSize);
+    return vSize;
+  }
+  
+  /**
+   * Reads value size from a memory address
+   * 
+   * @param ptr memory address
+   * @return value size
+   */
+  public static int getValueSize(long ptr) {
+    int kSize = Utils.readUVInt(ptr);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    int vSize = Utils.readUVInt(ptr + kSizeSize);
+    return vSize;
+  }
+  
+  /**
    * Reads value size from a byte buffer
    * 
    * @param ptr memory address
@@ -1002,6 +1109,28 @@ public class Utils {
     return vSize;
   }
   
+  public static int extractValueRange(ByteBuffer buffer, int rangeStart, int rangeSize) {
+    int pos = buffer.position();
+    int kSize = Utils.readUVInt(buffer);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    buffer.position(pos + kSizeSize);
+    int vSize = Utils.readUVInt(buffer);
+    int vSizeSize = Utils.sizeUVInt(vSize);
+    buffer.position(pos);
+
+    int toMove = kSizeSize + vSizeSize + kSize + rangeStart;
+
+    if (buffer.hasArray()) {
+      byte[] array = buffer.array();
+      System.arraycopy(array, pos + toMove, array, pos, rangeSize);
+    } else {
+      long ptr = UnsafeAccess.address(buffer);
+      ptr += pos;
+      UnsafeAccess.copy(ptr + toMove, ptr, rangeSize);
+    }
+    return rangeSize;
+  }
+  
   public static int extractValue(byte[] buffer, int off) {
     int pos = off;
     int kSize = Utils.readUVInt(buffer, pos);
@@ -1012,6 +1141,18 @@ public class Utils {
     int toMove = kSizeSize + vSizeSize + kSize;
     System.arraycopy(buffer, off + toMove, buffer, off, vSize);
     return vSize;
+  }
+  
+  public static int extractValueRange(byte[] buffer, int off, int rangeStart, int rangeSize) {
+    int pos = off;
+    int kSize = Utils.readUVInt(buffer, pos);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    pos += kSizeSize;
+    int vSize = Utils.readUVInt(buffer, pos);
+    int vSizeSize = Utils.sizeUVInt(vSize);   
+    int toMove = kSizeSize + vSizeSize + kSize + rangeStart;
+    System.arraycopy(buffer, off + toMove, buffer, off, rangeSize);
+    return rangeSize;
   }
   
   public static int getJavaVersion() {
