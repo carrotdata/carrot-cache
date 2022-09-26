@@ -15,6 +15,7 @@
 package com.carrot.cache;
 
 import java.io.IOException;
+import java.util.Random;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -23,27 +24,32 @@ import com.carrot.cache.controllers.AQBasedAdmissionController;
 import com.carrot.cache.controllers.MinAliveRecyclingSelector;
 import com.carrot.cache.eviction.LRUEvictionPolicy;
 
-public class TestFileCacheMultithreadedZipfWithAQ extends TestCacheMultithreadedZipfBase {
+public class TestFileCacheMultithreadedBigValues extends TestCacheMultithreadedZipfBase {
   
-  protected double startSizeRatio = 0.5;
+  protected double startSizeRatio = 0.3;
   
   @Before
   public void setUp() {
     this.offheap = false;
-    this.numRecords = 10000000;
+    this.numRecords = 10000;
     this.numIterations = 10 * this.numRecords;
     this.numThreads = 1;
-    this.segmentSize = 16 * 1024 * 1024;
-    this.maxCacheSize = 500 * this.segmentSize;
+    this.segmentSize = 64 * 1024 * 1024;
+    this.maxCacheSize = 100 * this.segmentSize;
+    this.maxValueSize = 1024 * 1024;
   }
   
+  @Override
+  protected int nextValueSize(Random r) {
+    return this.maxValueSize;
+  }
+
   @Override
   protected Cache.Builder withAddedConfigurations(Cache.Builder b) {
      b = b.withAdmissionQueueStartSizeRatio(startSizeRatio);
      return b;
   }
   
-  //@Ignore
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPIWithAQ() throws IOException {
     System.out.println("Bytes API: eviction=LRU, selector=MinAlive - AQ");
