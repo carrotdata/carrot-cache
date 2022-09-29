@@ -31,7 +31,7 @@ import com.carrot.cache.eviction.EvictionListener;
 import com.carrot.cache.eviction.EvictionPolicy;
 import com.carrot.cache.eviction.FIFOEvictionPolicy;
 import com.carrot.cache.io.IOEngine;
-import com.carrot.cache.util.CarrotCacheConfig;
+import com.carrot.cache.util.CarrotConfig;
 import com.carrot.cache.util.Persistent;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
@@ -184,7 +184,7 @@ public final class MemoryIndex implements Persistent {
   private AtomicReference<long[]> ref_index_base_rehash = new AtomicReference<long[]>();
   
   /* Cache configuration */
-  private CarrotCacheConfig cacheConfig;
+  private CarrotConfig cacheConfig;
   
   /* Eviction policy */
   private EvictionPolicy evictionPolicy;
@@ -232,7 +232,7 @@ public final class MemoryIndex implements Persistent {
   private AtomicLong expiredEvictedBalance = new AtomicLong();
   
   public MemoryIndex() {
-    this.cacheConfig = CarrotCacheConfig.getInstance();
+    this.cacheConfig = CarrotConfig.getInstance();
     initLocks();
   }
   
@@ -243,7 +243,7 @@ public final class MemoryIndex implements Persistent {
    */
   public MemoryIndex(IOEngine engine, Type type) {
     this.engine = engine;
-    this.cacheConfig = CarrotCacheConfig.getInstance();
+    this.cacheConfig = CarrotConfig.getInstance();
     this.cacheName = this.engine.getCacheName();
     init();
     setType(type);
@@ -255,7 +255,7 @@ public final class MemoryIndex implements Persistent {
    * @param type
    */
   public MemoryIndex(String cacheName, Type type) {
-    this.cacheConfig = CarrotCacheConfig.getInstance();
+    this.cacheConfig = CarrotConfig.getInstance();
     this.cacheName = cacheName;
     init();
     setType(type);
@@ -267,7 +267,7 @@ public final class MemoryIndex implements Persistent {
    * Call setEvictionPolicy and setIndexFormat
    */
   public MemoryIndex(String cacheName) {
-    this.cacheConfig = CarrotCacheConfig.getInstance();
+    this.cacheConfig = CarrotConfig.getInstance();
     this.cacheName = cacheName;
     init();
   }
@@ -2330,7 +2330,7 @@ public final class MemoryIndex implements Persistent {
         IndexFormat indexFormat = (IndexFormat) cls.newInstance();
         indexFormat.setCacheName(this.cacheName);
         setIndexFormat(indexFormat);
-        this.evictionPolicy = CarrotCacheConfig.getInstance().getCacheEvictionPolicy(this.cacheName);
+        this.evictionPolicy = CarrotConfig.getInstance().getCacheEvictionPolicy(this.cacheName);
       } catch (Exception e) {
         throw new IOException(e);
       } 

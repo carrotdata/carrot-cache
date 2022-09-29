@@ -39,9 +39,9 @@ import com.carrot.cache.io.DataReader;
 import com.carrot.cache.io.DataWriter;
 
 @SuppressWarnings("deprecation")
-public class CarrotCacheConfig {
+public class CarrotConfig {
   
-  private static final Logger LOG = LogManager.getLogger(CarrotCacheConfig.class);
+  private static final Logger LOG = LogManager.getLogger(CarrotConfig.class);
 
 
   /* List of all caches logical names, comma-separated*/
@@ -434,30 +434,30 @@ public class CarrotCacheConfig {
   public final static long DEFAULT_CACHE_SPIN_WAIT_TIME_NS = 10000;// 10000 nanoseconds
   
   // Statics
-  static CarrotCacheConfig instance;
+  static CarrotConfig instance;
 
-  public static CarrotCacheConfig getInstance() {
+  public static CarrotConfig getInstance() {
     if (instance != null) {
       return instance;
     }
-    synchronized (CarrotCacheConfig.class) {
+    synchronized (CarrotConfig.class) {
       if (instance != null) {
         return instance;
       }
-      instance = new CarrotCacheConfig();
+      instance = new CarrotConfig();
     }
     return instance;
   }
 
-  public static CarrotCacheConfig getInstance(String file) throws IOException {
+  public static CarrotConfig getInstance(String file) throws IOException {
     if (instance != null) {
       return instance;
     }
-    synchronized (CarrotCacheConfig.class) {
+    synchronized (CarrotConfig.class) {
       if (instance != null) {
         return instance;
       }
-      instance = new CarrotCacheConfig(file);
+      instance = new CarrotConfig(file);
     }
     return instance;
   }
@@ -467,10 +467,10 @@ public class CarrotCacheConfig {
    * @return cache configuration object
    * @throws IOException
    */
-  public static CarrotCacheConfig load(InputStream is) throws IOException {
+  public static CarrotConfig load(InputStream is) throws IOException {
     Properties props = new Properties();
     props.load(is);
-    return new CarrotCacheConfig(props);
+    return new CarrotConfig(props);
   }
   
   /**
@@ -486,7 +486,7 @@ public class CarrotCacheConfig {
   Properties props = new Properties();
 
   /** Default constructor */
-  private CarrotCacheConfig() {
+  private CarrotConfig() {
   }
 
   /**
@@ -502,7 +502,7 @@ public class CarrotCacheConfig {
    * @param file configuration file
    * @throws IOException
    */
-  private CarrotCacheConfig(String file) throws IOException {
+  private CarrotConfig(String file) throws IOException {
     this();
     if (file != null) {
       FileInputStream fis = new FileInputStream(file);
@@ -516,7 +516,7 @@ public class CarrotCacheConfig {
    *
    * @param props
    */
-  CarrotCacheConfig(Properties props) {
+  CarrotConfig(Properties props) {
     this.props = props;
   }
 

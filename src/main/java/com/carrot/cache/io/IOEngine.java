@@ -36,7 +36,7 @@ import com.carrot.cache.Scavenger;
 import com.carrot.cache.controllers.RecyclingSelector;
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MemoryIndex;
-import com.carrot.cache.util.CarrotCacheConfig;
+import com.carrot.cache.util.CarrotConfig;
 import com.carrot.cache.util.Persistent;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
@@ -76,7 +76,7 @@ public abstract class IOEngine implements Persistent {
   protected final int numSegments;
 
   /* Cache configuration */
-  protected final CarrotCacheConfig config;
+  protected final CarrotConfig config;
 
   /* Default item rank */
   protected final int defaultRank;
@@ -135,7 +135,7 @@ public abstract class IOEngine implements Persistent {
   public static IOEngine getEngineForCache(Cache cache) {
     // TODO: Check NULL on return
     String cacheName = cache.getName();
-    CarrotCacheConfig config = cache.getCacheConfig();
+    CarrotConfig config = cache.getCacheConfig();
     String[] caches = config.getCacheNames();
     String[] types = config.getCacheTypes();
     if (caches == null || types == null || caches.length != types.length) {
@@ -172,7 +172,7 @@ public abstract class IOEngine implements Persistent {
    */
   public IOEngine(String cacheName) {
     this.cacheName = cacheName;
-    this.config = CarrotCacheConfig.getInstance();
+    this.config = CarrotConfig.getInstance();
     this.segmentSize = this.config.getCacheSegmentSize(this.cacheName);
     this.maxStorageSize = this.config.getCacheMaximumSize(this.cacheName);
     this.numSegments = (int) (this.maxStorageSize / this.segmentSize);
@@ -203,7 +203,7 @@ public abstract class IOEngine implements Persistent {
    *
    * @param cong cache configuration
    */
-  public IOEngine(CarrotCacheConfig conf) {
+  public IOEngine(CarrotConfig conf) {
     this.cacheName = "default";
     this.config = conf;
     this.segmentSize = this.config.getCacheSegmentSize(this.cacheName);

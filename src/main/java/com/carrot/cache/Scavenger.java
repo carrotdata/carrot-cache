@@ -34,7 +34,7 @@ import com.carrot.cache.index.MemoryIndex.ResultWithRankAndExpire;
 import com.carrot.cache.io.IOEngine;
 import com.carrot.cache.io.Segment;
 import com.carrot.cache.io.SegmentScanner;
-import com.carrot.cache.util.CarrotCacheConfig;
+import com.carrot.cache.util.CarrotConfig;
 import com.carrot.cache.util.Persistent;
 import com.carrot.cache.util.Utils;
 
@@ -102,7 +102,7 @@ public class Scavenger extends Thread {
     
     Stats(String cacheName) {
       this.cacheName = cacheName;
-      CarrotCacheConfig conf = CarrotCacheConfig.getInstance();
+      CarrotConfig conf = CarrotConfig.getInstance();
       dumpBelowRatio = conf.getScavengerDumpEntryBelowStart(cacheName);
       dumpBelowRatioMin = dumpBelowRatio;
       dumpBelowRatioMax = conf.getScavengerDumpEntryBelowStop(cacheName);
@@ -271,7 +271,7 @@ public class Scavenger extends Thread {
   
   private final Cache cache;
   
-  private final CarrotCacheConfig config;
+  private final CarrotConfig config;
 
   private volatile long runStartTime = System.currentTimeMillis();
 
@@ -297,7 +297,7 @@ public class Scavenger extends Thread {
   public Scavenger(Cache cache) {
     super("c2 scavenger");
     this.cache = cache;
-    this.config = CarrotCacheConfig.getInstance();
+    this.config = CarrotConfig.getInstance();
     String cacheName = this.cache.getName();
 
     // Update stats

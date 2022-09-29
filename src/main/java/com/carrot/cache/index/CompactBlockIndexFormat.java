@@ -17,7 +17,7 @@
  */
 package com.carrot.cache.index;
 
-import com.carrot.cache.util.CarrotCacheConfig;
+import com.carrot.cache.util.CarrotConfig;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 
@@ -49,7 +49,7 @@ public class CompactBlockIndexFormat implements IndexFormat {
    * @param cacheName
    */
   public void setCacheName(String cacheName) {
-    CarrotCacheConfig config = CarrotCacheConfig.getInstance();
+    CarrotConfig config = CarrotConfig.getInstance();
     this.blockSize = config.getBlockWriterBlockSize(cacheName);
     this.L = config.getStartIndexNumberOfSlotsPower(cacheName);
   }

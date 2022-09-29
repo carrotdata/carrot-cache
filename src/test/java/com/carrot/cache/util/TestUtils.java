@@ -122,8 +122,8 @@ public class TestUtils {
     return raf;
   }
   
-  public static CarrotCacheConfig mockConfigForTests(long segmentSize, long maxCacheSize) throws IOException {
-    CarrotCacheConfig mock = Mockito.mock(CarrotCacheConfig.class, CALLS_REAL_METHODS);
+  public static CarrotConfig mockConfigForTests(long segmentSize, long maxCacheSize) throws IOException {
+    CarrotConfig mock = Mockito.mock(CarrotConfig.class, CALLS_REAL_METHODS);
     mock.init();
     // define segment size
     Mockito.when(mock.getCacheSegmentSize(Mockito.anyString())).thenReturn(segmentSize);
@@ -137,8 +137,8 @@ public class TestUtils {
     return mock;
   }
   
-  public static CarrotCacheConfig mockConfigForTests(long segmentSize, long maxCacheSize, String dataDir) throws IOException {
-    CarrotCacheConfig mock = Mockito.mock(CarrotCacheConfig.class, CALLS_REAL_METHODS);
+  public static CarrotConfig mockConfigForTests(long segmentSize, long maxCacheSize, String dataDir) throws IOException {
+    CarrotConfig mock = Mockito.mock(CarrotConfig.class, CALLS_REAL_METHODS);
     mock.init();
     // define segment size
     Mockito.when(mock.getCacheSegmentSize(Mockito.anyString())).thenReturn(segmentSize);

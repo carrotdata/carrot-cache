@@ -18,7 +18,7 @@ import static com.carrot.cache.io.BlockReaderWriterSupport.META_SIZE;
 import static com.carrot.cache.io.BlockReaderWriterSupport.SIZE_OFFSET;
 import static com.carrot.cache.io.BlockReaderWriterSupport.getFullDataSize;
 
-import com.carrot.cache.util.CarrotCacheConfig;
+import com.carrot.cache.util.CarrotConfig;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 
@@ -204,6 +204,6 @@ public class BlockDataWriter implements DataWriter {
   
   @Override
   public void init(String cacheName) {
-    this.blockSize = CarrotCacheConfig.getInstance().getBlockWriterBlockSize(cacheName);
+    this.blockSize = CarrotConfig.getInstance().getBlockWriterBlockSize(cacheName);
   }
 }

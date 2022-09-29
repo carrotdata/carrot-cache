@@ -20,7 +20,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.carrot.cache.Cache;
-import com.carrot.cache.util.CarrotCacheConfig;
+import com.carrot.cache.util.CarrotConfig;
 
 /**
  * This admission controller can be used for RAM - based caches only.
@@ -58,7 +58,7 @@ public class ExpirationAwareAdmissionController implements AdmissionController{
   
   @Override
   public void setCache(Cache cache) throws IOException {
-    CarrotCacheConfig conf = cache.getCacheConfig();
+    CarrotConfig conf = cache.getCacheConfig();
     int numRanks = conf.getNumberOfPopularityRanks(cache.getName());
     // Number of ranks is the number of expiration bins
     this.ttlBins = new long[numRanks];

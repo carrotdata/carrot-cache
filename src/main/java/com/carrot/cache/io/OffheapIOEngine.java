@@ -23,7 +23,7 @@ import java.nio.ByteBuffer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.carrot.cache.util.CarrotCacheConfig;
+import com.carrot.cache.util.CarrotConfig;
 
 public class OffheapIOEngine extends IOEngine {
   
@@ -35,7 +35,7 @@ public class OffheapIOEngine extends IOEngine {
     super(cacheName);
   }
 
-  public OffheapIOEngine (CarrotCacheConfig conf) {
+  public OffheapIOEngine (CarrotConfig conf) {
     super(conf);
   }
   
