@@ -49,7 +49,7 @@ public class TestPrefetchBuffer extends IOTestBase {
   }
   
   @After
-  public void tearDown() {
+  public void tearDown() throws IOException {
     super.tearDown();
     segment.dispose();
   }

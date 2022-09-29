@@ -14,11 +14,17 @@
  */
 package com.carrot.cache.util;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Properties;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import com.carrot.cache.controllers.AdmissionController;
 import com.carrot.cache.controllers.RecyclingSelector;
@@ -34,6 +40,9 @@ import com.carrot.cache.io.DataWriter;
 
 @SuppressWarnings("deprecation")
 public class CarrotCacheConfig {
+  
+  private static final Logger LOG = LogManager.getLogger(CarrotCacheConfig.class);
+
 
   /* List of all caches logical names, comma-separated*/
   public final static String CACHES_NAME_LIST_KEY = "c2.caches.name.list";
@@ -81,20 +90,12 @@ public class CarrotCacheConfig {
   /* Default cache configuration directory name - the only directory for all caches */
   public final static String DEFAULT_CACHE_CONFIG_DIR_NAME = "conf";
   
-  /* Cache snapshot directory - where to save index and statistics info */
-  public final static String CACHE_SNAPSHOT_DIR_NAME_KEY = "c2.snapshot.dir.name";
+  /* Cache root directory - where to save cached data */
+  public final static String CACHE_ROOT_DIR_PATH_KEY = "c2.root.dir.path";
   
-  /* Default cache snapshot directory name */
-  public final static String DEFAULT_CACHE_SNAPSHOT_DIR_NAME = "snapshot";
-  
-  /* Cache data directory - where to save cached data */
-  public final static String CACHE_DATA_DIR_NAME_KEY = "c2.data.dir.name";
-  
-  /* Default cache data directory name */
-  public final static String DEFAULT_CACHE_DATA_DIR_NAME = "data";
-  
-  //TODO - location for data and system snapshots
-  
+  /* Default cache root directory path */
+  public final static String DEFAULT_CACHE_ROOT_DIR_PATH = "." + File.separator + "c2";
+    
   /* Data segment size */
   public static final String CACHE_SEGMENT_SIZE_KEY = "c2.cache.data.segment.size";
   
@@ -135,13 +136,13 @@ public class CarrotCacheConfig {
   public static final String SLRU_NUMBER_SEGMENTS_KEY = "c2.eviction.slru.number.segments";
   
   /* Admission Queue start size in fraction of a full cache size */
-  public static final String ADMISSION_QUEUE_START_SIZE_RATIO_KEY = "c2.admission.queue.start.size";
+  public static final String ADMISSION_QUEUE_START_SIZE_RATIO_KEY = "c2.admission.queue.start.size.ratio";
   
   /* Admission Queue minimum size in fraction of a full cache size */
-  public static final String ADMISSION_QUEUE_MIN_SIZE_RATIO_KEY = "c2.admission.queue.min.size";
+  public static final String ADMISSION_QUEUE_MIN_SIZE_RATIO_KEY = "c2.admission.queue.min.size.ratio";
   
   /* Admission Queue maximum size in fraction of a full cache size */
-  public static final String ADMISSION_QUEUE_MAX_SIZE_RATIO_KEY = "c2.admission.queue.max.size";
+  public static final String ADMISSION_QUEUE_MAX_SIZE_RATIO_KEY = "c2.admission.queue.max.size.ratio";
   
   
   /* Readmission evicted item to AQ minimum hit count threshold */
@@ -896,21 +897,20 @@ public class CarrotCacheConfig {
    * @return snapshot directory name for a given cache name
    */
   public String getSnapshotDir(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ CACHE_SNAPSHOT_DIR_NAME_KEY);
-    if (value != null) {
-      return value;
+    String value = getCacheRootDir(cacheName);
+    value += File.separator + cacheName + File.separator + "snapshot";
+    Path p = Path.of(value);
+    if (Files.notExists(p)) {
+      try {
+        Files.createDirectories(p);
+      } catch (IOException e) {
+        LOG.error(e);
+        return null;
+      }
     }
-    return props.getProperty(CACHE_SNAPSHOT_DIR_NAME_KEY, DEFAULT_CACHE_SNAPSHOT_DIR_NAME);
+    return value;
   }
   
-  /**
-   * Set snapshot directory location for a cache
-   * @param cacheName cache name
-   * @param snapshot directory name for a given cache name
-   */
-  public void setSnapshotDir(String cacheName, String dir) {
-    props.setProperty(cacheName + "."+ CACHE_SNAPSHOT_DIR_NAME_KEY, dir);
-  }
   
   /**
    * Get data directory location for a cache
@@ -918,20 +918,58 @@ public class CarrotCacheConfig {
    * @return data directory name for a given cache  name
    */
   public String getDataDir(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ CACHE_DATA_DIR_NAME_KEY);
-    if (value != null) {
-      return value;
+    String value = getCacheRootDir(cacheName);
+    value += File.separator + cacheName + File.separator + "data";
+    // check if directory exists
+    Path p = Path.of(value);
+    if (Files.notExists(p)) {
+      try {
+        Files.createDirectories(p);
+      } catch (IOException e) {
+        LOG.error(e);
+        return null;
+      }
     }
-    return props.getProperty(CACHE_DATA_DIR_NAME_KEY, DEFAULT_CACHE_DATA_DIR_NAME);
+    return value;
   }
   
   /**
-   * Set data directory location for a cache
+   * Get root directory location for a cache
+   * @param cacheName cache name
+   * @return root directory name for a given cache  name
+   */
+  public String getCacheRootDir(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ CACHE_ROOT_DIR_PATH_KEY);
+    if (value == null) {
+      value = props.getProperty(CACHE_ROOT_DIR_PATH_KEY, DEFAULT_CACHE_ROOT_DIR_PATH);
+    }
+    return value;
+  }
+  
+  /**
+   * Set root directory location for a cache
    * @param cacheName cache name
    * @param data directory name for a given cache  name
    */
-  public void setDataDir(String cacheName, String dir) {
-    props.setProperty(cacheName + "."+ CACHE_DATA_DIR_NAME_KEY, dir);
+  public void setCacheRootDir(String cacheName, String dir) {
+    props.setProperty(cacheName + "."+ CACHE_ROOT_DIR_PATH_KEY, dir);
+  }
+  
+  /**
+   * Get global cache root directory
+   * @param cacheName
+   * @return root directory
+   */
+  public String getGlobalCacheRootDir(String cacheName) {
+      return props.getProperty(CACHE_ROOT_DIR_PATH_KEY, DEFAULT_CACHE_ROOT_DIR_PATH);
+  }
+  
+  /**
+   * Set global root directory location for all caches
+   * @param dir directory name 
+   */
+  public void setGlobalCacheRootDir(String dir) {
+    props.setProperty(CACHE_ROOT_DIR_PATH_KEY, dir);
   }
   
   /**

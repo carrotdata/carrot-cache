@@ -46,7 +46,7 @@ public class TestSegmentBaseDataWriterReaderMemory extends IOTestBase{
   }
   
   @After
-  public void tearDown() {
+  public void tearDown() throws IOException {
     super.tearDown();
     this.segment.dispose();
   }

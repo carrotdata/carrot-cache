@@ -340,22 +340,22 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     
     /**
-     * With snapshot directory
+     * With global  cache root directory
      * @param dir directory
      * @return builder instance
      */
-    public Builder withSnapshotDir(String dir) {
-      conf.setSnapshotDir(this.cacheName, dir);
+    public Builder withGlobalCacheRootDir(String dir) {
+      conf.setGlobalCacheRootDir(dir);
       return this;
     }
     
     /**
-     * With data directory
+     * With cache root directory
      * @param dir directory
      * @return builder instance
      */
-    public Builder withDataDir(String dir) {
-      conf.setDataDir(this.cacheName, dir);
+    public Builder withCacheRootDir(String dir) {
+      conf.setCacheRootDir(this.cacheName, dir);
       return this;
     }
     

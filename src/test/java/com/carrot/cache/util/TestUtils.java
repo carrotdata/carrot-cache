@@ -23,11 +23,13 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Random;
 import java.util.stream.Stream;
 
 import org.mockito.Mockito;
 
+import com.carrot.cache.Cache;
 import com.carrot.cache.io.Segment;
 
 /**
@@ -167,5 +169,14 @@ public class TestUtils {
       System.out.printf("Deleted dir=%s\n", dir.toString());
     }
     stream.close();
+  }
+  
+  public static void deleteCacheFiles(Cache cache) throws IOException {
+    String snapshotDir = cache.getCacheConfig().getSnapshotDir(cache.getName());
+    Path p = Paths.get(snapshotDir);
+    deleteDir(p);
+    String dataDir = cache.getCacheConfig().getDataDir(cache.getName());
+    p = Paths.get(dataDir);
+    deleteDir(p);
   }
 }

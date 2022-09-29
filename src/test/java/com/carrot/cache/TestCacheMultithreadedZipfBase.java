@@ -78,10 +78,6 @@ public abstract class TestCacheMultithreadedZipfBase {
   
   protected long testStartTime = System.currentTimeMillis();
   
-  protected Path dataDirPath;
-  
-  protected Path snapshotDirPath;
-  
   protected double aqStartRatio = 0.3;
   
   @After  
@@ -90,20 +86,15 @@ public abstract class TestCacheMultithreadedZipfBase {
     this.cache.printStats();
     this.cache.dispose();
     // Delete temp data
-    TestUtils.deleteDir(dataDirPath);
-    TestUtils.deleteDir(snapshotDirPath);
+    TestUtils.deleteCacheFiles(cache);
     Scavenger.clear();
   }
   
   protected  Cache createCache() throws IOException{
     String cacheName = "cache";
     // Data directory
-    dataDirPath = Files.createTempDirectory(null);
-    String dataDir = dataDirPath.toFile().getAbsolutePath();
-    
-    snapshotDirPath = Files.createTempDirectory(null);
-    String snapshotDir = snapshotDirPath.toFile().getAbsolutePath();
-    
+    Path rootDirPath = Files.createTempDirectory(null);
+    String rootDir = rootDirPath.toFile().getAbsolutePath();
     Cache.Builder builder = new Cache.Builder(cacheName);
     
     builder
@@ -113,8 +104,7 @@ public abstract class TestCacheMultithreadedZipfBase {
       .withScavengerDumpEntryBelowStart(scavDumpBelowRatio)
       .withCacheEvictionPolicy(epClz.getName())
       .withRecyclingSelector(rsClz.getName())
-      .withSnapshotDir(snapshotDir)
-      .withDataDir(dataDir)
+      .withCacheRootDir(rootDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
       .withEvictionDisabledMode(evictionDisabled)
       .withAdmissionQueueStartSizeRatio(aqStartRatio)

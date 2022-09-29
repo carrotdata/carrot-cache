@@ -60,8 +60,6 @@ public class TestOffheapCacheGetAPI {
   long expireTime;
   double scavDumpBelowRatio = 0.5;
   double minActiveRatio = 0.90;
-  Path dataDirPath;
-  Path snapshotDirPath;
   
   @Before
   public void setUp() throws IOException {
@@ -79,20 +77,15 @@ public class TestOffheapCacheGetAPI {
     cache.dispose();
     Arrays.stream(mKeys).forEach(x -> UnsafeAccess.free(x));
     Arrays.stream(mValues).forEach(x -> UnsafeAccess.free(x));
-    TestUtils.deleteDir(this.dataDirPath);
-    TestUtils.deleteDir(this.snapshotDirPath);
+    TestUtils.deleteCacheFiles(this.cache);
   }
   
   protected Cache createCache() throws IOException {
     String cacheName = "cache";
     // Data directory
-    this.dataDirPath = Files.createTempDirectory(null);
-    File  dir = this.dataDirPath.toFile();
-    String dataDir = dir.getAbsolutePath();
-    
-    this.snapshotDirPath = Files.createTempDirectory(null);
-    dir = this.snapshotDirPath.toFile();
-    String snapshotDir = dir.getAbsolutePath();
+    Path rootDirPath = Files.createTempDirectory(null);
+    File  dir = rootDirPath.toFile();
+    String rootDir = dir.getAbsolutePath();
     
     Cache.Builder builder = new Cache.Builder(cacheName);
     
@@ -106,8 +99,7 @@ public class TestOffheapCacheGetAPI {
       .withMemoryDataReader(BlockMemoryDataReader.class.getName())
       .withFileDataReader(BlockFileDataReader.class.getName())
       .withMainQueueIndexFormat(CompactBlockWithExpireIndexFormat.class.getName())
-      .withSnapshotDir(snapshotDir)
-      .withDataDir(dataDir)
+      .withCacheRootDir(rootDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
       .withEvictionDisabledMode(true);
     

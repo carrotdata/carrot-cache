@@ -58,10 +58,6 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
 
   protected Class<? extends AdmissionController> victim_acClz = BaseAdmissionController.class;
 
-  protected Path victim_dataDirPath;
-
-  protected Path victim_snapshotDirPath;
-
   @Before
   public void setUp() {
     // Parent cache
@@ -103,8 +99,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
 
     super.tearDown();
     // Delete temp data
-    TestUtils.deleteDir(victim_dataDirPath);
-    TestUtils.deleteDir(victim_snapshotDirPath);
+    TestUtils.deleteCacheFiles(victim);
   }
 
   @Override
@@ -120,11 +115,8 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
 
     String cacheName = "victim";
     // Data directory
-    victim_dataDirPath = Files.createTempDirectory(null);
-    String dataDir = victim_dataDirPath.toFile().getAbsolutePath();
-
-    victim_snapshotDirPath = Files.createTempDirectory(null);
-    String snapshotDir = victim_snapshotDirPath.toFile().getAbsolutePath();
+    Path victim_rootDirPath = Files.createTempDirectory(null);
+    String rootDir = victim_rootDirPath.toFile().getAbsolutePath();
 
     Cache.Builder builder = new Cache.Builder(cacheName);
 
@@ -132,8 +124,9 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
         .withScavengerRunInterval(victim_scavengerInterval)
         .withScavengerDumpEntryBelowStart(victim_scavDumpBelowRatio)
         .withCacheEvictionPolicy(victim_epClz.getName())
-        .withRecyclingSelector(victim_rsClz.getName()).withSnapshotDir(snapshotDir)
-        .withDataDir(dataDir).withMinimumActiveDatasetRatio(victim_minActiveRatio)
+        .withRecyclingSelector(victim_rsClz.getName())
+        .withCacheRootDir(rootDir)
+        .withMinimumActiveDatasetRatio(victim_minActiveRatio)
         .withVictimCachePromoteOnHit(victim_promoteOnHit)
         .withVictimCachePromotionThreshold(victim_promoteThreshold)
         .withAdmissionController(victim_acClz.getName())

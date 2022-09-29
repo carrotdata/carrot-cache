@@ -66,9 +66,10 @@ public abstract class TestCacheMultithreadedStreamBase {
   private static ThreadLocal<Percentile> perc = new ThreadLocal<Percentile>();
    
   @After  
-  public void tearDown() {
+  public void tearDown() throws IOException {
     // UnsafeAccess.mallocStats.printStats(false);
     this.cache.dispose();
+    TestUtils.deleteCacheFiles(cache);
   }
   
   protected  Cache createCache() throws IOException{
@@ -76,13 +77,7 @@ public abstract class TestCacheMultithreadedStreamBase {
     // Data directory
     Path path = Files.createTempDirectory(null);
     File  dir = path.toFile();
-    dir.deleteOnExit();
-    String dataDir = dir.getAbsolutePath();
-    
-    path = Files.createTempDirectory(null);
-    dir = path.toFile();
-    dir.deleteOnExit();
-    String snapshotDir = dir.getAbsolutePath();
+    String rootDir = dir.getAbsolutePath();
     
     Cache.Builder builder = new Cache.Builder(cacheName);
     
@@ -97,8 +92,7 @@ public abstract class TestCacheMultithreadedStreamBase {
       //.withMemoryDataReader(BlockMemoryDataReader.class.getName())
       //.withFileDataReader(BlockFileDataReader.class.getName())
       //.withMainQueueIndexFormat(CompactWithExpireIndexFormat.class.getName())
-      .withSnapshotDir(snapshotDir)
-      .withDataDir(dataDir)
+      .withCacheRootDir(rootDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
       .withEvictionDisabledMode(evictionDisabled);
     

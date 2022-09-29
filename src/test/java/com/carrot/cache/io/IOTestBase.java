@@ -63,7 +63,7 @@ public abstract class IOTestBase {
   }
   
   @After
-  public void tearDown() {
+  public void tearDown() throws IOException {
     if (this.index != null) {
       this.index.dispose();
     }

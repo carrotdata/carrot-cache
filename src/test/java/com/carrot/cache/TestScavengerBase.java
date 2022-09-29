@@ -33,6 +33,7 @@ import com.carrot.cache.io.BlockDataWriter;
 import com.carrot.cache.io.BlockFileDataReader;
 import com.carrot.cache.io.BlockMemoryDataReader;
 import com.carrot.cache.io.IOTestBase;
+import com.carrot.cache.util.TestUtils;
 import com.carrot.cache.util.UnsafeAccess;
 
 public abstract class TestScavengerBase extends IOTestBase {
@@ -55,9 +56,10 @@ public abstract class TestScavengerBase extends IOTestBase {
   }
   
   @After
-  public void tearDown() {
+  public void tearDown() throws IOException {
     super.tearDown();
     cache.dispose();
+    TestUtils.deleteCacheFiles(cache);
     UnsafeAccess.mallocStats.printStats();
   }
   
@@ -66,13 +68,8 @@ public abstract class TestScavengerBase extends IOTestBase {
     // Data directory
     Path path = Files.createTempDirectory(null);
     File  dir = path.toFile();
-    dir.deleteOnExit();
-    String dataDir = dir.getAbsolutePath();
+    String rootDir = dir.getAbsolutePath();
     
-    path = Files.createTempDirectory(null);
-    dir = path.toFile();
-    dir.deleteOnExit();
-    String snapshotDir = dir.getAbsolutePath();
     
     Cache.Builder builder = new Cache.Builder(cacheName);
     
@@ -81,14 +78,12 @@ public abstract class TestScavengerBase extends IOTestBase {
       .withCacheMaximumSize(maxCacheSize)
       .withScavengerRunInterval(scavengerInterval)
       .withScavengerDumpEntryBelowStart(scavDumpBelowRatio)
-      //.withCacheEvictionPolicy(LRUEvictionPolicy.class.getName())
       .withRecyclingSelector(MinAliveRecyclingSelector.class.getName())
       .withDataWriter(BlockDataWriter.class.getName())
       .withMemoryDataReader(BlockMemoryDataReader.class.getName())
       .withFileDataReader(BlockFileDataReader.class.getName())
       .withMainQueueIndexFormat(CompactBlockWithExpireIndexFormat.class.getName())
-      .withSnapshotDir(snapshotDir)
-      .withDataDir(dataDir)
+      .withCacheRootDir(rootDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
       .withEvictionDisabledMode(true);
     

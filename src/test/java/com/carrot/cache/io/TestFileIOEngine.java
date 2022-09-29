@@ -45,7 +45,7 @@ public class TestFileIOEngine extends IOTestBase{
   }
   
   @After
-  public void tearDown() {
+  public void tearDown() throws IOException {
     super.tearDown();
     engine.dispose();
   }

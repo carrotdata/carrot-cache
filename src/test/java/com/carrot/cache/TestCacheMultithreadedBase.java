@@ -57,12 +57,9 @@ public abstract class TestCacheMultithreadedBase extends TestIOMultithreadedBase
     Path path = Files.createTempDirectory(null);
     File  dir = path.toFile();
     dir.deleteOnExit();
-    String dataDir = dir.getAbsolutePath();
+    String rootDir = dir.getAbsolutePath();
     
-    path = Files.createTempDirectory(null);
-    dir = path.toFile();
-    dir.deleteOnExit();
-    String snapshotDir = dir.getAbsolutePath();
+
     
     Cache.Builder builder = new Cache.Builder(cacheName);
     
@@ -77,8 +74,7 @@ public abstract class TestCacheMultithreadedBase extends TestIOMultithreadedBase
       //.withMemoryDataReader(BlockMemoryDataReader.class.getName())
       //.withFileDataReader(BlockFileDataReader.class.getName())
       //.withMainQueueIndexFormat(CompactWithExpireIndexFormat.class.getName())
-      .withSnapshotDir(snapshotDir)
-      .withDataDir(dataDir)
+      .withCacheRootDir(rootDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
       .withEvictionDisabledMode(evictionDisabled);
     
