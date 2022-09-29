@@ -17,7 +17,7 @@ package com.carrot.cache.io;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import com.carrot.cache.util.CacheConfig;
+import com.carrot.cache.util.CarrotCacheConfig;
 import com.carrot.cache.util.UnsafeAccess;
 
 import static com.carrot.cache.io.BlockReaderWriterSupport.*;
@@ -32,7 +32,7 @@ public class BlockMemoryDataReader implements DataReader {
 
   @Override
   public void init(String cacheName) {
-    this.blockSize = CacheConfig.getInstance().getBlockWriterBlockSize(cacheName);
+    this.blockSize = CarrotCacheConfig.getInstance().getBlockWriterBlockSize(cacheName);
   }
 
   @Override
@@ -194,7 +194,7 @@ public class BlockMemoryDataReader implements DataReader {
 
   @Override
   public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
-    CacheConfig config = CacheConfig.getInstance();
+    CarrotCacheConfig config = CarrotCacheConfig.getInstance();
     String cacheName = engine.getCacheName();
     int blockSize = config.getBlockWriterBlockSize(cacheName);
     return new BlockMemorySegmentScanner(s, blockSize);

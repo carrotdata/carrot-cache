@@ -37,7 +37,7 @@ import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.carrot.cache.util.CacheConfig;
+import com.carrot.cache.util.CarrotCacheConfig;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 
@@ -71,7 +71,7 @@ public class FileIOEngine extends IOEngine {
    *
    * @param conf test configuration
    */
-  public FileIOEngine(CacheConfig conf) {
+  public FileIOEngine(CarrotCacheConfig conf) {
     super(conf);
     initEngine();
   }

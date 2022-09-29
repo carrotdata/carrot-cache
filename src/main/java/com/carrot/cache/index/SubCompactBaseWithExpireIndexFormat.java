@@ -18,7 +18,7 @@
 package com.carrot.cache.index;
 
 import com.carrot.cache.expire.ExpireSupport;
-import com.carrot.cache.util.CacheConfig;
+import com.carrot.cache.util.CarrotCacheConfig;
 
 /**
  * Format of an index entry (16 bytes):
@@ -73,7 +73,7 @@ public class SubCompactBaseWithExpireIndexFormat extends SubCompactBaseIndexForm
   public void setCacheName(String cacheName) {
     super.setCacheName(cacheName);
     try {
-      this.expireSupport = CacheConfig.getInstance().getExpireSupport(cacheName);
+      this.expireSupport = CarrotCacheConfig.getInstance().getExpireSupport(cacheName);
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
       // TODO Auto-generated catch block
       throw new RuntimeException(e);

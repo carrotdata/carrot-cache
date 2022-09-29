@@ -35,7 +35,7 @@ import org.junit.Test;
 
 import com.carrot.cache.controllers.AdmissionQueue;
 import com.carrot.cache.index.MemoryIndex;
-import com.carrot.cache.util.CacheConfig;
+import com.carrot.cache.util.CarrotCacheConfig;
 import com.carrot.cache.util.TestUtils;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
@@ -45,7 +45,7 @@ public class TestAdmissionQueue {
   private static final Logger LOG = LogManager.getLogger(TestAdmissionQueue.class);
   AdmissionQueue queue;
   MemoryIndex memoryIndex;
-  CacheConfig conf;
+  CarrotCacheConfig conf;
   
   int numRecords = 10;
   byte[][] keys = new byte[numRecords][];

@@ -19,7 +19,7 @@ import java.util.Random;
 import com.carrot.cache.eviction.EvictionPolicy;
 import com.carrot.cache.eviction.SLRUEvictionPolicy;
 import com.carrot.cache.expire.ExpireSupportSecondsMinutes;
-import com.carrot.cache.util.CacheConfig;
+import com.carrot.cache.util.CarrotCacheConfig;
 
 public class TestMemoryIndexCompactFormatWithExpireSM extends TestMemoryIndexFormatBase {
 
@@ -40,7 +40,7 @@ public class TestMemoryIndexCompactFormatWithExpireSM extends TestMemoryIndexFor
   @Override
   int nextOffset(Random r, int max) {
     if (this.blockSize == 0) {
-      CacheConfig config = CacheConfig.getInstance();
+      CarrotCacheConfig config = CarrotCacheConfig.getInstance();
       this.blockSize = config.getBlockWriterBlockSize("default");
     }
     int n = max / this.blockSize;

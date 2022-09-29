@@ -82,6 +82,8 @@ public abstract class TestCacheMultithreadedZipfBase {
   
   protected Path snapshotDirPath;
   
+  protected double aqStartRatio = 0.3;
+  
   @After  
   public void tearDown() throws IOException {
     // UnsafeAccess.mallocStats.printStats(false);
@@ -115,6 +117,7 @@ public abstract class TestCacheMultithreadedZipfBase {
       .withDataDir(dataDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
       .withEvictionDisabledMode(evictionDisabled)
+      .withAdmissionQueueStartSizeRatio(aqStartRatio)
       .withAdmissionController(acClz.getName());
     builder = withAddedConfigurations(builder);
     if (offheap) {

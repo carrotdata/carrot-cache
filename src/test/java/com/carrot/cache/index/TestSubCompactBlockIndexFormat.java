@@ -16,7 +16,7 @@ package com.carrot.cache.index;
 
 import java.util.Random;
 
-import com.carrot.cache.util.CacheConfig;
+import com.carrot.cache.util.CarrotCacheConfig;
 
 public class TestSubCompactBlockIndexFormat extends TestIndexFormatBase {
   int blockSize;
@@ -30,7 +30,7 @@ public class TestSubCompactBlockIndexFormat extends TestIndexFormatBase {
   
   protected int getDataOffset(Random r, int max) {
     if (this.blockSize == 0) {
-      CacheConfig config = CacheConfig.getInstance();
+      CarrotCacheConfig config = CarrotCacheConfig.getInstance();
       this.blockSize = config.getBlockWriterBlockSize("default");
     }
     int n = max / this.blockSize;

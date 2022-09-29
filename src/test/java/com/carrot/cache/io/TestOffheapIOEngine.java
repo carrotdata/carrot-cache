@@ -25,7 +25,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.carrot.cache.util.CacheConfig;
+import com.carrot.cache.util.CarrotCacheConfig;
 import com.carrot.cache.util.TestUtils;
 
 public class TestOffheapIOEngine extends IOTestBase{
@@ -134,7 +134,7 @@ public class TestOffheapIOEngine extends IOTestBase{
   private void createEngine(long segmentSize, long cacheSize) throws IOException {
     this.segmentSize = (int) segmentSize;
     this.cacheSize = cacheSize;
-    CacheConfig conf = TestUtils.mockConfigForTests(this.segmentSize, this.cacheSize);
+    CarrotCacheConfig conf = TestUtils.mockConfigForTests(this.segmentSize, this.cacheSize);
     this.engine = new OffheapIOEngine(conf);
   }
    

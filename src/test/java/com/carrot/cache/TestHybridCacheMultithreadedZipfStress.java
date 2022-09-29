@@ -20,7 +20,6 @@ import java.nio.file.Path;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.carrot.cache.Cache.Builder;
@@ -67,12 +66,12 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
   public void setUp() {
     // Parent cache
     this.offheap = true;
-    this.numRecords = 10000000;
-    this.numIterations = 50 * this.numRecords;
+    this.numRecords = 1000000;
+    this.numIterations = 10 * this.numRecords;
     this.numThreads = 4;
     this.minActiveRatio = 0.9;
     this.segmentSize = 4 * 1024 * 1024;
-    this.maxCacheSize = 1000L * this.segmentSize; // 16 GB in RAM
+    this.maxCacheSize = 100L * this.segmentSize; // 16 GB in RAM
     this.epClz = SLRUEvictionPolicy.class;
     this.rsClz = MinAliveRecyclingSelector.class;
     this.scavengerInterval = 4; // scavenger interval in sec
@@ -80,7 +79,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
 
     // victim cache
     this.victim_segmentSize = 12 * 1024 * 1024;
-    this.victim_maxCacheSize = 1000L * this.victim_segmentSize; // 160GB
+    this.victim_maxCacheSize = 100L * this.victim_segmentSize; // 160GB
     this.victim_minActiveRatio = 0.0;
     this.victim_scavDumpBelowRatio = 0.5;
     this.victim_scavengerInterval = 10;
@@ -88,6 +87,8 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
     this.victim_promoteThreshold = 0.9;
     this.victim_epClz = SLRUEvictionPolicy.class;
     this.victim_rsClz = MinAliveRecyclingSelector.class;
+    this.zipfAlpha = 0.7;
+
 
   }
 
@@ -137,14 +138,13 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
         .withVictimCachePromotionThreshold(victim_promoteThreshold)
         .withAdmissionController(victim_acClz.getName())
         .withCacheSpinWaitTimeOnHighPressure(0)
-        .withAdmissionQueueStartSizeRatio(0.3);
+        .withAdmissionQueueStartSizeRatio(aqStartRatio);
     Cache victim = builder.buildDiskCache();
     parent.setVictimCache(victim);
 
     return parent;
   }
 
-  @Ignore
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=LRU, selector=MinAlive");

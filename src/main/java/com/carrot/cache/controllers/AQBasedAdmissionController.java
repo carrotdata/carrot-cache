@@ -21,7 +21,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import com.carrot.cache.Cache;
-import com.carrot.cache.util.CacheConfig;
+import com.carrot.cache.util.CarrotCacheConfig;
 import com.carrot.cache.util.Utils;
 
 /**
@@ -56,7 +56,7 @@ public class AQBasedAdmissionController extends BaseAdmissionController
     super.setCache(cache);
     initAdmissionQueue();
     /* Admission Queue */
-    CacheConfig config = CacheConfig.getInstance();
+    CarrotCacheConfig config = CarrotCacheConfig.getInstance();
     String cacheName = cache.getName();
     this.aqMinRatio = config.getAdmissionQueueMinSizeRatio(cacheName);
     this.aqMaxRatio = config.getAdmissionQueueMaxSizeRatio(cacheName);

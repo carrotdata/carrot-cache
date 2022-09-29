@@ -17,7 +17,7 @@ package com.carrot.cache.io;
 
 import java.io.IOException;
 
-import com.carrot.cache.util.CacheConfig;
+import com.carrot.cache.util.CarrotCacheConfig;
 import com.carrot.cache.util.TestUtils;
 
 public class TestFileIOEngineMultithreaded extends TestIOEngineMultithreadedBase {
@@ -33,7 +33,7 @@ public class TestFileIOEngineMultithreaded extends TestIOEngineMultithreadedBase
   protected IOEngine getIOEngine() throws IOException {
     int segmentSize = 4 * 1024 * 1024;
     long cacheSize = 100 * segmentSize;
-    CacheConfig conf = TestUtils.mockConfigForTests(segmentSize, cacheSize);
+    CarrotCacheConfig conf = TestUtils.mockConfigForTests(segmentSize, cacheSize);
     this.engine = new FileIOEngine(conf);
     return this.engine;
   }
