@@ -826,6 +826,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     initAll();
   }
 
+  public Cache(String name, CarrotConfig conf) throws IOException {
+    this.cacheName = name;
+    this.conf = conf;
+    this.engine = IOEngine.getEngineForCache(this);
+    // set engine listener
+    this.engine.setListener(this);
+    this.type = engine instanceof OffheapIOEngine? Type.MEMORY: Type.DISK;
+    initAll();
+  }
+  
   private Cache(CarrotConfig conf, String cacheName) {
     this.cacheName = cacheName;
     this.conf = conf;
@@ -1305,6 +1315,20 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       expire = this.admissionController.adjustExpirationTime(expire);
     }
     return expire;
+  }
+  
+  public boolean put(
+      byte[] key,
+      int keyOffset,
+      int keySize,
+      byte[] value,
+      int valOffset,
+      int valSize,
+      long expire
+   )
+      throws IOException {
+    int rank = getDefaultRankToInsert();
+    return put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, false, false);
   }
   
   public boolean put(
