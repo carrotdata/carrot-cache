@@ -506,10 +506,7 @@ public abstract class IOEngine implements Persistent {
       }
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
-      // TODO: actually, not correct IT CAN RETURN -1
-      if (keyValueSize > buffer.length - bufOffset) {
-        return keyValueSize;
-      }
+
       boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
       if (dataEmbedded) {
         // Return embedded data
@@ -695,10 +692,8 @@ public abstract class IOEngine implements Persistent {
       }
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
-      // can be negative
-      if (keyValueSize > bufferAvail) {
-        return keyValueSize;
-      }
+
+      //TODO: getRange does not make sense for embedded data
       boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
       if (dataEmbedded) {
         // For index formats which supports embedding
@@ -905,10 +900,6 @@ public abstract class IOEngine implements Persistent {
       }
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
-      // TODO: actually, not correct
-      if (keyValueSize > buffer.remaining()) {
-        return keyValueSize;
-      }
 
       boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
       if (dataEmbedded) {
@@ -1088,10 +1079,7 @@ public abstract class IOEngine implements Persistent {
       }
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
-      // TODO: actually, not correct
-      if (keyValueSize > buffer.remaining()) {
-        return keyValueSize;
-      }
+
       boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
       if (dataEmbedded) {
         // Return embedded data
@@ -1342,7 +1330,7 @@ public abstract class IOEngine implements Persistent {
         }
         // OK it is in memory
         try {
-           this.memoryDataReader.readValueRange(
+           return this.memoryDataReader.readValueRange(
               this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset, rangeStart, rangeSize);
         } catch (IOException e) {
           // never happens
@@ -1828,7 +1816,9 @@ public abstract class IOEngine implements Persistent {
   private int getRange(int id, long offset, int size, long keyPtr, int keySize, 
       int rangeStart, int rangeSize, ByteBuffer buffer)
       throws IOException {
-    if (buffer == null || buffer.remaining() < size) throw new IllegalArgumentException();
+    if (buffer == null || buffer.remaining() < size) {
+      throw new IllegalArgumentException();
+    }
     int len = getRangeFromRAMBuffers(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer);
 
     if (len > 0) {

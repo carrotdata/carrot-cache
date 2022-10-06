@@ -2552,13 +2552,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     System.out.printf("Cache[%s]: storage size=%d data size=%d items=%d hit rate=%f, puts=%d, bytes written=%d\n",
       this.cacheName, getStorageAllocated(), getStorageUsed(), size(), 
       getHitRate(), getTotalWrites(), getTotalWritesSize());
-    
     if (this.victimCache != null) {
-        System.out.printf("Cache[%s]: storage size=%d data size=%d items=%d hit rate=%f, puts=%d, bytes written=%d\n",
-        this.victimCache.cacheName, this.victimCache.getStorageAllocated(), 
-        this.victimCache.getStorageUsed(), this.victimCache.size(),
-        this.victimCache.getHitRate(), 
-        this.victimCache.getTotalWrites(), this.victimCache.getTotalWritesSize());
+       this.victimCache.printStats();
     }
   }
 }

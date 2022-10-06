@@ -21,6 +21,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Properties;
 
 import org.apache.logging.log4j.LogManager;
@@ -899,7 +900,7 @@ public class CarrotConfig {
   public String getSnapshotDir(String cacheName) {
     String value = getCacheRootDir(cacheName);
     value += File.separator + cacheName + File.separator + "snapshot";
-    Path p = Path.of(value);
+    Path p = Paths.get(value);
     if (Files.notExists(p)) {
       try {
         Files.createDirectories(p);
@@ -921,7 +922,7 @@ public class CarrotConfig {
     String value = getCacheRootDir(cacheName);
     value += File.separator + cacheName + File.separator + "data";
     // check if directory exists
-    Path p = Path.of(value);
+    Path p = Paths.get(value);
     if (Files.notExists(p)) {
       try {
         Files.createDirectories(p);

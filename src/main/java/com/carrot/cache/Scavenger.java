@@ -58,7 +58,7 @@ public class Scavenger extends Thread {
   /** Logger */
   private static final Logger LOG = LogManager.getLogger(Scavenger.class);
   
-  static class Stats implements Persistent {
+  public static class Stats implements Persistent {
     
     /** Cache name */
     String cacheName;
