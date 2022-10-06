@@ -1185,8 +1185,8 @@ public abstract class IOEngine implements Persistent {
    */
   private int getRange(int sid, long offset, int keyValueSize, byte[] key, int keyOffset,
       int keySize, int rangeStart, int rangeSize, byte[] buffer, int bufOffset) throws IOException {
-    if (buffer == null || keyValueSize > 0 && (buffer.length - bufOffset) < keyValueSize) {
-      throw new IllegalArgumentException();
+    if (buffer == null) {
+      throw new IllegalArgumentException("buffer is null");
     }
     int len = getRangeFromRAMBuffers(sid, offset, keyValueSize, key, keyOffset, keySize, 
       rangeStart, rangeSize, buffer, bufOffset);
@@ -1239,8 +1239,8 @@ public abstract class IOEngine implements Persistent {
       int id, long offset, int size, long keyPtr, int keySize, int rangeStart, 
       int rangeSize, byte[] buffer, int bufOffset)
       throws IOException {
-    if (buffer == null || size > 0 && (buffer.length - bufOffset) < size) {
-      throw new IllegalArgumentException();
+    if (buffer == null) {
+      throw new IllegalArgumentException("buffer is null");
     }
     int len = getRangeFromRAMBuffers(id, offset, size, keyPtr, keySize, rangeStart, 
       rangeSize, buffer, bufOffset);
@@ -1776,7 +1776,9 @@ public abstract class IOEngine implements Persistent {
       int id, long offset, int size, byte[] key, int keyOffset, int keySize, 
       int rangeStart, int rangeSize, ByteBuffer buffer)
       throws IOException {
-    if (buffer == null || buffer.remaining() < size) throw new IllegalArgumentException();
+    if (buffer == null) {
+      throw new IllegalArgumentException("buffer is null");
+    }
     int len = getRangeFromRAMBuffers(id, offset, size, key, keyOffset, keySize, rangeStart, rangeSize, buffer);
     if (len > 0) {
       return len;
@@ -1816,8 +1818,8 @@ public abstract class IOEngine implements Persistent {
   private int getRange(int id, long offset, int size, long keyPtr, int keySize, 
       int rangeStart, int rangeSize, ByteBuffer buffer)
       throws IOException {
-    if (buffer == null || buffer.remaining() < size) {
-      throw new IllegalArgumentException();
+    if (buffer == null) {
+      throw new IllegalArgumentException("buffer is null");
     }
     int len = getRangeFromRAMBuffers(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer);
 
