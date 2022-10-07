@@ -92,8 +92,17 @@ public class IOUtils {
   public static void readFully(RandomAccessFile file, long fileOffset, byte[] buffer, int bufOffset, int len) 
       throws IOException {
     synchronized (file) {
-      file.seek(fileOffset);
-      file.readFully(buffer, bufOffset, len);
+      int max = 5;
+      int attempt = 0;
+      while(attempt++ < max) {
+        file.seek(fileOffset);
+        try {
+          file.readFully(buffer, bufOffset, len);
+          break;
+        } catch (IOException e) {
+          Utils.onSpinWait(10000);
+        }
+      }
     }
   }
 
