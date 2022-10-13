@@ -80,6 +80,10 @@ public abstract class TestCacheMultithreadedZipfBase {
   
   protected double aqStartRatio = 0.3;
   
+  protected String parentCacheName = "default";
+  
+  protected String victimCacheName = "victim";
+  
   @After  
   public void tearDown() throws IOException {
     // UnsafeAccess.mallocStats.printStats(false);
@@ -91,7 +95,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   }
   
   protected  Cache createCache() throws IOException{
-    String cacheName = "cache";
+    String cacheName = parentCacheName;
     // Data directory
     Path rootDirPath = Files.createTempDirectory(null);
     String rootDir = rootDirPath.toFile().getAbsolutePath();

@@ -19,6 +19,7 @@ import java.io.DataOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,6 +28,9 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -42,6 +46,7 @@ import com.carrot.cache.io.IOEngine;
 import com.carrot.cache.io.IOEngine.IOEngineEvent;
 import com.carrot.cache.io.OffheapIOEngine;
 import com.carrot.cache.io.Segment;
+import com.carrot.cache.jmx.CacheJMXSink;
 import com.carrot.cache.util.CarrotConfig;
 import com.carrot.cache.util.Epoch;
 import com.carrot.cache.util.UnsafeAccess;
@@ -686,6 +691,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
      */
     public Builder withCacheSpinWaitTimeOnHighPressure(long time) {
       conf.setCacheSpinWaitTimeOnHighPressure(cacheName, time);
+      return this;
+    }
+    
+    /**
+     * With JMX metrics domain name
+     * @param name domain name
+     * @return builder instance
+     */
+    public Builder withJMXMetricsDomainName(String name) {
+      conf.setJMXMetricsDomainName(name);
       return this;
     }
     
@@ -2554,6 +2569,26 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       getHitRate(), getTotalWrites(), getTotalWritesSize());
     if (this.victimCache != null) {
        this.victimCache.printStats();
+    }
+  }
+  
+  public void registerJMXMetricsSink() {
+    String domainName = this.conf.getJMXMetricsDomainName();
+    registerJMXMetricsSink(domainName);
+  }
+  
+  public void registerJMXMetricsSink(String domainName) {
+    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer(); 
+    ObjectName name;
+    try {
+      name = new ObjectName(String.format("%s:type=cache,name=%s",domainName, getName()));
+      CacheJMXSink mbean = new CacheJMXSink(this);
+      mbs.registerMBean(mbean, name); 
+    } catch (Exception e) {
+      LOG.error(e);
+    }
+    if (this.victimCache != null) {
+      victimCache.registerJMXMetricsSink(domainName);
     }
   }
 }

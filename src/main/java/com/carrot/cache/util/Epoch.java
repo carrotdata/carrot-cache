@@ -31,4 +31,7 @@ public class Epoch {
     start = time;
   }
   
+  public static void reset() {
+    start = System.currentTimeMillis();
+  }
 }
