@@ -269,6 +269,9 @@ public class CarrotConfig {
   /* Spin wait time on high pressure in nanoseconds */
   public static final String CACHE_SPIN_WAIT_TIME_NS_KEY = "c2.spin.wait-time-ns";
   
+  /* JMX metrics domain name */
+  public static final String CACHE_JMX_METRICS_DOMAIN_NAME_KEY = "c2.jmx.metrics-domain-name";
+  
   /* Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
@@ -434,6 +437,8 @@ public class CarrotConfig {
   /* Default cache spin wait time on high pressure - PUT operation*/
   public final static long DEFAULT_CACHE_SPIN_WAIT_TIME_NS = 10000;// 10000 nanoseconds
   
+  /* Default domain name for JMX metrics */
+  public final static String DEFAULT_CACHE_JMX_METRICS_DOMAIN_NAME = "com.carrot.cache";
   // Statics
   static CarrotConfig instance;
 
@@ -1212,7 +1217,7 @@ public class CarrotConfig {
    * @param cacheName cache name
    * @param true or false
    */
-  public  void setIndexDataEmbeddedSupported(String cacheName, boolean v) {
+  public void setIndexDataEmbeddedSupported(String cacheName, boolean v) {
      props.setProperty(cacheName + "." + INDEX_DATA_EMBEDDED_KEY, Boolean.toString(v));
   }
   
@@ -1649,7 +1654,7 @@ public class CarrotConfig {
    * @param value multiplier
    */
   public void setExpireBinMultiplier (String cacheName, double multiplier) {
-    props.getProperty(cacheName + "." + CACHE_EXPIRATION_MULTIPLIER_VALUE_KEY, Double.toString(multiplier));
+    props.setProperty(cacheName + "." + CACHE_EXPIRATION_MULTIPLIER_VALUE_KEY, Double.toString(multiplier));
   }
   
   /**
@@ -1673,7 +1678,7 @@ public class CarrotConfig {
    * @param value multiplier
    */
   public void setMinimumActiveDatasetRatio (String cacheName, double ratio) {
-    props.getProperty(cacheName + "." + CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO_KEY, 
+    props.setProperty(cacheName + "." + CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO_KEY, 
       Double.toString(ratio));
   }
   
@@ -1894,5 +1899,24 @@ public class CarrotConfig {
   public void setCacheSpinWaitTimeOnHighPressure  (String cacheName, long v) {
     props.setProperty(cacheName + "." + CACHE_SPIN_WAIT_TIME_NS_KEY, 
       Long.toString(v));
+  }
+  
+  /**
+   * Get JMX metrics domain name
+   * @return domain name
+   */
+  public String getJMXMetricsDomainName() {
+    String value = props.getProperty(CACHE_JMX_METRICS_DOMAIN_NAME_KEY);
+    if (value == null) {
+      value = DEFAULT_CACHE_JMX_METRICS_DOMAIN_NAME;
+    }
+    return value;
+  }
+  /**
+   * Sets JMX metrics domain name
+   * @param name domain name
+   */
+  public void setJMXMetricsDomainName(String name) {
+    props.setProperty(CACHE_JMX_METRICS_DOMAIN_NAME_KEY, name);
   }
 }
