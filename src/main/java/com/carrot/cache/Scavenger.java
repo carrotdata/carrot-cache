@@ -323,9 +323,18 @@ public class Scavenger extends Thread {
       adjStep = stats.adjStep;
       stopRatio = stats.stopRatio;
     }
-    this.maxSegmentsBeforeStallDetected = 
-        this.config.getScavengerMaxSegmentsBeforeStall(cacheName);
+    this.maxSegmentsBeforeStallDetected = getScavengerMaxSegmentsBeforeStall();
     stats.totalRuns++;
+    
+  }
+  
+  private int getScavengerMaxSegmentsBeforeStall() {
+    long maxCacheSize = this.cache.getMaximumCacheSize();
+    long segmentSize = this.cache.getCacheConfig().getCacheSegmentSize(cache.getName());
+    long maxSegments = maxCacheSize / segmentSize;
+    double startRatio = this.cache.getCacheConfig().getScavengerStartMemoryRatio(cache.getName());
+    double range = startRatio - stopRatio;
+    return (int) (2 * maxSegments * range);
     
   }
   
@@ -346,14 +355,8 @@ public class Scavenger extends Thread {
       
       if (numInstances.incrementAndGet() > maxInstances) {
         numInstances.decrementAndGet();
-//        System.out.printf(
-//            "Cache [%s] - scavenger skips run - number of maximum instances %d exceeded\n", 
-//            cache.getName(), maxInstances);
         return;
       }
-//      System.out.printf(
-//        "%d - scavenger started at %s allocated storage=%d maximum storage=%d num-instances=%d max-instances=%d\n", Thread.currentThread().getId(),
-//        format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize(), numInstances.get(), maxInstances);
       LOG.info(
           "scavenger [{}] started at {} allocated storage={} maximum storage={}", cache.getName(),
           format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
@@ -364,19 +367,17 @@ public class Scavenger extends Thread {
       
       while (!finished) {
         if (Thread.currentThread().isInterrupted()) {
-          /*DEBUG*/ System.out.printf("Scavenger [%s] - interrupted - exited\n", cache.getName());
           break;
         }
         Segment s = engine.getSegmentForRecycling();
         if (s == null) {
-//          /*DEBUG*/ System.out.printf("Scavenger [%s] - no segments to process - exited\n", 
-//            cache.getName());
-//          LOG.warn(Thread.currentThread().getName() + ": empty segment");
-          return;
+          break;
         }
         if (shouldStopOn(s)) {
           break;
         }
+        //TODO: make it more smarter, calculate maxSegmentsBeforeStallDetected using maximum number of segments
+        // and other current cache configuration values
         if (segmentsProcessed >= maxSegmentsBeforeStallDetected) {
           dumpBelowRatio = 1.0;// improve scavenger's performance - dump everything
           cleanDeletedOnly = false;
@@ -414,9 +415,6 @@ public class Scavenger extends Thread {
     LOG.info(
         "scavenger [{}] finished at {} allocated storage={} maximum storage=%{}", cache.getName(),
         format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
-//    System.out.printf(
-//      "%d - scavenger finished at %s allocated storage=%d maximum storage=%d\n", Thread.currentThread().getId(),
-//      format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
   }
 
   private boolean shouldStopOn(Segment s) {
@@ -488,6 +486,7 @@ public class Scavenger extends Thread {
       sc = engine.getScanner(s); // acquires read lock
       boolean isDirect =  sc.isDirect();
       
+      //TODO: can we avoid this?
       byte[] keyBuffer = new byte[4096];
       byte[] valueBuffer = new byte[4096];
       
@@ -547,23 +546,8 @@ public class Scavenger extends Thread {
         }
         sc.next();
       }
-//      System.out.println(Thread.currentThread().getId() + 
-//          "- scavenger finished segment id ="
-//              + s.getId()
-//              + " scanned="
-//              + scanned
-//              + " deleted="
-//              + deleted
-//              + " not found="
-//              + notFound
-//              + " expired="
-//              + expired
-//              + " usageRatio="
-//              + engine.getStorageAllocatedRatio()
-//              + " allocated=" + engine.getStorageAllocated());
     } catch (IOException e) {  
-      e.printStackTrace();
-      System.exit(-1);
+      LOG.error("Scavenger::cleanSegmentInternal", e);
     } finally {
       if (sc != null) {
         sc.close();
