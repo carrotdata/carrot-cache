@@ -134,7 +134,7 @@ public interface CacheJMXSinkMBean {
    * Average write rate in MB/sec including GC
    * @return write rate
    */
-  String gettotal_avg_write_rate();
+  double gettotal_avg_write_rate();
   
   /**
    * Get cache bytes written so far
@@ -143,10 +143,34 @@ public interface CacheJMXSinkMBean {
   long getcache_bytes_written();
   
   /**
+   * Get cache total bytes read
+   * @return total bytes read
+   */
+  long getcache_bytes_read();
+  
+  /**
+   * get overall bytes read including victim cache
+   * @return overall bytes read
+   */
+  long getoverall_bytes_read();
+  
+  /**
+   * Get cache average read rate in MB/s
+   * @return average read rate
+   */
+  double getcache_avg_read_rate();
+  
+  /**
+   * Get cache overall read rate (including victim cache)
+   * @return overall average read rate
+   */
+  double getoverall_avg_read_rate();
+  
+  /**
    * Average write rate by cache in MB/sec (formatted string)
    * @return write rate
    */
-  String getcache_avg_write_rate();
+  double getcache_avg_write_rate();
   
   /**
    * Get total number of bytes written back by Scavenger (GC)
@@ -158,7 +182,7 @@ public interface CacheJMXSinkMBean {
    * GC average write rate in MB/sec
    * @return average write rate 
    */
-  String getgc_avg_write_rate();
+  double getgc_avg_write_rate();
   /**
    * Number of runs of GC
    * @return number of runs

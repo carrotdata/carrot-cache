@@ -727,6 +727,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /* Total number of accesses (GET)*/
   private AtomicLong totalGets = new AtomicLong(0);
   
+  /* Total gets size */
+  private AtomicLong totalGetsSize = new AtomicLong(0);
+  
   /* Total hits */
   private AtomicLong totalHits = new AtomicLong(0);
   
@@ -1138,6 +1141,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   /**
+   * Total gets size
+   * @return size
+   */
+  public long getTotalGetsSize() {
+    return this.totalGetsSize.get();
+  }
+  
+  /**
    * Get total hits
    * @return total hits
    */
@@ -1192,8 +1203,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.totalGets.incrementAndGet();
   }
   
-  private void hit() {
+  private void hit(long size) {
     this.totalHits.incrementAndGet();
+    this.totalGetsSize.addAndGet(size);
+
   }
   
   /***********************************************************
@@ -1522,7 +1535,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (result <= buffer.length - bufOffset) {
       access();
       if (result >= 0) {
-        hit();
+        hit(result);
       }
     }
     if (result >= 0 && result <= buffer.length - bufOffset) {
@@ -1595,7 +1608,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (result <= buffer.length - bufOffset) {
       access();
       if (result >= 0) {
-        hit();
+        hit(result);
       }
     }
     if (result >= 0 && result <= buffer.length - bufOffset) {
@@ -1655,7 +1668,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (result <= buffer.length - bufOffset) {
       access();
       if (result >= 0) {
-        hit();
+        hit(result);
       }
     }
     if (result >=0 && result <= buffer.length - bufOffset) {
@@ -1740,7 +1753,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (result <= buffer.length - bufOffset) {
       access();
       if (result >= 0) {
-        hit();
+        hit(result);
       }
     }
     if (result >= 0 && result <= buffer.length - bufOffset) {
@@ -1798,7 +1811,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (result <= rem) {
       access();
       if (result >= 0) {
-        hit();
+        hit(result);
       }
     }
     if (result >= 0 && result <= rem) {
@@ -1873,7 +1886,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (result <= rem) {
       access();
       if (result >= 0) {
-        hit();
+        hit(result);
       }
     }
     if (result >= 0 && result <= rem) {
@@ -1930,7 +1943,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (result <= rem) {
       access();
       if (result >= 0) {
-        hit();
+        hit(result);
       }
     }
     if (result >= 0 && result <= rem) {
@@ -2005,7 +2018,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (result <= rem) {
       access();
       if (result >= 0) {
-        hit();
+        hit(result);
       }
     }
     if (result >= 0 && result <= rem) {

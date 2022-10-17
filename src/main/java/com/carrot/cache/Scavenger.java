@@ -486,27 +486,21 @@ public class Scavenger extends Thread {
       sc = engine.getScanner(s); // acquires read lock
       boolean isDirect =  sc.isDirect();
       
-      //TODO: can we avoid this?
-      byte[] keyBuffer = new byte[4096];
-      byte[] valueBuffer = new byte[4096];
+      byte[] keyBuffer = !isDirect? new byte[4096]: null;
+      byte[] valueBuffer = !isDirect? new byte[4096]: null;
       
       while (sc.hasNext()) {
-        // TODO: will it work for file based scanner? - FIXME
         final long keyPtr = sc.keyAddress();
         final int keySize = sc.keyLength();
         final long valuePtr = sc.valueAddress();
         final int valSize = sc.valueLength();
         final int totalSize = Utils.kvSize(keySize, valSize);
         stats.totalBytesScanned += totalSize;
-        
-        keyBuffer = checkBuffer(keyBuffer, keySize, isDirect);
-        valueBuffer = checkBuffer(valueBuffer, valSize, isDirect);
-        
         double ratio = cleanDeletedOnly? 0: dumpBelowRatio;
-        
         if (isDirect) {
           result = index.checkDeleteKeyForScavenger(keyPtr, keySize, result, ratio);
         } else {
+          keyBuffer = checkBuffer(keyBuffer, keySize, isDirect);
           sc.getKey(keyBuffer, 0);
           result = index.checkDeleteKeyForScavenger(keyBuffer, 0, keySize, result, ratio);
         }
@@ -539,6 +533,7 @@ public class Scavenger extends Thread {
             if (isDirect) {
               this.cache.put(keyPtr, keySize, valuePtr, valSize, expire, rank, true, true);
             } else {
+              valueBuffer = checkBuffer(valueBuffer, valSize, isDirect);
               sc.getValue(valueBuffer, 0);
               this.cache.put(keyBuffer, 0, keySize, valueBuffer, 0, valSize, expire, rank, true, true);
             }
@@ -546,8 +541,6 @@ public class Scavenger extends Thread {
         }
         sc.next();
       }
-    } catch (IOException e) {  
-      LOG.error("Scavenger::cleanSegmentInternal", e);
     } finally {
       if (sc != null) {
         sc.close();
@@ -566,12 +559,10 @@ public class Scavenger extends Thread {
     MemoryIndex index = engine.getMemoryIndex();
     SegmentScanner sc = null;
 
-    byte[] buffer = new byte[4096];
-
     try {
       sc = engine.getScanner(s); // acquires read lock
       boolean isDirect = sc.isDirect();
-
+      byte[] buffer = !isDirect? new byte[4096]: null;
       while (sc.hasNext()) {
         final long keyPtr = sc.keyAddress();
         final int keySize = sc.keyLength();

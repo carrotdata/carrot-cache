@@ -127,14 +127,14 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
 
   @Override
-  public String gettotal_avg_write_rate() {
+  public double gettotal_avg_write_rate() {
     long currentTime = System.currentTimeMillis();
     long elapsedTimeSec = (currentTime - Epoch.getEpochStartTime()) / 1000;
     long totalBytesWritten = gettotal_bytes_written();
     if(totalBytesWritten == 0 || elapsedTimeSec == 0) {
-      return "0.0 MB/s";
+      return 0.0;
     }
-    return Double.toString((double)totalBytesWritten/ ((1 << 20) * elapsedTimeSec)) + " MB/s";
+    return (double)totalBytesWritten/ ((1 << 20) * elapsedTimeSec);
   }
 
   @Override
@@ -143,14 +143,14 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
 
   @Override
-  public String getcache_avg_write_rate() {
+  public double getcache_avg_write_rate() {
     long currentTime = System.currentTimeMillis();
     long elapsedTimeSec = (currentTime - Epoch.getEpochStartTime()) / 1000;
     long cacheBytesWritten = getcache_bytes_written();
     if(cacheBytesWritten == 0 || elapsedTimeSec == 0) {
-      return "0.0 MB/s";
+      return 0.0;
     }
-    return Double.toString((double)cacheBytesWritten/ ((1 << 20) * elapsedTimeSec)) + " MB/s";
+    return (double)cacheBytesWritten/ ((1 << 20) * elapsedTimeSec);
   }
 
   @Override
@@ -159,14 +159,14 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
 
   @Override
-  public String getgc_avg_write_rate() {
+  public double getgc_avg_write_rate() {
     long currentTime = System.currentTimeMillis();
     long elapsedTimeSec = (currentTime - Epoch.getEpochStartTime()) / 1000;
     long gcBytesWritten = getgc_bytes_written();
     if(gcBytesWritten == 0 || elapsedTimeSec == 0) {
-      return "0.0 MB/s";
+      return 0.0;
     }
-    return Double.toString((double)gcBytesWritten/ ((1 << 20) * elapsedTimeSec)) + " MB/s";
+    return (double)gcBytesWritten/ ((1 << 20) * elapsedTimeSec);
   }
 
   @Override
@@ -202,6 +202,42 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   @Override
   public long getcache_writes() {
     return cache.getTotalWrites();
+  }
+
+  @Override
+  public long getcache_bytes_read() {
+    return cache.getTotalGetsSize();
+  }
+
+  @Override
+  public double getcache_avg_read_rate() {
+    long totalRead = cache.getTotalGetsSize();
+    long time = System.currentTimeMillis() - Epoch.getEpochStartTime();
+    time /= 1000;
+    if (time == 0) return 0.0;
+    
+    return (double) totalRead/ ((1 << 20) * time);
+  }
+
+  @Override
+  public double getoverall_avg_read_rate() {
+    long overallRead = getoverall_bytes_read();
+    long time= System.currentTimeMillis() - Epoch.getEpochStartTime();
+    time /= 1000;
+    if (time == 0) {
+      return 0.0;
+    }
+    return (double) overallRead/ ((1 << 20) * time);
+  }
+
+  @Override
+  public long getoverall_bytes_read() {
+    long self = getcache_bytes_read();
+    Cache victim = cache.getVictimCache();
+    if(victim != null) {
+      self += cache.getTotalGetsSize();
+    }
+    return self;
   }
 
 }

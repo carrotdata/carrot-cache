@@ -87,22 +87,13 @@ public class IOUtils {
    * @param buffer buffer to read into
    * @param bufOffset offset at a buffer
    * @param len how many bytes to read
-   * @throws IOException
+   * @throws IOException if file is closed or deleted
    */
-  public static void readFully(RandomAccessFile file, long fileOffset, byte[] buffer, int bufOffset, int len) 
-      throws IOException {
+  public static void readFully(RandomAccessFile file, long fileOffset, byte[] buffer, int bufOffset,
+      int len) throws IOException {
     synchronized (file) {
-      int max = 5;
-      int attempt = 0;
-      while(attempt++ < max) {
-        file.seek(fileOffset);
-        try {
-          file.readFully(buffer, bufOffset, len);
-          break;
-        } catch (IOException e) {
-          Utils.onSpinWait(10000);
-        }
-      }
+      file.seek(fileOffset);
+      file.readFully(buffer, bufOffset, len);
     }
   }
 
