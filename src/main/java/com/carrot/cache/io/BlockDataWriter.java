@@ -77,6 +77,7 @@ public class BlockDataWriter implements DataWriter {
     // Copy value (item)
     UnsafeAccess.copy(valuePtr, addr, valueSize);   
     int requiredSize = Utils.requiredSize(keySize, valueSize);
+
     incrBlockDataSize(s, currentBlock, requiredSize);
     s.incrBlockDataSize((int) retValue);
     return s.getSegmentBlockDataSize();//retValue;
@@ -157,6 +158,7 @@ public class BlockDataWriter implements DataWriter {
     // Copy value (item)
     UnsafeAccess.copy(value, valueOffset, addr, valueSize);
     int requiredSize = Utils.requiredSize(keySize, valueSize);
+
     incrBlockDataSize(s, currentBlock, requiredSize);
     s.incrBlockDataSize((int) retValue);
     return s.getSegmentBlockDataSize();
@@ -187,14 +189,6 @@ public class BlockDataWriter implements DataWriter {
   }
   
   /**
-   * Get block size
-   * @return block size
-   */
-  public int getBlockSize() {
-    return this.blockSize;
-  }
-  
-  /**
    * Sets block size
    * @param size block size
    */
@@ -205,5 +199,23 @@ public class BlockDataWriter implements DataWriter {
   @Override
   public void init(String cacheName) {
     this.blockSize = CarrotConfig.getInstance().getBlockWriterBlockSize(cacheName);
+  }
+  
+  /**
+   * Is block based data writer
+   * @return true false
+   */
+  @Override
+  public boolean isBlockBased() {
+    return true;
+  }
+  
+  /**
+   * Get block size
+   * @return block size
+   */
+  @Override
+  public int getBlockSize() {
+    return this.blockSize;
   }
 }

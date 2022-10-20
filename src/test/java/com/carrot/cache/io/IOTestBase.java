@@ -29,8 +29,6 @@ import org.junit.BeforeClass;
 import com.carrot.cache.Cache;
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MemoryIndex;
-import com.carrot.cache.io.IOEngine;
-import com.carrot.cache.io.Segment;
 import com.carrot.cache.util.TestUtils;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;

@@ -30,11 +30,11 @@ public class TestFileCacheMultithreadedZipfWithAQ extends TestCacheMultithreaded
   @Before
   public void setUp() {
     this.offheap = false;
-    this.numRecords = 10000000;
+    this.numRecords = 1000000;
     this.numIterations = 10 * this.numRecords;
-    this.numThreads = 1;
+    this.numThreads = 4;
     this.segmentSize = 16 * 1024 * 1024;
-    this.maxCacheSize = 500 * this.segmentSize;
+    this.maxCacheSize = 50 * this.segmentSize;
   }
   
   @Override

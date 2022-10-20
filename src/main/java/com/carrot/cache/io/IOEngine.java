@@ -1918,7 +1918,14 @@ public abstract class IOEngine implements Persistent {
       s.updateExpired(expire);
     }
   }
-
+  
+  /**
+   * Get recycling selector
+   * @return
+   */
+  public RecyclingSelector getRecyclingSelector() {
+    return this.recyclingSelector;
+  }
   /**
    * Get best segment for recycling MUST be sealed TODO: need synchronized?
    *

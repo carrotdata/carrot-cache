@@ -702,6 +702,15 @@ public class Segment implements Persistent {
     return this.info.getSegmentDataSize();
   }
   
+  public long getFullDataSize() {
+    if (this.dataWriter.isBlockBased()) {
+      int blockSize = this.dataWriter.getBlockSize();
+      return BlockReaderWriterSupport.getFullDataSize(this, blockSize); 
+    } else {
+      return getSegmentDataSize();
+    }
+  }
+  
   /**
    * Get segment's block data size
    * @return segment's data size
@@ -948,7 +957,7 @@ public class Segment implements Persistent {
         return;
       }
       // Write segment size
-      long size = size();
+      long size = getFullDataSize();//getSegmentDataSize();//size();
       dos.writeLong(size);
       
       int bufSize = (int) Math.min(size, 1024 * 1024);
@@ -975,7 +984,7 @@ public class Segment implements Persistent {
       }
       this.sip = true;
       // Write segment size
-      long size = size();
+      long size = getFullDataSize();//getSegmentDataSize();//size();
       file.writeLong(size);
       
       int bufSize = (int) Math.min(size, 1024 * 1024);
@@ -1007,7 +1016,7 @@ public class Segment implements Persistent {
     
     if (isOffheap()) {
       long size = dis.readLong();
-      long ptr = UnsafeAccess.mallocZeroed(size);
+      long ptr = UnsafeAccess.mallocZeroed(size());
       int bufSize = (int) Math.min(1024 * 1024, size);
       byte[] buffer = new byte[bufSize];
       int read = 0;

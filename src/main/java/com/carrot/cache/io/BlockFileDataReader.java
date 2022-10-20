@@ -81,7 +81,8 @@ public class BlockFileDataReader implements DataReader {
 
     int off = 0;
     // Read first block
-    readFully(file, offset, buffer, bufOffset, blockSize);
+    int toRead =(int) Math.min(blockSize, file.length() - offset);
+    readFully(file, offset, buffer, bufOffset, toRead);
 
     int dataSize = UnsafeAccess.toInt(buffer, bufOffset);
     if (dataSize > blockSize - META_SIZE) {
@@ -140,7 +141,8 @@ public class BlockFileDataReader implements DataReader {
     boolean releaseBuffer = true;
     try {
       // TODO: make file read a separate method
-      readFully(file, offset, buf, 0, buf.length);
+      int toRead = (int) Math.min(buf.length, file.length() - offset);
+      readFully(file, offset, buf, 0, toRead);
 
       int dataSize = UnsafeAccess.toInt(buf, 0);
       if (dataSize > blockSize - META_SIZE) {
@@ -226,7 +228,8 @@ public class BlockFileDataReader implements DataReader {
 
     int off = 0;
     // Read first block
-    readFully(file, offset, buffer, bufOffset, blockSize);
+    int toRead = (int) Math.min(blockSize, file.length() - offset);
+    readFully(file, offset, buffer, bufOffset, toRead);
 
     int dataSize = UnsafeAccess.toInt(buffer, bufOffset);
     if (dataSize > blockSize - META_SIZE) {
@@ -276,7 +279,8 @@ public class BlockFileDataReader implements DataReader {
     boolean releaseBuffer = true;
     try {
       // TODO: make file read a separate method
-      readFully(file, offset, buf, 0, buf.length);
+      int toRead = (int) Math.min(buf.length, file.length() - offset);
+      readFully(file, offset, buf, 0, toRead);
       int dataSize = UnsafeAccess.toInt(buf, 0);
       if (dataSize > blockSize - META_SIZE) {
         // means that this is a single item larger than a block

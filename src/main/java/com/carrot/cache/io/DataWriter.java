@@ -22,6 +22,22 @@ package com.carrot.cache.io;
 public interface DataWriter {
   
   /**
+   * Is block based data writer
+   * @return true false
+   */
+  public default boolean isBlockBased() {
+    return false;
+  }
+  
+  /**
+   * Get block size
+   * @return block size
+   */
+  public default int getBlockSize() {
+    return 0;
+  }
+  
+  /**
    * Initialize after creation
    * @param cacheName
    */
