@@ -1300,16 +1300,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     expire = adjustExpirationTime(expire);
     // Add to the cache
     boolean result = false;
-//    long start = System.currentTimeMillis();
-//    while(!result) {
-      result = engine.put(keyPtr, keySize, valPtr, valSize, expire, rank);
-//      if (!result && evictionDisabledMode == false && 
-//          (System.currentTimeMillis() - start) <= this.writesMaxWaitTime) {
-//        Thread.onSpinWait();
-//      } else {
-//        break;
-//      }
-//    }
+    result = engine.put(keyPtr, keySize, valPtr, valSize, expire, rank);
     if (result) {
       reportThroughputController(Utils.kvSize(keySize, valSize));
     }
@@ -1433,16 +1424,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     expire = adjustExpirationTime(expire);
     // Add to the cache
     boolean result = false;
-//    long start = System.currentTimeMillis();
-//    while(!result) {
-      result = engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank);
-//      if (!result && evictionDisabledMode == false && 
-//          (System.currentTimeMillis() - start) <= this.writesMaxWaitTime) {
-//        Thread.onSpinWait();
-//      } else {
-//        break;
-//      }
-//    }
+    result = engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank);
     if (result) {
       reportThroughputController(Utils.kvSize(keySize, valSize));
     }

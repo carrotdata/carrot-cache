@@ -395,7 +395,9 @@ public class Utils {
   
   /**
    * Returns size of unsigned variable integer in bytes
-   *
+   * The maximum positive value is 256M
+   * To support large values we need to change read/write code
+   * 
    * @param value
    * @return size in bytes
    */
