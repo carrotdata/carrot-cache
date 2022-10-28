@@ -811,6 +811,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /* Cache type*/
   Type type;
   
+  volatile boolean shutdownInProgress = false;
+  
   /**
    *  Constructor to use 
    *  when loading cache from a storage
@@ -879,7 +881,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   private void initAll() throws IOException {
- 
     initFromConfiguration();
     updateMaxCacheSize();
     initAdmissionController();
@@ -900,6 +901,17 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     initAdmissionController();
     initThroughputController();
     this.engine.getMemoryIndex().setEvictionListener(this);
+  }
+  
+  public void addShutdownHook() {
+    Runtime r = Runtime.getRuntime();
+    r.addShutdownHook( new Thread(() -> {
+      try {
+        shutdown();
+      } catch (IOException e) {
+        LOG.error(e);
+      }
+    }));
   }
   
   private void initScavenger() {
@@ -1277,16 +1289,22 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       long keyPtr, int keySize, long valPtr, int valSize, long expire, int rank, boolean force, boolean scavenger)
       throws IOException {
 
+    if(shutdownInProgress) {
+      return false;
+    }
     if (this.victimCache != null && this.hybridCacheInverseMode) {
       return this.victimCache.put(keyPtr, keySize, valPtr, valSize, expire, rank, force, scavenger);
     } else {
       return putDirectly(keyPtr, keySize, valPtr, valSize, expire, rank, force, scavenger);
     }
-
   }
 
   private boolean putDirectly(long keyPtr, int keySize, long valPtr, int valSize, long expire,
       int rank, boolean force, boolean scavenger) throws IOException {
+    
+    if(shutdownInProgress) {
+      return false;
+    }
     // Check rank
     checkRank(rank);
     if (!shouldAdmitToMainQueue(keyPtr, keySize, valSize, force)) {
@@ -1391,6 +1409,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       boolean scavenger)
       throws IOException {
     
+    if(shutdownInProgress) {
+      return false;
+    }
+    
     if (this.victimCache != null && this.hybridCacheInverseMode) {
       return this.victimCache.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, force, scavenger);
     } else {
@@ -1412,6 +1434,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       boolean scavenger)
       throws IOException {
 
+    if(shutdownInProgress) {
+      return false;
+    }
     if (!shouldAdmitToMainQueue(key, keyOffset, keySize, valSize, force)) {
       return false;
     }
@@ -2503,6 +2528,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     saveThroughputController();
     saveEngine();
     saveScavengerStats();
+    if (victimCache != null) {
+      victimCache.save();
+    }
     long endTime = System.currentTimeMillis();
     LOG.info("Cache saved in {}ms", endTime - startTime);
   }
@@ -2527,7 +2555,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     startThroughputController();
     initScavenger();
     long endTime = System.currentTimeMillis();
-
     LOG.info("Cache loaded in {}ms", endTime - startTime);
   }
 
@@ -2604,6 +2631,19 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
   }
   
+  public void shutdown() throws IOException {
+    // Disable writes/reads
+    this.shutdownInProgress = true;
+    this.timer.cancel();
+    stopScavenger();
+    // stop IOEngine
+    this.engine.shutdown();
+    save();
+    if (this.victimCache != null) {
+      this.victimCache.shutdown();
+    }
+  }
+  
   public static Cache loadCache(String cacheName) throws IOException {
     CarrotConfig conf = CarrotConfig.getInstance();
     String snapshotDir = conf.getSnapshotDir(cacheName);
@@ -2633,13 +2673,22 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (Files.notExists(statsPath)) {
       throw new IOException(String.format("Scavenger statistics snapshot file is missing in %s", p.toString()));
     }
-    
-    
+        
     // Ideally we need to check number of files at least
     //TODO: later more stricter verification of a saved cache data
     Cache cache = new Cache();
     cache.setName(cacheName);
     cache.load();
+    
+    conf = cache.getCacheConfig();
+    //TODO: check if it will work
+    String victimCacheName = conf.getVictimCacheName(cacheName);
+    if (victimCacheName != null) {
+      Cache victimCache = new Cache();
+      victimCache.setName(victimCacheName);
+      victimCache.load();
+      cache.setVictimCache(victimCache);
+    }
     return cache;
   }
   
@@ -2648,4 +2697,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     conf.setGlobalCacheRootDir(rootDir);
     return loadCache(cacheName);
   }
+  
+  
 }

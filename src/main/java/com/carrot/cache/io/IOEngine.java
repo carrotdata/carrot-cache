@@ -2367,4 +2367,8 @@ public abstract class IOEngine implements Persistent {
       l.finishSegment(s);
     }
   }
+  
+  public void shutdown() {
+    // do nothing, delegate to subclass
+  }
 }

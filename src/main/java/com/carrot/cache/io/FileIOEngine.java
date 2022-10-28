@@ -470,4 +470,9 @@ public class FileIOEngine extends IOEngine {
     }
     System.out.printf("Closed %d files\n", count);
   }
+  
+  @Override
+  public void shutdown() {
+    waitForIoStoragePool();
+  }
 }
