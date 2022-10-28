@@ -22,6 +22,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.Properties;
 
 import org.apache.logging.log4j.LogManager;
@@ -466,6 +467,19 @@ public class CarrotConfig {
       instance = new CarrotConfig(file);
     }
     return instance;
+  }
+  
+  /**
+   * Merge configuration to the main configuration
+   * @param conf
+   */
+  public static synchronized void merge(Properties props) {
+    CarrotConfig mainConfig = getInstance();
+    for (Map.Entry<Object, Object> entry : props.entrySet()) {
+      String key = (String) entry.getKey();
+      String value = (String) entry.getValue();
+      mainConfig.setProperty(key, value);
+    }
   }
   /**
    * Load configuration from an input stream

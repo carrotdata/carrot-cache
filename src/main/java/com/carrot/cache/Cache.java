@@ -24,6 +24,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicLong;
@@ -2310,6 +2311,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       this.cacheName = dis.readUTF();
       this.type = Type.values()[dis.readInt()];
       this.totalGets.set(dis.readLong());
+      this.totalGetsSize.set(dis.readLong());
       this.totalHits.set(dis.readLong());
       this.totalWrites.set(dis.readLong());
       this.totalWritesSize.set(dis.readLong());
@@ -2317,7 +2319,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       Epoch.setEpochStartTime(dis.readLong());
       this.tcEnabled = dis.readBoolean();
       this.evictionDisabledMode = dis.readBoolean();
-      this.conf = CarrotConfig.load(dis);
+      // Load configuration
+      Properties props = new Properties();
+      props.load(dis);
+      CarrotConfig.merge(props);
+      this.conf = CarrotConfig.getInstance();
       dis.close();
     } else {
       throw new IOException(String.format("Can not load cache. Path %s does not exists",
@@ -2330,7 +2336,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException
    */
   private void saveCache() throws IOException {
-    // TODO: Save custom cache config
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
     String file = CarrotConfig.CACHE_SNAPSHOT_NAME;
     Path p = Paths.get(snapshotDir, file);
@@ -2338,11 +2343,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     DataOutputStream dos = new DataOutputStream(fos);
     dos.writeUTF(this.cacheName);
     dos.writeInt(this.type.ordinal());
-    dos.writeLong(totalGets.get());
-    dos.writeLong(totalHits.get());
-    dos.writeLong(totalWrites.get());
-    dos.writeLong(totalWritesSize.get());
-    dos.writeLong(totalRejectedWrites.get());
+    dos.writeLong(this.totalGets.get());
+    dos.writeLong(this.totalGetsSize.get());
+    dos.writeLong(this.totalHits.get());
+    dos.writeLong(this.totalWrites.get());
+    dos.writeLong(this.totalWritesSize.get());
+    dos.writeLong(this.totalRejectedWrites.get());
     dos.writeLong(Epoch.getEpochStartTime());
     dos.writeBoolean(this.tcEnabled);
     dos.writeBoolean(this.evictionDisabledMode);
@@ -2525,6 +2531,17 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     LOG.info("Cache loaded in {}ms", endTime - startTime);
   }
 
+  /**
+   * Load cache from a given directory
+   * @param baseDirPath
+   * @throws IOException
+   */
+  public void load(String baseDirPath) throws IOException {
+    CarrotConfig conf = CarrotConfig.getInstance();
+    conf.setGlobalCacheRootDir(baseDirPath);
+    load();
+  }
+  
   // EvictionListener
   @Override
   public void onEviction(long ibPtr, long ptr) {
@@ -2585,5 +2602,50 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.victimCache != null) {
       victimCache.registerJMXMetricsSink(domainName);
     }
+  }
+  
+  public static Cache loadCache(String cacheName) throws IOException {
+    CarrotConfig conf = CarrotConfig.getInstance();
+    String snapshotDir = conf.getSnapshotDir(cacheName);
+    Path p = Paths.get(snapshotDir);
+    if (Files.notExists(p)) {
+      return null;
+    }
+    if(Files.list(p).count() == 0) {
+      return null;
+    }
+    // Check that all needed files are present in the snapshot directory
+    // at least cache, engine and scavenger statistics
+    String file = CarrotConfig.CACHE_SNAPSHOT_NAME;
+    Path cachePath = Paths.get(snapshotDir, file);
+    if (Files.notExists(cachePath)) {
+      throw new IOException(String.format("Cache snapshot file is missing in %s", p.toString()));
+    }
+    
+    file = CarrotConfig.CACHE_ENGINE_SNAPSHOT_NAME;
+    Path enginePath = Paths.get(snapshotDir, file);
+    if (Files.notExists(enginePath)) {
+      throw new IOException(String.format("IOEngine snapshot file is missing in %s", p.toString()));
+    }
+    
+    file = CarrotConfig.SCAVENGER_STATS_SNAPSHOT_NAME;
+    Path statsPath = Paths.get(snapshotDir, file);
+    if (Files.notExists(statsPath)) {
+      throw new IOException(String.format("Scavenger statistics snapshot file is missing in %s", p.toString()));
+    }
+    
+    
+    // Ideally we need to check number of files at least
+    //TODO: later more stricter verification of a saved cache data
+    Cache cache = new Cache();
+    cache.setName(cacheName);
+    cache.load();
+    return cache;
+  }
+  
+  public static Cache loadCache(String rootDir, String cacheName) throws IOException{
+    CarrotConfig conf = CarrotConfig.getInstance();
+    conf.setGlobalCacheRootDir(rootDir);
+    return loadCache(cacheName);
   }
 }

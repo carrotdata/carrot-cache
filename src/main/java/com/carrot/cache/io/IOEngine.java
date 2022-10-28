@@ -675,9 +675,7 @@ public abstract class IOEngine implements Persistent {
     // TODO: embedded entry case
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
-    int bufferAvail = buffer.length - bufOffset;
     try {
-
       long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
       if (result < 0) {
         return NOT_FOUND;
@@ -747,8 +745,6 @@ public abstract class IOEngine implements Persistent {
       UnsafeAccess.free(buf);
     }
   }
-  
-
 
   private void access(Segment s, int result, boolean hit) {
     if (result > 0 && hit) {

@@ -14,11 +14,12 @@
  */
 package com.carrot.cache;
 
+import static org.junit.Assert.assertEquals;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Random;
 
 import org.junit.After;
@@ -55,11 +56,42 @@ public abstract class TestCacheBase extends IOTestBase {
   @After
   public void tearDown() throws IOException {
     super.tearDown();
+    cache.dispose();
     TestUtils.deleteCacheFiles(cache);
   }
   
   protected Cache createCache() throws IOException {
     String cacheName = "cache";
+    // Data directory
+    Path path = Files.createTempDirectory(null);
+    File  dir = path.toFile();
+    dir.deleteOnExit();
+    String rootDir = dir.getAbsolutePath();
+    
+    Cache.Builder builder = new Cache.Builder(cacheName);
+    
+    builder
+      .withCacheDataSegmentSize(segmentSize)
+      .withCacheMaximumSize(maxCacheSize)
+      .withScavengerRunInterval(scavengerInterval)
+      .withScavengerDumpEntryBelowStart(scavDumpBelowRatio)
+      .withRecyclingSelector(MinAliveRecyclingSelector.class.getName())
+      .withDataWriter(BlockDataWriter.class.getName())
+      .withMemoryDataReader(BlockMemoryDataReader.class.getName())
+      .withFileDataReader(BlockFileDataReader.class.getName())
+      .withMainQueueIndexFormat(CompactBlockWithExpireIndexFormat.class.getName())
+      .withCacheRootDir(rootDir)
+      .withMinimumActiveDatasetRatio(minActiveRatio)
+      .withEvictionDisabledMode(true);
+    
+    if (offheap) {
+      return builder.buildMemoryCache();
+    } else {
+      return builder.buildDiskCache();
+    }
+  }
+  
+  protected Cache createCache(String cacheName) throws IOException {
     // Data directory
     Path path = Files.createTempDirectory(null);
     File  dir = path.toFile();
@@ -317,16 +349,100 @@ public abstract class TestCacheBase extends IOTestBase {
     cache.save();
     long t2 = System.currentTimeMillis();
     System.out.printf("Saved %d in %d ms\n", cache.getStorageAllocated(), t2 - t1);
-    cache.dispose();
     
-    cache = new Cache();
-    cache.setName(cacheName);
     t1 = System.currentTimeMillis();
-    cache.load();
+    Cache newCache = Cache.loadCache(cacheName);
     t2 = System.currentTimeMillis();
     System.out.printf("Loaded %d in %d ms\n", cache.getStorageAllocated(), t2 - t1);
+    
+    assertEquals(cache.getCacheType(), newCache.getCacheType());
+    assertEquals(cache.activeSize(), newCache.activeSize());
+    assertEquals(cache.getMaximumCacheSize(), newCache.getMaximumCacheSize());
+    assertEquals(cache.getStorageAllocated(), newCache.getStorageAllocated());
+    assertEquals(cache.getStorageUsed(), newCache.getStorageUsed());
+    assertEquals(cache.getTotalGets(), newCache.getTotalGets());
+    assertEquals(cache.getTotalGetsSize(), newCache.getTotalGetsSize());
+    assertEquals(cache.getTotalHits(), newCache.getTotalHits());
+    assertEquals(cache.getTotalWrites(), newCache.getTotalWrites());
+    assertEquals(cache.getTotalWritesSize(), newCache.getTotalWritesSize());
 
-    verifyBytesCache(cache, loaded);
+    verifyBytesCache(newCache, loaded);
+
+    newCache.dispose();
+    TestUtils.deleteCacheFiles(newCache);
+  }
+  
+  @Test
+  public void testSaveLoadTwoCaches() throws IOException {
+    System.out.println("Test save load two caches");
+    Scavenger.clear();
+    // Create cache
+    this.cache = createCache("cache1");
+    
+    this.expireTime = 1000000; 
+    prepareData(150000);
+    // Fill cache completely (no eviction is enabled)
+    int loaded = loadBytesCache(cache);
+    System.out.println("loaded=" + loaded);
+    verifyBytesCacheByteBuffer(cache, loaded);
+
+    String cacheName = cache.getName();
+    long t1 = System.currentTimeMillis();
+    cache.save();
+    long t2 = System.currentTimeMillis();
+    System.out.printf("Saved %d in %d ms\n", cache.getStorageAllocated(), t2 - t1);
+    
+    t1 = System.currentTimeMillis();
+    Cache newCache = Cache.loadCache(cacheName);
+    t2 = System.currentTimeMillis();
+    System.out.printf("Loaded %d in %d ms\n", cache.getStorageAllocated(), t2 - t1);
+    
+    assertEquals(cache.getCacheType(), newCache.getCacheType());
+    assertEquals(cache.activeSize(), newCache.activeSize());
+    assertEquals(cache.getMaximumCacheSize(), newCache.getMaximumCacheSize());
+    assertEquals(cache.getStorageAllocated(), newCache.getStorageAllocated());
+    assertEquals(cache.getStorageUsed(), newCache.getStorageUsed());
+    assertEquals(cache.getTotalGets(), newCache.getTotalGets());
+    assertEquals(cache.getTotalGetsSize(), newCache.getTotalGetsSize());
+    assertEquals(cache.getTotalHits(), newCache.getTotalHits());
+    assertEquals(cache.getTotalWrites(), newCache.getTotalWrites());
+    assertEquals(cache.getTotalWritesSize(), newCache.getTotalWritesSize());
+
+    verifyBytesCache(newCache, loaded);
+
+    Cache cache2 = createCache("cache2");
+    loaded = loadBytesCache(cache2);
+    System.out.println("loaded=" + loaded);
+    verifyBytesCacheByteBuffer(cache2, loaded);
+
+    t1 = System.currentTimeMillis();
+    cache2.save();
+    t2 = System.currentTimeMillis();
+
+    System.out.printf("Saved %d in %d ms\n", cache2.getStorageAllocated(), t2 - t1);
+    
+    t1 = System.currentTimeMillis();
+    Cache newCache2 = Cache.loadCache("cache2");
+    t2 = System.currentTimeMillis();
+    System.out.printf("Loaded %d in %d ms\n", newCache2.getStorageAllocated(), t2 - t1);
+    
+    assertEquals(cache2.getCacheType(), newCache2.getCacheType());
+    assertEquals(cache2.activeSize(), newCache2.activeSize());
+    assertEquals(cache2.getMaximumCacheSize(), newCache2.getMaximumCacheSize());
+    assertEquals(cache2.getStorageAllocated(), newCache2.getStorageAllocated());
+    assertEquals(cache2.getStorageUsed(), newCache2.getStorageUsed());
+    assertEquals(cache2.getTotalGets(), newCache2.getTotalGets());
+    assertEquals(cache2.getTotalGetsSize(), newCache2.getTotalGetsSize());
+    assertEquals(cache2.getTotalHits(), newCache2.getTotalHits());
+    assertEquals(cache2.getTotalWrites(), newCache2.getTotalWrites());
+    assertEquals(cache2.getTotalWritesSize(), newCache2.getTotalWritesSize());
+    
+    newCache.dispose();
+    TestUtils.deleteCacheFiles(newCache);
+    cache2.dispose();
+    TestUtils.deleteCacheFiles(cache2);
+    newCache2.dispose();
+    TestUtils.deleteCacheFiles(newCache2);    
     
   }
 }
