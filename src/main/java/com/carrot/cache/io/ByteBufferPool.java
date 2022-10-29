@@ -27,7 +27,7 @@ public class ByteBufferPool {
     this.maxSize = size;
   }
 
-  boolean offer(byte[] buffer) {
+  public boolean offer(byte[] buffer) {
     if (pool.size() >= this.maxSize) {
       return false;
     } else {
@@ -36,11 +36,11 @@ public class ByteBufferPool {
     return true;
   }
 
-  byte[] poll() {
+  public byte[] poll() {
     return this.pool.poll();
   }
 
-  int getMaxSize() {
+  public int getMaxSize() {
     return maxSize;
   }
 }
