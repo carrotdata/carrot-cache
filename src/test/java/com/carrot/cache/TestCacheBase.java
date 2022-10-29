@@ -82,6 +82,7 @@ public abstract class TestCacheBase extends IOTestBase {
       .withMainQueueIndexFormat(CompactBlockWithExpireIndexFormat.class.getName())
       .withCacheRootDir(rootDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
+      .withCacheStreamingSupportBufferSize(1 << 19)
       .withEvictionDisabledMode(true);
     
     if (offheap) {
@@ -112,6 +113,7 @@ public abstract class TestCacheBase extends IOTestBase {
       .withMainQueueIndexFormat(CompactBlockWithExpireIndexFormat.class.getName())
       .withCacheRootDir(rootDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
+      .withCacheStreamingSupportBufferSize(1 << 19)
       .withEvictionDisabledMode(true);
     
     if (offheap) {
@@ -160,6 +162,7 @@ public abstract class TestCacheBase extends IOTestBase {
       allocated, used, size, activeSize));
     
   }
+  
   
   @Test
   public void testAllExpiredMemory() throws IOException {
@@ -445,4 +448,5 @@ public abstract class TestCacheBase extends IOTestBase {
     TestUtils.deleteCacheFiles(newCache2);    
     
   }
+  
 }

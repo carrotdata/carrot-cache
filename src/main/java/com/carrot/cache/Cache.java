@@ -19,6 +19,8 @@ import java.io.DataOutputStream;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
@@ -42,6 +44,8 @@ import com.carrot.cache.controllers.ThroughputController;
 import com.carrot.cache.eviction.EvictionListener;
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MemoryIndex;
+import com.carrot.cache.io.CacheInputStream;
+import com.carrot.cache.io.CacheOutputStream;
 import com.carrot.cache.io.FileIOEngine;
 import com.carrot.cache.io.IOEngine;
 import com.carrot.cache.io.IOEngine.IOEngineEvent;
@@ -702,6 +706,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
      */
     public Builder withJMXMetricsDomainName(String name) {
       conf.setJMXMetricsDomainName(name);
+      return this;
+    }
+    
+    /**
+     * With streaming buffer size
+     * @param size buffer size
+     * @return builder instance
+     */
+    public Builder withCacheStreamingSupportBufferSize(int size) {
+      conf.setCacheStreamingSupportBufferSize(cacheName, size);
       return this;
     }
     
@@ -1704,7 +1718,33 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return result;
   }
 
-
+   /**
+    * Stream API
+    */
+  
+  /**
+   * To write streams to the cache. Stream must be closed after using
+   * @param key stream key
+   * @param off offset
+   * @param len length
+   * @param expire stream expiration
+   * @return output stream to write data to
+   */
+  public OutputStream getOutputStream(byte[] key, int off, int len, long expire) {
+    return new CacheOutputStream(this, key, off, len, expire);
+  }
+  
+  /** 
+   * To read stream data from cache. Stream must be closed after using
+   * @param key stream's key
+   * @param off key offset
+   * @param len key length
+   * @return input stream to read data from
+   * @throws IOException
+   */
+  public InputStream getInputStream(byte[] key, int off, int len) throws IOException {
+    return  CacheInputStream.openStream(this, key, off, len);
+  }
   
   /**
    * Get cached item only (if any)

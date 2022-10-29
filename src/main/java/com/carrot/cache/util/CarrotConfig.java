@@ -273,6 +273,8 @@ public class CarrotConfig {
   /* JMX metrics domain name */
   public static final String CACHE_JMX_METRICS_DOMAIN_NAME_KEY = "c2.jmx.metrics-domain-name";
   
+  public static final String CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY = "c2.cache.streaming.buffer.size";
+  
   /* Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
@@ -440,6 +442,9 @@ public class CarrotConfig {
   
   /* Default domain name for JMX metrics */
   public final static String DEFAULT_CACHE_JMX_METRICS_DOMAIN_NAME = "com.carrot.cache";
+  
+  /* Default streaming support buffer size */
+  public final static int DEFAULT_CACHE_STREAMING_SUPPORT_BUFFER_SIZE = 1 << 22;
   // Statics
   static CarrotConfig instance;
 
@@ -1933,4 +1938,23 @@ public class CarrotConfig {
   public void setJMXMetricsDomainName(String name) {
     props.setProperty(CACHE_JMX_METRICS_DOMAIN_NAME_KEY, name);
   }
+
+  public int getCacheStreamingSupportBufferSize(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY);
+    if (value == null) {
+      return (int) getLongProperty(CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY,
+        DEFAULT_CACHE_STREAMING_SUPPORT_BUFFER_SIZE);
+    } else {
+      return (int) Long.parseLong(value);
+    }
+  }
+  
+  public void setCacheStreamingSupportBufferSize(int size) {
+    this.props.setProperty(CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY, Integer.toString(size));
+  }
+  
+  public void setCacheStreamingSupportBufferSize(String cacheName, int size) {
+    this.props.setProperty(cacheName + "." + CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY, Integer.toString(size));
+  }
 }
+

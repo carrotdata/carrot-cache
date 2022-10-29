@@ -65,8 +65,12 @@ public abstract class IOTestBase {
     if (this.index != null) {
       this.index.dispose();
     }
-    Arrays.stream(mKeys).forEach(x -> UnsafeAccess.free(x));
-    Arrays.stream(mValues).forEach(x -> UnsafeAccess.free(x));
+    if (mKeys != null) {
+      Arrays.stream(mKeys).forEach(x -> UnsafeAccess.free(x));
+    }
+    if (mValues!= null) {
+      Arrays.stream(mValues).forEach(x -> UnsafeAccess.free(x));
+    }
   }
   
   protected void prepareData(int numRecords) {
