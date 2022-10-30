@@ -1319,6 +1319,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if(shutdownInProgress) {
       return false;
     }
+    if (storageIsFull(keySize, valSize)) {
+      return false;
+    }
     // Check rank
     checkRank(rank);
     if (!shouldAdmitToMainQueue(keyPtr, keySize, valSize, force)) {
@@ -1435,7 +1438,19 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     
   }
 
-  public boolean putDirectly(
+  private boolean storageIsFull(int keySize, int valueSize) {
+    if (!this.evictionDisabledMode) {
+      return false; // when eviction is enabled - storage is never full
+    }
+    // OK, eviction is disabled
+    // check used and maximum storage size
+    long used = getStorageUsed();
+    long max = getMaximumCacheSize();
+    int size = Utils.kvSize(keySize, valueSize);
+    return used + size > max;
+  }
+  
+  private boolean putDirectly(
       byte[] key,
       int keyOffset,
       int keySize,
@@ -1449,6 +1464,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       throws IOException {
 
     if(shutdownInProgress) {
+      return false;
+    }
+    if (storageIsFull(keySize, valSize)) {
       return false;
     }
     if (!shouldAdmitToMainQueue(key, keyOffset, keySize, valSize, force)) {
@@ -1573,8 +1591,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         double popularity = mi.popularity(keyPtr, keySize);
         if (popularity > this.victimCachePromoteThreshold) {
           long expire = mi.getExpire(keyPtr, keySize);
-          put(buffer, bufOffset, expire);
-          this.victimCache.delete(keyPtr, keySize);
+          boolean res = put(buffer, bufOffset, expire);
+          if (res) {
+            this.victimCache.delete(keyPtr, keySize);
+          }
         }
       } 
     }
@@ -1710,8 +1730,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         // Promote only popular items
         if (popularity > this.victimCachePromoteThreshold) {
           long expire = mi.getExpire(key, keyOffset, keySize);
-          put(buffer, bufOffset, expire);
-          this.victimCache.delete(key, keyOffset, keySize);
+          boolean res = put(buffer, bufOffset, expire);
+          if (res) {
+            this.victimCache.delete(key, keyOffset, keySize);
+          }
         }
       } 
     }
@@ -1731,6 +1753,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @return output stream to write data to
    */
   public OutputStream getOutputStream(byte[] key, int off, int len, long expire) {
+    if (storageIsFull(0, 0)) {
+      return null;
+    }
     return new CacheOutputStream(this, key, off, len, expire);
   }
   
@@ -1875,8 +1900,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         double popularity = mi.popularity(key, keyOff, keySize);
         if (popularity > this.victimCachePromoteThreshold) {
           long expire = mi.getExpire(key, keyOff, keySize);
-          put(buffer, expire);
-          this.victimCache.delete(key, keyOff, keySize);
+          boolean res = put(buffer, expire);
+          if (res) {
+            this.victimCache.delete(key, keyOff, keySize);
+          }
         }
       } 
     }
@@ -2007,8 +2034,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         double popularity = mi.popularity(keyPtr, keySize);
         if (popularity > this.victimCachePromoteThreshold) {
           long expire = mi.getExpire(keyPtr, keySize);
-          put(buffer, expire);
-          this.victimCache.delete(keyPtr, keySize);
+          boolean res = put(buffer, expire);
+          if (res) {
+            this.victimCache.delete(keyPtr, keySize);
+          }
         }
       } 
     }

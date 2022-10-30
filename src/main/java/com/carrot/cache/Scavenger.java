@@ -231,6 +231,9 @@ public class Scavenger extends Thread {
     }
   }
 
+  /**
+   * Map keeps statistics per cache instance (by cache name)
+   */
   static ConcurrentHashMap<String, Stats> statsMap = new ConcurrentHashMap<String, Stats>();
 
   /**
@@ -242,7 +245,10 @@ public class Scavenger extends Thread {
     Stats stats = statsMap.get(cacheName);
     if (stats == null) {
       stats = new Stats(cacheName);
-      statsMap.put(cacheName, stats);
+      Stats s = statsMap.putIfAbsent(cacheName, stats);
+      if (s != null) {
+        return s;
+      }
     }
     return stats;
   }
@@ -294,6 +300,8 @@ public class Scavenger extends Thread {
   
   private long maxSegmentsBeforeStallDetected;
   
+  private boolean evictionDisabledMode = false;
+  
   public Scavenger(Cache cache) {
     super("c2 scavenger");
     this.cache = cache;
@@ -324,16 +332,30 @@ public class Scavenger extends Thread {
       stopRatio = stats.stopRatio;
     }
     this.maxSegmentsBeforeStallDetected = getScavengerMaxSegmentsBeforeStall();
+    this.evictionDisabledMode = this.config.getEvictionDisabledMode(cache.getName());
+    if (this.evictionDisabledMode) {
+      // Disable all cold items cleaning - only deleted and updated ones
+      dumpBelowRatio = -0.01;
+      dumpBelowRatioMax = -0.01;
+      dumpBelowRatioMin = -0.01;
+      adjStep = 0.0;
+    }
     stats.totalRuns++;
     
   }
   
-  private int getScavengerMaxSegmentsBeforeStall() {
+  private long getScavengerMaxSegmentsBeforeStall() {
+    if (this.evictionDisabledMode) {
+      // Never stalls
+      return Long.MAX_VALUE;
+    }
+    
     long maxCacheSize = this.cache.getMaximumCacheSize();
     long segmentSize = this.cache.getCacheConfig().getCacheSegmentSize(cache.getName());
     long maxSegments = maxCacheSize / segmentSize;
     double startRatio = this.cache.getCacheConfig().getScavengerStartMemoryRatio(cache.getName());
     double range = startRatio - stopRatio;
+    // TODO on this value
     return (int) (2 * maxSegments * range);
     
   }
@@ -379,6 +401,7 @@ public class Scavenger extends Thread {
         //TODO: make it more smarter, calculate maxSegmentsBeforeStallDetected using maximum number of segments
         // and other current cache configuration values
         if (segmentsProcessed >= maxSegmentsBeforeStallDetected) {
+          // This should never happen if eviction is disabled
           dumpBelowRatio = 1.0;// improve scavenger's performance - dump everything
           cleanDeletedOnly = false;
         }
@@ -390,6 +413,12 @@ public class Scavenger extends Thread {
         }
         try {
           finished = cleanSegment(s);
+          if (finished && evictionDisabledMode) {
+            // Means scavenger did not manage to clean any data
+            // in the last segment - hence storage is FULL and
+            // some data must deleted explicitly
+            break;
+          }
           if (finished && cleanDeletedOnly) {
             // continue with purging low rank elements
             cleanDeletedOnly = false;
@@ -430,14 +459,17 @@ public class Scavenger extends Thread {
     }
     double sratio = (double) s.getAliveItems() / s.getTotalItems();    
     double minActiveRatio = config.getMinimumActiveDatasetRatio(cache.getName());
-    if (sratio >= minActiveRatio) {
-      cleanDeletedOnly = false;
-    } else {
-      cleanDeletedOnly = true;
-    }
+ 
     double usage = engine.getStorageAllocatedRatio();
     double activeRatio = engine.activeSizeRatio();
-    cleanDeletedOnly = cleanDeletedOnly && usage < stopRatio;
+    if (!evictionDisabledMode) {
+      if (sratio >= minActiveRatio) {
+        cleanDeletedOnly = false;
+      } else {
+        cleanDeletedOnly = true;
+      }
+      cleanDeletedOnly = cleanDeletedOnly && usage < stopRatio;
+    }
     return activeRatio >= minActiveRatio && usage < stopRatio;   
   }
 
@@ -485,7 +517,7 @@ public class Scavenger extends Thread {
       
       sc = engine.getScanner(s); // acquires read lock
       boolean isDirect =  sc.isDirect();
-      
+      //TODO Buffer reuse across all scavenger session
       byte[] keyBuffer = !isDirect? new byte[4096]: null;
       byte[] valueBuffer = !isDirect? new byte[4096]: null;
       

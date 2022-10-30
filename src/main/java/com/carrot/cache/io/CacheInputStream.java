@@ -110,6 +110,7 @@ public class CacheInputStream extends InputStream {
     }
     // save current
     this.keyBase = getKey(bufferPos);  
+    /*DEBUG*/ System.out.printf("get key=%s\n", Utils.toHex(keyBase));
     long size = this.parent.get(keyBase, 0, keyBase.length, true, buffer, 0);
     if (size < 0) {
       return false;
