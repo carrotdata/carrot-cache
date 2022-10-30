@@ -87,7 +87,10 @@ public class CacheInputStream extends InputStream {
     
     this.keyBase = new byte[len + Utils.SIZEOF_LONG];
     System.arraycopy(key, off, keyBase, 0, len);
-    nextPage();
+    boolean result = nextPage();
+    if (!result) {
+      throw new IOException("stream not found");
+    }
   }
   
   private byte[] getKey(long offset) {
