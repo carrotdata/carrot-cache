@@ -136,8 +136,7 @@ public class CacheOutputStream extends OutputStream {
     checkClosed();
     keyBase = getKey(bufferPos);
     if (bufferPos != 0 || bufferOffset != 0) {
-      boolean result = this.parent.put(keyBase, 0, keyBase.length, buffer, 0, bufferOffset, expire);
-      /*DEBUG*/ System.out.printf("put key=%s result=%s\n", Utils.toHex(keyBase), Boolean.toString(result));
+      this.parent.put(keyBase, 0, keyBase.length, buffer, 0, bufferOffset, expire);
     }
     // Release buffer
     pool.offer(buffer);
