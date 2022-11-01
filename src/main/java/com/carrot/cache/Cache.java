@@ -1320,6 +1320,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return false;
     }
     if (storageIsFull(keySize, valSize)) {
+      this.totalRejectedWrites.incrementAndGet();
       return false;
     }
     // Check rank
@@ -1439,9 +1440,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   private boolean storageIsFull(int keySize, int valueSize) {
-    if (!this.evictionDisabledMode) {
-      return false; // when eviction is enabled - storage is never full
-    }
     // OK, eviction is disabled
     // check used and maximum storage size
     long used = getStorageUsed();
@@ -1467,6 +1465,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return false;
     }
     if (storageIsFull(keySize, valSize)) {
+      this.totalRejectedWrites.incrementAndGet();
       return false;
     }
     if (!shouldAdmitToMainQueue(key, keyOffset, keySize, valSize, force)) {
@@ -1754,6 +1753,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public OutputStream getOutputStream(byte[] key, int off, int len, long expire) {
     if (storageIsFull(0, 0)) {
+      this.totalRejectedWrites.incrementAndGet();
       return null;
     }
     return new CacheOutputStream(this, key, off, len, expire);

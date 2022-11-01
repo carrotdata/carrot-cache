@@ -29,6 +29,7 @@ public class MinAliveRecyclingSelector implements RecyclingSelector {
   @Override
   public Segment selectForRecycling(Segment[] segments) {
     Segment selection1 = null, selection2 = null;
+    // TODO Make it configurable
     double minRatio = 0.99;// little hack
     long minCreationTime = Long.MAX_VALUE;
     
