@@ -118,6 +118,12 @@ public class CompactBaseIndexFormat implements IndexFormat {
   }
 
   @Override
+  public int getHashBit(long ptr, int n) {
+    ptr += hashOffset();
+    return (int)(UnsafeAccess.toLong(ptr) >>> 64 - n) & 1;
+  }
+  
+  @Override
   public void writeIndex(
       long ibPtr,
       long ptr,
