@@ -17,6 +17,13 @@ package com.carrot.cache.util;
 
 import static org.junit.Assert.assertEquals;
 
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+
 import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.junit.Test;
 
@@ -24,6 +31,46 @@ import com.carrot.cache.expire.ExpireSupport;
 
 public class TestProjectUtils {
 
+  @Test
+  public void testObjectArray() throws SecurityException, IllegalAccessException, IllegalArgumentException, 
+  InvocationTargetException, NoSuchFieldException, ClassNotFoundException {
+    
+    String[] arr = new String[] {"1", "2", "3"};
+    
+    Class<?> cls = arr.getClass();
+    System.out.println("is array=" + cls.isArray());
+    Object[] f = (Object[]) arr;
+    System.out.println("arr length=" + f.length);
+    String className = cls.getName();
+    Class<?> fromName = Class.forName(className);
+    
+    System.out.println("class=" +cls + " from name ="+ fromName);
+    
+    cls = int[].class;
+    className = cls.getName();
+    fromName = Class.forName(className);
+    System.out.println("class=" +cls + " from name ="+ fromName);
+
+  }
+  
+  @Test
+  public void testCollection() {
+    List<String> l = new ArrayList<String>();
+    l.add("s1");
+    l.add("s2");
+    l.add("s3");
+    
+    
+    Collection<?> c = (Collection<?>) l; 
+    System.out.println("list size =" + c.size() + "list instance of Collection=" +
+        (l instanceof Collection<?>));
+    HashMap<String, String> map = new HashMap<>();
+    System.out.println("map instanceof Collection=" + (map instanceof Collection<?>));
+    Iterator<?> it = c.iterator();
+    System.out.println("it=" + it);
+    
+  }
+  
   @Test
   public void testCopyBuffer() {
     

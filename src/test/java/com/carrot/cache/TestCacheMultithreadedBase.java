@@ -59,9 +59,7 @@ public abstract class TestCacheMultithreadedBase extends TestIOMultithreadedBase
     dir.deleteOnExit();
     String rootDir = dir.getAbsolutePath();
     
-
-    
-    Cache.Builder builder = new Cache.Builder(cacheName);
+    Builder builder = new Builder(cacheName);
     
     builder
       .withCacheDataSegmentSize(segmentSize)

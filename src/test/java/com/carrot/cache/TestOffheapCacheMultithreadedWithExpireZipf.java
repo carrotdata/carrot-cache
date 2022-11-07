@@ -56,7 +56,7 @@ public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultit
   }
   
   @Override
-  protected Cache.Builder withAddedConfigurations(Cache.Builder b) {
+  protected Builder withAddedConfigurations(Builder b) {
      b = b.withExpireStartBinValue(binStartValue)
          .withExpireBinMultiplier(binMultiplier)
          .withNumberOfPopularityRanks(numberOfBins)

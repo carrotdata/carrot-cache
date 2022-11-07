@@ -776,6 +776,27 @@ public final class MemoryIndex implements Persistent {
   }
 
   /**
+   * Does key exist
+   * @param key key buffer
+   * @param off key offset
+   * @param size key size
+   * @return true or false
+   */
+  public boolean exists(byte[] key, int off, int size) {
+    //TODO: does it work for variable sizes?
+    int bufSize = this.indexFormat.indexEntrySize();
+    long buf = UnsafeAccess.mallocZeroed(bufSize);
+    try {
+      long result = find(key, off, size, false, buf, bufSize);
+      if (result != bufSize) {
+        return false;
+      }
+      return true;
+    } finally {
+      UnsafeAccess.free(buf);
+    }
+  }
+  /**
    * Get item size (only for MQ)
    * @param key key buffer
    * @param off offset

@@ -40,7 +40,6 @@ import com.carrot.cache.index.BaseIndexFormat;
 import com.carrot.cache.io.DataReader;
 import com.carrot.cache.io.DataWriter;
 
-@SuppressWarnings("deprecation")
 public class CarrotConfig {
   
   private static final Logger LOG = LogManager.getLogger(CarrotConfig.class);
@@ -91,6 +90,15 @@ public class CarrotConfig {
   
   /* Default cache configuration directory name - the only directory for all caches */
   public final static String DEFAULT_CACHE_CONFIG_DIR_NAME = "conf";
+  
+  /* Key class name for object cache */
+  public final static String OBJECT_CACHE_KEY_CLASS_NAME_KEY = "c2.obj.cache.key-class-name";
+  
+  /* Value class name for object cache */
+  public final static String OBJECT_CACHE_VALUE_CLASS_NAME_KEY = "c2.obj.cache.value-class-name";
+  
+  /* Additional class names for object cache, comma separated */
+  public final static String OBJECT_CACHE_ADD_CLASS_NAMES_KEY = "c2.obj.cache.add-class-names";
   
   /* Cache root directory - where to save cached data */
   public final static String CACHE_ROOT_DIR_PATH_KEY = "c2.root.dir-path";
@@ -1775,7 +1783,8 @@ public class CarrotConfig {
   
   
   /**
-   * Get I/O storage pool size
+   * Get I/O storage pool size - should be equal or greater than the maximum number of threads
+   * serving IO requests in an application 
    * @param cacheName cache name
    * @return size
    */
@@ -1955,6 +1964,69 @@ public class CarrotConfig {
   
   public void setCacheStreamingSupportBufferSize(String cacheName, int size) {
     this.props.setProperty(cacheName + "." + CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY, Integer.toString(size));
+  }
+  
+  /**
+   * Get object cache key class name
+   * @param cacheName cache name
+   * @return key class name or null
+   */
+  
+  public String getObjectCacheKeyClassName(String cacheName) {
+    return props.getProperty(cacheName + "." + OBJECT_CACHE_KEY_CLASS_NAME_KEY);
+  }
+  
+  /**
+   * Set object name key class name
+   * @param cacheName cache name
+   * @param className class name
+   */
+  public void setObjectCacheKeyClassName(String cacheName, String className) {
+    props.setProperty(cacheName + "." + OBJECT_CACHE_KEY_CLASS_NAME_KEY, className);
+  }
+  
+  /**
+   * Get object cache value class name
+   * @param cacheName cache name
+   * @return value class name or null
+   */
+  
+  public String getObjectCacheValueClassName(String cacheName) {
+    return props.getProperty(cacheName + "." + OBJECT_CACHE_VALUE_CLASS_NAME_KEY);
+  }
+  
+  /**
+   * Set object name value class name
+   * @param cacheName cache name
+   * @param className class name
+   */
+  public void setObjectCacheValueClassName(String cacheName, String className) {
+    props.setProperty(cacheName + "." + OBJECT_CACHE_VALUE_CLASS_NAME_KEY, className);
+  }
+  
+  /**
+   * Get object cache additional class names
+   * @param cacheName cache name
+   * @return add class name or null
+   */
+  
+  public String[] getObjectCacheAddClassNames(String cacheName) {
+    String value =  props.getProperty(cacheName + "." + OBJECT_CACHE_ADD_CLASS_NAMES_KEY);
+    if (value == null) {
+      return null;
+    }
+    String[] result = value.split(",");
+    return result;
+  }
+  
+  /**
+   * Set object additional class names
+   * @param cacheName cache name
+   * @param className class name
+   */
+  public void setObjectCacheAddClassNames(String cacheName, String[] classNames) {
+    String v = String.join(",", classNames);
+    props.setProperty(cacheName + "." + OBJECT_CACHE_ADD_CLASS_NAMES_KEY, v);
   }
 }
 

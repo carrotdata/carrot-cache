@@ -45,7 +45,7 @@ public class CacheInputStream extends InputStream {
   int pageSize;
   
   /** Buffer pool */
-  static ByteBufferPool pool;
+  static ObjectPool<byte[]> pool;
   
   /** Stream is closed */
   boolean closed = false;
@@ -73,9 +73,9 @@ public class CacheInputStream extends InputStream {
     this.parent = parent;
     int poolSize = parent.getCacheConfig().getIOStoragePoolSize(parent.getName());
     if (pool == null) {
-      synchronized(ByteBufferPool.class) {
+      synchronized(ObjectPool.class) {
         if (pool == null) {
-          pool = new ByteBufferPool(poolSize);
+          pool = new ObjectPool<byte[]>(poolSize);
         }
       }
     }

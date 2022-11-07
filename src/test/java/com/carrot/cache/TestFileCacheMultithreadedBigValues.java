@@ -45,7 +45,7 @@ public class TestFileCacheMultithreadedBigValues extends TestCacheMultithreadedZ
   }
 
   @Override
-  protected Cache.Builder withAddedConfigurations(Cache.Builder b) {
+  protected Builder withAddedConfigurations(Builder b) {
      b = b.withAdmissionQueueStartSizeRatio(startSizeRatio);
      return b;
   }

@@ -112,6 +112,17 @@
     		<version>3.6.1</version>
                 <scope>test</scope>
 	</dependency>
+	<!-- https://mvnrepository.com/artifact/net.openhft/chronicle-wire -->
+	<!--dependency>
+    		<groupId>net.openhft</groupId>
+    		<artifactId>chronicle-wire</artifactId>
+    		<version>2.23.39</version>
+	</dependency-->
+	<dependency>
+   		<groupId>com.esotericsoftware.kryo</groupId>
+   		<artifactId>kryo5</artifactId>
+   		<version>5.3.0</version>
+	</dependency>
         </dependencies>
     <!--/dependencyManagement-->
     <properties>

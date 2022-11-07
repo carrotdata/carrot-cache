@@ -38,7 +38,7 @@ public class TestFileCacheMultithreadedZipfWithAQ extends TestCacheMultithreaded
   }
   
   @Override
-  protected Cache.Builder withAddedConfigurations(Cache.Builder b) {
+  protected Builder withAddedConfigurations(Builder b) {
      b = b.withAdmissionQueueStartSizeRatio(startSizeRatio);
      return b;
   }

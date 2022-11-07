@@ -79,7 +79,7 @@ public abstract class TestCacheMultithreadedStreamBase {
     File  dir = path.toFile();
     String rootDir = dir.getAbsolutePath();
     
-    Cache.Builder builder = new Cache.Builder(cacheName);
+    Builder builder = new Builder(cacheName);
     
     builder
       .withCacheDataSegmentSize(segmentSize)

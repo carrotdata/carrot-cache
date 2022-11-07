@@ -79,7 +79,7 @@ public class TestOffheapCacheGetRangeAPI {
     Path rootDirPath = Files.createTempDirectory(null);
     File  dir = rootDirPath.toFile();
     String rootDir = dir.getAbsolutePath();
-    Cache.Builder builder = new Cache.Builder(cacheName);
+    Builder builder = new Builder(cacheName);
     
     builder
       .withCacheDataSegmentSize(segmentSize)

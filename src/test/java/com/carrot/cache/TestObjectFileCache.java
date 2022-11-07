@@ -12,35 +12,16 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package com.carrot.cache;
 
-package com.carrot.cache.io;
+import java.io.IOException;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
+import org.junit.Before;
 
-public class ObjectPool<T> {
-
-  private ConcurrentLinkedQueue<T> pool = new ConcurrentLinkedQueue<T>();
-
-  private int maxSize;
-
-  public ObjectPool(int size) {
-    this.maxSize = size;
-  }
-
-  public boolean offer(T obj) {
-    if (pool.size() >= this.maxSize) {
-      return false;
-    } else {
-      pool.offer(obj);
-    }
-    return true;
-  }
-
-  public T poll() {
-    return this.pool.poll();
-  }
-
-  public int getMaxSize() {
-    return maxSize;
+public class TestObjectFileCache extends TestObjectCacheBase {
+  
+  @Before
+  public void setUp() throws IOException {
+    this.offheap = false;
   }
 }

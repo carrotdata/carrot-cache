@@ -44,10 +44,13 @@ public class CacheOutputStream extends OutputStream {
   long expire;
   
   /** Buffer pool */
-  static ByteBufferPool pool;
+  static ObjectPool<byte[]> pool;
   
   /** Stream is closed */
   boolean closed = false;
+  
+  /** Ignore flush() and close() */
+  boolean ignoreFC = false;
   
   /**
    * Constructor 
@@ -59,9 +62,9 @@ public class CacheOutputStream extends OutputStream {
     this.parent = parent;
     int poolSize = parent.getCacheConfig().getIOStoragePoolSize(parent.getName());
     if (pool == null) {
-      synchronized(ByteBufferPool.class) {
+      synchronized(ObjectPool.class) {
         if (pool == null) {
-          pool = new ByteBufferPool(poolSize);
+          pool = new ObjectPool<byte[]>(poolSize);
         }
       }
     }
@@ -74,6 +77,22 @@ public class CacheOutputStream extends OutputStream {
     this.keyBase = new byte[len + Utils.SIZEOF_LONG];
     System.arraycopy(key, off, keyBase, 0, len);
     keyBase = getKey(bufferPos);
+  }
+  
+  /**
+   * Set ignore regular flush and close 
+   * @param b
+   */
+  public void setIgnoreFlushAndClose(boolean b) {
+    this.ignoreFC = b;
+  }
+  
+  /**
+   * Get ignore set and close
+   * @return current setting
+   */
+  public boolean getIgnoreFlushAndClose() {
+    return this.ignoreFC;
   }
   
   private byte[] getKey(long offset) {
@@ -128,11 +147,21 @@ public class CacheOutputStream extends OutputStream {
 
   @Override
   public void flush() throws IOException {
+    if (this.ignoreFC) {
+      return;
+    }
     checkClosed();
   }
 
   @Override
   public void close() throws IOException {
+    if (this.ignoreFC) {
+      return;
+    }
+    forcedClose();
+  }
+
+  public void forcedClose() throws IOException {
     checkClosed();
     keyBase = getKey(bufferPos);
     if (bufferPos != 0 || bufferOffset != 0) {
@@ -142,7 +171,7 @@ public class CacheOutputStream extends OutputStream {
     pool.offer(buffer);
     this.closed = true;
   }
-
+  
   private void checkClosed() throws IOException {
     if (closed) {
       throw new IOException("Stream is closed");

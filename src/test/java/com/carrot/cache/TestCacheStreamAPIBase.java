@@ -64,7 +64,7 @@ public abstract class TestCacheStreamAPIBase  {
     dir.deleteOnExit();
     String rootDir = dir.getAbsolutePath();
     
-    Cache.Builder builder = new Cache.Builder(cacheName);
+    Builder builder = new Builder(cacheName);
     
     builder
       .withCacheDataSegmentSize(segmentSize)

@@ -23,7 +23,6 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.carrot.cache.Cache.Builder;
 import com.carrot.cache.controllers.AQBasedAdmissionController;
 import com.carrot.cache.controllers.AdmissionController;
 import com.carrot.cache.controllers.BaseAdmissionController;
@@ -127,7 +126,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
     Path victim_rootDirPath = Files.createTempDirectory(null);
     String rootDir = victim_rootDirPath.toFile().getAbsolutePath();
 
-    Cache.Builder builder = new Cache.Builder(cacheName);
+    Builder builder = new Builder(cacheName);
 
     builder.withCacheDataSegmentSize(victim_segmentSize).withCacheMaximumSize(victim_maxCacheSize)
         .withScavengerRunInterval(victim_scavengerInterval)

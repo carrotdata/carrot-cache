@@ -99,7 +99,7 @@ public abstract class TestCacheMultithreadedZipfBase {
     // Data directory
     Path rootDirPath = Files.createTempDirectory(null);
     String rootDir = rootDirPath.toFile().getAbsolutePath();
-    Cache.Builder builder = new Cache.Builder(cacheName);
+    Builder builder = new Builder(cacheName);
     
     builder
       .withCacheDataSegmentSize(segmentSize)
@@ -126,7 +126,7 @@ public abstract class TestCacheMultithreadedZipfBase {
    * @param b builder instance
    * @return builder instance
    */
-  protected Cache.Builder withAddedConfigurations(Cache.Builder b) {
+  protected Builder withAddedConfigurations(Builder b) {
     return b;
   }
   

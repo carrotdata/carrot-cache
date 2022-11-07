@@ -94,7 +94,7 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
     Path victim_rootDirPath = Files.createTempDirectory(null);
     String rootDir = victim_rootDirPath.toFile().getAbsolutePath();
     
-    Cache.Builder builder = new Cache.Builder(cacheName);
+    Builder builder = new Builder(cacheName);
     
     builder
       .withCacheDataSegmentSize(victim_segmentSize)
