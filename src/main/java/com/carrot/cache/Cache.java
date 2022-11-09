@@ -60,120 +60,8 @@ import com.carrot.cache.util.Utils;
 /**
  * Main entry for off-heap/on-disk cache
  *
- * <p>Memory Index is a dynamic hash table, which implements smart incremental rehashing technique
- * to avoid large pauses during operation.
- *
- * <p>Size of a table is always power of 2'. It starts with size = 64K (configurable)
- *
- * <p>1. Addressing
- *
- * <p>1.1 Each key is hashed into 8 bytes value 
- * <p>1.2 First N bits (2**N is a size of a table) are
- * used to identify a slot number. 
- * <p>1.3 Each slot is 8 bytes and keeps address to an index buffer IB
- * (dynamically sized between 256 bytes and 4KB) 
- * <p>1.4 Each index buffer keeps cached item indexes.
- * First 2 bytes keeps # of indexes
- *
- * <p>0 -> IB(0) 1 -> IB(1)
- *
- * <p>...
- *
- * <p>64535 -> IB (65535)
- *
- * <p>IB(x) -> number indexes (2 bytes) index1 (16 bytes) index2 (16 bytes) index3(16 bytes)
- *
- * <p>1.5 Index is 16 bytes, first 8 bytes is hashed key, second 8 bytes is address of a cached item
- * in a special format: 
- * <p>1.5.1 first 2 bytes - reserved for future eviction algorithms 
- * <p>1.5.2 next 2 bytes - Memory buffer ID (total maximum number of buffers is 64K) 
- * <p>1.5.3 last 4 bytes is offset in
- * a memory buffer (maximum memory buffer size is 4GB)
- *
- * <p>Memory buffer is where cached data is stored. Each cached item has the following format:
- *
- * <p>expiration (8 bytes) key (variable) item (variable)
- *
- * <p>2. Incremental rehashing
- *
- * <p>When some index buffer is filled up (size is 4KB and keeps 255 indexes each 16 bytes long) and
- * no maximum memory limit is reached yet, rehashing process starts. 
- * <p>2.1 N -> N+1 we increment size
- * of a table by factor of 2 
- * <p>2.2 We rehash full slots one - by one once slot reaches its capacity
- * <p>2.3 Slot #K is rehashed into 2 slots in a new hash table: 'K0' and 'K1'
- *
- * <p>Example: let suppose that N = 8 and we rehash slot with ID = 255 (11111111) This slot will be
- * rehashed into 2 slots in a new table: 111111110 and 111111111. ALl keys for these two slots come
- * from a slot 255 from and old table 
- * <p>2.4 System set 'rehashInProgress' and two tables now co-exists
- * <p>2.5 We keep track on how many slots have been rehashed already and based on this number we set
- * the priority on probing both tables as following: old -> new when number of rehashed slots <
- * size(old); new -> old - otherwise 
- * <p>2.6 when rehash finishes, we set old_table = new_table and set
- * rehashInProgress to 'false' 2.6 If during rehashing some slot in a new table reaches maximum
- * capacity - all cache operations are put on hold until old table rehash is finished. This is
- * highly unlikely event, but in theory is possible
- *
- * <p>3. Eviction algorithms
- *
- * <p>3.1 CSLRU - Concurrent Segmented LRU
- *
- * <p>SLOT X: Item1, Item2, ...Item100, ... ItemX (X <= 255)
- *
- * <p>3.1.1 Eviction and item promotion (on hit) happens in a particular table's slot. 
- * <p>3.1.2 Because we have at least 64K slots - there are literally no contention on both: read and insert. We use
- * write locking of a slot. Multiple concurrent threads can read/write index at the same time 
- * <p>3.1.3 When item is hit, his position in a slot memory buffer is changed - it is moved closer to the
- * head of a buffer, how far depends on how many virtual segments in a slot we have. Default is 8.
- * So. if item is located in a segment 6, it will be moved to a head of a segment 5. Item in a
- * segment 1 will be moved to a head of a segment 1.
- *
- * <p>Example:
- *
- * <p>A. We found ITEM in a Slot Y. ITEM has position 100, total number of items in a slot - 128.
- * Therefore virtual segment size is 128/8 = 16. Item is located in segment 7, it will be promoted
- * to a head of segment 6 and its position will change from 100 to 80
- *
- * <p>3.2 CSLRU-WP (with weighted promotion)
- *
- * <p>We take into account accumulated 'importance' of a cached entry when making decision on how
- * large will item promotion be. 2 bytes in a 8 byte index entry are access counters. Every time
- * item is accessed we increment counter. On saturation (if it will ever happen) we reset counter to
- * 0 (?)
- *
- * <p>All cached items are divided by groups: VERY HOT, HOT, WARM, COLD based on a values of their
- * counters. For VERY HOT item promotion on access is going to be larger than for COLD item.
- *
- * <p>This info can be used during item eviction from RAM cache to SSD cache. For example, during
- * eviction COLD items from RAM will be discarded completely, all others will be evicted to SSD
- * cache.
- *
- * <p>4. Insertion point To prevent cache from trashing on scan-like workload, we insert every new
- * item into the head of a segment 7, which is approximately 25% (quarter) distance from a memory
- * buffer tail.
- *
- * <p>5. Handling TTL and freeing the space
- *
- * <p>5.1 Special Scavenger thread is running periodically to clean TTL-expired items and remove
- * cold items to free space for a new items 
- * <p>5.2 All memory buffers are ordered BUF(0) -> BUF(1) ->
- * ... -> BUF(K) in a circular buffer. For the sake of simplicity, let BUF(0) be a head, where new
- * items are inserted into right now. 
- * <p>5.3 Scavenger scans buffers starting from BUF(1) (the least
- * recent ones). It skips TTL-expired items and inserts other ones into BUF(0) ONLY if they are
- * popular enough (if you remember, we separated ALL cached items into 8 segments, where Segment 1
- * is most popular and Segment 8 is the least popular). By default we dump all items which belongs
- * to segments 7 and 8. 
- * <p>5.4 There are two configuration parameters which control Scavenger :
- * minimum_start_capacity (95% by default) and stop_capacity (90%). Scavengers starts running when
- * cache reaches minimum_start_capacity and stops when cache size gets down to stop_capacity. 
- * <p>5.5 During scavenger run, the special rate limiter controls incoming data rate and sets its limit to
- * 90% of a Scavenger cleaning data rate to guarantee that we won't exceed cache maximum capacity
  */
 public class Cache implements IOEngine.Listener, EvictionListener {
-
-
   
   /** Logger */
   private static final Logger LOG = LogManager.getLogger(Cache.class);
@@ -230,7 +118,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /* Parent cache */
   Cache parentCache;
   
+  /* Cache epoch */
   Epoch epoch;
+  
+  Thread shutDownHook = new Thread(() -> {
+    try {
+      shutdown();
+    } catch (IOException e) {
+      LOG.error(e);
+    }
+  });
     
   /* Throughput controller enabled */
   boolean tcEnabled;
@@ -289,9 +186,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   /**
-   * Constructor with configuration
-   * 
-   * @param conf configuration
+   * Constructor with cache name
+   * @param name cache name
    * @throws IOException 
    */
   public Cache(String name) throws IOException {
@@ -360,15 +256,20 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.engine.getMemoryIndex().setEvictionListener(this);
   }
   
+  /**
+   * Add shutdown hook
+   */
   public void addShutdownHook() {
     Runtime r = Runtime.getRuntime();
-    r.addShutdownHook( new Thread(() -> {
-      try {
-        shutdown();
-      } catch (IOException e) {
-        LOG.error(e);
-      }
-    }));
+    r.addShutdownHook(this.shutDownHook);
+  }
+  
+  /**
+   * Remove shutdown hook
+   */
+  public void removeShutdownHook() {
+    Runtime r = Runtime.getRuntime();
+    r.removeShutdownHook(shutDownHook);
   }
   
   private void initScavenger() {
@@ -1143,11 +1044,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * Get cached item and key (if any)
    *
    * @param key key buffer
-   * @param keyOfset key offset
+   * @param keyOffset key offset
    * @param keySize key size
    * @param hit if true - its a hit
    * @param buffer buffer for item
-   * @param bufSize buffer offset
+   * @param bufOffset buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
    * @throws IOException 
@@ -1248,11 +1149,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * Get cached item only (if any)
    *
    * @param key key buffer
-   * @param keyOfset key offset
+   * @param keyOffset key offset
    * @param keySize key size
    * @param hit if true - its a hit
    * @param buffer buffer for item
-   * @param bufSize buffer offset
+   * @param bufOffset buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
    * @throws IOException 
@@ -1272,13 +1173,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * Get cached value range
    *
    * @param key key buffer
-   * @param keyOfset key offset
+   * @param keyOffset key offset
    * @param keySize key size
    * @param rangeStart range start
    * @param rangeSize range size
    * @param hit if true - its a hit
    * @param buffer buffer for item
-   * @param bufSize buffer offset
+   * @param bufOffset buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
    * @throws IOException 
@@ -1321,7 +1222,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param key key buffer
    * @param keyOff key offset
    * @param keySize key size
-   * @param hit if true - its a hit
    * @param buffer byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
@@ -1409,7 +1309,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * Get cached value range (if any)
    *
    * @param key key buffer
-   * @param keyOff key offset
+   * @param keyOffset key offset
    * @param keySize key size
    * @param rangeStart range start
    * @param rangeSize range size
@@ -1622,9 +1522,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /**
    * Delete cached item
    *
-   * @param key key
-   * @param keyOffset key offset
-   * @param keyLength key size
+   * @param key key buffer
    * @return true - success, false - does not exist
    * @throws IOException 
    */
@@ -1661,8 +1559,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * Expire cached item
    *
    * @param key key
-   * @param keyOffset key offset
-   * @param keyLength key size
    * @return true - success, false - does not exist
    * @throws IOException 
    */
@@ -2154,6 +2050,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * Dispose cache
    */
   public void dispose() {
+    removeShutdownHook();
     // 1 cancel the timer
     this.timer.cancel();
     stopScavenger();

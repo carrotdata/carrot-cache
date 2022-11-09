@@ -79,11 +79,11 @@ public interface DataReader {
    * @param sid segment id
    * @param offset offset at a segment to start reading from
    * @param size size of K-V pair (can be -1)
-   * @param bufferbuffer
+   * @param buffer buffer
    * @return full size of a K-V pair
    */
   public int read(IOEngine engine, long keyPtr, int keySize, 
-      int sid, long ofset, int size, ByteBuffer buffer) throws IOException;
+      int sid, long offset, int size, ByteBuffer buffer) throws IOException;
 
   
   /**
@@ -153,13 +153,13 @@ public interface DataReader {
    * @param sid segment id
    * @param offset offset at a segment to start reading from
    * @param size size of K-V pair (can be -1)
-   * @param bufferbuffer
+   * @param buffer buffer
    * @param rangeStart offset to read from
    * @param rangeSize size of a value range
    * @return full size of a K-V pair
    */
   public default int readValueRange(IOEngine engine, long keyPtr, int keySize, 
-      int sid, long ofset, int size, ByteBuffer buffer, int rangeStart, int rangeSize) throws IOException{
+      int sid, long offset, int size, ByteBuffer buffer, int rangeStart, int rangeSize) throws IOException{
     throw new UnsupportedOperationException("read value range");
   }
 

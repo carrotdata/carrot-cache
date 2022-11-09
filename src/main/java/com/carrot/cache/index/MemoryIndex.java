@@ -470,9 +470,6 @@ public final class MemoryIndex implements Persistent {
    * Set type of an index - either AdmissionQueue index or Main Queue
    *
    * @param type
-   * @throws IllegalAccessException
-   * @throws InstantiationException
-   * @throws ClassNotFoundException
    */
   public void setType(Type type) {
     this.indexType = type;
@@ -821,9 +818,8 @@ public final class MemoryIndex implements Persistent {
   
   /**
    * Get item size (only for MQ)
-   * @param key key buffer
-   * @param off offset
-   * @param size key size
+   * @param keyPtr key address
+   * @param keySize key size
    * @return size of an item, both key and value (-1 - not found)
    */
   public int getItemSize(long keyPtr, int keySize) {
@@ -894,9 +890,8 @@ public final class MemoryIndex implements Persistent {
   /**
    * Get item's hit count (only for MQ)
    *
-   * @param key key buffer
-   * @param off offset
-   * @param size key size
+   * @param keyPtr key address
+   * @param keySize key size
    * @return hit count (or -1)
    */
   public int getHitCount(long keyPtr, int keySize) {
@@ -1657,13 +1652,15 @@ public final class MemoryIndex implements Persistent {
    * Insert new index entry with default rank
    *
    * @param key item key
-   * @param keyOff item's key offset
+   * @param keyOffset item's key offset
    * @param keyLength item key size
    * @param value item value
    * @param valueOffset item's value offset
    * @param valueLength value size
+   * @param sid data segment id
+   * @param offset offset in a data segment
    * @param expire expiration time
-   * @return INSERTED or FAILED
+   * @return MutationResult.INSERTED or MutationResult.FAILED
    */
   
   public MutationResult insert(byte[] key, int keyOffset, int keyLength, 
@@ -1678,11 +1675,13 @@ public final class MemoryIndex implements Persistent {
    * Insert new index entry with a rank
    *
    * @param key item key
-   * @param keyOff item's key offset
+   * @param keyOffset item's key offset
    * @param keyLength item key size
    * @param value item value
    * @param valueOffset item's value offset
    * @param valueLength value size
+   * @param sid data segment id
+   * @param offset offset in the data segment
    * @param rank item's rank
    * @param expire expiration time
    * @return INSERTED or FAILED
@@ -1721,20 +1720,21 @@ public final class MemoryIndex implements Persistent {
    *
    * @param key item key
    * @param indexPtr item index data pointer
+   * @param indexSize item's index size
+   * @return MutationResult.INSERTED or MutationResult.FAILED
    */
   public MutationResult insert(byte[] key, long indexPtr, int indexSize) {
     return insert(key, 0, key.length, indexPtr, indexSize);
   }
-
 
   /**
    * Insert new index entry with default rank
    *
    * @param ptr key address
    * @param size key size
-   * @param index data pointer (not used for AQ, for MQ - its 12 bytes value)
+   * @param indexPtr data pointer (not used for AQ, for MQ - its 12 bytes value)
    * @param indexSize index size
-   * @return INSERTED or FAILED
+   * @return MutationResult.INSERTED or MutationResult.FAILED
    */
   public MutationResult insert(long ptr, int size, long indexPtr, int indexSize) {
     int slot = 0;
@@ -1755,8 +1755,10 @@ public final class MemoryIndex implements Persistent {
    * @param keyLength key size
    * @param valuePtr value address
    * @param valueLength value size
+   * @param sid segment id
+   * @param offset offset in the segment
    * @param expire expiration time
-   * @param mutation result: INSERTED or FAILED
+   * @return MutationResult.INSERTED or MutationResult.FAILED
    */
   public MutationResult insert(long keyPtr, int keyLength, long valuePtr, int valueLength, 
       short sid, int offset, long expire) {
@@ -1771,9 +1773,11 @@ public final class MemoryIndex implements Persistent {
    * @param keyLength key size
    * @param valuePtr value address
    * @param valueLength value size
+   * @param sid segment id
+   * @param offset offset in the data segment
    * @param rank item's rank
    * @param expire expiration time
-   * @param mutation result: INSERTED or FAILED
+   * @return MutationResult.INSERTED or MutationResult.FAILED
    */
   public MutationResult insertWithRank(long keyPtr, int keyLength, long valuePtr, int valueLength, 
       short sid, int offset, int rank, long expire) {
@@ -1808,7 +1812,7 @@ public final class MemoryIndex implements Persistent {
    * @param hash hash
    * @param indexPtr value
    * @param indexSize index size
-   * @return MutationResult.INSERTED 
+   * @return MutationResult.INSERTED | MutationResult.FAILED
 
    */
   private MutationResult insertInternal(long hash, long indexPtr, int indexSize) {
@@ -1820,8 +1824,7 @@ public final class MemoryIndex implements Persistent {
    * Selects correct index table for a hashed key
    * Can be either ref_index_base or ref_index_base_rehash
    * @param hash hashed key 
-   * @return index
-   * TODO: check we under lock
+   * @return index array
    */
   private long[] getIndexForHash(long hash) {
     long[] index = ref_index_base.get();
@@ -1845,7 +1848,7 @@ public final class MemoryIndex implements Persistent {
    * @param key key buffer
    * @param keyOffset key offset 
    * @param keyLength key length
-   * @return index
+   * @return index array
    */
   private long[] getIndexForKey(byte[] key, int keyOffset, int keyLength) {
     long hash = Utils.hash64(key, keyOffset, keyLength);
@@ -1857,7 +1860,7 @@ public final class MemoryIndex implements Persistent {
    * Can be either ref_index_base or ref_index_base_rehash
    * @param keyPtr key address
    * @param keyLength key length
-   * @return index
+   * @return index array
    */
   private long[] getIndexForKey(long keyPtr, int keyLength) {
     long hash = Utils.hash64(keyPtr, keyLength);
@@ -1868,8 +1871,9 @@ public final class MemoryIndex implements Persistent {
    *
    * @param hash hash
    * @param indexPtr value
+   * @param indexSize index size
    * @param rank item's rank
-   * @return MutationResult.INSERTED 
+   * @return MutationResult.INSERTED or FAILED
    */
   private MutationResult insertInternal(long hash, long indexPtr, int indexSize, int rank) {
     // Get slot number
@@ -1902,8 +1906,8 @@ public final class MemoryIndex implements Persistent {
    * @param ptr index block address
    * @param hash hash of a key
    * @param indexPtr index data pointer (not used for AQ, 12 bytes for MQ)
+   * @param indexSize index size
    * @return new index block pointer
-   * @throws  
    */
   private long insert0(long ptr, long hash, long indexPtr, int indexSize) {
     int rank = this.evictionPolicy.getDefaultRankForInsert();
@@ -1916,9 +1920,9 @@ public final class MemoryIndex implements Persistent {
    * @param ptr index block address
    * @param hash hash of a key
    * @param indexPtr index data pointer (not used for AQ, 12 bytes for MQ)
+   * @param indexSize index size
    * @param rank item's rank
    * @return new index block pointer
-   * @throws
    */
   private long insert0(long ptr, long hash, long indexPtr, int indexSize, int rank) {
 
@@ -2057,6 +2061,8 @@ public final class MemoryIndex implements Persistent {
    * @param ptr index block address
    * @param hash hash
    * @param indexPtr index data pointer (not relevant for AQ, for MQ - 12 byte data)
+   * @param indexSize index size
+   * @param rank rank of an item
    * @return true on INSERT, false on UPDATE (DELETE -> INSERT)
    */
   private boolean insertEntry(long ptr, long hash, long indexPtr, int indexSize, int rank) {
@@ -2222,7 +2228,7 @@ public final class MemoryIndex implements Persistent {
    * @param key key
    * @param off offset
    * @param len key length
-   * @return FAILED, INSERTED or DELETED
+   * @return MutationResult.FAILED | INSERTED | DELETED
    */
   public MutationResult aarp(byte[] key, int off, int len) {
     
@@ -2241,7 +2247,8 @@ public final class MemoryIndex implements Persistent {
   /**
    * Add-if Absent-Remove-if Present 
    * Atomic operation
-   * @param key key
+   * @param keyPtr key address
+   * @param keySize key size
    * @return FAILED, INSERTED or DELETED 
    */
   public MutationResult aarp(long keyPtr, int keySize) {

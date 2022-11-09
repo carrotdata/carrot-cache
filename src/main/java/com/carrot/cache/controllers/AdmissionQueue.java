@@ -82,7 +82,8 @@ public class AdmissionQueue implements Persistent {
   
   /**
    * Public constructor
-   * @param initialMaxSize initial maximum size
+   * 
+   * @param cache parent cache
    */
   public AdmissionQueue(Cache cache) {
     this.cache = cache;
@@ -189,7 +190,7 @@ public class AdmissionQueue implements Persistent {
   
   /**
    * Sets global minimum AQ size ratio
-   * @param  new global minimum size ratio
+   * @param min  new global minimum size ratio
    */
   public void setGlobalMinSizeRatio(double min) {
     this.globalMinSizeRatio = min;

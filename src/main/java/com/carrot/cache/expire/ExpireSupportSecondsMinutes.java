@@ -33,8 +33,6 @@ public class ExpireSupportSecondsMinutes implements ExpireSupport {
   
   /**
    * Default constructor
-   * @param type
-   * @param epochStartTime
    */
   public ExpireSupportSecondsMinutes() {
     this.epochStartTime = Epoch.getEpochStartTime();
@@ -63,8 +61,6 @@ public class ExpireSupportSecondsMinutes implements ExpireSupport {
    * 2 bytes - seconds epoch counter
    * 2 bytes - minutes 
    * 2 bytes  - hours
-   * @param type expire type
-   * @return meta section size in bytes
    */
   public int getExpireMetaSectionSize () {
     return ExpireSupport.super.getExpireMetaSectionSize() +  2 * Utils.SIZEOF_SHORT;
@@ -74,7 +70,6 @@ public class ExpireSupportSecondsMinutes implements ExpireSupport {
    * Checks and updates expiration time or expire item
    * @param ibesPtr index block expiration section address
    * @param expireFieldPtr item expire field address (2 bytes are used to keep expiration time)
-   * @param accessStartTime - time when this index block scan was started
    * @return true if expired, false otherwise
    */
   public final long getExpire(long ibesPtr, long expireFieldPtr) {

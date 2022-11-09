@@ -108,7 +108,7 @@ public class Builder {
   
   /**
    * With object cache key class name
-   * @param className class name
+   * @param cls key class 
    * @return builder instance
    */
   public Builder withObjectCacheKeyClass(Class<?> cls) {
@@ -118,7 +118,7 @@ public class Builder {
   
   /**
    * With object cache value class name
-   * @param className class name
+   * @param cls value class 
    * @return builder instance
    */
   public Builder withObjectCacheValueClass(Class<?> cls) {

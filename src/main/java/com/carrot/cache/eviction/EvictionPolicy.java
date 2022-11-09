@@ -70,7 +70,7 @@ public interface EvictionPolicy {
   /**
    * TODO: move this code out
    * Get start index for a given segment
-   * @param total number of ranks
+   * @param numRanks number of ranks
    * @param rank rank
    * @param totalItems total items in Index-Data-Block
    * @return start index

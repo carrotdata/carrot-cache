@@ -140,46 +140,6 @@ public class FileIOEngine extends IOEngine {
     new Thread(r).start();
   }
 
-
-//  @Override
-//  protected Segment getRAMSegmentByRank(int rank) {
-//    Segment s = this.ramBuffers[rank];
-//    if (s == null) {
-//      synchronized (this.ramBuffers) {
-//        s = this.ramBuffers[rank];
-//        if (s != null) {
-//          return s;
-//        }
-//        int id = getAvailableId();
-//        if (id < 0) {
-//          return null;
-//        }
-//        if (this.dataSegments[id] == null) {
-//          Long ptr = this.bufferPool.poll();
-//          if (ptr == null) {
-//            ptr = UnsafeAccess.mallocZeroed(this.segmentSize);
-//          }
-//          s = Segment.newSegment(ptr, (int) this.segmentSize, id, rank);
-//          s.init(this.cacheName);
-//          // Set data appender
-//
-//          s.setDataWriter(this.dataWriter);
-//          this.dataSegments[id] = s;
-//          reportAllocation(this.segmentSize);
-//          created.incrementAndGet();
-//          // LOG.error("created "+ id + " s=" + s);
-//        } else {
-//          // TODO: is it normal path of an execution?
-//          // FIXME: check Scavenger
-//          s = this.dataSegments[id];
-//          s.reuse(id, rank, System.currentTimeMillis());
-//        }
-//        this.ramBuffers[rank] = s;
-//      }
-//    }
-//    return s;
-//  }
-
   @Override
   protected int getInternal(
       int sid,
@@ -361,7 +321,6 @@ public class FileIOEngine extends IOEngine {
    *
    * @param id segment id
    * @return file
-   * @throws FileNotFoundException
    */
   public RandomAccessFile getFileFor(int id) {
     RandomAccessFile file = dataFiles.get(id);

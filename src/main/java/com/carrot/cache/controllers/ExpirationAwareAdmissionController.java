@@ -34,7 +34,7 @@ import com.carrot.cache.util.CarrotConfig;
  * 1. All cached items in the same bin have the same relative expiration time
  * 2. If two data segments: S1 and S2 have the same rank (bin) and t1 is S! creation time, 
  *   t2 - S2 creation time, then:
- *   2.1 if t2 > t1 and S2 is all-expired-items segment, then S1 is also - all-expired-items segment
+ *   2.1 if t2 &gt; t1 and S2 is all-expired-items segment, then S1 is also - all-expired-items segment
  *   2.2 if S1 is not all-expired-items segment, then S2 is full (no expired items at all) 
  * 
  * The controller MUST decrease expiration time only. One exclusion is when expiration time 

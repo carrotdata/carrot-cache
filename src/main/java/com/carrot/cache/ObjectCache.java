@@ -254,11 +254,9 @@ public class ObjectCache {
   
   /**
    * Loads saved object cache.
-   * make sure that CarrotConfig was already set for the cache
+   * Make sure that CarrotConfig was already set for the cache
    * @param cacheRootDir cache root directory
    * @param cacheName cache name
-   * @param keyClass object cache key class
-   * @param valueClass object cache value class
    * @return object cache or null
    * @throws IOException
    */
@@ -371,14 +369,14 @@ public class ObjectCache {
    * Adds shutdown hook
    */
   public void addShutdownHook() {
-    Runtime r = Runtime.getRuntime();
-    r.addShutdownHook( new Thread(() -> {
-      try {
-        shutdown();
-      } catch (IOException e) {
-        LOG.error(e);
-      }
-    }));
+    this.cache.addShutdownHook();
+  }
+  
+  /**
+   * Removes shutdown hook
+   */
+  public void removeShutdownHook() {
+    this.cache.removeShutdownHook();
   }
   
   /**

@@ -55,7 +55,8 @@ public class BlockReaderWriterSupport {
   
   /**
    * Get data size in block at offset
-   * @param block data block (first 4 bytes contains size)
+   * @param buffer data block (first 4 bytes contains size)
+   * @param offset offset in the data block
    * @return data size
    */
   public static int getBlockDataSize(byte[] buffer, int offset) {

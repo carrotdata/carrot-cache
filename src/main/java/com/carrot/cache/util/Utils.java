@@ -51,9 +51,10 @@ public class Utils {
     }
   }
   /**
-   * Returns true if x1 is less than x2, when both values are treated as unsigned long. Both values
-   * are passed as is read by Unsafe. When platform is Little Endian, have to convert to
-   * corresponding Big Endian value and then do compare. We do all writes in Big Endian format.
+   * Returns true if x1 is less than x2, when both values are treated as unsigned long. <br>
+   * Both values are passed as is read by Unsafe. When platform is Little Endian, have <br>
+   * to convert to corresponding Big Endian value and then do compare. We do all writes <br>
+   * in Big Endian format.
    */
   static boolean lessThanUnsignedLong(long x1, long x2) {
     if (UnsafeAccess.littleEndian) {
@@ -96,7 +97,7 @@ public class Utils {
    * @param buffer2 array
    * @param bufOffset2 offset
    * @param len2 length
-   * @return  0 if equal, < 0 if left is less than right, etc.
+   * @return  0 if equal, &lt; 0 if left is less than right, etc.
    */
   public static int compareTo(ByteBuffer buffer, int len, byte[] buffer2, int bufOffset2, int len2) {
     int off = buffer.position();
@@ -115,7 +116,7 @@ public class Utils {
    * @param len length
    * @param ptr memory address
    * @param len2 length
-   * @return  0 if equal, < 0 if left is less than right, etc.
+   * @return  0 if equal, &lt; 0 if left is less than right, etc.
    */
   public static int compareTo(ByteBuffer buffer, int len, long ptr,  int len2) {
     int off = buffer.position();
@@ -137,7 +138,7 @@ public class Utils {
    * @param offset2 Where to start comparing in the right buffer
    * @param length1 How much to compare from the left buffer
    * @param length2 How much to compare from the right buffer
-   * @return 0 if equal, < 0 if left is less than right, etc.
+   * @return 0 if equal, &lt; 0 if left is less than right, etc.
    */
   public static int compareTo(
       byte[] buffer1, int offset1, int length1, byte[] buffer2, int offset2, int length2) {
@@ -203,7 +204,7 @@ public class Utils {
    * @param offset1 Where to start comparing in the left buffer
    * @param length1 How much to compare from the left buffer
    * @param length2 How much to compare from the right buffer
-   * @return 0 if equal, < 0 if left is less than right, etc.
+   * @return 0 if equal, &lt; 0 if left is less than right, etc.
    */
   public static int compareTo(byte[] buffer1, int offset1, int length1, long address, int length2) {
 
@@ -260,12 +261,11 @@ public class Utils {
   /**
    * Lexicographically compare two native memory pointers.
    *
-   * @param buffer1 left operand
-   * @param address right operand - native
-   * @param offset1 Where to start comparing in the left buffer
-   * @param length1 How much to compare from the left buffer
-   * @param length2 How much to compare from the right buffer
-   * @return 0 if equal, < 0 if left is less than right, etc.
+   * @param address1 first pointer
+   * @param length1 length
+   * @param address2 second pointer
+   * @param length2 length
+   * @return 0 if equal,&lt; 0 if left is less than right, etc.
    */
   public static int compareTo(long address1, int length1, long address2, int length2) {
     UnsafeAccess.mallocStats.checkAllocation(address1, length1);
@@ -371,7 +371,6 @@ public class Utils {
   /**
    * Read unsigned VarInt from a byte buffer
    * @param buf byte buffer
-   * @param off offset
    * @return value
    */
   public static int readUVInt(ByteBuffer buf) {
@@ -510,10 +509,11 @@ public class Utils {
   }
 
   /**
-   * Murmur3hash implementation with native pointer.
+   * Murmur3hash implementation.
    *
-   * @param ptr the address of memory
-   * @param len the length of memory
+   * @param buf byte buffer
+   * @param off offset
+   * @param len length
    * @param seed the seed
    * @return hash value
    */
@@ -966,7 +966,7 @@ public class Utils {
   /**
    * Reads item size from a byte buffer
    * 
-   * @param ptr memory address
+   * @param buffer byte buffer
    * @return size
    */
   public static int getItemSize(ByteBuffer buffer) {
@@ -981,10 +981,10 @@ public class Utils {
   }
   
   /**
-   * Reads item size from a byte buffer
+   * Reads key offset from a byte buffer
    * 
-   * @param ptr memory address
-   * @return size
+   * @param buffer byte buffer
+   * @return offset
    */
   public static int getKeyOffset(ByteBuffer buffer) {
     int pos = buffer.position();
@@ -1000,7 +1000,7 @@ public class Utils {
   /**
    * Reads value offset from a byte buffer
    * 
-   * @param ptr memory address
+   * @param buffer byte buffer
    * @return value offset
    */
   public static int getValueOffset(ByteBuffer buffer) {
@@ -1076,7 +1076,7 @@ public class Utils {
   /**
    * Reads value size from a byte buffer
    * 
-   * @param ptr memory address
+   * @param buffer byte buffer
    * @return size
    */
   public static int getValueSize(ByteBuffer buffer) {

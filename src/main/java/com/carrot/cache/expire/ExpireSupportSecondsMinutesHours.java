@@ -33,8 +33,6 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
   
   /**
    * Default constructor
-   * @param type
-   * @param epochStartTime
    */
   public ExpireSupportSecondsMinutesHours() {
     this.epochStartTime = Epoch.getEpochStartTime();
@@ -52,19 +50,17 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
    * Get expiration meta section size for index data block. Expire adds additional 
    * meta section to each index block meta.
    * 
-   * Format meta
+   * Format meta<br>
    * 
-   * Type.SM
+   * Type.SM<br>
    * 
-   * 2 bytes - seconds epoch counter
-   * 2 bytes - minutes 
+   * 2 bytes - seconds epoch counter<br>
+   * 2 bytes - minutes <br>
    * 
-   * Type.SMH
-   * 2 bytes - seconds epoch counter
-   * 2 bytes - minutes 
+   * Type.SMH <br>
+   * 2 bytes - seconds epoch counter<br>
+   * 2 bytes - minutes <br>
    * 2 bytes  - hours
-   * @param type expire type
-   * @return meta section size in bytes
    */
   public int getExpireMetaSectionSize () {
     return ExpireSupport.super.getExpireMetaSectionSize() +  3 * Utils.SIZEOF_SHORT;

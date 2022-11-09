@@ -38,16 +38,16 @@ import com.carrot.cache.util.Utils;
 
 /**
  * 
- * Segment encapsulates all the logic associated
- * with a memory allocation, packing cached entry data,
- * saving and loading to/from disk
+ * Segment encapsulates all the logic associated <br>
+ * with a memory allocation, packing cached entry data,<br>
+ * saving and loading to/from disk. <br> 
  * 
- * Entry format:
+ * Entry format: <br>
  * 
- * VINT - key size
- * VINT - value size
- * Key
- * Value
+ * VINT - key size <br>
+ * VINT - value size <br>
+ * Key <br>
+ * Value <br>
  *
  */
 public class Segment implements Persistent {
@@ -538,7 +538,6 @@ public class Segment implements Persistent {
    * @param size requested size
    * @param id segment id
    * @param rank segment's rank
-   * @param creationTime  segment's creation time
    * @return new segment
    */
   public static Segment newSegment(int size, int id, int rank) {
@@ -552,7 +551,6 @@ public class Segment implements Persistent {
    * @param size requested size
    * @param id segment id
    * @param rank segment's rank
-   * @param creationTime  segment's creation time   
    * @return new segment
    */
   public static Segment newSegment(long ptr, int size, int id, int rank) {
@@ -910,7 +908,6 @@ public class Segment implements Persistent {
 
   /**
    * Update segment's statistics
-   * @param itemIncrement total items to increment
    */
   public void updateEvictedDeleted() {
     this.info.updateEvictedDeleted(1);
@@ -918,7 +915,6 @@ public class Segment implements Persistent {
   
   /**
    * Update expired counter and total rank
-   * @param rank rank of an expired item
    * @param expire expiration time
    */
   public void updateExpired(long expire) {

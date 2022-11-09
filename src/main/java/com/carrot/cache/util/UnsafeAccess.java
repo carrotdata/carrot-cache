@@ -850,11 +850,10 @@ public final class UnsafeAccess {
    */
 
   /**
-   * Copy from a byte buffer to a direct memory
+   * Copy from a memory to a byte buffer
    *
-   * @param src byte buffer
-   * @param srcOffset offset
-   * @param ptr memory destination
+   * @param src memory address
+   * @param dst byte buffer
    * @param len number of bytes to copy
    */
   public static void copy(long src, ByteBuffer dst, int len) {
@@ -878,7 +877,6 @@ public final class UnsafeAccess {
    * Copy from a byte buffer to a direct memory
    *
    * @param src byte buffer
-   * @param srcOffset offset
    * @param ptr memory destination
    * @param len number of bytes to copy
    */

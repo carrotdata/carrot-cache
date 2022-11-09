@@ -484,7 +484,7 @@ public class CarrotConfig {
   
   /**
    * Merge configuration to the main configuration
-   * @param conf
+   * @param props properties
    */
   public static synchronized void merge(Properties props) {
     CarrotConfig mainConfig = getInstance();
@@ -658,8 +658,8 @@ public class CarrotConfig {
   
   /**
    * Gets scavenger start memory ratio for a cache
-   * @param cache name
-   * @return start ratio
+   * @param cacheName cache name
+   * @return start ratio for GC Scavenger
    */
   public double getScavengerStartMemoryRatio(String cacheName) {
     String value = props.getProperty(cacheName + "."+ SCAVENGER_START_RUN_RATIO_KEY);
@@ -716,7 +716,7 @@ public class CarrotConfig {
   /**
    * Sets scavenger dump entry below adjustment step
    * @param cacheName cache name
-   * @param dump entry below adjustment step
+   * @param step entry below adjustment step
    */
   public void setScavengerDumpEntryBelowAdjStep(String cacheName, double step) {
     props.setProperty(cacheName + "."+ SCAVENGER_DUMP_ENTRY_BELOW_STEP_KEY, Double.toString(step));
@@ -739,7 +739,7 @@ public class CarrotConfig {
   /**
    * Sets scavenger dump entry below - start
    * @param cacheName cache name
-   * @param dump entry below ratio
+   * @param ratio entry below ratio start
    */
   public void setScavengerDumpEntryBelowStart(String cacheName, double ratio) {
     props.setProperty(cacheName + "."+ SCAVENGER_DUMP_ENTRY_BELOW_START_KEY, Double.toString(ratio));
@@ -761,7 +761,7 @@ public class CarrotConfig {
   /**
    * Sets scavenger dump entry below - stop
    * @param cacheName cache name
-   * @param dump entry below ratio
+   * @param ratio entry below ratio stop
    */
   public void setScavengerDumpEntryBelowStop(String cacheName, double ratio) {
     props.setProperty(cacheName + "."+ SCAVENGER_DUMP_ENTRY_BELOW_STOP_KEY, Double.toString(ratio));
@@ -783,7 +783,7 @@ public class CarrotConfig {
   /**
    * Set random admission controller start ratio
    * @param cacheName cache name
-   * @param start ratio
+   * @param ratio start ratio
    */
   public void setRandomAdmissionControllerStartRatio(String cacheName, double ratio) {
     props.setProperty(cacheName + "."+ CACHE_RANDOM_ADMISSION_RATIO_START_KEY, Double.toString(ratio));
@@ -805,7 +805,7 @@ public class CarrotConfig {
   /**
    * Set random admission controller stop ratio
    * @param cacheName cache name
-   * @param stop ratio
+   * @param ratio stop ratio
    */
   public void setRandomAdmissionControllerStopRatio(String cacheName, double ratio) {
     props.setProperty(cacheName + "."+ CACHE_RANDOM_ADMISSION_RATIO_STOP_KEY, Double.toString(ratio));
@@ -827,7 +827,7 @@ public class CarrotConfig {
   /**
    * Set number of item popularity ranks for a cache
    * @param cacheName cache name
-   * @param number of popularity ranks
+   * @param num number of popularity ranks
    */
   public void setNumberOfPopularityRanks(String cacheName, int num) {
     props.setProperty(cacheName + "."+ CACHE_POPULARITY_NUMBER_RANKS_KEY, Integer.toString(num));
@@ -849,7 +849,7 @@ public class CarrotConfig {
   /**
    * Set SLRU  insertion point (segment number to insert into the head of)
    * @param cacheName cache name
-   * @param SLRU insertion point (segment number between 0 and getSLRUNumberOfSegments)
+   * @param n SLRU insertion point (segment number between 0 and getSLRUNumberOfSegments - 1)
    */
   public void setSLRUInsertionPoint(String cacheName, int n) {
     props.setProperty(cacheName + "."+ SLRU_CACHE_INSERT_POINT_KEY, Integer.toString(n));
@@ -872,7 +872,7 @@ public class CarrotConfig {
   /**
    * Set SLRU  number of segments 
    * @param cacheName cache name
-   * @param SLRU number of segments
+   * @param n SLRU number of segments
    */
   public void setSLRUNumberOfSegments(String cacheName, int n) {
     props.setProperty(cacheName + "."+ SLRU_NUMBER_SEGMENTS_KEY, Integer.toString(n));
@@ -894,7 +894,7 @@ public class CarrotConfig {
   /**
    * Set sparse files support for a cache (only for 'file' type caches)
    * @param cacheName cache name
-   * @param true / false
+   * @param v true or false
    */
   public void setSparseFilesSupport(String cacheName, boolean v) {
     props.setProperty(cacheName + "."+ SPARSE_FILES_SUPPORT_KEY, Boolean.toString(v));
@@ -918,7 +918,7 @@ public class CarrotConfig {
   /**
    * Set start index size for a cache
    * @param cacheName cache name
-   * @param start index size for a given cache name
+   * @param v start index size for a given cache name
    */
   public void setStartIndexNumberOfSlotsPower (String cacheName, int v) {
     props.setProperty(cacheName + "."+ START_INDEX_NUMBER_OF_SLOTS_POWER_KEY, Integer.toString(v));
@@ -982,7 +982,7 @@ public class CarrotConfig {
   /**
    * Set root directory location for a cache
    * @param cacheName cache name
-   * @param data directory name for a given cache  name
+   * @param dir data directory name for a given cache  name
    */
   public void setCacheRootDir(String cacheName, String dir) {
     props.setProperty(cacheName + "."+ CACHE_ROOT_DIR_PATH_KEY, dir);
@@ -1021,7 +1021,7 @@ public class CarrotConfig {
   /**
    * Set admission queue start size ratio for a given cache name
    * @param cacheName cache name
-   * @param AQ start size ratio relative to the maximum cache size
+   * @param ratio AQ start size ratio relative to the maximum cache size
    */
   public void setAdmissionQueueStartSizeRatio(String cacheName, double ratio) {
     props.setProperty(cacheName + "."+ ADMISSION_QUEUE_START_SIZE_RATIO_KEY, Double.toString(ratio));
@@ -1043,7 +1043,7 @@ public class CarrotConfig {
   /**
    * Set admission queue minimum size ratio for a given cache name
    * @param cacheName cache name
-   * @param AQ minimum size ratio relative to the maximum cache size
+   * @param ratio AQ minimum size ratio relative to the maximum cache size
    */
   public void setAdmissionQueueMinSizeRatio(String cacheName, double ratio ) {
     props.setProperty(cacheName + "."+ ADMISSION_QUEUE_MIN_SIZE_RATIO_KEY, Double.toString(ratio));
@@ -1065,7 +1065,7 @@ public class CarrotConfig {
   /**
    * Set admission queue maximum size ratio for a given cache name
    * @param cacheName cache name
-   * @param AQ maximum size ratio relative to the maximum cache size
+   * @param ratio AQ maximum size ratio relative to the maximum cache size
    */
   public void setAdmissionQueueMaxSizeRatio(String cacheName, double ratio) {
     props.setProperty(cacheName + "."+ ADMISSION_QUEUE_MAX_SIZE_RATIO_KEY, Double.toString(ratio));
@@ -1209,9 +1209,9 @@ public class CarrotConfig {
   }
   
   /**
-   * Get cache write rate limit for a given cache name
+   * Get cache throughput controller number of adjustment steps
    * @param cacheName cache name
-   * @return cache write rate limit for a given cache name
+   * @return throughput controller number of adjustment steps
    */
   public int getThrougputControllerNumberOfAdjustmentSteps(String cacheName) {
     String value = props.getProperty(cacheName + "."+ THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS_KEY);
@@ -1222,9 +1222,9 @@ public class CarrotConfig {
   }
   
   /**
-   * Set cache write rate limit for a given cache name
+   * Set throughput controller number of adjustment steps for cache
    * @param cacheName cache name
-   * @param cache write rate limit for a given cache name
+   * @param n throughput controller number of adjustment steps
    */
   public void setThrougputControllerNumberOfAdjustmentSteps(String cacheName, int n) {
     props.setProperty(cacheName + "."+ THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS_KEY, Long.toString(n));
@@ -1242,7 +1242,7 @@ public class CarrotConfig {
   /**
    * Set index data embedding supported
    * @param cacheName cache name
-   * @param true or false
+   * @param v true or false
    */
   public void setIndexDataEmbeddedSupported(String cacheName, boolean v) {
      props.setProperty(cacheName + "." + INDEX_DATA_EMBEDDED_KEY, Boolean.toString(v));
@@ -1261,7 +1261,7 @@ public class CarrotConfig {
   /**
    * Set data embedded size
    * @param cacheName cache name
-   * @param data embedded size
+   * @param v data embedded size
    */
   public void setIndexDataEmbeddedSize(String cacheName, int v) {
     props.setProperty(cacheName + "." + INDEX_DATA_EMBEDDED_SIZE_KEY, 
@@ -1331,7 +1331,7 @@ public class CarrotConfig {
   /**
    * Set main queue index format implementation
    * @param cacheName cache name
-   * @param index format class name
+   * @param className index format class name
    */
   public void setMainQueueIndexFormat(String cacheName, String className) {
     props.setProperty(cacheName + "." + INDEX_FORMAT_MAIN_QUEUE_IMPL_KEY, className);
@@ -1367,7 +1367,7 @@ public class CarrotConfig {
   /**
    * Set cache eviction policy implementation by cache name
    * @param cacheName cache name
-   * @param eviction policy
+   * @param className eviction policy class name
    */
   public void setCacheEvictionPolicy(String cacheName, String className) {
     props.setProperty(cacheName + "." + CACHE_EVICTION_POLICY_IMPL_KEY, className);
@@ -1402,7 +1402,7 @@ public class CarrotConfig {
    * Set cache admission controller implementation by cache name
    * 
    * @param cacheName cache name
-   * @param admission controller class name
+   * @param className admission controller class name
    */
   public void setAdmissionController(String cacheName, String className) {
     props.setProperty(cacheName + "." + CACHE_ADMISSION_CONTROLLER_IMPL_KEY, className);
@@ -1435,7 +1435,7 @@ public class CarrotConfig {
   /**
    * Set cache throughput controller implementation by cache name
    * @param cacheName cache name
-   * @param throughput controller class name
+   * @param className throughput controller class name
    */
   public void setThroughputController(String cacheName, String className) {
     props.setProperty(cacheName + "." + CACHE_THROUGHPUT_CONTROLLER_IMPL_KEY, className);
@@ -1465,7 +1465,7 @@ public class CarrotConfig {
   /**
    * Set Scavenger recycling selector implementation by cache name
    * @param cacheName cache name
-   * @param recycling selector class name
+   * @param className recycling selector class name
    */
   public void setRecyclingSelector(String cacheName, String className) {
     props.setProperty(cacheName + "." + CACHE_RECYCLING_SELECTOR_IMPL_KEY, className);
@@ -1497,7 +1497,7 @@ public class CarrotConfig {
    * Set segment data writer (appender) implementation by cache name
    * 
    * @param cacheName cache name
-   * @param data writer class name
+   * @param className data writer class name
    */
   public void setDataWriter(String cacheName, String className) {
     props.setProperty(cacheName + "." + CACHE_DATA_WRITER_IMPL_KEY, className);
@@ -1529,7 +1529,7 @@ public class CarrotConfig {
    * Set segment data reader implementation (Memory) by cache name
    * 
    * @param cacheName cache name
-   * @param data reader class name
+   * @param className data reader class name
    */
   public void setMemoryDataReader(String cacheName, String className) {
     props.setProperty(cacheName + "." + CACHE_MEMORY_DATA_READER_IMPL_KEY, className);
@@ -1582,7 +1582,7 @@ public class CarrotConfig {
   /**
    * Set block writer block size by cache name
    * @param cacheName cache name
-   * @param block size
+   * @param size block size
    */
   public void  setBlockWriterBlockSize(String cacheName, int size) {
     props.setProperty(cacheName + "." + CACHE_BLOCK_WRITER_BLOCK_SIZE_KEY, Integer.toString(size));
@@ -1632,7 +1632,7 @@ public class CarrotConfig {
   /**
    * Set expiration support implementation by cache name
    * @param cacheName cache name
-   * @return expire support class name
+   * @param className expire support class name
    */
   public void setExpireSupport(String cacheName, String className) {
     props.setProperty(cacheName + "." + CACHE_EXPIRE_SUPPORT_IMPL_KEY, className);
@@ -1678,7 +1678,7 @@ public class CarrotConfig {
   /**
    * Set expiration bin multiplier
    * @param cacheName cache name
-   * @param value multiplier
+   * @param multiplier value multiplier
    */
   public void setExpireBinMultiplier (String cacheName, double multiplier) {
     props.setProperty(cacheName + "." + CACHE_EXPIRATION_MULTIPLIER_VALUE_KEY, Double.toString(multiplier));
@@ -1702,7 +1702,7 @@ public class CarrotConfig {
   /**
    * Set minimum cache active data set threshold
    * @param cacheName cache name
-   * @param value multiplier
+   * @param ratio minimum cache active data set threshold
    */
   public void setMinimumActiveDatasetRatio (String cacheName, double ratio) {
     props.setProperty(cacheName + "." + CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO_KEY, 
@@ -1727,7 +1727,7 @@ public class CarrotConfig {
   /**
    * Set eviction disabled mode
    * @param cacheName cache name
-   * @param true or false
+   * @param mode true or false
    */
   public void setEvictionDisabledMode (String cacheName, boolean mode) {
     props.setProperty(cacheName + "." + CACHE_EVICTION_DISABLED_MODE_KEY, Boolean.toString(mode));
@@ -1751,7 +1751,7 @@ public class CarrotConfig {
   /**
    * Set rolling window number of bins
    * @param cacheName cache name
-   * @param number of bins
+   * @param n number of bins
    */
   public void setRollingWindowNumberBins (String cacheName, int n) {
     props.setProperty(cacheName + "." + CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY, Integer.toString(n));
@@ -1897,7 +1897,7 @@ public class CarrotConfig {
   /**
    * Set victim cache promotion threshold
    * @param cacheName cache name
-   * @param promotion threshold
+   * @param v promotion threshold
    */
   public void setVictimPromotionThreshold (String cacheName, double v) {
     props.setProperty(cacheName + "." + CACHE_VICTIM_PROMOTION_THRESHOLD_KEY, 
@@ -2022,7 +2022,7 @@ public class CarrotConfig {
   /**
    * Set object additional class names
    * @param cacheName cache name
-   * @param className class name
+   * @param classNames class names
    */
   public void setObjectCacheAddClassNames(String cacheName, String[] classNames) {
     String v = String.join(",", classNames);

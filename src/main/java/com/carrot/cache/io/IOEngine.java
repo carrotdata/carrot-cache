@@ -128,8 +128,7 @@ public abstract class IOEngine implements Persistent {
   /**
    * Initialize engine for a given cache
    *
-   * @param cacheName cache name
-   * @param config cache configuration
+   * @param cache cache 
    * @return new engine
    */
   public static IOEngine getEngineForCache(Cache cache) {
@@ -201,7 +200,7 @@ public abstract class IOEngine implements Persistent {
   /**
    * Constructor
    *
-   * @param cong cache configuration
+   * @param conf cache configuration
    */
   public IOEngine(CarrotConfig conf) {
     this.cacheName = "default";
@@ -956,10 +955,11 @@ public abstract class IOEngine implements Persistent {
    * Get item into a given byte buffer
    *
    * @param key key buffer
-   * @param off offset
-   * @param size size of a key
+   * @param keyOffset offset
+   * @param keySize size of a key
+   * @param hit record hit if true
    * @param buffer buffer
-   * @return length of an item or -1
+   * @return length of an item or -1 (not found)
    * @throws IOException
    */
   public long get(byte[] key, int keyOffset, int keySize, boolean hit, ByteBuffer buffer)
@@ -1045,10 +1045,11 @@ public abstract class IOEngine implements Persistent {
    * Get item into a given byte buffer
    *
    * @param key key buffer
-   * @param off offset
-   * @param size size of a key
+   * @param keyOffset offset
+   * @param keySize size of a key
    * @param rangeStart range start
    * @param rangeSize range size
+   * @param hit record hit if true
    * @param buffer buffer
    * @return length of an item or -1
    * @throws IOException
@@ -1882,7 +1883,7 @@ public abstract class IOEngine implements Persistent {
   /**
    * Release id after segment recycling
    *
-   * @param id data segment id
+   * @param seg data segment 
    */
   public void disposeDataSegment(Segment seg) {
     long dataSize = seg.getInfo().getSegmentDataSize();
@@ -1970,8 +1971,7 @@ public abstract class IOEngine implements Persistent {
   /**
    * Delete key from a cache
    *
-   * @param key key buffer
-   * @param off key offset
+   * @param keyPtr key address
    * @param size key size
    * @return true on success, false otherwise
    * @throws IOException
@@ -1982,12 +1982,11 @@ public abstract class IOEngine implements Persistent {
   }
 
   /**
-   * Put key-value into a cache with a rank
+   * Put key-value into a cache
    *
    * @param key key buffer
    * @param value value buffer
    * @param expire expiration time
-   * @param rank cache item rank
    * @throws IOException
    * @return true on success, false - otherwise
    */
@@ -2098,13 +2097,11 @@ public abstract class IOEngine implements Persistent {
   }
 
   /**
-   * Put key-value into a cache with a rank
+   * Put key-value into a cache 
    *
-   * @param key key buffer
-   * @param keyOff key offset
+   * @param keyPtr key address
    * @param keyLength key length
-   * @param value value buffer
-   * @param valueOff value offset
+   * @param valuePtr value address
    * @param valueLength value length
    * @param expire absolute expiration time in ms, 0 - no expire
    * @return true on success, false - otherwise
@@ -2118,14 +2115,12 @@ public abstract class IOEngine implements Persistent {
   /**
    * Put key-value into a cache with a rank
    *
-   * @param key key buffer
-   * @param keyOff key offset
+   * @param keyPtr key address
    * @param keyLength key length
-   * @param value value buffer
-   * @param valueOff value offset
+   * @param valuePtr value address
    * @param valueLength value length
-   * @param rank rank of a cache item
    * @param expire absolute expiration time in ms, 0 - no expire
+   * @param rank rank of a cache item
    * @throws IOException
    */
   public boolean put(
