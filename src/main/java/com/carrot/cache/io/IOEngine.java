@@ -174,7 +174,8 @@ public abstract class IOEngine implements Persistent {
     this.config = CarrotConfig.getInstance();
     this.segmentSize = this.config.getCacheSegmentSize(this.cacheName);
     this.maxStorageSize = this.config.getCacheMaximumSize(this.cacheName);
-    this.numSegments = (int) (this.maxStorageSize / this.segmentSize);
+    // Currently, maximum number of data segments is 64K
+    this.numSegments = Math.min((int) (this.maxStorageSize / this.segmentSize) + 1, 1 << 16);
     int num = this.config.getNumberOfPopularityRanks(this.cacheName);
     this.ramBuffers = new Segment[num];
     this.dataSegments = new Segment[this.numSegments];
