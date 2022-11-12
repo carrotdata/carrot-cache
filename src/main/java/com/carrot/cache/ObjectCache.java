@@ -16,7 +16,9 @@ package com.carrot.cache;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 import org.apache.logging.log4j.LogManager;
@@ -26,6 +28,7 @@ import com.carrot.cache.Cache.Type;
 import com.carrot.cache.io.ObjectPool;
 import com.carrot.cache.util.CarrotConfig;
 import com.esotericsoftware.kryo.kryo5.Kryo;
+import com.esotericsoftware.kryo.kryo5.Serializer;
 import com.esotericsoftware.kryo.kryo5.io.Input;
 import com.esotericsoftware.kryo.kryo5.io.Output;
 
@@ -51,6 +54,7 @@ public class ObjectCache {
   /** Additional classes for serialization registration*/
   private List<Class<?>> addOns = new ArrayList<Class<?>>();
   
+  private Map<Class<?>, Serializer<?>> serdeMap = new HashMap<Class<?>, Serializer<?>>();
   /** Object pool for Kryo inputs */
   static ObjectPool<Input> inputs;
   
@@ -81,6 +85,25 @@ public class ObjectCache {
    */
   public void addClassesForRegistration(List<Class<?>>  classes) {
     this.addOns.addAll(classes);
+  }
+  
+  /**
+   * Add additional classes to register for serialization
+   * @param classes
+   */
+  public void addClassesForRegistration(Class<?> ...classes) {
+    for (Class<?> cls: classes) {
+      this.addOns.add(cls);
+    }
+  }
+  
+  /**
+   * Register class and custom serializer
+   * @param cls class
+   * @param serde serializer
+   */
+  public void addClassAndSerializer(Class<?> cls, Serializer<?> serde) {
+    serdeMap.put(cls, serde);
   }
   
   private void initIOPools() {
@@ -334,6 +357,9 @@ public class ObjectCache {
       kryo.register(this.valueClass);
       for (Class<?> cls: addOns) {
         kryo.register(cls);
+      }
+      for (Map.Entry<Class<?>, Serializer<?>> pair: serdeMap.entrySet()) {
+        kryo.register(pair.getKey(), pair.getValue());
       }
     } else {
       kryo.reset();
