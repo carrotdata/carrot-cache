@@ -307,7 +307,8 @@ public class ObjectCache {
         }
         return cache;
       } catch (Exception e) {
-        LOG.error("Corrupted snapshot - %s", e.getMessage());
+        LOG.error("Corrupted snapshot");
+        LOG.error(e);
         return null;
       }
     }

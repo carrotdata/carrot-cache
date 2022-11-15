@@ -953,7 +953,7 @@ public class Segment implements Persistent {
         return;
       }
       // Write segment size
-      long size = getFullDataSize();//getSegmentDataSize();//size();
+      long size = getFullDataSize();
       dos.writeLong(size);
       
       int bufSize = (int) Math.min(size, 1024 * 1024);

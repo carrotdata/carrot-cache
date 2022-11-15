@@ -373,6 +373,7 @@ public class Scavenger extends Thread {
     long runStart = System.currentTimeMillis();
     IOEngine engine = this.cache.getEngine();
     DateFormat format = DateFormat.getDateTimeInstance();
+    Segment s = null;
     try {
       
       if (numInstances.incrementAndGet() > maxInstances) {
@@ -391,7 +392,7 @@ public class Scavenger extends Thread {
         if (Thread.currentThread().isInterrupted()) {
           break;
         }
-        Segment s = engine.getSegmentForRecycling();
+        s = engine.getSegmentForRecycling();
         if (s == null) {
           break;
         }
@@ -427,6 +428,9 @@ public class Scavenger extends Thread {
           // Dispose segment
           engine.disposeDataSegment(s);
         } catch (IOException e) {
+          LOG.error("Cache : %s segment id=%d offheap =%s sealed=%s", cache.getName(), 
+            s == null? -1: s.getId(), s==null? null: Boolean.toString(s.isOffheap()), 
+                s == null? null: Boolean.toString(s.isSealed()));
           LOG.error(e);
           return;
         }

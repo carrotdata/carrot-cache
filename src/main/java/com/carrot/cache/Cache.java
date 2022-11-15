@@ -2106,9 +2106,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     CarrotConfig conf = CarrotConfig.getInstance();
     String snapshotDir = conf.getSnapshotDir(cacheName);
     Path p = Paths.get(snapshotDir);
+
     if (Files.notExists(p)) {
       return null;
     }
+
     if(Files.list(p).count() == 0) {
       return null;
     }

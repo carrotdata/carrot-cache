@@ -380,7 +380,23 @@ public class FileIOEngine extends IOEngine {
   @Override
   public void save(OutputStream os) throws IOException {
     waitForIoStoragePool();
+    // Save in memory segments
+    saveRAMSegments();
     super.save(os);
+  }
+
+  private void saveRAMSegments() throws IOException {
+    for(int i = 0; i < ramBuffers.length; i++) {
+      Segment s = ramBuffers[i];
+      if (s == null) {
+        continue;
+      }
+      Path p = getPathForDataSegment(s.getId());
+      RandomAccessFile file = new RandomAccessFile(p.toFile(), "rw");
+      s.save(file);
+      s.setOffheap(false);
+
+    }
   }
 
   @Override
