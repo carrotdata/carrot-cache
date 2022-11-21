@@ -24,6 +24,7 @@ import java.util.Random;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.carrot.cache.controllers.MinAliveRecyclingSelector;
@@ -128,6 +129,7 @@ public abstract class TestCacheBase extends IOTestBase {
     return System.currentTimeMillis() + expireTime;
   }
   
+  @Ignore
   @Test
   public void testAllExpiredBytes() throws IOException {
     System.out.println("Test all expired bytes");
@@ -164,6 +166,7 @@ public abstract class TestCacheBase extends IOTestBase {
   }
   
   
+  @Ignore
   @Test
   public void testAllExpiredMemory() throws IOException {
     System.out.println("Test all expired memory");
@@ -199,6 +202,7 @@ public abstract class TestCacheBase extends IOTestBase {
     
   }
   
+  @Ignore
   @Test
   public void testNoExpiredBytes() throws IOException {
     System.out.println("Test no expired - bytes");
@@ -232,6 +236,7 @@ public abstract class TestCacheBase extends IOTestBase {
     
   }
   
+  @Ignore
   @Test
   public void testNoExpiredMemory() throws IOException {
     System.out.println("Test no expired - memory");
@@ -264,6 +269,7 @@ public abstract class TestCacheBase extends IOTestBase {
     
   }
   
+  @Ignore
   @Test
   public void testNoExpiredWithDeletesBytes() throws IOException {
     System.out.println("Test no expired with deletes bytes");
@@ -299,6 +305,7 @@ public abstract class TestCacheBase extends IOTestBase {
 
   }
   
+  @Ignore
   @Test
   public void testNoExpiredWithDeletesMemory() throws IOException {
     System.out.println("Test no expired with deletes memory");
@@ -333,6 +340,7 @@ public abstract class TestCacheBase extends IOTestBase {
       allocated, used, size, activeSize));
   }
   
+  @Ignore
   @Test
   public void testSaveLoad() throws IOException {
     System.out.println("Test save load");
@@ -375,6 +383,66 @@ public abstract class TestCacheBase extends IOTestBase {
     TestUtils.deleteCacheFiles(newCache);
   }
   
+  @Test
+  public void testSaveLoadSmallData() throws IOException {
+    System.out.println("Test save load small data");
+    Scavenger.clear();
+    // Create cache
+    this.cache = createCache();
+    
+    this.expireTime = 1000000; 
+    prepareData(1);
+    // Fill cache completely (no eviction is enabled)
+    int loaded = loadBytesCache(cache);
+    System.out.println("loaded=" + loaded);
+    verifyBytesCacheByteBuffer(cache, loaded);
+
+    String cacheName = cache.getName();
+    long t1 = System.currentTimeMillis();
+    cache.save();
+    long t2 = System.currentTimeMillis();
+    System.out.printf("Saved %d in %d ms\n", cache.getStorageAllocated(), t2 - t1);
+    
+    t1 = System.currentTimeMillis();
+    Cache newCache = Cache.loadCache(cacheName);
+    t2 = System.currentTimeMillis();
+    System.out.printf("Loaded %d in %d ms\n", newCache.getStorageAllocated(), t2 - t1);
+    
+    assertEquals(cache.getCacheType(), newCache.getCacheType());
+    assertEquals(cache.activeSize(), newCache.activeSize());
+    assertEquals(cache.getMaximumCacheSize(), newCache.getMaximumCacheSize());
+    assertEquals(cache.getStorageAllocated(), newCache.getStorageAllocated());
+    assertEquals(cache.getStorageUsed(), newCache.getStorageUsed());
+    assertEquals(cache.getTotalGets(), newCache.getTotalGets());
+    assertEquals(cache.getTotalGetsSize(), newCache.getTotalGetsSize());
+    assertEquals(cache.getTotalHits(), newCache.getTotalHits());
+    assertEquals(cache.getTotalWrites(), newCache.getTotalWrites());
+    assertEquals(cache.getTotalWritesSize(), newCache.getTotalWritesSize());
+
+    verifyBytesCache(newCache, loaded);
+    
+    newCache.save();
+    
+    Cache newCache2 = Cache.loadCache(cacheName);
+    assertEquals(newCache2.getCacheType(), newCache.getCacheType());
+    assertEquals(newCache2.activeSize(), newCache.activeSize());
+    assertEquals(newCache2.getMaximumCacheSize(), newCache.getMaximumCacheSize());
+    assertEquals(newCache2.getStorageAllocated(), newCache.getStorageAllocated());
+    assertEquals(newCache2.getStorageUsed(), newCache.getStorageUsed());
+    assertEquals(newCache2.getTotalGets(), newCache.getTotalGets());
+    assertEquals(newCache2.getTotalGetsSize(), newCache.getTotalGetsSize());
+    assertEquals(newCache2.getTotalHits(), newCache.getTotalHits());
+    assertEquals(newCache2.getTotalWrites(), newCache.getTotalWrites());
+    assertEquals(newCache2.getTotalWritesSize(), newCache.getTotalWritesSize());
+    
+    verifyBytesCache(newCache2, loaded);
+    
+    newCache.dispose();
+    newCache2.dispose();
+    TestUtils.deleteCacheFiles(newCache);
+  }
+  
+  @Ignore
   @Test
   public void testSaveLoadTwoCaches() throws IOException {
     System.out.println("Test save load two caches");

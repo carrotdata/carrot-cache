@@ -47,8 +47,6 @@ public abstract class TestObjectCacheBase  {
   long expireTime;
   double scavDumpBelowRatio = 0.5;
   double minActiveRatio = 0.90;
-  Class<?> keyClass;
-  Class<?> valueClass;
   
   int numThreads = 1;
   
@@ -68,8 +66,7 @@ public abstract class TestObjectCacheBase  {
     Builder builder = new Builder(cacheName);
     
     builder
-      .withObjectCacheKeyClass(keyClass)
-      .withObjectCacheValueClass(valueClass)
+      
       .withCacheDataSegmentSize(segmentSize)
       .withCacheMaximumSize(maxCacheSize)
       .withScavengerRunInterval(scavengerInterval)
@@ -119,6 +116,7 @@ public abstract class TestObjectCacheBase  {
     return count;
   }
   
+  @SuppressWarnings("deprecation")
   private void verifyData(ObjectCache cache, int n) throws IOException {
     int count = 0;
     long tn = Thread.currentThread().getId();
@@ -201,10 +199,8 @@ public abstract class TestObjectCacheBase  {
   public void testLoadAndVerify() throws IOException {
     System.out.println("Test load and verify");
     Scavenger.clear();
-    this.keyClass = String.class;
-    this.valueClass = ArrayList.class;
     this.cache = createCache("test");
-    
+    this.cache.addKeyValueClasses(String.class,  ArrayList.class);
     int loaded = loadData(1000000);
     verifyData(cache, loaded);
   }
@@ -213,13 +209,14 @@ public abstract class TestObjectCacheBase  {
   public void testLoadAndVerifyPerson() throws IOException {
     System.out.println("Test load and verify person");
     Scavenger.clear();
-    this.keyClass = String.class;
-    this.valueClass = Person.class;
     this.cache = createCache("testPerson");
-    List<Class<?>> l = new ArrayList<Class<?>>();
-    l.add(Address.class);
+    this.cache.addKeyValueClasses(String.class, Person.class);
     
-    this.cache.addClassesForRegistration(l);
+    ObjectCache.SerdeInitializationListener listener = (x) -> {
+      x.register(Address.class);
+    };
+    
+    this.cache.addSerdeInitializationListener(listener);
     int loaded = loadPersonData(1000000);
     verifyPersonData(cache, loaded);
   }
@@ -231,10 +228,9 @@ public abstract class TestObjectCacheBase  {
     
     this.maxCacheSize = 1000L * this.segmentSize;
     this.numThreads = 4;
-    this.keyClass = String.class;
-    this.valueClass = ArrayList.class;
     this.cache = createCache("test");
-    
+    this.cache.addKeyValueClasses(String.class, ArrayList.class);
+
     Runnable r = () -> {
       int loaded;
       try {
@@ -255,12 +251,14 @@ public abstract class TestObjectCacheBase  {
     Scavenger.clear();
     this.maxCacheSize = 1000L * this.segmentSize;
     this.numThreads = 4;
-    this.keyClass = String.class;
-    this.valueClass = Person.class;
     this.cache = createCache("testPerson");
-    List<Class<?>> l = new ArrayList<Class<?>>();
-    l.add(Address.class);
-    this.cache.addClassesForRegistration(l);
+    this.cache.addKeyValueClasses(String.class, Person.class);
+
+    ObjectCache.SerdeInitializationListener listener = (x) -> {
+      x.register(Address.class);
+    };
+    
+    this.cache.addSerdeInitializationListener(listener);
     
     Runnable r = () -> {
       int loaded;
@@ -296,10 +294,10 @@ public abstract class TestObjectCacheBase  {
   public void testSaveLoad() throws IOException {
     System.out.println("Test save load");
     Scavenger.clear();
-    this.keyClass = String.class;
-    this.valueClass = ArrayList.class;
+
     this.cache = createCache("test");
-    
+    this.cache.addKeyValueClasses(String.class, ArrayList.class);
+
     int loaded = loadData(1000000);
     
     System.out.println("loaded=" + loaded);
@@ -314,6 +312,8 @@ public abstract class TestObjectCacheBase  {
     t1 = System.currentTimeMillis();
     String rootDir = cache.getCacheConfig().getCacheRootDir(cacheName);
     ObjectCache newCache = ObjectCache.loadCache(rootDir, cacheName);
+    newCache.addKeyValueClasses(String.class, ArrayList.class);
+
     t2 = System.currentTimeMillis();
     System.out.printf("Loaded %d in %d ms\n", cache.getStorageAllocated(), t2 - t1);
     

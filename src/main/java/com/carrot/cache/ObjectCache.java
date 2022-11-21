@@ -16,10 +16,11 @@ package com.carrot.cache;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -28,12 +29,18 @@ import com.carrot.cache.Cache.Type;
 import com.carrot.cache.io.ObjectPool;
 import com.carrot.cache.util.CarrotConfig;
 import com.esotericsoftware.kryo.kryo5.Kryo;
-import com.esotericsoftware.kryo.kryo5.Serializer;
 import com.esotericsoftware.kryo.kryo5.io.Input;
 import com.esotericsoftware.kryo.kryo5.io.Output;
 
 public class ObjectCache {
+  
+  public static interface SerdeInitializationListener{
+    
+    public void initSerde(Kryo kryo);
+  }
+  
   /** Logger */
+  @SuppressWarnings("unused")
   private static final Logger LOG = LogManager.getLogger(ObjectCache.class);
   
   /** Initial buffer size in bytes for Kryo serialization*/
@@ -45,16 +52,12 @@ public class ObjectCache {
   /** Kryo object serialization pool*/
   private ObjectPool<Kryo> kryos;
   
-  /** Key's class - for serialization*/
-  private Class<?> keyClass;
+  private Map<Class<?>, Class<?>> keyValueClassMap = new ConcurrentHashMap<Class<?>, Class<?>>();
   
-  /** Value's class - for serialization */
-  private Class<?> valueClass;
+  /** Kryo initialization listeners */
+  private List<SerdeInitializationListener> listeners = 
+      Collections.synchronizedList(new ArrayList<>());
   
-  /** Additional classes for serialization registration*/
-  private List<Class<?>> addOns = new ArrayList<Class<?>>();
-  
-  private Map<Class<?>, Serializer<?>> serdeMap = new HashMap<Class<?>, Serializer<?>>();
   /** Object pool for Kryo inputs */
   static ObjectPool<Input> inputs;
   
@@ -64,46 +67,19 @@ public class ObjectCache {
   /**
    * Default constructor
    * @param c native cache instance
-   * @param keyClass key class
-   * @param valueClass value class
    */
-  ObjectCache(Cache c, Class<?> keyClass, Class<?> valueClass){
-    Objects.requireNonNull(c, "cache is null");
-    Objects.requireNonNull(keyClass, "key class is null");
-    Objects.requireNonNull(valueClass, "value class is null");
-    
+  ObjectCache(Cache c){
+    Objects.requireNonNull(c, "cache is null");    
     this.cache = c;
-    this.keyClass = keyClass;
-    this.valueClass = valueClass;
- 
     initIOPools();
   }
-  
-  /**
-   * Add additional classes to register for serialization
-   * @param classes
-   */
-  public void addClassesForRegistration(List<Class<?>>  classes) {
-    this.addOns.addAll(classes);
+    
+  public void addSerdeInitializationListener(SerdeInitializationListener l) {
+    this.listeners.add(l);
   }
   
-  /**
-   * Add additional classes to register for serialization
-   * @param classes
-   */
-  public void addClassesForRegistration(Class<?> ...classes) {
-    for (Class<?> cls: classes) {
-      this.addOns.add(cls);
-    }
-  }
-  
-  /**
-   * Register class and custom serializer
-   * @param cls class
-   * @param serde serializer
-   */
-  public void addClassAndSerializer(Class<?> cls, Serializer<?> serde) {
-    serdeMap.put(cls, serde);
+  public void addKeyValueClasses(Class<?> key, Class<?> value) {
+    this.keyValueClassMap.put(key,  value);
   }
   
   private void initIOPools() {
@@ -188,7 +164,12 @@ public class ObjectCache {
     Output outKey = getOutput();
     Input in = getInput();
     Kryo kryo = getKryo();
-
+    Class<?> valueClass = this.keyValueClassMap.get(key.getClass());
+    
+    if (valueClass == null) {
+      throw new IOException(String.format("Value class is not registered for key class %s", key.getClass()));
+    }
+    
     try {
       kryo.writeObject(outKey, key);
       byte[] keyBuffer = outKey.getBuffer();
@@ -208,7 +189,7 @@ public class ObjectCache {
           break;
         }
       }
-      Object value = kryo.readObject(in, this.valueClass);
+      Object value = kryo.readObject(in, valueClass);
       return value;
     } finally {
       release(outKey);
@@ -286,31 +267,8 @@ public class ObjectCache {
   public static ObjectCache loadCache(String cacheRootDir, String cacheName) throws IOException {
     
     Cache c = Cache.loadCache(cacheRootDir, cacheName);
-    if (c != null) {
-      
-      CarrotConfig conf = c.getCacheConfig();
-     
-      String keyClassName = conf.getObjectCacheKeyClassName(cacheName);
-      String valueClassName = conf.getObjectCacheValueClassName(cacheName);
-      String[] addClassNames = conf.getObjectCacheAddClassNames(cacheName);
-      
-      try {
-        Class<?> keyClass = Class.forName(keyClassName);
-        Class<?> valueClass = Class.forName(valueClassName);
-        ObjectCache cache = new ObjectCache(c, keyClass, valueClass);
-        if (addClassNames != null) {
-          List<Class<?>> classes = new ArrayList<Class<?>>();
-          for (String name: addClassNames) {
-            classes.add(Class.forName(name));
-          }
-          cache.addClassesForRegistration(classes);
-        }
-        return cache;
-      } catch (Exception e) {
-        LOG.error("Corrupted snapshot");
-        LOG.error(e);
-        return null;
-      }
+    if (c != null) {  
+        return new ObjectCache(c);
     }
     // Else create new
     return null;
@@ -354,13 +312,8 @@ public class ObjectCache {
     if(kryo == null) {
       kryo = new Kryo();
       kryo.setRegistrationRequired(false);
-      kryo.register(this.keyClass);
-      kryo.register(this.valueClass);
-      for (Class<?> cls: addOns) {
-        kryo.register(cls);
-      }
-      for (Map.Entry<Class<?>, Serializer<?>> pair: serdeMap.entrySet()) {
-        kryo.register(pair.getKey(), pair.getValue());
+      for (SerdeInitializationListener l:listeners) {
+        l.initSerde(kryo);
       }
     } else {
       kryo.reset();

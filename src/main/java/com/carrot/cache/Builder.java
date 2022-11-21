@@ -15,8 +15,6 @@
 package com.carrot.cache;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import com.carrot.cache.io.FileIOEngine;
 import com.carrot.cache.io.IOEngine;
@@ -71,28 +69,7 @@ public class Builder {
   public ObjectCache buildObjectMemoryCache() throws IOException {
     this.engine = new OffheapIOEngine(this.cacheName);
     Cache c = build();
-    return getObjectCacheFor(c);
-  }
-  
-  private ObjectCache getObjectCacheFor(Cache c) throws IOException {
-    try {
-      String keyClassName = this.conf.getObjectCacheKeyClassName(this.cacheName);
-      Class<?> keyClass = Class.forName(keyClassName);
-      String valueClassName = this.conf.getObjectCacheValueClassName(this.cacheName);
-      Class<?> valueClass = Class.forName(valueClassName);
-      ObjectCache oc = new ObjectCache(c, keyClass, valueClass);
-      String[] adds = this.conf.getObjectCacheAddClassNames(this.cacheName);
-      if (adds != null) {
-        List<Class<?>> classes = new ArrayList<Class<?>>();
-        for (String name: adds) {
-          classes.add(Class.forName(name));
-        }
-        oc.addClassesForRegistration(classes);
-      }
-      return oc;
-    } catch (Exception e){
-      throw new IOException (e);
-    }
+    return new ObjectCache(c);
   }
   
   /**
@@ -103,41 +80,7 @@ public class Builder {
   public ObjectCache buildObjectDiskCache() throws IOException {
     this.engine = new FileIOEngine(this.cacheName);
     Cache c = build();
-    return getObjectCacheFor(c);
-  }
-  
-  /**
-   * With object cache key class name
-   * @param cls key class 
-   * @return builder instance
-   */
-  public Builder withObjectCacheKeyClass(Class<?> cls) {
-    conf.setObjectCacheKeyClassName(this.cacheName, cls.getName());
-    return this;
-  }
-  
-  /**
-   * With object cache value class name
-   * @param cls value class 
-   * @return builder instance
-   */
-  public Builder withObjectCacheValueClass(Class<?> cls) {
-    conf.setObjectCacheValueClassName(this.cacheName, cls.getName());
-    return this;
-  }
-  
-  /**
-   * With additional classes  for registration
-   * @param classes list of classes
-   * @return builder instance
-   */
-  public Builder withObjectCacheAddClasses(Class<?>... classes) {
-    String[] names = new String[classes.length];
-    for (int i = 0; i < names.length; i++) {
-      names[i] = classes[i].getName();
-    }
-    conf.setObjectCacheAddClassNames(cacheName, names);
-    return this;
+    return new ObjectCache(c);
   }
   
   /**
