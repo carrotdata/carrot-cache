@@ -312,6 +312,10 @@ public class ObjectCache {
     if(kryo == null) {
       kryo = new Kryo();
       kryo.setRegistrationRequired(false);
+      for (Map.Entry<Class<?>, Class<?>> entry : keyValueClassMap.entrySet()) {
+        kryo.register(entry.getKey());
+        kryo.register(entry.getValue());
+      }
       for (SerdeInitializationListener l:listeners) {
         l.initSerde(kryo);
       }
