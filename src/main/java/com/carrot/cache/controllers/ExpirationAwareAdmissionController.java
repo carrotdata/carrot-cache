@@ -91,7 +91,7 @@ public class ExpirationAwareAdmissionController implements AdmissionController{
   }
   
   @Override
-  public int adjustRank(int rank, long expire) {
+  public int adjustRank(int popularityRank, int groupRank, long expire) {
     if (expire <= 0) {
       return 0; // maximum
     }

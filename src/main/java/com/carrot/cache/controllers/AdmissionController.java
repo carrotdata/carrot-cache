@@ -73,12 +73,13 @@ public interface AdmissionController extends Persistent, ThroughputControllable 
    * Adjust item rank based on its current rank and value expiration time (ms)
    * The lower expiration time - the lower rank should be to guarantee
    * that items with low expiration time must be recycled first
-   * @param rank current rank
+   * @param popularityRank current rank
+   * @param groupRank group rank
    * @param expire expiration time in ms
    * @return new rank
    */
-  public default int adjustRank(int rank, long expire) {
-    return rank;
+  public default int adjustRank(int popularityRank, int groupRank, long expire) {
+    return popularityRank;
   }
   
   /**

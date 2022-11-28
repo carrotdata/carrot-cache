@@ -509,6 +509,7 @@ public class Scavenger extends Thread {
   private boolean cleanSegmentInternal(Segment s) throws IOException {
     IOEngine engine = this.cache.getEngine();
     MemoryIndex index = engine.getMemoryIndex();
+    int groupRank = s.getInfo().getGroupRank();
     SegmentScanner sc = null;
     @SuppressWarnings("unused")
     int scanned = 0;
@@ -567,11 +568,11 @@ public class Scavenger extends Thread {
           case OK:
             // Put value back into the cache - it has high popularity
             if (isDirect) {
-              this.cache.put(keyPtr, keySize, valuePtr, valSize, expire, rank, true, true);
+              this.cache.put(keyPtr, keySize, valuePtr, valSize, expire, rank, groupRank, true, true);
             } else {
               valueBuffer = checkBuffer(valueBuffer, valSize, isDirect);
               sc.getValue(valueBuffer, 0);
-              this.cache.put(keyBuffer, 0, keySize, valueBuffer, 0, valSize, expire, rank, true, true);
+              this.cache.put(keyBuffer, 0, keySize, valueBuffer, 0, valSize, expire, rank, groupRank, true, true);
             }
             break;
         }

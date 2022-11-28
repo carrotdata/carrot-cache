@@ -76,7 +76,7 @@ public class Segment implements Persistent {
     private volatile boolean sealed;
     
     /* Segment rank */
-    private int rank;
+    private int groupRank;
     
     /* Segment creation time */
     private long creationTime; // in ms
@@ -123,7 +123,7 @@ public class Segment implements Persistent {
     Info (int id, int rank, long creationTime) { 
       this();
       this.id  = id;
-      this.rank = rank;
+      this.groupRank = rank;
       this.creationTime = creationTime;
     }
     
@@ -273,19 +273,19 @@ public class Segment implements Persistent {
     }
     
     /**
-     * Get segment rank 
-     * @return segment rank
+     * Get segment group rank 
+     * @return segment group rank
      */
-    public int getRank() {
-      return this.rank;
+    public int getGroupRank() {
+      return this.groupRank;
     }
     
     /**
-     * Sets segment's rank
+     * Sets segment's group rank
      * @param rank segments's rank
      */
-    public void setRank(int rank) {
-      this.rank = rank;
+    public void setGroupRank(int rank) {
+      this.groupRank = rank;
     }
     
     /**
@@ -385,7 +385,7 @@ public class Segment implements Persistent {
         // Segment Id
         dos.writeInt(getId());
         // Rank
-        dos.writeInt(getRank());
+        dos.writeInt(getGroupRank());
         // Creation time 
         dos.writeLong(getCreationTime());
         // Segment size
@@ -414,7 +414,7 @@ public class Segment implements Persistent {
       DataInputStream dis = Utils.toDataInputStream(is);
       this.sealed = dis.readBoolean();
       this.id = dis.readInt();
-      this.rank = dis.readInt();
+      this.groupRank = dis.readInt();
       this.creationTime = dis.readLong();
       this.size = dis.readLong();
       this.dataSize.set(dis.readLong());

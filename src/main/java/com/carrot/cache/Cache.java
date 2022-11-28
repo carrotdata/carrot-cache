@@ -600,7 +600,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public boolean put(long keyPtr, int keySize, long valPtr, int valSize, long expire)
     throws IOException {    
     int rank = getDefaultRankToInsert();
-    return put(keyPtr, keySize, valPtr, valSize, expire, rank, false);
+    // by default, groupRank == rank
+    return put(keyPtr, keySize, valPtr, valSize, expire, rank, rank, false);
   }
 
   private boolean shouldAdmitToMainQueue(long keyPtr, int keySize, int valueSize,  boolean force) {
@@ -627,8 +628,37 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   public boolean put(
-      long keyPtr, int keySize, long valPtr, int valSize, long expire, int rank, boolean force) throws IOException {
-    return put(keyPtr, keySize, valPtr, valSize, expire, rank, force, false);
+      long keyPtr, int keySize, long valPtr, int valSize, long expire, 
+      int rank, int groupRank, boolean force) throws IOException {
+    return put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank, force, false);
+  }
+  
+  /**
+   * Put item into the cache with grouping rank - API for new items
+   *
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param valPtr value address
+   * @param valSize value size
+   * @param expire expiration (0 - no expire)
+   * @param groupRank grouping rank
+   * @return true on success, false - otherwise
+   */
+  public boolean putWithGroupRank(
+      long keyPtr, int keySize, long valPtr, int valSize, long expire,  
+      int groupRank)
+      throws IOException {
+
+    if(shutdownInProgress) {
+      return false;
+    }
+    int rank = getDefaultRankToInsert();
+
+    if (this.victimCache != null && this.hybridCacheInverseMode) {
+      return this.victimCache.put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank, false, false);
+    } else {
+      return putDirectly(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank, false, false);
+    }
   }
   
   /**
@@ -639,26 +669,28 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param valPtr value address
    * @param valSize value size
    * @param expire expiration (0 - no expire)
-   * @param rank rank of the item
+   * @param rank popularity rank of the item
+   * @param groupRank grouping rank
    * @param force if true - bypass admission controller
    * @return true on success, false - otherwise
    */
   public boolean put(
-      long keyPtr, int keySize, long valPtr, int valSize, long expire, int rank, boolean force, boolean scavenger)
+      long keyPtr, int keySize, long valPtr, int valSize, long expire, int rank, 
+      int groupRank, boolean force, boolean scavenger)
       throws IOException {
 
     if(shutdownInProgress) {
       return false;
     }
     if (this.victimCache != null && this.hybridCacheInverseMode) {
-      return this.victimCache.put(keyPtr, keySize, valPtr, valSize, expire, rank, force, scavenger);
+      return this.victimCache.put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank, force, scavenger);
     } else {
-      return putDirectly(keyPtr, keySize, valPtr, valSize, expire, rank, force, scavenger);
+      return putDirectly(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank, force, scavenger);
     }
   }
 
   private boolean putDirectly(long keyPtr, int keySize, long valPtr, int valSize, long expire,
-      int rank, boolean force, boolean scavenger) throws IOException {
+      int rank, int groupRank, boolean force, boolean scavenger) throws IOException {
     
     if(shutdownInProgress) {
       return false;
@@ -669,6 +701,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     // Check rank
     checkRank(rank);
+    checkRank(groupRank);
     if (!shouldAdmitToMainQueue(keyPtr, keySize, valSize, force)) {
       return false;
     }
@@ -677,11 +710,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.totalWritesSize.addAndGet(Utils.kvSize(keySize, valSize));
 
     // Adjust rank taking into account item's expiration time
-    rank = adjustRank(rank, expire);
+    groupRank = adjustGroupRank(rank, groupRank, expire);
     expire = adjustExpirationTime(expire);
     // Add to the cache
     boolean result = false;
-    result = engine.put(keyPtr, keySize, valPtr, valSize, expire, rank);
+    result = engine.put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank);
     if (result) {
       reportThroughputController(Utils.kvSize(keySize, valSize));
     }
@@ -702,12 +735,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return true;
   }
   
-  private int adjustRank(int rank, long expire) {
+  private int adjustGroupRank(int popularityRank, int groupRank, long expire) {
     if (this.admissionController != null) {
       // Adjust rank taking into account item's expiration time
-      rank = this.admissionController.adjustRank(rank, expire);
+      groupRank = this.admissionController.adjustRank(popularityRank, groupRank, expire);
     }
-    return rank;
+    return groupRank;
   }
   
   private long adjustExpirationTime(long expire) {
@@ -728,7 +761,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    )
       throws IOException {
     int rank = getDefaultRankToInsert();
-    return put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, false, false);
+    int groupRank = rank;
+    return put(key, keyOffset, keySize, value, valOffset, valSize, expire, 
+      rank, groupRank, false, false);
   }
   
   public boolean put(
@@ -743,7 +778,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    )
       throws IOException {
     int rank = getDefaultRankToInsert();
-    return put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, force, false);
+    int groupRank = rank;
+    return put(key, keyOffset, keySize, value, valOffset, valSize, expire, 
+      rank, groupRank, force, false);
   }
   
   public boolean put(
@@ -757,7 +794,37 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       int rank,
       boolean force)
       throws IOException {
-    return put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, force, false);
+    int groupRank = rank;
+    return put(key, keyOffset, keySize, value, valOffset, valSize, expire, 
+      rank, groupRank, force, false);
+  }
+  
+  /**
+   * Put with group rank (group rank - aware AC)
+   * @param key
+   * @param keyOffset
+   * @param keySize
+   * @param value
+   * @param valOffset
+   * @param valSize
+   * @param expire
+   * @param groupRank
+   * @return
+   * @throws IOException
+   */
+  public boolean putWithGroupRank(
+      byte[] key,
+      int keyOffset,
+      int keySize,
+      byte[] value,
+      int valOffset,
+      int valSize,
+      long expire,
+      int groupRank)
+      throws IOException {
+    int rank = getDefaultRankToInsert();
+
+    return put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, groupRank, false, false);
   }
   
   /**
@@ -770,6 +837,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param valOffset value offset
    * @param valSize value size
    * @param expire - expiration (0 - no expire)
+   * @param rank item's popularity rank
+   * @param groupRank - group rank
    * @param force if true - bypass admission controller
    * @return true on success, false - otherwise
    */
@@ -782,6 +851,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       int valSize,
       long expire,
       int rank,
+      int groupRank,
       boolean force,
       boolean scavenger)
       throws IOException {
@@ -791,9 +861,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     
     if (this.victimCache != null && this.hybridCacheInverseMode) {
-      return this.victimCache.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, force, scavenger);
+      return this.victimCache.put(key, keyOffset, keySize, value, valOffset, valSize, expire, 
+        rank, groupRank, force, scavenger);
     } else {
-      return putDirectly(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, force, scavenger);
+      return putDirectly(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, groupRank, force, scavenger);
     }
     
   }
@@ -816,6 +887,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       int valSize,
       long expire,
       int rank,
+      int groupRank,
       boolean force,
       boolean scavenger)
       throws IOException {
@@ -835,12 +907,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.totalWritesSize.addAndGet(Utils.kvSize(keySize, valSize));
     // Check rank
     checkRank(rank);
+    checkRank(groupRank);
       // Adjust rank
-    rank = adjustRank(rank, expire);
+    groupRank = adjustGroupRank(rank, groupRank, expire);
     expire = adjustExpirationTime(expire);
     // Add to the cache
     boolean result = false;
-    result = engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank);
+    result = engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, groupRank);
     if (result) {
       reportThroughputController(Utils.kvSize(keySize, valSize));
     }
@@ -850,22 +923,25 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   
   private boolean put (byte[] buf, int off, long expire) throws IOException {
     int rank = getDefaultRankToInsert();
+    int groupRank = rank;
     int keySize = Utils.readUVInt(buf, off);
     int kSizeSize = Utils.sizeUVInt(keySize);
     int valueSize = Utils.readUVInt(buf, off + kSizeSize);
     int vSizeSize = Utils.sizeUVInt(valueSize);
     return putDirectly(buf, off + kSizeSize + vSizeSize, keySize, buf, 
-      off + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, true, false);
+      off + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, groupRank, true, false);
   }
   
   private boolean put(long bufPtr, long expire) throws IOException {
     int rank = getDefaultRankToInsert();
+    int groupRank = rank;
+
     int keySize = Utils.readUVInt(bufPtr);
     int kSizeSize = Utils.sizeUVInt(keySize);
     int valueSize = Utils.readUVInt(bufPtr + kSizeSize);
     int vSizeSize = Utils.sizeUVInt(valueSize);
     return putDirectly(bufPtr + kSizeSize + vSizeSize, keySize, bufPtr 
-      + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, true, false);
+      + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, groupRank, true, false);
   }
   
   private boolean put(ByteBuffer buf, long expire) throws IOException {
@@ -1697,6 +1773,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     long offset = format.getOffset(indexPtr); 
     
     Segment s = this.engine.getSegmentById(sid);
+    int groupRank = s.getInfo().getGroupRank();
     //TODO : check segment
     try {
       s.readLock();
@@ -1710,7 +1787,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         int vSizeSize = Utils.sizeUVInt(valueSize);
         ptr += vSizeSize;
         // Do not force PUT, let victim's cache admission controller work
-        this.victimCache.put(ptr, keySize, ptr + keySize, valueSize, expire, rank, false);
+        this.victimCache.put(ptr, keySize, ptr + keySize, valueSize, expire, rank, groupRank, false);
       } else {
         // not supported yet
       }
@@ -1752,7 +1829,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     int vSizeSize = Utils.sizeUVInt(vSize);
     indexPtr += vSizeSize;
     // Do not force PUT, let victim's cache admission controller to work
-    c.put(indexPtr, kSize, indexPtr + kSize, vSize, expire, rank, false);
+    // TODO: groupRank?
+    c.put(indexPtr, kSize, indexPtr + kSize, vSize, expire, rank, rank, false);
   }
 
   // IOEngine.Listener

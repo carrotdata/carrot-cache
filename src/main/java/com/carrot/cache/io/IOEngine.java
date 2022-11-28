@@ -1840,7 +1840,7 @@ public abstract class IOEngine implements Persistent {
       }
       // TODO: remove this. Move data to a main storage
       this.dataSegments[data.getId()] = data;
-      this.ramBuffers[data.getInfo().getRank()] = null;
+      this.ramBuffers[data.getInfo().getGroupRank()] = null;
       // }
       // Call IOEngine - specific (FileIOEngine overrides it)
       // Can be costly - executed in a separate thread
@@ -2033,6 +2033,7 @@ public abstract class IOEngine implements Persistent {
       throws IOException {
     return put(key, keyOff, keyLength, value, valueOff, valueLength, expire, this.defaultRank);
   }
+  
   /**
    * Put key-value into a cache
    *
@@ -2057,9 +2058,39 @@ public abstract class IOEngine implements Persistent {
       long expire,
       int rank)
       throws IOException {
+    int groupRank = rank;
+    return put(key, keyOff, keyLength, value, valueOff, valueLength, expire, rank, groupRank);
+  }
+  /**
+   * Put key-value into a cache 
+   *
+   * @param key key buffer
+   * @param keyOff key offset
+   * @param keyLength key length
+   * @param value value buffer
+   * @param valueOff value offset
+   * @param valueLength value length
+   * @param expire absolute expiration time in ms, 0 - no expire
+   * @param rank rank of a cache item
+   * @param groupRank group rank
+   * @return true on success, false - otherwise
+   * @throws IOException
+   */
+  public boolean put(
+      byte[] key,
+      int keyOff,
+      int keyLength,
+      byte[] value,
+      int valueOff,
+      int valueLength,
+      long expire,
+      int rank,
+      int groupRank)
+      throws IOException {
     checkRank(rank);
+    checkRank(groupRank);
 
-    Segment s = getRAMSegmentByRank(rank);
+    Segment s = getRAMSegmentByRank(groupRank);
     if (s == null) {
       // We silently ignore PUT operation due to lack of resources
       // TODO: update stats
@@ -2071,7 +2102,7 @@ public abstract class IOEngine implements Persistent {
       if(!s.isSealed()) {
         save(s); // removes segment from RAM buffers
       }
-      s = getRAMSegmentByRank(rank);
+      s = getRAMSegmentByRank(groupRank);
       if (s == null) {
         // We silently ignore PUT operation due to lack of resources
         // TODO: update stats
@@ -2113,6 +2144,7 @@ public abstract class IOEngine implements Persistent {
 
     return put(keyPtr, keyLength, valuePtr, valueLength, expire, this.defaultRank);
   }
+  
   /**
    * Put key-value into a cache with a rank
    *
@@ -2125,10 +2157,30 @@ public abstract class IOEngine implements Persistent {
    * @throws IOException
    */
   public boolean put(
-      long keyPtr, int keyLength, long valuePtr, int valueLength, long expire, int rank)
+      long keyPtr, int keyLength, long valuePtr, int valueLength, 
+      long expire, int rank) throws IOException {
+    int groupRank = rank;
+    return put(keyPtr, keyLength, valuePtr, valueLength, expire, rank, groupRank);
+  }
+  /**
+   * Put key-value into a cache with a rank and group rank
+   *
+   * @param keyPtr key address
+   * @param keyLength key length
+   * @param valuePtr value address
+   * @param valueLength value length
+   * @param expire absolute expiration time in ms, 0 - no expire
+   * @param rank rank of a cache item
+   * @param groupRank group rank
+   * @throws IOException
+   */
+  public boolean put(
+      long keyPtr, int keyLength, long valuePtr, int valueLength, 
+      long expire, int rank, int groupRank)
       throws IOException {
     checkRank(rank);
-    Segment s = getRAMSegmentByRank(rank);
+    checkRank(groupRank);
+    Segment s = getRAMSegmentByRank(groupRank);
     if (s == null) {
       // We silently ignore PUT operation due to lack of resources
       // TODO: update stats
@@ -2139,7 +2191,7 @@ public abstract class IOEngine implements Persistent {
       if(!s.isSealed()) {
         save(s); // removes segment from RAM buffers
       }
-      s = getRAMSegmentByRank(rank);
+      s = getRAMSegmentByRank(groupRank);
       if (s == null) {
         // We silently ignore PUT operation due to lack of resources
         // TODO: update stats
