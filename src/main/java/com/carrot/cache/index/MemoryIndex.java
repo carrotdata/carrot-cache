@@ -793,6 +793,29 @@ public final class MemoryIndex implements Persistent {
       UnsafeAccess.free(buf);
     }
   }
+  
+  /**
+   * Touch the key (activates eviction policy) 
+   * @param key key buffer
+   * @param off key offset
+   * @param size key size
+   * @return true or false (key does not exist)
+   */
+  public boolean touch(byte[] key, int off, int size) {
+    //TODO: does it work for variable sizes?
+    int bufSize = this.indexFormat.indexEntrySize();
+    long buf = UnsafeAccess.mallocZeroed(bufSize);
+    try {
+      long result = find(key, off, size, true, buf, bufSize);
+      if (result != bufSize) {
+        return false;
+      }
+      return true;
+    } finally {
+      UnsafeAccess.free(buf);
+    }
+  }
+  
   /**
    * Get item size (only for MQ)
    * @param key key buffer

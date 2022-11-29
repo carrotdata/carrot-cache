@@ -1661,6 +1661,18 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public boolean exists(byte[] key, int off, int size) {
     return this.engine.getMemoryIndex().exists(key, off, size);
   }
+  
+  /**
+   * Touches the key
+   * @param key key buffer
+   * @param off key offset
+   * @param size key size
+   * @return true or false (key does not exist)
+   */
+  public boolean touch(byte[] key, int off, int size) {
+    return this.engine.getMemoryIndex().touch(key, off, size);
+  }
+  
   /**
    * Get victim cache
    * @return victim cache or null

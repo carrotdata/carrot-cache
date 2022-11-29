@@ -248,6 +248,30 @@ public class ObjectCache {
   }
   
   /**
+   * Touch the key 
+   * @param key object key
+   * @return true on success, false - otherwise (key does not exists)
+   * @throws IOException
+   */
+  public boolean touch(Object key) throws IOException {
+    Objects.requireNonNull(key, "key is null");
+    Output outKey = getOutput();
+    Kryo kryo = getKryo();
+    try {
+      kryo.writeObject(outKey, key);
+      // TODO: cryptographic hashing of a key
+      byte[] keyBuffer = outKey.getBuffer();
+      int keyLength = outKey.position();
+      boolean result =
+          cache.touch(keyBuffer, 0, keyLength);
+      return result;
+    } finally {
+      release(outKey);
+      release(kryo);
+    }
+  }
+  
+  /**
    * Shutdown and save cache
    * @throws IOException
    */
