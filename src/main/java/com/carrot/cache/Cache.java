@@ -1771,7 +1771,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param indexPtr item pointer
    * @throws IOException 
    */
-  public void transferToCache (Cache c, long ibPtr, long indexPtr) throws IOException {
+  private void transferToCache (Cache c, long ibPtr, long indexPtr) throws IOException {
     if (getCacheType() == Type.DISK) {
       LOG.error("Attempt to transfer cached item from cache type = DISK");
       throw new IllegalArgumentException("Victim cache is not supported for DISK type cache");
@@ -1818,7 +1818,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param indexPtr item pointer
    * @throws IOException
    */
-  public void transferEmbeddedToCache(Cache c, long ibPtr, long indexPtr) throws IOException {
+  private void transferEmbeddedToCache(Cache c, long ibPtr, long indexPtr) throws IOException {
     if (getCacheType() == Type.DISK) {
       LOG.error("Attempt to transfer cached item from cache type = DISK");
       throw new IllegalArgumentException("Victim cache is not supported for DISK type cache");

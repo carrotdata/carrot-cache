@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
@@ -732,7 +733,46 @@ public final class MemoryIndex implements Persistent {
     }
     return slot;
   }
-      
+  /**
+   * Write lock on a random slot
+   * @return slot number
+   */
+  public PtrSlotPair lockRandom() {
+    long[] index = ref_index_base.get();
+    ThreadLocalRandom tlr = ThreadLocalRandom.current();
+    int slot =  tlr.nextInt(index.length);
+
+    ReentrantLock lock = locks[slot % locks.length];
+    lock.lock();
+    if(index[slot] == 0) {
+      // rehash is in progress
+      lock.unlock();
+      index = ref_index_base_rehash.get();
+      if (index == null) {
+        // Get main back - rare race condition
+        // when rehashing was completed during this method invocation
+        index = ref_index_base.get();
+      }
+      slot = tlr.nextInt(index.length);
+      lock = locks[slot % locks.length];
+      lock.lock();
+      // NOTES: either we lock correct slot in a main index or a
+      // correct slot in rehash index (during rehashing)
+      // In both cases we are safe
+    }
+    return new PtrSlotPair(index[slot], slot);
+  }    
+  
+  public static class PtrSlotPair {
+    
+    long ptr;
+    int slot;
+    
+    PtrSlotPair(long ptr, int slot){
+      this.ptr = ptr;
+      this.slot = slot;
+    }
+  }
   /**
    * Write lock on a slot
    * @param slot slot number
@@ -772,6 +812,48 @@ public final class MemoryIndex implements Persistent {
     }
   }
 
+  /**
+   * Get eviction candidate
+   * @param buf buffer
+   * @param bufSize buffer size
+   * @return required size for a index slot
+   */
+  public int evictionCandidate(long buf, int bufSize) {
+    int slot = -1;
+    try {
+      int count = 0;
+      int maxCount = 10;
+      while (count++ < maxCount) {
+        PtrSlotPair pair = lockRandom();
+        long slotPtr = pair.ptr;
+        slot = pair.slot;
+
+        int toEvict = -1;
+        int numEntries = numEntries(slotPtr);
+        if (numEntries == 0) {
+          continue;
+        }
+        if (this.indexFormat.isExpirationSupported()) {
+          toEvict = findExpired(slotPtr);
+        }
+        if (toEvict == -1) {
+          toEvict = evictionPolicy.getEvictionCandidateIndex(slotPtr, numEntries);
+        }
+        long ptr = slotPtr + offsetFor(slotPtr, toEvict);
+        int indexSize = this.indexFormat.fullEntrySize(ptr);
+        if (indexSize <= bufSize) {
+          UnsafeAccess.copy(ptr, buf, indexSize);
+        }
+        return indexSize;
+      }
+      return NOT_FOUND;
+    } finally {
+      if (slot >= 0) {
+        unlock(slot);
+      }
+    }
+  }
+  
   /**
    * Does key exist
    * @param key key buffer
@@ -1547,7 +1629,7 @@ public final class MemoryIndex implements Persistent {
    * @param hash key's hash
    * @return true or false
    */
-  private boolean exists(long ptr, long hash) {
+  public boolean exists(long ptr, long hash) {
     int numEntries = numEntries(ptr);
     long $ptr = ptr + indexBlockHeaderSize;
     int count = 0;

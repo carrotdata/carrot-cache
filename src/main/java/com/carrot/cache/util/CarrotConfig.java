@@ -504,7 +504,7 @@ public class CarrotConfig {
    * @return true or false
    */
   public static boolean isCarrotPropertyName(String name) {
-    return name.startsWith("c2.");
+    return name.indexOf("c2.") >= 0;
   }
   
   // Instance
@@ -982,10 +982,9 @@ public class CarrotConfig {
   
   /**
    * Get global cache root directory
-   * @param cacheName
    * @return root directory
    */
-  public String getGlobalCacheRootDir(String cacheName) {
+  public String getGlobalCacheRootDir() {
       return props.getProperty(CACHE_ROOT_DIR_PATH_KEY, DEFAULT_CACHE_ROOT_DIR_PATH);
   }
   
