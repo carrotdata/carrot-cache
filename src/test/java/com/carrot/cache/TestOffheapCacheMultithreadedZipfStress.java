@@ -23,5 +23,9 @@ public class TestOffheapCacheMultithreadedZipfStress extends TestOffheapCacheMul
     this.numThreads = 4;
     this.segmentSize = 16 * 1024 * 1024;
     this.maxCacheSize = 1000 * this.segmentSize;
+    this.scavNumberThreads = 2;
+    this.scavengerInterval = 100000;
+    this.numIterations = 10 * this.numRecords;
+
   }
 }

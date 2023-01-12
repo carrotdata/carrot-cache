@@ -18,7 +18,7 @@ import com.carrot.cache.io.Segment;
 
 /**
  * 
- * This selector selects the "oldest" segment
+ * This selector selects the "oldest" segment(s)
  * Least Recently Created (LRC)
  *
  */
@@ -33,7 +33,9 @@ public class LRCRecyclingSelector implements RecyclingSelector {
     long minCreationTime = Long.MAX_VALUE;
     for(int i = 0; i < segments.length; i++) {
       Segment s = segments[i];
-      if (s == null || !s.isSealed()) continue;
+      if (s == null || !s.isSealed() || s.isRecycling()) {
+        continue;
+      }
       Segment.Info info = s.getInfo();
       long maxExpireAt = info.getMaxExpireAt();
       long currentTime = System.currentTimeMillis();
@@ -46,6 +48,9 @@ public class LRCRecyclingSelector implements RecyclingSelector {
         minCreationTime = time;
         selection = s;
       }
+    }
+    if (selection != null) {
+      selection.setRecycling(true);
     }
     return selection;
   }

@@ -121,7 +121,10 @@ public class CarrotConfig {
   
   /* Scavenger number of segment processed before stall mode activated*/
   public static final String SCAVENGER_MAX_SEGMENTS_BEFORE_STALL_KEY = "c2.scavenger.max-segments-before-stall";
-    
+  
+  /* Scavenger number of threads */
+  public static final String SCAVENGER_NUMBER_THREADS_KEY = "c2.scavenger.number-threads";
+  
   /* Number of popularity ranks ( default - 8) */
   public static final String CACHE_POPULARITY_NUMBER_RANKS_KEY = "c2.popularity-number-ranks";
   
@@ -273,7 +276,9 @@ public class CarrotConfig {
   /* JMX metrics domain name */
   public static final String CACHE_JMX_METRICS_DOMAIN_NAME_KEY = "c2.jmx.metrics-domain-name";
   
-  public static final String CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY = "c2.cache.streaming.buffer.size";
+  public static final String CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY = "c2.cache.streaming-buffer-size";
+  
+  public static final String CACHE_MAX_WAIT_ON_PUT_MS_KEY = "c2.cache.max-wait-on-put-ms";
   
   /* Defaults section */
   
@@ -309,6 +314,11 @@ public class CarrotConfig {
    * 
    * */
   public static final int DEFAULT_SCAVENGER_MAX_SEGMENTS_BEFORE_STALL = 10;
+  
+  /**
+   * Default number of Scavenger (Garbage collector) threads
+   */
+  public static final int DEFAULT_SCAVENGER_NUMBER_THREADS = 2;
   /**
    * Limits write speed during scavenger run to 0.9 of scavenger cleaning memory rate Suppose
    * Scavenger frees memory with a rate of 900MB/sec. Incoming cache write requests will be limited
@@ -445,6 +455,10 @@ public class CarrotConfig {
   
   /* Default streaming support buffer size */
   public final static int DEFAULT_CACHE_STREAMING_SUPPORT_BUFFER_SIZE = 1 << 22;
+  
+  /* Default cache maximum wait time on PUT (due to full storage) in ms */
+  public final static int DEFAULT_CACHE_MAX_WAIT_ON_PUT_MS = 20; // Wait up to 20ms when storage is full
+  
   // Statics
   static CarrotConfig instance;
 
@@ -1181,6 +1195,10 @@ public class CarrotConfig {
     return s.split(",");
   }
   
+  public void setCacheNames(String names) {
+    props.setProperty(CACHES_NAME_LIST_KEY, names);
+  }
+  
   /**
    * Get cache types list
    * @return cache types list
@@ -1188,6 +1206,10 @@ public class CarrotConfig {
   public String[] getCacheTypes() {
     String s = props.getProperty(CACHES_TYPES_LIST_KEY, DEFAULT_CACHES_TYPES_LIST);
     return s.split(",");
+  }
+  
+  public void setCacheTypes(String types) {
+    props.setProperty(CACHES_TYPES_LIST_KEY, types);
   }
   
   /**
@@ -1949,12 +1971,74 @@ public class CarrotConfig {
     }
   }
   
+  /**
+   * Cache streaming support buffer size
+   * @param size
+   */
   public void setCacheStreamingSupportBufferSize(int size) {
     this.props.setProperty(CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY, Integer.toString(size));
   }
   
+  /**
+   * Cache streaming support number threads
+   * @param cacheName
+   * @param size
+   */
   public void setCacheStreamingSupportBufferSize(String cacheName, int size) {
     this.props.setProperty(cacheName + "." + CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY, Integer.toString(size));
+  }
+  
+  /**
+   * Get properties
+   * @return properties
+   */
+  public Properties getProperties() {
+    return props;
+  }
+  
+  /**
+   * Get Scavenger number of threads for the cache
+   * @param cacheName cache name
+   * @return number of threads
+   */
+  public int getScavengerNumberOfThreads(String cacheName) {
+    String value = props.getProperty(cacheName + "." + SCAVENGER_NUMBER_THREADS_KEY);
+    if (value == null) {
+      return (int) getLongProperty(SCAVENGER_NUMBER_THREADS_KEY, DEFAULT_SCAVENGER_NUMBER_THREADS);
+    } else {
+      return Integer.parseInt(value);
+    }
+  }
+  
+  /**
+   * Set scavenger number of threads
+   * @param cacheName cache name
+   * @param threads number
+   */
+  public void setScavengerNumberOfThreads(String cacheName, int threads) {
+    this.props.setProperty(cacheName + "." + SCAVENGER_NUMBER_THREADS_KEY, Integer.toString(threads));
+  }
+  
+  /**
+   * Get maximum wait on PUT time in ms
+   * @param cacheName cache name
+   * @return wait time in ms
+   */
+  public long getCacheMaximumWaitTimeOnPut(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_MAX_WAIT_ON_PUT_MS_KEY);
+    if (value == null) {
+      return getLongProperty(CACHE_MAX_WAIT_ON_PUT_MS_KEY, DEFAULT_CACHE_MAX_WAIT_ON_PUT_MS);
+    }
+    return Long.parseLong(value);
+  }
+  
+  /**
+   * Set maximum wait time on PUT for a given cache
+   * @param cacheName cache name
+   * @param time wait time
+   */
+  public void setCacheMaximumWaitTimeOnPut(String cacheName, long time) {
+    this.props.setProperty(cacheName + "." + CACHE_MAX_WAIT_ON_PUT_MS_KEY, Long.toString(time));
   }
   
 }

@@ -461,6 +461,9 @@ public class Segment implements Persistent {
   /* Save to file in progress - TESTs only*/
   private volatile boolean sip = false;
   
+  /* Segment is in recycling */
+  private volatile boolean inRecycling;
+  
   /**
    * 
    * Default constructor
@@ -980,7 +983,7 @@ public class Segment implements Persistent {
       }
       this.sip = true;
       // Write segment size
-      long size = getFullDataSize();//getSegmentDataSize();//size();
+      long size = getFullDataSize();
       file.writeLong(size);
       
       int bufSize = (int) Math.min(size, 1024 * 1024);
@@ -1025,5 +1028,14 @@ public class Segment implements Persistent {
       }
       this.setAddress(ptr);
     }
+  }
+  
+  public boolean isRecycling() {
+    return this.inRecycling;
+  }
+  
+  
+  public void setRecycling(boolean v) {
+    this.inRecycling = v;
   }
 }

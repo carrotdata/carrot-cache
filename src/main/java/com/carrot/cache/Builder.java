@@ -595,6 +595,26 @@ public class Builder {
   }
   
   /**
+   * With Scavenger number of threads
+   * @param threads number of threads
+   * @return builder instances
+   */
+  public Builder withScavengerNumberOfThreads(int threads) {
+    conf.setScavengerNumberOfThreads(cacheName, threads);
+    return this;
+  }
+  
+  /**
+   * With maximum wait time on PUT
+   * @param time time
+   * @return builder instance
+   */
+  public Builder withCacheMaximumWaitTimeOnPut(long time) {
+    conf.setCacheMaximumWaitTimeOnPut(cacheName, time);
+    return this;
+  }
+  
+  /**
    * Build cache
    * @return
    * @throws IOException
@@ -605,4 +625,6 @@ public class Builder {
     cache.initAll();
     return cache;
   }
+  
+  
 }

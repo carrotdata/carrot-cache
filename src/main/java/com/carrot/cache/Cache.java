@@ -30,7 +30,6 @@ import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -96,9 +95,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /** Maximum memory limit in bytes */
   long maximumCacheSize;
-
-  /** Cache scavenger */
-  AtomicReference<Scavenger> scavenger = new AtomicReference<Scavenger>();
   
   /* IOEngine */
   IOEngine engine;
@@ -239,7 +235,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     initAdmissionController();
     initThroughputController();
     startThroughputController();
-    initScavenger();
     // Set eviction listener
     this.engine.getMemoryIndex().setEvictionListener(this);
   }
@@ -272,56 +267,25 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     r.removeShutdownHook(shutDownHook);
   }
   
-  private void initScavenger() {
-    long interval = this.conf.getScavengerRunInterval(this.cacheName) * 1000;
-    LOG.info("Started Scavenger, interval=%d sec", interval /1000);
-    TimerTask task = new TimerTask() {
-      public void run() {
-        Scavenger scavenger = Cache.this.scavenger.get();
-        if (scavenger != null && scavenger.isAlive()) {
-          return;
-        }
-        // Scavenger MUST be null here, because we first set scavenger to NULL then exit Scavenger thread
-        scavenger = new Scavenger(Cache.this);
-        if (!Cache.this.scavenger.compareAndSet(null, scavenger)) {
-          return;
-        }
-        scavenger.start();
-      }
-    };
-    if (this.timer == null) {
-      this.timer = new Timer();
-    }
-    this.timer.scheduleAtFixedRate(task, interval, interval);
-  }
-  
   void startScavenger() {
-    Scavenger scavenger = Cache.this.scavenger.get();
-    if (scavenger != null && scavenger.isAlive()) {
-      return;
-    }
     // Scavenger MUST be null here, because we first set scavenger to NULL then exit Scavenger thread
-    scavenger = new Scavenger(this);
-    if (!this.scavenger.compareAndSet(null, scavenger)) {
-      return;
+    if (Scavenger.getActiveThreadsCount() < this.conf.getScavengerNumberOfThreads(cacheName)){
+      Scavenger scavenger = new Scavenger(this);
+      scavenger.start();
     }
-    scavenger.start();
   }
   
   void stopScavenger() {
-    Scavenger scavenger = this.scavenger.get();
-    if (scavenger != null && scavenger.isAlive()) {
-      scavenger.interrupt();
+    while(Scavenger.getActiveThreadsCount() > 0) {
       try {
-        scavenger.join();
+        Thread.sleep(100);
       } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
       }
     }
   }
   
   void finishScavenger(Scavenger s) {
-    this.scavenger.compareAndSet(s, null);
+    //TODO
   }
   
   private void adjustThroughput() {
@@ -612,8 +576,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
     
   private boolean isScavengerActive() {
-    Scavenger scav = this.scavenger.get();
-    return scav != null && scav.isAlive();
+    return Scavenger.getActiveThreadsCount() > 0;
   }
   
   private void spinWaitOnHighPressure(boolean scavenger) {
@@ -695,9 +658,17 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if(shutdownInProgress) {
       return false;
     }
-    if (storageIsFull(keySize, valSize)) {
-      this.totalRejectedWrites.incrementAndGet();
-      return false;
+    long waitOnPutTime = this.conf.getCacheMaximumWaitTimeOnPut(cacheName);
+    if (!scavenger ) {
+      long start = System.currentTimeMillis();
+      while(!evictionDisabledMode && storageIsFull(keySize, valSize) && 
+          (System.currentTimeMillis() - start) < waitOnPutTime) {
+         Utils.onSpinWait(this.spinWaitTime);
+      }
+      if (storageIsFull(keySize, valSize)) { 
+        this.totalRejectedWrites.incrementAndGet();
+        return false;
+      }
     }
     // Check rank
     checkRank(rank);
@@ -706,6 +677,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return false;
     }
     spinWaitOnHighPressure(scavenger);
+    
     this.totalWrites.incrementAndGet();
     this.totalWritesSize.addAndGet(Utils.kvSize(keySize, valSize));
 
@@ -895,9 +867,17 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if(shutdownInProgress) {
       return false;
     }
-    if (storageIsFull(keySize, valSize)) {
-      this.totalRejectedWrites.incrementAndGet();
-      return false;
+    long waitOnPutTime = this.conf.getCacheMaximumWaitTimeOnPut(cacheName);
+    if (!scavenger ) {
+      long start = System.currentTimeMillis();
+      while(!evictionDisabledMode && storageIsFull(keySize, valSize) && 
+          (System.currentTimeMillis() - start) < waitOnPutTime) {
+         Utils.onSpinWait(this.spinWaitTime);
+      }
+      if (storageIsFull(keySize, valSize)) { 
+        this.totalRejectedWrites.incrementAndGet();
+        return false;
+      }
     }
     if (!shouldAdmitToMainQueue(key, keyOffset, keySize, valSize, force)) {
       return false;
@@ -2087,10 +2067,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException
    */
   public void load() throws IOException {
-    // Cache cache = new Cache();
-    // cache.setName(name);
-    // cache.load();
-    // ready to rumble
+  
     LOG.info("Started loading cache ...");
     long startTime = System.currentTimeMillis();
     loadCache();
@@ -2100,7 +2077,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     loadEngine();
     loadScavengerStats();
     startThroughputController();
-    initScavenger();
     long endTime = System.currentTimeMillis();
     LOG.info("Cache loaded in {}ms", endTime - startTime);
   }
@@ -2141,8 +2117,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public void dispose() {
     removeShutdownHook();
-    // 1 cancel the timer
-    this.timer.cancel();
     stopScavenger();
     this.engine.dispose();
     if (this.victimCache != null) {
@@ -2182,7 +2156,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public void shutdown() throws IOException {
     // Disable writes/reads
     this.shutdownInProgress = true;
-    this.timer.cancel();
     stopScavenger();
     // stop IOEngine
     this.engine.shutdown();
@@ -2247,6 +2220,4 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     conf.setGlobalCacheRootDir(rootDir);
     return loadCache(cacheName);
   }
-  
-  
 }

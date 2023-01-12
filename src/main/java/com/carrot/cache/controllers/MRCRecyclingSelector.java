@@ -33,7 +33,9 @@ public class MRCRecyclingSelector implements RecyclingSelector {
     long maxCreationTime = Long.MIN_VALUE;
     for(int i = 0; i < segments.length; i++) {
       Segment s = segments[i];
-      if (s == null || !s.isSealed()) continue;
+      if (s == null || !s.isSealed() || s.isRecycling()) {
+        continue;
+      }
       Segment.Info info = s.getInfo();
       long maxExpireAt = info.getMaxExpireAt();
       long currentTime = System.currentTimeMillis();
@@ -46,6 +48,9 @@ public class MRCRecyclingSelector implements RecyclingSelector {
         maxCreationTime = time;
         selection = s;
       }
+    }
+    if (selection != null) {
+      selection.setRecycling(true);
     }
     return selection;
   }

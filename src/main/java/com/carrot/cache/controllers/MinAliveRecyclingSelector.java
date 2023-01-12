@@ -35,7 +35,7 @@ public class MinAliveRecyclingSelector implements RecyclingSelector {
     
     for(int i = 0; i < segments.length; i++) {
       Segment s = segments[i];
-      if (s == null || !s.isSealed()) {
+      if (s == null || !s.isSealed() || s.isRecycling()) {
         continue;
       }
       Segment.Info info = s.getInfo();
@@ -58,6 +58,10 @@ public class MinAliveRecyclingSelector implements RecyclingSelector {
         selection2 = s;
       }
     }
-    return selection1 != null? selection1: selection2;
+    Segment ss = selection1 != null? selection1: selection2;
+    if (ss != null) {
+      ss.setRecycling(true);
+    }
+    return ss;
   }
 }

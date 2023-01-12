@@ -51,7 +51,9 @@ public abstract class TestCacheMultithreadedZipfBase {
   protected long maxCacheSize = 1000L * segmentSize;
   
   int scavengerInterval = 2; // seconds
-    
+  
+  int scavNumberThreads = 1;
+  
   double scavDumpBelowRatio = 1.0;
   
   double minActiveRatio = 0.90;
@@ -86,7 +88,6 @@ public abstract class TestCacheMultithreadedZipfBase {
   
   @After  
   public void tearDown() throws IOException {
-    // UnsafeAccess.mallocStats.printStats(false);
     this.cache.printStats();
     this.cache.dispose();
     // Delete temp data
@@ -112,7 +113,8 @@ public abstract class TestCacheMultithreadedZipfBase {
       .withMinimumActiveDatasetRatio(minActiveRatio)
       .withEvictionDisabledMode(evictionDisabled)
       .withAdmissionQueueStartSizeRatio(aqStartRatio)
-      .withAdmissionController(acClz.getName());
+      .withAdmissionController(acClz.getName())
+      .withScavengerNumberOfThreads(scavNumberThreads);
     builder = withAddedConfigurations(builder);
     if (offheap) {
       return builder.buildMemoryCache();

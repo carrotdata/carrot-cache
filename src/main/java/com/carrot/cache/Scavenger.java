@@ -24,6 +24,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -64,31 +65,31 @@ public class Scavenger extends Thread {
     String cacheName;
     
     /** Total times scavenger ran */
-    long totalRuns;
+    AtomicLong totalRuns = new AtomicLong();
 
     /** Total empty segments */
-    long totalEmptySegments;
+    AtomicLong totalEmptySegments = new AtomicLong();
     
     /** Total run time in ms; */
-    long totalRunTimes;
+    AtomicLong totalRunTimes= new AtomicLong();
 
     /** Total items scanned */
-    long totalItemsScanned;
+    AtomicLong totalItemsScanned = new AtomicLong();
 
     /** Total items freed */
-    long totalItemsFreed;
+    AtomicLong totalItemsFreed = new AtomicLong();
 
     /** Total items expired */
-    long totalItemsExpired;
+    AtomicLong totalItemsExpired = new AtomicLong();
 
     /** Total bytes scanned */
-    long totalBytesScanned;
+    AtomicLong totalBytesScanned = new AtomicLong();
 
     /** Total bytes freed */
-    long totalBytesFreed;
+    AtomicLong totalBytesFreed = new AtomicLong();
 
     /** Total bytes expired */
-    long totalBytesExpired;
+    AtomicLong totalBytesExpired = new AtomicLong();
 
     double dumpBelowRatioMin;
     
@@ -116,7 +117,7 @@ public class Scavenger extends Thread {
      * @return total runs
      */
     public long getTotalRuns() {
-      return totalRuns;
+      return totalRuns.get();
     }
 
     /**
@@ -124,7 +125,7 @@ public class Scavenger extends Thread {
      * @return total number of empty segments
      */
     public long getTotalEmptySegments() {
-      return totalEmptySegments;
+      return totalEmptySegments.get();
     }
     
     /**
@@ -133,7 +134,7 @@ public class Scavenger extends Thread {
      * @return total run time
      */
     public long getTotalRunTimes() {
-      return totalRunTimes;
+      return totalRunTimes.get();
     }
 
     /**
@@ -142,7 +143,7 @@ public class Scavenger extends Thread {
      * @return total items scanned
      */
     public long getTotalItemsScanned() {
-      return totalItemsScanned;
+      return totalItemsScanned.get();
     }
 
     /**
@@ -151,7 +152,7 @@ public class Scavenger extends Thread {
      * @return total items freed
      */
     public long getTotalItemsFreed() {
-      return totalItemsFreed;
+      return totalItemsFreed.get();
     }
 
     /**
@@ -160,7 +161,7 @@ public class Scavenger extends Thread {
      * @return total items expired
      */
     public long getTotalItemsExpired() {
-      return totalItemsExpired;
+      return totalItemsExpired.get();
     }
 
     /**
@@ -169,7 +170,7 @@ public class Scavenger extends Thread {
      * @return total bytes scanned
      */
     public long getTotalBytesScanned() {
-      return totalBytesScanned;
+      return totalBytesScanned.get();
     }
 
     /**
@@ -178,7 +179,7 @@ public class Scavenger extends Thread {
      * @return total bytes freed
      */
     public long getTotalBytesFreed() {
-      return totalBytesFreed;
+      return totalBytesFreed.get();
     }
 
     /**
@@ -187,22 +188,22 @@ public class Scavenger extends Thread {
      * @return total bytes expired
      */
     public long getTotalBytesExpired() {
-      return totalBytesExpired;
+      return totalBytesExpired.get();
     }
     
     @Override
     public void save(OutputStream os) throws IOException {
       DataOutputStream dos = Utils.toDataOutputStream(os);
       dos.writeUTF(cacheName);
-      dos.writeLong(totalBytesExpired);
-      dos.writeLong(totalBytesFreed);
-      dos.writeLong(totalBytesScanned);
-      dos.writeLong(totalEmptySegments);
-      dos.writeLong(totalItemsExpired);
-      dos.writeLong(totalItemsFreed);
-      dos.writeLong(totalItemsScanned);
-      dos.writeLong(totalRuns);
-      dos.writeLong(totalRunTimes);
+      dos.writeLong(totalBytesExpired.get());
+      dos.writeLong(totalBytesFreed.get());
+      dos.writeLong(totalBytesScanned.get());
+      dos.writeLong(totalEmptySegments.get());
+      dos.writeLong(totalItemsExpired.get());
+      dos.writeLong(totalItemsFreed.get());
+      dos.writeLong(totalItemsScanned.get());
+      dos.writeLong(totalRuns.get());
+      dos.writeLong(totalRunTimes.get());
       dos.writeDouble(dumpBelowRatioMin);
       dos.writeDouble(dumpBelowRatioMax);
       dos.writeDouble(dumpBelowRatio);
@@ -214,15 +215,15 @@ public class Scavenger extends Thread {
     public void load(InputStream is) throws IOException {
       DataInputStream dis = Utils.toDataInputStream(is);
       cacheName = dis.readUTF();
-      totalBytesExpired = dis.readLong();
-      totalBytesFreed = dis.readLong();
-      totalBytesScanned = dis.readLong();
-      totalEmptySegments = dis.readLong();
-      totalItemsExpired = dis.readLong();
-      totalItemsFreed = dis.readLong();
-      totalItemsScanned  = dis.readLong();
-      totalRuns = dis.readLong();
-      totalRunTimes = dis.readLong();
+      totalBytesExpired.set(dis.readLong());
+      totalBytesFreed.set(dis.readLong());
+      totalBytesScanned.set(dis.readLong());
+      totalEmptySegments.set(dis.readLong());
+      totalItemsExpired.set(dis.readLong());
+      totalItemsFreed.set(dis.readLong());
+      totalItemsScanned.set(dis.readLong());
+      totalRuns.set(dis.readLong());
+      totalRunTimes.set(dis.readLong());
       dumpBelowRatioMin = dis.readDouble();
       dumpBelowRatioMax = dis.readDouble();
       dumpBelowRatio = dis.readDouble();
@@ -295,6 +296,8 @@ public class Scavenger extends Thread {
   
   private static int maxInstances = 1; // TODO: make it configurable
   
+  private static AtomicLong rollingId = new AtomicLong();
+  
   /* Clean deleted only items - do not purge low ranks*/
   private boolean cleanDeletedOnly = true;
   
@@ -303,11 +306,11 @@ public class Scavenger extends Thread {
   private boolean evictionDisabledMode = false;
   
   public Scavenger(Cache cache) {
-    super("c2 scavenger");
+    super("c2 scavenger-" + rollingId.getAndIncrement());
     this.cache = cache;
     this.config = CarrotConfig.getInstance();
     String cacheName = this.cache.getName();
-
+    maxInstances = config.getScavengerNumberOfThreads(cacheName);
     // Update stats
     stats = statsMap.get(cache.getName());
     
@@ -340,8 +343,12 @@ public class Scavenger extends Thread {
       dumpBelowRatioMin = -0.01;
       adjStep = 0.0;
     }
-    stats.totalRuns++;
+    stats.totalRuns.incrementAndGet();
     
+  }
+  
+  public static int getActiveThreadsCount() {
+    return numInstances.get();
   }
   
   private long getScavengerMaxSegmentsBeforeStall() {
@@ -377,10 +384,10 @@ public class Scavenger extends Thread {
     try {
       
       if (numInstances.incrementAndGet() > maxInstances) {
-        numInstances.decrementAndGet();
+        // Number of instances exceeded the maximum value
         return;
       }
-      LOG.info(
+      LOG.debug(
           "scavenger [{}] started at {} allocated storage={} maximum storage={}", cache.getName(),
           format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
 
@@ -410,7 +417,7 @@ public class Scavenger extends Thread {
         long maxExpire = s.getInfo().getMaxExpireAt();
         if (s.getInfo().getTotalActiveItems() == 0
             || (maxExpire < System.currentTimeMillis() && maxExpire > 0)) {
-          stats.totalEmptySegments++;
+          stats.totalEmptySegments.incrementAndGet();
         }
         try {
           finished = cleanSegment(s);
@@ -444,10 +451,11 @@ public class Scavenger extends Thread {
     }
     long runEnd = System.currentTimeMillis();
     // Update stats
-    stats.totalRunTimes += (runEnd - runStart);
-    LOG.info(
+    stats.totalRunTimes.addAndGet(runEnd - runStart);
+    LOG.debug(
         "scavenger [{}] finished at {} allocated storage={} maximum storage=%{}", cache.getName(),
         format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
+
   }
 
   private boolean shouldStopOn(Segment s) {
@@ -488,8 +496,8 @@ public class Scavenger extends Thread {
       // We can dump it completely w/o asking memory index
       long dataSize = info.getSegmentDataSize();
       // Update stats
-      stats.totalBytesFreed += dataSize;
-      stats.totalBytesScanned += dataSize;
+      stats.totalBytesFreed.addAndGet(dataSize);
+      stats.totalBytesScanned.addAndGet(dataSize);
       return false; // not finished yet
     } else {
       return cleanSegmentInternal(s);
@@ -532,7 +540,7 @@ public class Scavenger extends Thread {
         final long valuePtr = sc.valueAddress();
         final int valSize = sc.valueLength();
         final int totalSize = Utils.kvSize(keySize, valSize);
-        stats.totalBytesScanned += totalSize;
+        stats.totalBytesScanned.addAndGet(totalSize);
         double ratio = cleanDeletedOnly? 0: dumpBelowRatio;
         if (isDirect) {
           result = index.checkDeleteKeyForScavenger(keyPtr, keySize, result, ratio);
@@ -548,18 +556,18 @@ public class Scavenger extends Thread {
         scanned++;
         switch (res) {
           case EXPIRED:
-            stats.totalBytesExpired += totalSize;
-            stats.totalBytesFreed += totalSize;
-            stats.totalItemsExpired += 1;
+            stats.totalBytesExpired.addAndGet(totalSize);
+            stats.totalBytesFreed.addAndGet(totalSize);
+            stats.totalItemsExpired.incrementAndGet();
             expired++;
             break;
           case NOT_FOUND:
-            stats.totalBytesFreed += totalSize;
+            stats.totalBytesFreed.addAndGet(totalSize);
             notFound++;
             break;
           case DELETED:
             // Update stats
-            stats.totalBytesFreed += totalSize;
+            stats.totalBytesFreed.addAndGet(totalSize);
             // Return Item back to AQ
             // TODO: fix this code. We need to move data to a victim cache on
             // memory index eviction.
@@ -605,7 +613,7 @@ public class Scavenger extends Thread {
         final int keySize = sc.keyLength();
         final int valSize = sc.valueLength();
         final int totalSize = Utils.kvSize(keySize, valSize);
-        stats.totalBytesScanned += totalSize;
+        stats.totalBytesScanned.addAndGet(totalSize);
         if (!isDirect && buffer.length < keySize) {
           buffer = new byte[keySize];
         }
@@ -629,7 +637,7 @@ public class Scavenger extends Thread {
    * @return run rate
    */
   public long getScavengerRunRateAverage() {
-    return (long) stats.totalBytesFreed * 1000 / (System.currentTimeMillis() - runStartTime); 
+    return (long) stats.totalBytesFreed.get() * 1000 / (System.currentTimeMillis() - runStartTime); 
   }
 
   public static boolean decreaseThroughput(String cacheName) {

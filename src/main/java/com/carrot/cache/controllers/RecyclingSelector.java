@@ -25,4 +25,5 @@ public interface RecyclingSelector extends Persistent {
    * @return segment to select
    */
   public Segment selectForRecycling(Segment[] segments);
+  
 }

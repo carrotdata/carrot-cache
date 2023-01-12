@@ -1895,6 +1895,7 @@ public abstract class IOEngine implements Persistent {
       reportAllocation(-this.segmentSize);
       reportUsage(-dataSize);
     } finally {
+      seg.setRecycling(false);
       seg.writeUnlock();
     }
   }

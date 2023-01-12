@@ -45,6 +45,7 @@ public class TestOffheapCacheMultithreadedZipf extends TestCacheMultithreadedZip
     this.numIterations = this.numRecords;
     this.numThreads = 4;
     this.maxCacheSize = 100 * this.segmentSize;
+    this.scavNumberThreads = 2;
   }
   
   @Test
