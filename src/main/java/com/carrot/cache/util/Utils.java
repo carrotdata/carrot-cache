@@ -1145,6 +1145,18 @@ public class Utils {
     return vSize;
   }
   
+  public static int extractValue(long buffer) {
+    int pos = 0;
+    int kSize = Utils.readUVInt(buffer + pos);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    pos += kSizeSize;
+    int vSize = Utils.readUVInt(buffer + pos);
+    int vSizeSize = Utils.sizeUVInt(vSize);   
+    int toMove = kSizeSize + vSizeSize + kSize;
+    UnsafeAccess.copy(buffer + toMove, buffer, vSize);
+    return vSize;
+  }
+  
   public static int extractValueRange(byte[] buffer, int off, int rangeStart, int rangeSize) {
     int pos = off;
     int kSize = Utils.readUVInt(buffer, pos);

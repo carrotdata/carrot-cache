@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -469,7 +471,7 @@ public abstract class IOEngine implements Persistent {
       UnsafeAccess.free(buf);
     }
   }
-
+  
   /**
    * Get value range into a given byte buffer
    *
@@ -1932,7 +1934,9 @@ public abstract class IOEngine implements Persistent {
    */
   public synchronized Segment getSegmentForRecycling() {
     Segment s = this.recyclingSelector.selectForRecycling(dataSegments);
-    if (s != null && !s.isSealed()) throw new RuntimeException("Segment for recycling must be sealed");
+    if (s != null && !s.isSealed()) {
+      throw new RuntimeException("Segment for recycling must be sealed");
+    }
     return s;
   }
 
@@ -2358,14 +2362,15 @@ public abstract class IOEngine implements Persistent {
    * @return number
    */
   public long activeSize() {
-    long total = 0;
-    for (Segment s : this.dataSegments) {
-      if (s == null) {
-        continue;
-      }
-      total += s.getTotalItems() - s.getNumberEvictedDeletedItems() - s.getNumberExpiredItems();
-    }
-    return total;
+//    long total = 0;
+//    for (Segment s : this.dataSegments) {
+//      if (s == null) {
+//        continue;
+//      }
+//      total += s.getTotalItems() - s.getNumberEvictedDeletedItems() - s.getNumberExpiredItems();
+//    }
+//    return total;
+    return this.index.size();
   }
 
   /**
@@ -2419,5 +2424,19 @@ public abstract class IOEngine implements Persistent {
   
   public void shutdown() {
     // do nothing, delegate to subclass
+  }
+  
+  public Segment[] getDataSegmentsSorted() {
+    Arrays.sort(dataSegments, new Comparator<Segment>() {
+      @Override
+      public int compare(Segment o1, Segment o2) {
+        if (o1 == null && o2 == null) return 0;
+        if (o1 == null) return -1;
+        if (o2 == null) return 1;
+        
+        return (int) (o1.getInfo().getCreationTime() - o2.getInfo().getCreationTime());
+      }      
+    });
+    return this.dataSegments;
   }
 }

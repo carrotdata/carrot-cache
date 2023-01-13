@@ -50,6 +50,7 @@ import com.carrot.cache.io.IOEngine;
 import com.carrot.cache.io.IOEngine.IOEngineEvent;
 import com.carrot.cache.io.OffheapIOEngine;
 import com.carrot.cache.io.Segment;
+import com.carrot.cache.io.SegmentScanner;
 import com.carrot.cache.jmx.CacheJMXSink;
 import com.carrot.cache.util.CarrotConfig;
 import com.carrot.cache.util.Epoch;
@@ -1837,11 +1838,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         return;
       }
       if (used >= max) {
-        this.engine.setEvictionEnabled(true);
+        //this.engine.setEvictionEnabled(true);
         this.tcEnabled = true;
         startScavenger();
       } else if (used < min){
-        this.engine.setEvictionEnabled(false);
+        //this.engine.setEvictionEnabled(false);
       }
     }
   }
@@ -2163,6 +2164,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.victimCache != null) {
       this.victimCache.shutdown();
     }
+  }
+  
+  public Segment[] getSegmentsSorted() {
+    return this.engine.getDataSegmentsSorted();
+  }
+  
+  public SegmentScanner getSegmentScanner(Segment s) throws IOException {
+    return this.engine.getScanner(s);
   }
   
   public static Cache loadCache(String cacheName) throws IOException {

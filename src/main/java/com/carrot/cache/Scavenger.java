@@ -82,6 +82,12 @@ public class Scavenger extends Thread {
     /** Total items expired */
     AtomicLong totalItemsExpired = new AtomicLong();
 
+    /** Total items scanned */
+    AtomicLong totalItemsDeleted = new AtomicLong();
+
+    /** Total items freed */
+    AtomicLong totalItemsNotFound = new AtomicLong();
+    
     /** Total bytes scanned */
     AtomicLong totalBytesScanned = new AtomicLong();
 
@@ -165,6 +171,23 @@ public class Scavenger extends Thread {
     }
 
     /**
+     * Get total items deleted
+     *
+     * @return total items deleted
+     */
+    public long getTotalItemsDeleted() {
+      return totalItemsDeleted.get();
+    }
+
+    /**
+     * Get total items not found
+     *
+     * @return total items not found
+     */
+    public long getTotalItemsNotFound() {
+      return totalItemsNotFound.get();
+    }
+    /**
      * Get total bytes scanned
      *
      * @return total bytes scanned
@@ -202,6 +225,9 @@ public class Scavenger extends Thread {
       dos.writeLong(totalItemsExpired.get());
       dos.writeLong(totalItemsFreed.get());
       dos.writeLong(totalItemsScanned.get());
+      dos.writeLong(totalItemsDeleted.get());
+      dos.writeLong(totalItemsNotFound.get());
+
       dos.writeLong(totalRuns.get());
       dos.writeLong(totalRunTimes.get());
       dos.writeDouble(dumpBelowRatioMin);
@@ -222,6 +248,9 @@ public class Scavenger extends Thread {
       totalItemsExpired.set(dis.readLong());
       totalItemsFreed.set(dis.readLong());
       totalItemsScanned.set(dis.readLong());
+      totalItemsDeleted.set(dis.readLong());
+      totalItemsNotFound.set(dis.readLong());
+      
       totalRuns.set(dis.readLong());
       totalRunTimes.set(dis.readLong());
       dumpBelowRatioMin = dis.readDouble();
@@ -299,7 +328,7 @@ public class Scavenger extends Thread {
   private static AtomicLong rollingId = new AtomicLong();
   
   /* Clean deleted only items - do not purge low ranks*/
-  private boolean cleanDeletedOnly = true;
+  private boolean cleanDeletedOnly = false;
   
   private long maxSegmentsBeforeStallDetected;
   
@@ -404,14 +433,15 @@ public class Scavenger extends Thread {
           break;
         }
         if (shouldStopOn(s)) {
+          s.setRecycling(false);
           break;
         }
         //TODO: make it more smarter, calculate maxSegmentsBeforeStallDetected using maximum number of segments
         // and other current cache configuration values
         if (segmentsProcessed >= maxSegmentsBeforeStallDetected) {
           // This should never happen if eviction is disabled
-          dumpBelowRatio = 1.0;// improve scavenger's performance - dump everything
-          cleanDeletedOnly = false;
+          //dumpBelowRatio = 1.0;// improve scavenger's performance - dump everything
+          //cleanDeletedOnly = false;
         }
         engine.startRecycling(s);
         long maxExpire = s.getInfo().getMaxExpireAt();
@@ -469,20 +499,20 @@ public class Scavenger extends Thread {
     if ((expire > 0 && expire <= currentTime) || n == 0) {
       return false;
     }
-    double sratio = (double) s.getAliveItems() / s.getTotalItems();    
-    double minActiveRatio = config.getMinimumActiveDatasetRatio(cache.getName());
+//    double sratio = (double) s.getAliveItems() / s.getTotalItems();    
+//    double minActiveRatio = config.getMinimumActiveDatasetRatio(cache.getName());
  
     double usage = engine.getStorageAllocatedRatio();
-    double activeRatio = engine.activeSizeRatio();
-    if (!evictionDisabledMode) {
-      if (sratio >= minActiveRatio) {
-        cleanDeletedOnly = false;
-      } else {
-        cleanDeletedOnly = true;
-      }
-      cleanDeletedOnly = cleanDeletedOnly && usage < stopRatio;
-    }
-    return activeRatio >= minActiveRatio && usage < stopRatio;   
+//    double activeRatio = engine.activeSizeRatio();
+//    if (!evictionDisabledMode) {
+//      if (sratio >= minActiveRatio) {
+//        cleanDeletedOnly = false;
+//      } else {
+//        cleanDeletedOnly = true;
+//      }
+//      cleanDeletedOnly = cleanDeletedOnly && usage < stopRatio;
+//    }
+    return /*activeRatio >= minActiveRatio && */usage < stopRatio;   
   }
 
   private boolean cleanSegment(Segment s) throws IOException {
@@ -498,6 +528,8 @@ public class Scavenger extends Thread {
       // Update stats
       stats.totalBytesFreed.addAndGet(dataSize);
       stats.totalBytesScanned.addAndGet(dataSize);
+      stats.totalItemsFreed.addAndGet(s.getTotalItems());
+      stats.totalItemsScanned.addAndGet(s.getTotalItems());
       return false; // not finished yet
     } else {
       return cleanSegmentInternal(s);
@@ -555,6 +587,7 @@ public class Scavenger extends Thread {
         long expire = result.getExpire();
         scanned++;
         switch (res) {
+          
           case EXPIRED:
             stats.totalBytesExpired.addAndGet(totalSize);
             stats.totalBytesFreed.addAndGet(totalSize);
@@ -595,6 +628,11 @@ public class Scavenger extends Thread {
     // means Scavenger MUST stop and log warning
     // Mostly for testing - in a real application properly configured
     // should never happen
+    stats.totalItemsExpired.addAndGet(expired);
+    stats.totalItemsFreed.addAndGet(deleted + expired + notFound);
+    stats.totalItemsScanned.addAndGet(scanned);
+    stats.totalItemsDeleted.addAndGet(deleted);
+    stats.totalItemsNotFound.addAndGet(notFound);
     return (deleted + expired + notFound) == 0;
   }
 
