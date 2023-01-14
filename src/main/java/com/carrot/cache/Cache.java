@@ -1838,11 +1838,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         return;
       }
       if (used >= max) {
-        //this.engine.setEvictionEnabled(true);
+//        this.engine.setEvictionEnabled(true);
         this.tcEnabled = true;
         startScavenger();
       } else if (used < min){
-        //this.engine.setEvictionEnabled(false);
+//        this.engine.setEvictionEnabled(false);
       }
     }
   }

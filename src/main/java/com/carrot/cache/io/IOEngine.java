@@ -2362,15 +2362,14 @@ public abstract class IOEngine implements Persistent {
    * @return number
    */
   public long activeSize() {
-//    long total = 0;
-//    for (Segment s : this.dataSegments) {
-//      if (s == null) {
-//        continue;
-//      }
-//      total += s.getTotalItems() - s.getNumberEvictedDeletedItems() - s.getNumberExpiredItems();
-//    }
-//    return total;
-    return this.index.size();
+    long total = 0;
+    for (Segment s : this.dataSegments) {
+      if (s == null) {
+        continue;
+      }
+      total += s.getTotalItems() - s.getNumberEvictedDeletedItems() - s.getNumberExpiredItems();
+    }
+    return total;
   }
 
   /**

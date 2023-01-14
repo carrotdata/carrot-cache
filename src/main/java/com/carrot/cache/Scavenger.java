@@ -331,9 +331,7 @@ public class Scavenger extends Thread {
   private boolean cleanDeletedOnly = false;
   
   private long maxSegmentsBeforeStallDetected;
-  
-  private boolean evictionDisabledMode = false;
-  
+    
   public Scavenger(Cache cache) {
     super("c2 scavenger-" + rollingId.getAndIncrement());
     this.cache = cache;
@@ -364,14 +362,6 @@ public class Scavenger extends Thread {
       stopRatio = stats.stopRatio;
     }
     this.maxSegmentsBeforeStallDetected = getScavengerMaxSegmentsBeforeStall();
-    this.evictionDisabledMode = this.config.getEvictionDisabledMode(cache.getName());
-    if (this.evictionDisabledMode) {
-      // Disable all cold items cleaning - only deleted and updated ones
-      dumpBelowRatio = -0.01;
-      dumpBelowRatioMax = -0.01;
-      dumpBelowRatioMin = -0.01;
-      adjStep = 0.0;
-    }
     stats.totalRuns.incrementAndGet();
     
   }
@@ -381,10 +371,6 @@ public class Scavenger extends Thread {
   }
   
   private long getScavengerMaxSegmentsBeforeStall() {
-    if (this.evictionDisabledMode) {
-      // Never stalls
-      return Long.MAX_VALUE;
-    }
     
     long maxCacheSize = this.cache.getMaximumCacheSize();
     long segmentSize = this.cache.getCacheConfig().getCacheSegmentSize(cache.getName());
@@ -451,12 +437,6 @@ public class Scavenger extends Thread {
         }
         try {
           finished = cleanSegment(s);
-          if (finished && evictionDisabledMode) {
-            // Means scavenger did not manage to clean any data
-            // in the last segment - hence storage is FULL and
-            // some data must deleted explicitly
-            break;
-          }
           if (finished && cleanDeletedOnly) {
             // continue with purging low rank elements
             cleanDeletedOnly = false;
