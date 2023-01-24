@@ -46,86 +46,97 @@ public class CarrotConfig {
   private static final Logger LOG = LogManager.getLogger(CarrotConfig.class);
 
 
-  /* List of all caches logical names, comma-separated*/
+  /** List of all caches logical names, comma-separated*/
   public final static String CACHES_NAME_LIST_KEY = "c2.caches.name-list";
   
-  /* By default we have only one cache */
+  /**By default we have only one cache */
   public final static String DEFAULT_CACHES_NAME_LIST ="cache"; // only one cache
   
-  /* Caches types ('offheap', 'file' only supported), comma-separated */
+  /**Caches types ('offheap', 'file' only supported), comma-separated */
   public final static String CACHES_TYPES_LIST_KEY ="c2.caches.types-list";
   
-  /* By default cache type is offheap */
+  /**By default cache type is offheap */
   public final static String DEFAULT_CACHES_TYPES_LIST = "offheap";
   
-  /* 
+  /** 
    * Cache victim name. If cache name is C1, then to lookup for its victim name 
    * we must request 'C1.victim.name' property value 
    */
   public final static String CACHE_VICTIM_NAME_KEY = "c2.victim.name";
   
   
-  /* File name for cache snapshot data */
+  /**File name for cache snapshot data */
   public final static String CACHE_SNAPSHOT_NAME = "cache.data";
   
-  /* File name for admission controller snapshot data */
+  /**File name for admission controller snapshot data */
   public final static String ADMISSION_CONTROLLER_SNAPSHOT_NAME = "ac.data";
   
-  /* File name for throughput controller snapshot data */
+  /**File name for throughput controller snapshot data */
   public final static String THROUGHPUT_CONTROLLER_SNAPSHOT_NAME = "tc.data";
   
-  /* File name for recycling selector snapshot data */
+  /**File name for recycling selector snapshot data */
   public final static String RECYCLING_SELECTOR_SNAPSHOT_NAME = "rc.data";
   
-  /* File name for admission queue snapshot data */
+  /**File name for admission queue snapshot data */
   public final static String ADMISSION_QUEUE_SNAPSHOT_NAME = "aq.data";
 
-  /* File name for scavenger statistics snapshot data */
+  /**File name for scavenger statistics snapshot data */
   public final static String SCAVENGER_STATS_SNAPSHOT_NAME = "scav.data";
   
-  /* File name for cache engine snapshot data */
+  /**File name for cache engine snapshot data */
   public final static String CACHE_ENGINE_SNAPSHOT_NAME = "engine.data";
   
-  /* Default cache configuration file name */
+  /**Default cache configuration file name */
   public final static String DEFAULT_CACHE_CONFIG_FILE_NAME = "cache.conf";
   
-  /* Default cache configuration directory name - the only directory for all caches */
+  /**Default cache configuration directory name - the only directory for all caches */
   public final static String DEFAULT_CACHE_CONFIG_DIR_NAME = "conf";
   
-  /* Cache root directory - where to save cached data */
+  /**Cache root directory - where to save cached data */
   public final static String CACHE_ROOT_DIR_PATH_KEY = "c2.root.dir-path";
   
-  /* Default cache root directory path */
+  /**Default cache root directory path */
   public final static String DEFAULT_CACHE_ROOT_DIR_PATH = "." + File.separator + "c2";
     
-  /* Data segment size */
+  /**Data segment size */
   public static final String CACHE_SEGMENT_SIZE_KEY = "c2.data.segment-size";
   
-  /* Maximum storage limit to use for cache */
+  /**Maximum storage limit to use for cache */
   public static final String CACHE_MAXIMUM_SIZE_KEY = "c2.storage.max-size";
   
-  /* When to start GC (garbage collection) - size of the cache as a fraction of the maximum cache size */
+  /**When to start GC (garbage collection) - size of the cache as a fraction of the maximum cache size */
   public static final String SCAVENGER_START_RUN_RATIO_KEY = "c2.scavenger.start-ratio";
 
-  /* When to stop GC (garbage collection) - size of the cache as a fraction of the maximum cache size */
+  /**When to stop GC (garbage collection) - size of the cache as a fraction of the maximum cache size */
   public static final String SCAVENGER_STOP_RUN_RATIO_KEY = "c2.scavenger.stop-ratio";
   
-  /* Discard cached entry if it in this lower percentile - start value */
-  public static final String SCAVENGER_DUMP_ENTRY_BELOW_START_KEY = "c2.scavenger.dump-entry-below-start";
+  /**Discard cached entry if it in this lower percentile - start value */
+  public static final String SCAVENGER_DUMP_ENTRY_BELOW_MIN_KEY = "c2.scavenger.dump-entry-below-min";
 
-  /* Discard cached entry if it in this lower percentile - stop value (maximum) */
-  public static final String SCAVENGER_DUMP_ENTRY_BELOW_STOP_KEY = "c2.scavenger.dump-entry-below-stop";
+  /**Discard cached entry if it in this lower percentile - stop value (maximum) */
+  public static final String SCAVENGER_DUMP_ENTRY_BELOW_MAX_KEY = "c2.scavenger.dump-entry-below-max";
   
-  /* Adjustment step for scavenger */
+  /**Adjustment step for scavenger */
   public static final String SCAVENGER_DUMP_ENTRY_BELOW_STEP_KEY = "c2.scavenger.dump-entry-below-step";
   
-  /* Scavenger number of segment processed before stall mode activated*/
+  /**Scavenger number of segment processed before stall mode activated*/
   public static final String SCAVENGER_MAX_SEGMENTS_BEFORE_STALL_KEY = "c2.scavenger.max-segments-before-stall";
   
-  /* Scavenger number of threads */
+  /**Scavenger number of threads */
   public static final String SCAVENGER_NUMBER_THREADS_KEY = "c2.scavenger.number-threads";
   
-  /* Number of popularity ranks ( default - 8) */
+  /**
+   * Scavenger stop ratio (relative to a number of scanned items) when deleted-mode-only 
+   * gets disabled 
+   */
+  public static final String SCAVENGER_STOP_RATIO_FOR_DELETED_ONLY_MODE_KEY = "c2.scavenger.stop-ratio-deleted-only-mode";
+  
+  /**
+   * Scavenger start ratio (relative to maximum number of data segments) when maximum value 'dumpBelowRatio' starts
+   */
+  public static final String SCAVENGER_START_RATIO_FOR_DUMP_BELOW_MAX_KEY = "c2.scavenger.start-ratio-dump-below-max";
+
+  /**Number of popularity ranks ( default - 8) */
   public static final String CACHE_POPULARITY_NUMBER_RANKS_KEY = "c2.popularity-number-ranks";
   
   /** Keep active data set fraction above this threshold */
@@ -134,26 +145,26 @@ public class CarrotConfig {
   /** IO storage pool size */
   public static final String CACHE_IO_STORAGE_POOL_SIZE_KEY = "c2.storage-io-pool-size";
   
-  /* New item insertion point for SLRU (segment number 1- based)*/
+  /**New item insertion point for SLRU (segment number 1- based)*/
   public static final String SLRU_CACHE_INSERT_POINT_KEY = "c2.eviction.slru-insert-point";
 
-  /* Number of segments in SLRU eviction policy */
+  /**Number of segments in SLRU eviction policy */
   public static final String SLRU_NUMBER_SEGMENTS_KEY = "c2.eviction.slru-number-segments";
   
-  /* Admission Queue start size in fraction of a full cache size */
+  /**Admission Queue start size in fraction of a full cache size */
   public static final String ADMISSION_QUEUE_START_SIZE_RATIO_KEY = "c2.admission.queue-start-size-ratio";
   
-  /* Admission Queue minimum size in fraction of a full cache size */
+  /**Admission Queue minimum size in fraction of a full cache size */
   public static final String ADMISSION_QUEUE_MIN_SIZE_RATIO_KEY = "c2.admission.queue-min-size-ratio";
   
-  /* Admission Queue maximum size in fraction of a full cache size */
+  /**Admission Queue maximum size in fraction of a full cache size */
   public static final String ADMISSION_QUEUE_MAX_SIZE_RATIO_KEY = "c2.admission.queue-max-size-ratio";
   
   
-  /* Readmission evicted item to AQ minimum hit count threshold */
+  /**Readmission evicted item to AQ minimum hit count threshold */
   public static final String READMISSION_HIT_COUNT_MIN_KEY = "c2.readmission-hit-count-min";
   
-  /* Cumulative average write rate limit  (bytes/sec) */
+  /**Cumulative average write rate limit  (bytes/sec) */
   public static final String CACHE_WRITE_RATE_LIMIT_KEY = "c2.write.avg-rate-limit";
   
   /** Promotion on hit from victim to main cache */
@@ -192,12 +203,6 @@ public class CarrotConfig {
   public static final String THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS_KEY = "c2.throughput.adjustment-steps";
   
   /**
-   * Cache write maximum waiting time in milliseconds
-   */
-  
-  public static final String CACHE_WRITES_MAX_WAIT_TIME_MS_KEY = "c2.writes-max-wait-time-ms";
-  
-  /**
    * Does index support memory embedding
    */
   public static final String INDEX_DATA_EMBEDDED_KEY = "c2.index.data-embedded";
@@ -207,80 +212,80 @@ public class CarrotConfig {
    **/
   public static final String INDEX_DATA_EMBEDDED_SIZE_KEY = "c2.index.data-embedded-max-size";
   
-  /* Class name for main queue index format implementation */
+  /**Class name for main queue index format implementation */
   public static final String INDEX_FORMAT_MAIN_QUEUE_IMPL_KEY = "c2.index.format-main-queue-impl";
   
-  /* Class name for admission queue index format implementation */
+  /**Class name for admission queue index format implementation */
   public static final String INDEX_FORMAT_ADMISSION_QUEUE_IMPL_KEY = "c2.index.format-admission-queue-impl";
 
-  /* Class name for cache eviction policy implementation */
+  /**Class name for cache eviction policy implementation */
   public static final String CACHE_EVICTION_POLICY_IMPL_KEY = "c2.eviction-policy-impl";
   
-  /* Class name for cache admission controller implementation */
+  /**Class name for cache admission controller implementation */
   public static final String CACHE_ADMISSION_CONTROLLER_IMPL_KEY = "c2.admission-controller-impl";
   
-  /* Class name for cache throughput controller implementation */
+  /**Class name for cache throughput controller implementation */
   public static final String CACHE_THROUGHPUT_CONTROLLER_IMPL_KEY = "c2.throughput-controller-impl";
   
-  /* Class name for cache recycling controller implementation */
+  /**Class name for cache recycling controller implementation */
   public static final String CACHE_RECYCLING_SELECTOR_IMPL_KEY = "c2.recycling-selector-impl";
   
-  /* Class name for cache data appender implementation */
+  /**Class name for cache data appender implementation */
   public static final String CACHE_DATA_WRITER_IMPL_KEY = "c2.data-writer-impl";
   
-  /* Class name for cache data reader implementation (RAM)*/
+  /**Class name for cache data reader implementation (RAM)*/
   public static final String CACHE_MEMORY_DATA_READER_IMPL_KEY = "c2.memory.data-reader-impl";
   
-  /* Class name for cache data reader implementation (File)*/
+  /**Class name for cache data reader implementation (File)*/
   public static final String CACHE_FILE_DATA_READER_IMPL_KEY = "c2.file.data-reader-impl";
   
-  /* Block writer block size key */
+  /**Block writer block size key */
   public static final String CACHE_BLOCK_WRITER_BLOCK_SIZE_KEY = "c2.block-writer-block-size";
   
-  /* File prefetch buffer size */
+  /**File prefetch buffer size */
   public static final String FILE_PREFETCH_BUFFER_SIZE_KEY = "c2.file.prefetch-buffer-size";
   
-  /* Cache expiration support implementation key */
+  /**Cache expiration support implementation key */
   public static final String CACHE_EXPIRE_SUPPORT_IMPL_KEY = "c2.expire-support-impl";
   
-  /* Random admission controller ratio start key */
+  /**Random admission controller ratio start key */
   public static final String CACHE_RANDOM_ADMISSION_RATIO_START_KEY = "c2.random.admission.ratio-start";
   
-  /* Random admission controller ratio key */
+  /**Random admission controller ratio key */
   public static final String CACHE_RANDOM_ADMISSION_RATIO_STOP_KEY = "c2.random.admission.ratio-stop";
   
-  /* For expiration  based admission controller */
+  /**For expiration  based admission controller */
   public static final String CACHE_EXPIRATION_BIN_START_VALUE_KEY = "c2.expire.start-bin-value";
   
-  /* Bin value multiplier */
+  /**Bin value multiplier */
   public static final String CACHE_EXPIRATION_MULTIPLIER_VALUE_KEY = "c2.expire.multiplier-value";
   
-  /* Eviction disabled mode */
+  /**Eviction disabled mode */
   public static final String CACHE_EVICTION_DISABLED_MODE_KEY = "c2.eviction.disabled-mode";
   
-  /* Rolling Window Counter number of bins*/
+  /**Rolling Window Counter number of bins*/
   public static final String CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY = "c2.rwc-bins";
   
-  /* Rolling Window Counter window duration in seconds */
+  /**Rolling Window Counter window duration in seconds */
   public static final String CACHE_ROLLING_WINDOW_COUNTER_DURATION_KEY = "c2.rwc-window";
   
-  /* Hybrid cache mode of operation */
+  /**Hybrid cache mode of operation */
   public static final String CACHE_HYBRID_INVERSE_MODE_KEY = "c2.hybrid.inverse-mode";
   
-  /* Victim cache promotion threshold  */
+  /**Victim cache promotion threshold  */
   public static final String CACHE_VICTIM_PROMOTION_THRESHOLD_KEY = "c2.victim.promotion-threshold";
   
-  /* Spin wait time on high pressure in nanoseconds */
+  /**Spin wait time on high pressure in nanoseconds */
   public static final String CACHE_SPIN_WAIT_TIME_NS_KEY = "c2.spin.wait-time-ns";
   
-  /* JMX metrics domain name */
+  /**JMX metrics domain name */
   public static final String CACHE_JMX_METRICS_DOMAIN_NAME_KEY = "c2.jmx.metrics-domain-name";
   
   public static final String CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY = "c2.cache.streaming-buffer-size";
   
   public static final String CACHE_MAX_WAIT_ON_PUT_MS_KEY = "c2.cache.max-wait-on-put-ms";
   
-  /* Defaults section */
+  /**Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
 
@@ -295,13 +300,13 @@ public class CarrotConfig {
    * During scavenger run, all expired entries as well as entries with popularity below this config
    * value will be dumped, all others will be rewritten back to a cache. THis is the start value
    */
-  public static final double DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_START = 0.1;
+  public static final double DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_MIN = 0.1;
   
   /**
    * During scavenger run, all expired entries as well as entries with popularity below this config
    * value will be dumped, all others will be rewritten back to a cache. This is the stop value
    */
-  public static final double DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_STOP = 0.5;
+  public static final double DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_MAX = 0.5;
   
   /**
    * Default value for scavenger adjustment step
@@ -319,6 +324,16 @@ public class CarrotConfig {
    * Default number of Scavenger (Garbage collector) threads
    */
   public static final int DEFAULT_SCAVENGER_NUMBER_THREADS = 2;
+  
+  /**
+   * Default value for 'SCAVENGER_STOP_RATIO_FOR_DELETED_MODE_ONLY'
+   */
+  public static final double DEFAULT_SCAVENGER_STOP_RATIO_FOR_DELETED_ONLY_MODE = 0.5; 
+  
+  /**
+   * Default value for 'SCAVENGER_START_RATIO_FOR_FULL_DUMP_MODE_KEY'
+   */
+  public static final double DEFAULT_SCAVENGER_START_RATIO_FOR_DUMP_BELOW_MAX = 0.2; // When 20% of segments scanned
   /**
    * Limits write speed during scavenger run to 0.9 of scavenger cleaning memory rate Suppose
    * Scavenger frees memory with a rate of 900MB/sec. Incoming cache write requests will be limited
@@ -339,52 +354,49 @@ public class CarrotConfig {
   /** Default segment size */
   public static final long DEFAULT_CACHE_DISK_SEGMENT_SIZE = 256 * 1024 * 1024; // 64MB
 
-  /* Default re-admission hit count min*/
+  /**Default re-admission hit count min*/
   public final static int DEFAULT_READMISSION_HIT_COUNT_MIN = 1;
   
-  /* Default sparse files support */
+  /**Default sparse files support */
   public final static boolean DEFAULT_SPARSE_FILES_SUPPORT = false;
   
-  /* Default AQ (admission queue) start size a fraction of a cache size */
+  /**Default AQ (admission queue) start size a fraction of a cache size */
   public final static double DEFAULT_ADMISSION_QUEUE_START_SIZE_RATIO = 0.5;
   
-  /* Default AQ (admission queue) minimum size a fraction of a cache size */
+  /**Default AQ (admission queue) minimum size a fraction of a cache size */
   public final static double DEFAULT_ADMISSION_QUEUE_MIN_SIZE_RATIO = 0.1;
   
-  /* Default AQ (admission queue) maximum size a fraction of a cache size */
+  /**Default AQ (admission queue) maximum size a fraction of a cache size */
   public final static double DEFAULT_ADMISSION_QUEUE_MAX_SIZE_RATIO = 0.5;
 
-  /* Default disk limit - 0 unlimited*/
+  /**Default disk limit - 0 unlimited*/
   public static final long DEFAULT_DISK_LIMIT = 0; // Unlimited
   
-  /* Default size as a power indicator of 2 for index N = 2**10 - start */ 
+  /**Default size as a power indicator of 2 for index N = 2**10 - start */ 
   public static final int DEFAULT_START_INDEX_NUMBER_OF_SLOTS_POWER = 10;
   
-  /* Default incremental index rehashing */
+  /**Default incremental index rehashing */
   public static final boolean DEFAULT_INCREMENTRAL_INDEX_REHASHING = false;
 
-  /* Default throughput check interval - 1 hour*/
+  /**Default throughput check interval - 1 hour*/
   public static final long DEFAULT_THROUGHPUT_CHECK_INTERVAL_SEC = 3600;// 1h
   
-  /* Default Scavenger run interval - 1 min*/
+  /**Default Scavenger run interval - 1 min*/
   public static final long DEFAULT_SCAVENGER_RUN_INTERVAL_SEC = 60;// 1min
   
-  /* Default throughput controller tolerance limit*/
+  /**Default throughput controller tolerance limit*/
   public static final double DEFAULT_THROUGHPUT_CONTROLLER_TOLERANCE_LIMIT = 0.05;
   
-  /* Cache write maximum wait time in milliseconds */
-  public static final long DEFAULT_CACHE_WRITES_MAX_WAIT_TIME_MS = 10;
-  
-  /* Default cache write rate limit */
+  /**Default cache write rate limit */
   public static final long DEFAULT_CACHE_WRITE_RATE_LIMIT = 50 * 1024 * 1024;
   
-  /* Default number of adjustment steps */
+  /**Default number of adjustment steps */
   public static final int DEFAULT_THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS = 10;
   
-  /* Default for index data embedding */
+  /**Default for index data embedding */
   public final static boolean DEFAULT_INDEX_DATA_EMBEDDED = false;
   
-  /* Default index data embedding maximum size */
+  /**Default index data embedding maximum size */
   public final static int DEFAULT_INDEX_DATA_EMBEDDED_SIZE = 100;
   
   /** Default implementation class for recycling selector */
@@ -423,40 +435,40 @@ public class CarrotConfig {
   
   public static final double DEFAULT_CACHE_EXPIRATION_MULTIPLIER_VALUE = 2;
   
-  /* Default minimum active data set ratio */
+  /**Default minimum active data set ratio */
   public final static double DEFAULT_CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO = 0.0;
   
-  /* Default IO pool size */
+  /**Default IO pool size */
   public final static int DEFAULT_CACHE_IO_STORAGE_POOL_SIZE = 32;
   
-  /* Default cache disabled mode */
+  /**Default cache disabled mode */
   public final static boolean DEFAULT_CACHE_EVICTION_DISABLED_MODE = false;
   
-  /* Rolling window counter bins default */
+  /**Rolling window counter bins default */
   public final static int DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_BINS = 60;
   
-  /* Rolling window counter window size in seconds default */
+  /**Rolling window counter window size in seconds default */
   public final static int DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_DURATION = 3600;
   
-  /* Victim cache promotion on hit default value*/
+  /**Victim cache promotion on hit default value*/
   public final static boolean DEFAULT_CACHE_VICTIM_PROMOTION_ON_HIT = true;
   
-  /* Default hybrid inverse mode of operation */
+  /**Default hybrid inverse mode of operation */
   public final static boolean DEFAULT_CACHE_HYBRID_INVERSE_MODE = false;
   
-  /* Default victim promotion threshold */
+  /**Default victim promotion threshold */
   public final static double DEFAULT_CACHE_VICTIM_PROMOTION_THRESHOLD = 0.9;
   
-  /* Default cache spin wait time on high pressure - PUT operation*/
+  /**Default cache spin wait time on high pressure - PUT operation*/
   public final static long DEFAULT_CACHE_SPIN_WAIT_TIME_NS = 10000;// 10000 nanoseconds
   
-  /* Default domain name for JMX metrics */
+  /**Default domain name for JMX metrics */
   public final static String DEFAULT_CACHE_JMX_METRICS_DOMAIN_NAME = "com.carrot.cache";
   
-  /* Default streaming support buffer size */
+  /**Default streaming support buffer size */
   public final static int DEFAULT_CACHE_STREAMING_SUPPORT_BUFFER_SIZE = 1 << 22;
   
-  /* Default cache maximum wait time on PUT (due to full storage) in ms */
+  /**Default cache maximum wait time on PUT (due to full storage) in ms */
   public final static int DEFAULT_CACHE_MAX_WAIT_ON_PUT_MS = 20; // Wait up to 20ms when storage is full
   
   // Statics
@@ -734,12 +746,12 @@ public class CarrotConfig {
    * @param cacheName cache name
    * @return dump entry below ratio
    */
-  public double getScavengerDumpEntryBelowStart(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ SCAVENGER_DUMP_ENTRY_BELOW_START_KEY);
+  public double getScavengerDumpEntryBelowMin(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ SCAVENGER_DUMP_ENTRY_BELOW_MIN_KEY);
     if (value != null) {
       return Double.parseDouble(value);
     }
-    return getDoubleProperty(SCAVENGER_DUMP_ENTRY_BELOW_START_KEY, DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_START);
+    return getDoubleProperty(SCAVENGER_DUMP_ENTRY_BELOW_MIN_KEY, DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_MIN);
   }
 
   /**
@@ -748,7 +760,7 @@ public class CarrotConfig {
    * @param ratio entry below ratio start
    */
   public void setScavengerDumpEntryBelowStart(String cacheName, double ratio) {
-    props.setProperty(cacheName + "."+ SCAVENGER_DUMP_ENTRY_BELOW_START_KEY, Double.toString(ratio));
+    props.setProperty(cacheName + "."+ SCAVENGER_DUMP_ENTRY_BELOW_MIN_KEY, Double.toString(ratio));
   }
   
   /**
@@ -756,12 +768,12 @@ public class CarrotConfig {
    * @param cacheName cache name
    * @return dump entry below ratio
    */
-  public double getScavengerDumpEntryBelowStop(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ SCAVENGER_DUMP_ENTRY_BELOW_STOP_KEY);
+  public double getScavengerDumpEntryBelowMax(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ SCAVENGER_DUMP_ENTRY_BELOW_MAX_KEY);
     if (value != null) {
       return Double.parseDouble(value);
     }
-    return getDoubleProperty(SCAVENGER_DUMP_ENTRY_BELOW_STOP_KEY, DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_STOP);
+    return getDoubleProperty(SCAVENGER_DUMP_ENTRY_BELOW_MAX_KEY, DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_MAX);
   }
   
   /**
@@ -770,7 +782,7 @@ public class CarrotConfig {
    * @param ratio entry below ratio stop
    */
   public void setScavengerDumpEntryBelowStop(String cacheName, double ratio) {
-    props.setProperty(cacheName + "."+ SCAVENGER_DUMP_ENTRY_BELOW_STOP_KEY, Double.toString(ratio));
+    props.setProperty(cacheName + "."+ SCAVENGER_DUMP_ENTRY_BELOW_MAX_KEY, Double.toString(ratio));
   }
   
   /**
@@ -1140,28 +1152,6 @@ public class CarrotConfig {
    */
   public void setThroughputToleranceLimit(String cacheName, double limit) {
     props.setProperty(cacheName + "."+ THROUGHPUT_CONTROLLER_TOLERANCE_LIMIT_KEY, Double.toString(limit));
-  }
-  
-  /**
-   * Get cache write maximum wait time
-   * @param cacheName cache name
-   * @return maximum wait time for writes for a given cache name
-   */
-  public long getCacheWritesMaxWaitTime(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ CACHE_WRITES_MAX_WAIT_TIME_MS_KEY);
-    if (value != null) {
-      return Long.parseLong(value);
-    }
-    return getLongProperty(CACHE_WRITES_MAX_WAIT_TIME_MS_KEY, DEFAULT_CACHE_WRITES_MAX_WAIT_TIME_MS);
-  }
-  
-  /**
-   * Set cache write maximum wait time
-   * @param cacheName cache name
-   * @param max writes wait time for a given cache name
-   */
-  public void setCacheWritesMaxWaitTime(String cacheName, long max) {
-    props.setProperty(cacheName + "."+ CACHE_WRITES_MAX_WAIT_TIME_MS_KEY, Long.toString(max));
   }
   
   /**
@@ -2039,6 +2029,53 @@ public class CarrotConfig {
    */
   public void setCacheMaximumWaitTimeOnPut(String cacheName, long time) {
     this.props.setProperty(cacheName + "." + CACHE_MAX_WAIT_ON_PUT_MS_KEY, Long.toString(time));
+  }
+  
+  /**
+   * Set scavenger stop ratio for deleted mode only (ratio = number--of-cleaned-items / number-of-scanned-items)
+   * @param cacheName cache name
+   * @param ratio ratio 
+   */
+  public void setScavengerStopRatioForDeletedOnlyMode(String cacheName, double ratio) {
+    props.setProperty(cacheName + "."+ SCAVENGER_STOP_RATIO_FOR_DELETED_ONLY_MODE_KEY, Double.toString(ratio));
+  }
+  
+  /**
+   * Get scavenger stop ratio for deleted mode only
+   * @param cacheName cache name
+   * @return  ratio 
+   */
+  public double getScavengerStopRatioForDeletedOnlyMode(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ SCAVENGER_STOP_RATIO_FOR_DELETED_ONLY_MODE_KEY);
+    if (value != null) {
+      return Double.parseDouble(value);
+    }
+    return getDoubleProperty(SCAVENGER_STOP_RATIO_FOR_DELETED_ONLY_MODE_KEY, 
+      DEFAULT_SCAVENGER_STOP_RATIO_FOR_DELETED_ONLY_MODE);
+  }
+  
+  /**
+   * Set scavenger start ratio for dump below max (when Scavenger's 'dumpBelowRatio' reaches maximum value)
+   * ratio  = number segments scanned/ maximum number of segments in the cache)
+   * @param cacheName cache name
+   * @param ratio ratio 
+   */
+  public void setScavengerStartRatioForDumpBelowMax(String cacheName, double ratio) {
+    props.setProperty(cacheName + "."+ SCAVENGER_START_RATIO_FOR_DUMP_BELOW_MAX_KEY, Double.toString(ratio));
+  }
+  
+  /**
+   * Get scavenger start ratio for full dump mode
+   * @param cacheName cache name
+   * @return  ratio 
+   */
+  public double getScavengerStartRatioForDumpBelowMax(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ SCAVENGER_START_RATIO_FOR_DUMP_BELOW_MAX_KEY);
+    if (value != null) {
+      return Double.parseDouble(value);
+    }
+    return getDoubleProperty(SCAVENGER_START_RATIO_FOR_DUMP_BELOW_MAX_KEY, 
+      DEFAULT_SCAVENGER_START_RATIO_FOR_DUMP_BELOW_MAX);
   }
   
 }

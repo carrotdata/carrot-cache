@@ -138,9 +138,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /* Eviction disabled mode */
   boolean evictionDisabledMode;
   
-  /* Wait writes threshold */
-  double writesMaxWaitTime;
-  
   /* Scavenger start memory ratio*/
   double scavengerStartMemoryRatio;
   
@@ -157,8 +154,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   boolean hybridCacheInverseMode;
   
   /* Cache spin wait time */
-  long spinWaitTime;
+  long spinWaitTimeNs;
 
+  /** Maximum wait time to complete PUT operation in ms*/
+  long waitOnPutTimeMs;
+  
   /* Cache type*/
   Type type;
   
@@ -224,10 +224,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         this.conf.isIndexDataEmbeddedSupported(this.cacheName);
     this.indexEmbeddedSize = this.conf.getIndexDataEmbeddedSize(this.cacheName);
     this.evictionDisabledMode = this.conf.getEvictionDisabledMode(this.cacheName);
-    this.writesMaxWaitTime = this.conf.getCacheWritesMaxWaitTime(this.cacheName);
     this.scavengerStartMemoryRatio = this.conf.getScavengerStartMemoryRatio(this.cacheName);
     this.scavengerStopMemoryRatio = this.conf.getScavengerStopMemoryRatio(this.cacheName);
-    this.spinWaitTime = this.conf.getCacheSpinWaitTimeOnHighPressure(this.cacheName);
+    this.spinWaitTimeNs = this.conf.getCacheSpinWaitTimeOnHighPressure(this.cacheName);
+    this.waitOnPutTimeMs = this.conf.getCacheMaximumWaitTimeOnPut(cacheName);
   }
   
   void initAll() throws IOException {
@@ -588,7 +588,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (storageUsed < this.scavengerStopMemoryRatio || !isScavengerActive()) {
       return;
     }
-    Utils.onSpinWait(this.spinWaitTime);
+    Utils.onSpinWait(this.spinWaitTimeNs);
   }
   
   public boolean put(
@@ -659,12 +659,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if(shutdownInProgress) {
       return false;
     }
-    long waitOnPutTime = this.conf.getCacheMaximumWaitTimeOnPut(cacheName);
-    if (!scavenger ) {
+    if (evictionDisabledMode && storageIsFull(keySize, valSize)) {
+      return false;
+    }
+    if (!scavenger) {
       long start = System.currentTimeMillis();
-      while(!evictionDisabledMode && storageIsFull(keySize, valSize) && 
-          (System.currentTimeMillis() - start) < waitOnPutTime) {
-         Utils.onSpinWait(this.spinWaitTime);
+      while(storageIsFull(keySize, valSize) && 
+          (System.currentTimeMillis() - start) < this.waitOnPutTimeMs) {
+         Utils.onSpinWait(this.spinWaitTimeNs);
       }
       if (storageIsFull(keySize, valSize)) { 
         this.totalRejectedWrites.incrementAndGet();
@@ -868,13 +870,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if(shutdownInProgress) {
       return false;
     }
-    long waitOnPutTime = this.conf.getCacheMaximumWaitTimeOnPut(cacheName);
+    if (evictionDisabledMode && storageIsFull(keySize, valSize)) {
+      return false;
+    }
     if (!scavenger ) {
       long start = System.currentTimeMillis();
-      while(!evictionDisabledMode && storageIsFull(keySize, valSize) && 
-          (System.currentTimeMillis() - start) < waitOnPutTime) {
-         Utils.onSpinWait(this.spinWaitTime);
+      while(storageIsFull(keySize, valSize) && 
+          (System.currentTimeMillis() - start) < this.waitOnPutTimeMs) {
+         Utils.onSpinWait(this.spinWaitTimeNs);
       }
+      // If still storage is full return false: operation failed
       if (storageIsFull(keySize, valSize)) { 
         this.totalRejectedWrites.incrementAndGet();
         return false;

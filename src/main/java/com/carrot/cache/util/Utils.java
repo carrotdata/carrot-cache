@@ -837,6 +837,29 @@ public class Utils {
   }
   
   /**
+   * Get value offset in serialized key-value record
+   * @param keySize key size
+   * @param valSize value size
+   * @return value offset
+   */
+  public static int valueOffset(int keySize, int  valSize) {
+    return sizeUVInt(keySize) + sizeUVInt(valSize) + keySize;
+  }
+  
+  /**
+   * Get value size from raw value size (value size + value length representation)
+   * @param rawSize 
+   * @return value size
+   */
+  public static int getValueSizeFromRawSize(int rawSize) {
+    for (int i = 1; i <= 6; i++) {
+      if ((Utils.sizeUVInt(rawSize - i) + rawSize - i)  == rawSize) {
+        return rawSize - i;
+      }
+    }
+    return -1;
+  }
+  /**
    * Converts output stream to data output stream
    * @param os output stream
    * @return data output stream
