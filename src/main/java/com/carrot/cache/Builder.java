@@ -305,16 +305,6 @@ public class Builder {
   }
   
   /**
-   * With cache write maximum wait time
-   * @param max maximum wait time
-   * @return builder instance
-   */
-  public Builder withCacheWritesSuspendedThreshold(long max) {
-    conf.setCacheWritesMaxWaitTime(this.cacheName, max);
-    return this;
-  }
-  
-  /**
    * With cache write limit
    * @param limit write limit
    * @return builder instance
@@ -615,6 +605,49 @@ public class Builder {
   }
   
   /**
+   * With scavenger stop ratio for deleted mode only
+   * @param ratio ratio relative to data size scanned
+   * @return builder instance
+   */
+  public Builder withScavengerStopRatioForDeletedOnlyMode(double ratio) {
+    conf.setScavengerStopRatioForDeletedOnlyMode(cacheName, ratio);
+    return this;
+  }
+ 
+  /**
+   * With scavenger 
+   * @param ratio
+   * @return
+   */
+  public Builder withScavengerStartRatioForFullDumpMode(double ratio) {
+    conf.setScavengerStartRatioForDumpBelowMax(cacheName, ratio);
+    return this;
+  }
+  
+  /**
+   * With rolling window duration
+   * @param cacheName
+   * @param duration
+   * @return builder instance 
+   */
+  public Builder withRollingWindowDuration(String cacheName, int duration) {
+    conf.setRollingWindowDuration(cacheName, duration);
+    return this;
+  }
+  
+  /**
+   * With rolling window bins count
+   * @param cacheName
+   * @param count number of bins
+   * @return builder instance 
+   */
+  public Builder withRollingWindowBinsCount(String cacheName, int count) {
+    conf.setRollingWindowNumberBins(cacheName, count);
+    return this;
+  }
+  
+  
+  /**
    * Build cache
    * @return
    * @throws IOException
@@ -626,5 +659,5 @@ public class Builder {
     return cache;
   }
   
-  
+ 
 }

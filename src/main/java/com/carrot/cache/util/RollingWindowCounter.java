@@ -75,6 +75,10 @@ public class RollingWindowCounter implements Persistent {
     return bins[bin];
   }
   
+  public int windowSize() {
+    return this.window;
+  }
+  
   @Override
   public void save(OutputStream os) throws IOException {
     DataOutputStream dos = Utils.toDataOutputStream(os);

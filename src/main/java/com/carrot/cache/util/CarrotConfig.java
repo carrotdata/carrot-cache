@@ -291,7 +291,7 @@ public class CarrotConfig {
 
   public static final long DEFAULT_CACHE_MAXIMUM_SIZE = 0; // Unlimited
   
-  public static final double DEFAULT_SCAVENGER_START_RUN_RATIO = 0.95;
+  public static final double DEFAULT_SCAVENGER_START_RUN_RATIO = 0.99;
 
   public static final double DEFAULT_SCAVENGER_STOP_RUN_RATIO =
       0.9; // Set it to 0 for continuous scavenger run

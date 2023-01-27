@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.junit.After;
+import org.junit.Test;
 
 import com.carrot.cache.controllers.AdmissionController;
 import com.carrot.cache.controllers.BaseAdmissionController;
@@ -70,6 +71,18 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
     this.victim_rsClz = MinAliveRecyclingSelector.class;
     this.victim_acClz = BaseAdmissionController.class;
     
+  }
+  
+  @Test
+  public void testLRUEvictionAndMinAliveSelectorMemoryAPI() throws IOException {
+    System.out.println("Memory API: eviction=LRU, selector=MinAlive");
+
+    this.evictionDisabled = false;
+    this.scavengerInterval = 2; // scavenger interval in sec
+    this.epClz = LRUEvictionPolicy.class;
+    this.rsClz = MinAliveRecyclingSelector.class;
+    //this.scavDumpBelowRatio = 1.0;
+    super.testContinuosLoadMemoryRun();
   }
   
   @After  

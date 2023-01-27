@@ -110,9 +110,9 @@ public class Scavenger extends Thread {
     Stats(String cacheName) {
       this.cacheName = cacheName;
       CarrotConfig conf = CarrotConfig.getInstance();
-      dumpBelowRatio = conf.getScavengerDumpEntryBelowStart(cacheName);
+      dumpBelowRatio = conf.getScavengerDumpEntryBelowMax(cacheName);
       dumpBelowRatioMin = dumpBelowRatio;
-      dumpBelowRatioMax = conf.getScavengerDumpEntryBelowStop(cacheName);
+      dumpBelowRatioMax = conf.getScavengerDumpEntryBelowMin(cacheName);
       adjStep = conf.getScavengerDumpEntryBelowAdjStep(cacheName);
       stopRatio =  conf.getScavengerStopMemoryRatio(cacheName);
     }
@@ -303,6 +303,7 @@ public class Scavenger extends Thread {
     }
   }
   
+  public final static String NAME = "c2 scavenger-";
   private Stats stats;
   
   private final Cache cache;
@@ -321,19 +322,19 @@ public class Scavenger extends Thread {
   
   private double stopRatio;
   
-  private static AtomicInteger numInstances = new AtomicInteger();
+  private static Map<String, AtomicInteger> numInstancesMap = new ConcurrentHashMap<String, AtomicInteger> ();
   
   private static int maxInstances = 1; // TODO: make it configurable
   
   private static AtomicLong rollingId = new AtomicLong();
   
   /* Clean deleted only items - do not purge low ranks*/
-  private boolean cleanDeletedOnly = false;
+  private boolean cleanDeletedOnly = true;
   
   private long maxSegmentsBeforeStallDetected;
     
   public Scavenger(Cache cache) {
-    super("c2 scavenger-" + rollingId.getAndIncrement());
+    super(NAME + rollingId.getAndIncrement());
     this.cache = cache;
     this.config = CarrotConfig.getInstance();
     String cacheName = this.cache.getName();
@@ -344,9 +345,9 @@ public class Scavenger extends Thread {
     if (stats == null) {
       stats = new Stats(cache.getName());
       statsMap.put(cache.getName(), stats);
-      dumpBelowRatio = this.config.getScavengerDumpEntryBelowStart(cacheName);
+      dumpBelowRatio = this.config.getScavengerDumpEntryBelowMax(cacheName);
       dumpBelowRatioMin = dumpBelowRatio;
-      dumpBelowRatioMax = this.config.getScavengerDumpEntryBelowStop(cacheName);
+      dumpBelowRatioMax = this.config.getScavengerDumpEntryBelowMin(cacheName);
       adjStep = this.config.getScavengerDumpEntryBelowAdjStep(cacheName);
       stopRatio =  this.config.getScavengerStopMemoryRatio(cacheName);
       stats.dumpBelowRatio = dumpBelowRatio;
@@ -366,8 +367,12 @@ public class Scavenger extends Thread {
     
   }
   
-  public static int getActiveThreadsCount() {
-    return numInstances.get();
+  public static void registerCache(String cacheName) {
+    numInstancesMap.put(cacheName,  new AtomicInteger());
+  }
+  
+  public static int getActiveThreadsCount(String cacheName) {
+    return numInstancesMap.get(cacheName).get();
   }
   
   private long getScavengerMaxSegmentsBeforeStall() {
@@ -387,6 +392,7 @@ public class Scavenger extends Thread {
    */
   public static void clear() {
     statsMap.clear();
+    numInstancesMap.clear();
   }
 
   @Override
@@ -397,7 +403,7 @@ public class Scavenger extends Thread {
     DateFormat format = DateFormat.getDateTimeInstance();
     Segment s = null;
     try {
-      
+      AtomicInteger numInstances = numInstancesMap.get(cache.getName());
       if (numInstances.incrementAndGet() > maxInstances) {
         // Number of instances exceeded the maximum value
         return;
@@ -426,8 +432,8 @@ public class Scavenger extends Thread {
         // and other current cache configuration values
         if (segmentsProcessed >= maxSegmentsBeforeStallDetected) {
           // This should never happen if eviction is disabled
-          //dumpBelowRatio = 1.0;// improve scavenger's performance - dump everything
-          //cleanDeletedOnly = false;
+          dumpBelowRatio = dumpBelowRatioMax;// improve scavenger's performance - dump everything
+          cleanDeletedOnly = false;
         }
         engine.startRecycling(s);
         long maxExpire = s.getInfo().getMaxExpireAt();
@@ -444,6 +450,7 @@ public class Scavenger extends Thread {
           }
           // Dispose segment
           engine.disposeDataSegment(s);
+
         } catch (IOException e) {
           LOG.error("Cache : %s segment id=%d offheap =%s sealed=%s", cache.getName(), 
             s == null? -1: s.getId(), s==null? null: Boolean.toString(s.isOffheap()), 
@@ -456,6 +463,7 @@ public class Scavenger extends Thread {
         segmentsProcessed++;
       }
     } finally {
+      AtomicInteger numInstances = numInstancesMap.get(cache.getName());
       numInstances.decrementAndGet();
       this.cache.finishScavenger(this);
     }
@@ -531,7 +539,6 @@ public class Scavenger extends Thread {
     MemoryIndex index = engine.getMemoryIndex();
     int groupRank = s.getInfo().getGroupRank();
     SegmentScanner sc = null;
-    @SuppressWarnings("unused")
     int scanned = 0;
     int deleted = 0;
     int expired = 0;
@@ -555,11 +562,11 @@ public class Scavenger extends Thread {
         stats.totalBytesScanned.addAndGet(totalSize);
         double ratio = cleanDeletedOnly? 0: dumpBelowRatio;
         if (isDirect) {
-          result = index.checkDeleteKeyForScavenger(keyPtr, keySize, result, ratio);
+          result = index.checkDeleteKeyForScavenger(s.getId(), keyPtr, keySize, result, ratio);
         } else {
           keyBuffer = checkBuffer(keyBuffer, keySize, isDirect);
           sc.getKey(keyBuffer, 0);
-          result = index.checkDeleteKeyForScavenger(keyBuffer, 0, keySize, result, ratio);
+          result = index.checkDeleteKeyForScavenger(s.getId(), keyBuffer, 0, keySize, result, ratio);
         }
 
         Result res = result.getResult();
@@ -680,5 +687,18 @@ public class Scavenger extends Thread {
     }
     stats.dumpBelowRatio -= stats.adjStep;
     return true;  
+  }
+
+  public static void waitForFinish() {
+    for (AtomicInteger numInstances : numInstancesMap.values()) {
+      while (numInstances.get() > 0) {
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+      }
+    }
   }
 }

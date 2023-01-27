@@ -31,6 +31,7 @@ import com.carrot.cache.controllers.MinAliveRecyclingSelector;
 import com.carrot.cache.controllers.RecyclingSelector;
 import com.carrot.cache.eviction.EvictionPolicy;
 import com.carrot.cache.eviction.FIFOEvictionPolicy;
+import com.carrot.cache.eviction.LRUEvictionPolicy;
 import com.carrot.cache.eviction.SLRUEvictionPolicy;
 import com.carrot.cache.util.Epoch;
 import com.carrot.cache.util.TestUtils;
@@ -39,13 +40,15 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
 
   int victim_segmentSize = 16 * 1024 * 1024;
 
-  long victim_maxCacheSize = 1000L * victim_segmentSize;
+  long victim_maxCacheSize = 100L * victim_segmentSize;
 
   double victim_minActiveRatio = 0.5;
 
   int victim_scavengerInterval = 10; // seconds
 
   double victim_scavDumpBelowRatio = 0.5;
+  
+  double victim_aqStartRatio = 0.3;
 
   boolean victim_promoteOnHit = true;
 
@@ -63,27 +66,27 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
   public void setUp() {
     // Parent cache
     this.offheap = true;
-    this.numRecords = 1000000;
+    this.numRecords = 10000000;
     this.numIterations = 100 * this.numRecords;
     this.numThreads = 4;
     this.minActiveRatio = 0.9;
     this.segmentSize = 4 * 1024 * 1024;
-    this.maxCacheSize = 100L * this.segmentSize; // 16 GB in RAM
+    this.maxCacheSize = 1000L * this.segmentSize; // 16 GB in RAM
     this.epClz = SLRUEvictionPolicy.class;
     this.rsClz = MinAliveRecyclingSelector.class;
     //this.acClz = AQBasedAdmissionController.class;
     this.aqStartRatio = 1.0;
     this.scavengerInterval = 4; // scavenger interval in sec
-    this.hybridCacheInverseMode = false;
-    this.scavDumpBelowRatio = 0.1;
+    this.hybridCacheInverseMode = true;
+    this.scavDumpBelowRatio = 0.2;
 
     // victim cache
-    this.victim_segmentSize = 12 * 1024 * 1024;
-    this.victim_maxCacheSize = 100L * this.victim_segmentSize; // 160GB
+    this.victim_segmentSize = 64 * 1024 * 1024;
+    this.victim_maxCacheSize = 200L * this.victim_segmentSize; // 160GB
     this.victim_minActiveRatio = 0.0;
-    this.victim_scavDumpBelowRatio = 0.5;
+    this.victim_scavDumpBelowRatio = 0.2;
     this.victim_scavengerInterval = 1000;
-    this.victim_promoteOnHit = false;
+    this.victim_promoteOnHit = true;
     this.victim_promoteThreshold = 0.9;
     this.victim_epClz = SLRUEvictionPolicy.class;
     this.victim_rsClz = MinAliveRecyclingSelector.class;
@@ -113,7 +116,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
   @Override
   protected Builder withAddedConfigurations(Builder b) {
     b.withCacheHybridInverseMode(hybridCacheInverseMode)
-    .withCacheSpinWaitTimeOnHighPressure(0)
+    .withCacheSpinWaitTimeOnHighPressure(20000)
     .withSLRUInsertionPoint(7);
     return b;
   }
@@ -138,8 +141,9 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
         .withVictimCachePromoteOnHit(victim_promoteOnHit)
         .withVictimCachePromotionThreshold(victim_promoteThreshold)
         .withAdmissionController(victim_acClz.getName())
-        .withCacheSpinWaitTimeOnHighPressure(0)
-        .withAdmissionQueueStartSizeRatio(aqStartRatio);
+        .withCacheSpinWaitTimeOnHighPressure(10000)
+        .withScavengerNumberOfThreads(1)
+        .withAdmissionQueueStartSizeRatio(victim_aqStartRatio);
     Cache victim = builder.buildDiskCache();
     parent.setVictimCache(victim);
     parent.registerJMXMetricsSink();
@@ -149,19 +153,20 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
 
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=LRU, selector=MinAlive");
+    System.out.println("Bytes API: eviction=SLRU, selector=MinAlive");
     this.parentCacheName = "RAM-AC-OFF";
     this.victimCacheName = "DISK-AC-OFF";
     super.testContinuosLoadBytesRun();
   }
 
-  @Ignore
+
   @Test
   public void testLRUEvictionAndMinAliveSelectorWithAQBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=LRU, selector=MinAlive - AQ");
+    System.out.println("Bytes API: eviction=SLRU, selector=MinAlive - AQ");
     this.parentCacheName = "RAM-AC-ON";
     this.victimCacheName = "DISK-AC-ON";
     this.victim_acClz = AQBasedAdmissionController.class;
+    this.victim_aqStartRatio = 0.3;
     super.testContinuosLoadBytesRun();
   }
 }

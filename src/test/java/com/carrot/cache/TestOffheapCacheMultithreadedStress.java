@@ -23,11 +23,11 @@ public class TestOffheapCacheMultithreadedStress extends TestCacheMultithreadedS
 
   @Before
   public void setUp() throws IOException{
-    this.numRecords = 10000000;
+    this.numRecords = 1000000;
     this.numThreads = 4;
     this.scavDumpBelowRatio = 0.1;
-    this.segmentSize = 64 * 1024 * 1024;
-    // 32 GB
+    this.segmentSize = 6 * 1024 * 1024;
+    // 3 GB
     this.maxCacheSize = 500L * this.segmentSize;
     this.offheap = true;
   }

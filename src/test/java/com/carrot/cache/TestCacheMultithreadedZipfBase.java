@@ -86,12 +86,22 @@ public abstract class TestCacheMultithreadedZipfBase {
   
   protected String victimCacheName = "victim";
   
+  protected int slruInsertionPoint = 6;
+  
+  protected long spinOnWaitTime;
+  
+  protected int windowSize = 60;
+  
+  protected int binsCount = 60;
+  
   @After  
   public void tearDown() throws IOException {
     this.cache.printStats();
+    Scavenger.printStats();
     this.cache.dispose();
     // Delete temp data
     TestUtils.deleteCacheFiles(cache);
+    
     Scavenger.clear();
   }
   
@@ -114,6 +124,10 @@ public abstract class TestCacheMultithreadedZipfBase {
       .withEvictionDisabledMode(evictionDisabled)
       .withAdmissionQueueStartSizeRatio(aqStartRatio)
       .withAdmissionController(acClz.getName())
+      .withSLRUInsertionPoint(slruInsertionPoint)
+      .withCacheSpinWaitTimeOnHighPressure(spinOnWaitTime)
+      .withRollingWindowDuration(cacheName, windowSize)
+      .withRollingWindowBinsCount(cacheName, binsCount)
       .withScavengerNumberOfThreads(scavNumberThreads);
     builder = withAddedConfigurations(builder);
     if (offheap) {

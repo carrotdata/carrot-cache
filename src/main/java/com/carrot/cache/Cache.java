@@ -228,6 +228,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.scavengerStopMemoryRatio = this.conf.getScavengerStopMemoryRatio(this.cacheName);
     this.spinWaitTimeNs = this.conf.getCacheSpinWaitTimeOnHighPressure(this.cacheName);
     this.waitOnPutTimeMs = this.conf.getCacheMaximumWaitTimeOnPut(cacheName);
+    Scavenger.registerCache(cacheName);
   }
   
   void initAll() throws IOException {
@@ -268,16 +269,20 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     r.removeShutdownHook(shutDownHook);
   }
   
-  void startScavenger() {
-    // Scavenger MUST be null here, because we first set scavenger to NULL then exit Scavenger thread
-    if (Scavenger.getActiveThreadsCount() < this.conf.getScavengerNumberOfThreads(cacheName)){
-      Scavenger scavenger = new Scavenger(this);
-      scavenger.start();
+  void startScavengers() {
+    if (Scavenger.getActiveThreadsCount(this.cacheName) < this.conf.getScavengerNumberOfThreads(cacheName)){
+      synchronized(this) {
+        // Check again
+        while (Scavenger.getActiveThreadsCount(this.cacheName) < this.conf.getScavengerNumberOfThreads(cacheName)){
+          Scavenger scavenger = new Scavenger(this);
+          scavenger.start();
+        }
+      }
     }
   }
   
-  void stopScavenger() {
-    while(Scavenger.getActiveThreadsCount() > 0) {
+  void stopScavengers() {
+    while(Scavenger.getActiveThreadsCount(this.cacheName) > 0) {
       try {
         Thread.sleep(100);
       } catch (InterruptedException e) {
@@ -577,7 +582,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
     
   private boolean isScavengerActive() {
-    return Scavenger.getActiveThreadsCount() > 0;
+    return Scavenger.getActiveThreadsCount(this.cacheName) > 0;
   }
   
   private void spinWaitOnHighPressure(boolean scavenger) {
@@ -666,7 +671,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       long start = System.currentTimeMillis();
       while(storageIsFull(keySize, valSize) && 
           (System.currentTimeMillis() - start) < this.waitOnPutTimeMs) {
-         Utils.onSpinWait(this.spinWaitTimeNs);
+        startScavengers();
+        Utils.onSpinWait(this.spinWaitTimeNs);
       }
       if (storageIsFull(keySize, valSize)) { 
         this.totalRejectedWrites.incrementAndGet();
@@ -877,7 +883,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       long start = System.currentTimeMillis();
       while(storageIsFull(keySize, valSize) && 
           (System.currentTimeMillis() - start) < this.waitOnPutTimeMs) {
-         Utils.onSpinWait(this.spinWaitTimeNs);
+        // Start scavengers if not running 
+        startScavengers(); 
+        Utils.onSpinWait(this.spinWaitTimeNs);
       }
       // If still storage is full return false: operation failed
       if (storageIsFull(keySize, valSize)) { 
@@ -1762,7 +1770,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       LOG.error("Attempt to transfer cached item from cache type = DISK");
       throw new IllegalArgumentException("Victim cache is not supported for DISK type cache");
     }
-
+    boolean isScavenger = Thread.currentThread().getName().startsWith(Scavenger.NAME);
     // Cache is off-heap 
     IndexFormat format = this.engine.getMemoryIndex().getIndexFormat(); 
     long expire = format.getExpire(ibPtr, indexPtr);
@@ -1771,6 +1779,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     long offset = format.getOffset(indexPtr); 
     
     Segment s = this.engine.getSegmentById(sid);
+    if (s == null) {
+      return;
+    }
     int groupRank = s.getInfo().getGroupRank();
     //TODO : check segment
     try {
@@ -1785,11 +1796,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         int vSizeSize = Utils.sizeUVInt(valueSize);
         ptr += vSizeSize;
         // Do not force PUT, let victim's cache admission controller work
-        this.victimCache.put(ptr, keySize, ptr + keySize, valueSize, expire, rank, groupRank, false);
+        this.victimCache.put(ptr, keySize, ptr + keySize, valueSize, expire, rank, groupRank, false, isScavenger);
       } else {
         // not supported yet
       }
-    } finally {
+    } 
+    finally {
       s.readUnlock();
     }
   }
@@ -1843,11 +1855,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         return;
       }
       if (used >= max) {
-//        this.engine.setEvictionEnabled(true);
+        if (this.victimCache == null) {
+          // Enable eviction only if we do not have victim cache to avoid deadlock
+          this.engine.setEvictionEnabled(true);
+        }
         this.tcEnabled = true;
-        startScavenger();
+        startScavengers();
       } else if (used < min){
-//        this.engine.setEvictionEnabled(false);
+        this.engine.setEvictionEnabled(false);
       }
     }
   }
@@ -2123,7 +2138,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public void dispose() {
     removeShutdownHook();
-    stopScavenger();
+    stopScavengers();
     this.engine.dispose();
     if (this.victimCache != null) {
       this.victimCache.dispose();
@@ -2162,7 +2177,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public void shutdown() throws IOException {
     // Disable writes/reads
     this.shutdownInProgress = true;
-    stopScavenger();
+    stopScavengers();
     // stop IOEngine
     this.engine.shutdown();
     save();

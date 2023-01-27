@@ -14,6 +14,14 @@
  */
 package com.carrot.cache;
 
+import java.io.IOException;
+
+import org.junit.Test;
+
+import com.carrot.cache.controllers.AQBasedAdmissionController;
+import com.carrot.cache.controllers.PopularityBasedRecyclingSelector;
+import com.carrot.cache.eviction.SLRUEvictionPolicy;
+
 public class TestOffheapCacheMultithreadedZipfStress extends TestOffheapCacheMultithreadedZipf {
   
   @Override
@@ -21,11 +29,44 @@ public class TestOffheapCacheMultithreadedZipfStress extends TestOffheapCacheMul
     this.offheap = true;
     this.numRecords = 10000000;
     this.numThreads = 4;
-    this.segmentSize = 16 * 1024 * 1024;
+    this.segmentSize = 13 * 1024 * 1024;
     this.maxCacheSize = 1000 * this.segmentSize;
-    this.scavNumberThreads = 2;
+    this.scavNumberThreads = 1;
     this.scavengerInterval = 100000;
     this.numIterations = 10 * this.numRecords;
+    this.acClz = AQBasedAdmissionController.class;
+    this.aqStartRatio = 0.6;
+    this.epClz = SLRUEvictionPolicy.class;
+    this.slruInsertionPoint = 6;
 
+  }
+  
+//  @Test
+//  public void testSLRUEvictionAndPopularitySelectorBytesAPI() throws IOException {
+//    System.out.println("Bytes API: eviction=SLRU, selector=Popularity");
+//    this.evictionDisabled = false;
+//    this.scavDumpBelowRatio = 0.5;
+//    this.rsClz = PopularityBasedRecyclingSelector.class;
+//
+//    super.testContinuosLoadBytesRun();
+//  }
+  
+  @Test
+  public void testSLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
+    this.scavDumpBelowRatio = 0.5;
+
+    super.testSLRUEvictionAndMinAliveSelectorBytesAPI();
+  }
+  
+  @Test
+  public void testNoEvictionBytesAPI() throws IOException {
+    super.testNoEvictionBytesAPI();
+  }
+  
+  @Test
+  public void testLRUEvictionAndMRCSelectorBytesAPI() throws IOException {
+    this.scavDumpBelowRatio = 0.5;
+    this.spinOnWaitTime = 10000;
+    super.testLRUEvictionAndMRCSelectorBytesAPI();
   }
 }

@@ -1368,14 +1368,14 @@ public final class MemoryIndex implements Persistent {
    * @param dumpBelowRatio
    * @return operation result (OK, NOT_FOUND, EXPIRED, DELETED)
    */
-  public ResultWithRankAndExpire checkDeleteKeyForScavenger(byte[] key, int keyOffset, int keySize, 
+  public ResultWithRankAndExpire checkDeleteKeyForScavenger(int sid, byte[] key, int keyOffset, int keySize, 
       ResultWithRankAndExpire result, double dumpBelowRatio) {
     int slot = 0;
     try {
       slot = lock(key, keyOffset, keySize);
       long hash = Utils.hash64(key, keyOffset,keySize);
       long ptr = getIndexBlockForHash(hash);
-      return checkDeleteKeyForScavenger(ptr, hash, result, dumpBelowRatio);
+      return checkDeleteKeyForScavenger(sid, ptr, hash, result, dumpBelowRatio);
     } finally {
       unlock(slot);
     }
@@ -1387,24 +1387,24 @@ public final class MemoryIndex implements Persistent {
    * @param keySize key size
    * @return operation result (OK, NOT_FOUND, EXPIRED, DELETED)
    */
-  public ResultWithRankAndExpire checkDeleteKeyForScavenger(long keyPtr, int keySize, 
+  public ResultWithRankAndExpire checkDeleteKeyForScavenger(int sid, long keyPtr, int keySize, 
       ResultWithRankAndExpire result, double dumpBelowRatio) {
     int slot = 0;
     try {
       slot = lock(keyPtr, keySize);
       long hash = Utils.hash64(keyPtr, keySize);
       long ptr = getIndexBlockForHash(hash);
-      return checkDeleteKeyForScavenger(ptr, hash, result, dumpBelowRatio);
+      return checkDeleteKeyForScavenger(sid, ptr, hash, result, dumpBelowRatio);
     } finally {
       unlock(slot);
     }
   }
   
-  private ResultWithRankAndExpire checkDeleteKeyForScavenger(long ptr, long hash, 
+  private ResultWithRankAndExpire checkDeleteKeyForScavenger(int sid, long ptr, long hash, 
       ResultWithRankAndExpire result, double dumpBelowRatio) {
     int numEntries = numEntries(ptr);
     //ATTN: we do not check keys directly - only hashes, for small hashes this may result in 
-    // collisions. 
+    // collisions. Addressed by checking segment ids
     // TODO: this works ONLY when index size = item size (no embedded data)
     //TODO: Check count when delete
     //TODO: If deleted > 0, update number of items and size
@@ -1418,6 +1418,11 @@ public final class MemoryIndex implements Persistent {
       
       while (count < numEntries) {
         if (this.indexFormat.equals($ptr, hash)) {
+          int $sid = this.indexFormat.getSegmentId($ptr);
+          if($sid != sid) {
+            // hash collision return NOT_FOUND to delete item 
+            return result;
+          }
           long expire = this.indexFormat.getExpire(ptr, $ptr);
           long current = System.currentTimeMillis();
           int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);

@@ -87,7 +87,6 @@ public class TestOffheapCacheMultithreadedZipf extends TestCacheMultithreadedZip
     super.testContinuosLoadMemoryRun();
   }
   
-  @Ignore
   @Test
   public void testLRUEvictionAndMRCSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=LRU, selector=MRC");
