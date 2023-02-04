@@ -646,6 +646,16 @@ public class Builder {
     return this;
   }
   
+  /**
+   * With cache maximum value size
+   * @param cacheName cache name
+   * @param size maximum size
+   * @return builder instance
+   */
+  public Builder withMaximumKeyValueSize(String cacheName, int size) {
+    conf.setKeyValueMaximumSize(cacheName, size);
+    return this;
+  }
   
   /**
    * Build cache

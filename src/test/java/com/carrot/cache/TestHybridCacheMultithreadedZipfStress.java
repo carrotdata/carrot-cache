@@ -67,7 +67,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
     // Parent cache
     this.offheap = true;
     this.numRecords = 10000000;
-    this.numIterations = 100 * this.numRecords;
+    this.numIterations = 10 * this.numRecords;
     this.numThreads = 4;
     this.minActiveRatio = 0.9;
     this.segmentSize = 4 * 1024 * 1024;
@@ -77,7 +77,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
     //this.acClz = AQBasedAdmissionController.class;
     this.aqStartRatio = 1.0;
     this.scavengerInterval = 4; // scavenger interval in sec
-    this.hybridCacheInverseMode = true;
+    this.hybridCacheInverseMode = false;
     this.scavDumpBelowRatio = 0.2;
 
     // victim cache
@@ -86,10 +86,10 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
     this.victim_minActiveRatio = 0.0;
     this.victim_scavDumpBelowRatio = 0.2;
     this.victim_scavengerInterval = 1000;
-    this.victim_promoteOnHit = true;
+    this.victim_promoteOnHit = false;
     this.victim_promoteThreshold = 0.9;
     this.victim_epClz = SLRUEvictionPolicy.class;
-    this.victim_rsClz = MinAliveRecyclingSelector.class;
+    this.victim_rsClz = LRCRecyclingSelector.class;
     this.zipfAlpha = 0.9;
 
     Epoch.reset();
@@ -117,7 +117,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
   protected Builder withAddedConfigurations(Builder b) {
     b.withCacheHybridInverseMode(hybridCacheInverseMode)
     .withCacheSpinWaitTimeOnHighPressure(20000)
-    .withSLRUInsertionPoint(7);
+    .withSLRUInsertionPoint(6);
     return b;
   }
 
@@ -166,7 +166,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
     this.parentCacheName = "RAM-AC-ON";
     this.victimCacheName = "DISK-AC-ON";
     this.victim_acClz = AQBasedAdmissionController.class;
-    this.victim_aqStartRatio = 0.3;
+    this.victim_aqStartRatio = 1.0;
     super.testContinuosLoadBytesRun();
   }
 }

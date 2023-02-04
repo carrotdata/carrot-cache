@@ -97,6 +97,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /** Maximum memory limit in bytes */
   long maximumCacheSize;
   
+  /** Maximum key-value size to cache */
+  int maximumKeyValueSize;
+  
   /* IOEngine */
   IOEngine engine;
     
@@ -228,12 +231,25 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.scavengerStopMemoryRatio = this.conf.getScavengerStopMemoryRatio(this.cacheName);
     this.spinWaitTimeNs = this.conf.getCacheSpinWaitTimeOnHighPressure(this.cacheName);
     this.waitOnPutTimeMs = this.conf.getCacheMaximumWaitTimeOnPut(cacheName);
+    this.maximumCacheSize = this.conf.getCacheMaximumSize(cacheName);
+    this.maximumKeyValueSize = this.conf.getKeyValueMaximumSize(cacheName);
+    long segmentSize = this.conf.getCacheSegmentSize(cacheName);
+    if (this.maximumKeyValueSize > (1 << 30) || 
+        this.maximumKeyValueSize > segmentSize  - 16) {
+      LOG.warn("Maximum key-value size can not exceed 1GB and data segment size {}", segmentSize);
+      this.maximumKeyValueSize = (int) Math.min(1 << 30, segmentSize - 16);
+    } else if (this.maximumKeyValueSize == 0) {
+      if (segmentSize > 1L << 30) {
+        segmentSize = 1L << 30;
+      }
+      this.maximumKeyValueSize = (int)(segmentSize - 16);
+    }
+    
     Scavenger.registerCache(cacheName);
   }
   
   void initAll() throws IOException {
     initFromConfiguration();
-    updateMaxCacheSize();
     initAdmissionController();
     initThroughputController();
     startThroughputController();
@@ -247,7 +263,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         new OffheapIOEngine(this.cacheName): new FileIOEngine(this.cacheName);
     // set engine listener
     this.engine.setListener(this);
-    updateMaxCacheSize();
     initAdmissionController();
     initThroughputController();
     this.engine.getMemoryIndex().setEvictionListener(this);
@@ -364,10 +379,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     LOG.info("Started throughput controller, interval=%d sec", interval /1000);
   }
   
-  private void updateMaxCacheSize() {
-    this.maximumCacheSize = this.engine.getMaximumStorageSize();
-  }
-
   /**
    * Get cache type
    * @return cache type
@@ -661,7 +672,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   private boolean putDirectly(long keyPtr, int keySize, long valPtr, int valSize, long expire,
       int rank, int groupRank, boolean force, boolean scavenger) throws IOException {
     
-    if(shutdownInProgress) {
+    if(shutdownInProgress || isGreaterThanMaxSize(keySize, valSize)) {
       return false;
     }
     if (evictionDisabledMode && storageIsFull(keySize, valSize)) {
@@ -859,6 +870,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return used + size > max;
   }
   
+  private boolean isGreaterThanMaxSize(int keySize, int valueSize) {
+    int size = Utils.kvSize(keySize, valueSize);
+    return size > this.maximumKeyValueSize; 
+  }
+  
   private boolean putDirectly(
       byte[] key,
       int keyOffset,
@@ -873,12 +889,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       boolean scavenger)
       throws IOException {
 
-    if(shutdownInProgress) {
+    if(shutdownInProgress || isGreaterThanMaxSize(keySize, valSize)) {
       return false;
     }
     if (evictionDisabledMode && storageIsFull(keySize, valSize)) {
       return false;
     }
+    
     if (!scavenger ) {
       long start = System.currentTimeMillis();
       while(storageIsFull(keySize, valSize) && 

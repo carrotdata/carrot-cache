@@ -285,6 +285,9 @@ public class CarrotConfig {
   
   public static final String CACHE_MAX_WAIT_ON_PUT_MS_KEY = "c2.cache.max-wait-on-put-ms";
   
+  /* Maximum Key Value size to cache */
+  public static final String CACHE_MAX_KEY_VALUE_SIZE_KEY = "c2.cache.max-key-value-size";
+  
   /**Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
@@ -471,6 +474,7 @@ public class CarrotConfig {
   /**Default cache maximum wait time on PUT (due to full storage) in ms */
   public final static int DEFAULT_CACHE_MAX_WAIT_ON_PUT_MS = 20; // Wait up to 20ms when storage is full
   
+  public final static int DEFAULT_CACHE_MAX_KEY_VALUE_SIZE = 0; // no limit, limit is defined by data segment size 
   // Statics
   static CarrotConfig instance;
 
@@ -2076,6 +2080,28 @@ public class CarrotConfig {
     }
     return getDoubleProperty(SCAVENGER_START_RATIO_FOR_DUMP_BELOW_MAX_KEY, 
       DEFAULT_SCAVENGER_START_RATIO_FOR_DUMP_BELOW_MAX);
+  }
+  
+  /**
+   * Get maximum cached key-value size
+   * @param cacheName cache name
+   * @return maximum size, 0 - means, maximum size is defined by data segment size
+   */
+  public int getKeyValueMaximumSize(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_MAX_KEY_VALUE_SIZE_KEY);
+    if (value != null) {
+      return Integer.parseInt(value);
+    }
+    return (int) getLongProperty(CACHE_MAX_KEY_VALUE_SIZE_KEY, DEFAULT_CACHE_MAX_KEY_VALUE_SIZE);
+  }
+  
+  /**
+   * Sets cache maximum key-value size in bytes
+   * @param cacheName cache name
+   * @param size maximum size
+   */
+  public void setKeyValueMaximumSize(String cacheName,int size) {
+    props.setProperty(cacheName + "." + CACHE_MAX_KEY_VALUE_SIZE_KEY, Integer.toString(size));
   }
   
 }

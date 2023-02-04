@@ -15,6 +15,9 @@
 package com.carrot.cache;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
+
 
 import java.io.File;
 import java.io.IOException;
@@ -24,7 +27,6 @@ import java.util.Random;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.carrot.cache.controllers.MinAliveRecyclingSelector;
@@ -45,6 +47,7 @@ public abstract class TestCacheBase extends IOTestBase {
   long expireTime;
   double scavDumpBelowRatio = 0.5;
   double minActiveRatio = 0.90;
+  int maxKeyValueSize = 0;
       
   @Before
   public void setUp() throws IOException {
@@ -85,7 +88,9 @@ public abstract class TestCacheBase extends IOTestBase {
       .withMinimumActiveDatasetRatio(minActiveRatio)
       .withCacheStreamingSupportBufferSize(1 << 19)
       .withEvictionDisabledMode(true);
-    
+    if (maxKeyValueSize > 0) {
+      builder.withMaximumKeyValueSize(cacheName, maxKeyValueSize);
+    }
     if (offheap) {
       return builder.buildMemoryCache();
     } else {
@@ -116,7 +121,9 @@ public abstract class TestCacheBase extends IOTestBase {
       .withMinimumActiveDatasetRatio(minActiveRatio)
       .withCacheStreamingSupportBufferSize(1 << 19)
       .withEvictionDisabledMode(true);
-    
+    if (maxKeyValueSize > 0) {
+      builder.withMaximumKeyValueSize(cacheName, maxKeyValueSize);
+    }
     if (offheap) {
       return builder.buildMemoryCache();
     } else {
@@ -129,7 +136,24 @@ public abstract class TestCacheBase extends IOTestBase {
     return System.currentTimeMillis() + expireTime;
   }
   
-  @Ignore
+  @Test
+  public void testBigKeyValue() throws IOException {
+    System.out.println("Test big key value");
+    this.maxKeyValueSize = 100000;
+    Scavenger.clear();
+    this.cache = createCache();
+    
+    byte[] key = new byte[20];
+    byte[] value = new byte[maxKeyValueSize - 30];
+    
+    boolean result = cache.put(key, value, 0);
+    assertTrue(result);
+
+    value = new byte[maxKeyValueSize];
+    result = cache.put(key, value, 0);
+    assertFalse(result);
+  }
+  
   @Test
   public void testAllExpiredBytes() throws IOException {
     System.out.println("Test all expired bytes");
@@ -165,8 +189,6 @@ public abstract class TestCacheBase extends IOTestBase {
     
   }
   
-  
-  @Ignore
   @Test
   public void testAllExpiredMemory() throws IOException {
     System.out.println("Test all expired memory");
@@ -202,7 +224,6 @@ public abstract class TestCacheBase extends IOTestBase {
     
   }
   
-  @Ignore
   @Test
   public void testNoExpiredBytes() throws IOException {
     System.out.println("Test no expired - bytes");
@@ -236,7 +257,6 @@ public abstract class TestCacheBase extends IOTestBase {
     
   }
   
-  @Ignore
   @Test
   public void testNoExpiredMemory() throws IOException {
     System.out.println("Test no expired - memory");
@@ -269,7 +289,6 @@ public abstract class TestCacheBase extends IOTestBase {
     
   }
   
-  @Ignore
   @Test
   public void testNoExpiredWithDeletesBytes() throws IOException {
     System.out.println("Test no expired with deletes bytes");
@@ -305,7 +324,6 @@ public abstract class TestCacheBase extends IOTestBase {
 
   }
   
-  @Ignore
   @Test
   public void testNoExpiredWithDeletesMemory() throws IOException {
     System.out.println("Test no expired with deletes memory");
@@ -340,7 +358,6 @@ public abstract class TestCacheBase extends IOTestBase {
       allocated, used, size, activeSize));
   }
   
-  @Ignore
   @Test
   public void testSaveLoad() throws IOException {
     System.out.println("Test save load");
@@ -442,7 +459,6 @@ public abstract class TestCacheBase extends IOTestBase {
     TestUtils.deleteCacheFiles(newCache);
   }
   
-  @Ignore
   @Test
   public void testSaveLoadTwoCaches() throws IOException {
     System.out.println("Test save load two caches");
