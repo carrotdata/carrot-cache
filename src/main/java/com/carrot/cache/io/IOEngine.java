@@ -56,7 +56,7 @@ public abstract class IOEngine implements Persistent {
   /** Logger */
   private static final Logger LOG = LogManager.getLogger(IOEngine.class);
 
-  protected static final String FILE_NAME = "cache_";
+  protected static final String FILE_NAME = "data_";
 
   public static int NOT_FOUND = -1;
 

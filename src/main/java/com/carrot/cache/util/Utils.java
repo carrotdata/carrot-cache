@@ -822,10 +822,10 @@ public class Utils {
     return s.substring(0, index + afterDecimalPoint + 1);
   }
 
-
   public static String format(String s, int wide) {
     if (s.length() >= wide) return s;
-    for (int i = 0; i < wide - s.length(); i++) {
+    int slen = s.length();
+    for (int i = 0; i < wide - slen; i++) {
       s = "0" + s;
     }
     return s;
