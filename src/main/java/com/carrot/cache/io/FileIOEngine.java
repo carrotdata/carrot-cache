@@ -30,7 +30,12 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
@@ -39,7 +44,6 @@ import org.apache.logging.log4j.Logger;
 
 import com.carrot.cache.util.CarrotConfig;
 import com.carrot.cache.util.UnsafeAccess;
-import com.carrot.cache.util.Utils;
 
 public class FileIOEngine extends IOEngine {
   /** Logger */
@@ -55,7 +59,10 @@ public class FileIOEngine extends IOEngine {
   private AtomicInteger activeSaveTasks = new AtomicInteger(0);
   
   private int ioStoragePoolSize = 32; 
-    
+   
+  private BlockingQueue<Runnable> taskQueue;
+  
+  private ExecutorService unboundedThreadPool;
   /**
    * Constructor
    *
@@ -81,6 +88,14 @@ public class FileIOEngine extends IOEngine {
       this.fileDataReader = this.config.getFileDataReader(this.cacheName);
       this.fileDataReader.init(this.cacheName);
       this.ioStoragePoolSize = this.config.getIOStoragePoolSize(this.cacheName);
+      int keepAliveTime = 60; // hard-coded
+      // This is actually unbounded queue (LinkedBlockingQueue w/o parameters)
+      // and bounded thread pool - only coreThreads is maximum, maximum number of threads is ignored
+      taskQueue = new LinkedBlockingQueue<>();
+      unboundedThreadPool = new ThreadPoolExecutor(
+        ioStoragePoolSize, Integer.MAX_VALUE, 
+        keepAliveTime, TimeUnit.SECONDS,
+        taskQueue);
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
       LOG.fatal(e);
       throw new RuntimeException(e);
@@ -133,11 +148,8 @@ public class FileIOEngine extends IOEngine {
   }
 
   private void submitTask(Runnable r) {
-    while(activeSaveTasks.get() >= ioStoragePoolSize) {
-      Utils.onSpinWait(10000);
-    }
     activeSaveTasks.incrementAndGet();
-    new Thread(r).start();
+    unboundedThreadPool.submit(r);
   }
 
   @Override
