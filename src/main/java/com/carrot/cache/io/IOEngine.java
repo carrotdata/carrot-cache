@@ -2395,7 +2395,7 @@ public abstract class IOEngine implements Persistent {
       return 0;
     }
     long as = activeSize();
-    double ratio = (double) s / as;
+    double ratio = (double) as / s;
     return (long) (ratio * dataSize());
   }
 
