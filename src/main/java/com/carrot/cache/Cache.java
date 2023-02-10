@@ -2191,6 +2191,21 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
   }
   
+  public void registerJMXMetricsSink(String domainName, String type) {
+    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer(); 
+    ObjectName name;
+    try {
+      name = new ObjectName(String.format("%s:type=%s,name=%s",domainName, type, getName()));
+      CacheJMXSink mbean = new CacheJMXSink(this);
+      mbs.registerMBean(mbean, name); 
+    } catch (Exception e) {
+      LOG.error(e);
+    }
+    if (this.victimCache != null) {
+      victimCache.registerJMXMetricsSink(domainName, type);
+    }
+  }
+  
   public void shutdown() throws IOException {
     // Disable writes/reads
     this.shutdownInProgress = true;
