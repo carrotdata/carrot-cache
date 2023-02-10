@@ -185,7 +185,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
 
   @Override
-  public long gettotal_writes() {
+  public long gettotal_puts() {
     long totalWrites = cache.getTotalWrites();
     Cache victim = cache.getVictimCache();
     if (victim != null) {
@@ -194,6 +194,36 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     return totalWrites;
   }
 
+  @Override
+  public long gettotal_inserts() {
+    long totalInserts = cache.getEngine().getTotalInserts();
+    Cache victim = cache.getVictimCache();
+    if (victim != null) {
+      totalInserts += victim.getEngine().getTotalInserts();
+    }
+    return totalInserts;
+  }
+  
+  @Override
+  public long gettotal_updates() {
+    long totalUpdates = cache.getEngine().getTotalUpdates();
+    Cache victim = cache.getVictimCache();
+    if (victim != null) {
+      totalUpdates += victim.getEngine().getTotalUpdates();
+    }
+    return totalUpdates;
+  }
+  
+  @Override
+  public long gettotal_deletes() {
+    long totalDeletes = cache.getEngine().getTotalDeletes();
+    Cache victim = cache.getVictimCache();
+    if (victim != null) {
+      totalDeletes += victim.getEngine().getTotalDeletes();
+    }
+    return totalDeletes;
+  }
+  
   @Override
   public long getcache_gets() {
     return cache.getTotalGets();

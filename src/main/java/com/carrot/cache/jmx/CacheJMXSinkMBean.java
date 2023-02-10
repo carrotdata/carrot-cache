@@ -59,10 +59,28 @@ public interface CacheJMXSinkMBean {
   double getused_size_ratio();
   
   /**
-   * Cache total writes operations (including victim cache)
-   * @return total writes
+   * Cache total number of put operations (including victim cache)
+   * @return total puts
    */
-  long gettotal_writes();
+  long gettotal_puts();
+  
+  /**
+   * Cache total number of insert operations (including victim cache)
+   * @return total inserts
+   */
+  long gettotal_inserts();
+  
+  /**
+   * Cache total number of update operations (including victim cache)
+   * @return total updates
+   */
+  long gettotal_updates();
+  
+  /**
+   * Cache total number of delete operations (including victim cache)
+   * @return
+   */
+  long gettotal_deletes();
   
   /**
    * Cache total GET operations

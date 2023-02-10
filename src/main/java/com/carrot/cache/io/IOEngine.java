@@ -38,6 +38,7 @@ import com.carrot.cache.Scavenger;
 import com.carrot.cache.controllers.RecyclingSelector;
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MemoryIndex;
+import com.carrot.cache.index.MemoryIndex.MutationResult;
 import com.carrot.cache.util.CarrotConfig;
 import com.carrot.cache.util.Persistent;
 import com.carrot.cache.util.UnsafeAccess;
@@ -95,6 +96,15 @@ public abstract class IOEngine implements Persistent {
   /* Total storage used size in bytes */
   protected AtomicLong storageUsed = new AtomicLong();
 
+  /* Upsert operation - update existing one*/
+  protected AtomicLong totalUpdates = new AtomicLong();
+  
+  /* New inserts */
+  protected AtomicLong totalInserts = new AtomicLong();
+  
+  /* Total number of delete operations */
+  protected AtomicLong totalDeletes = new AtomicLong();
+  
   /*
    * RAM buffers accumulates incoming PUT's before submitting them to an IOEngine
    */
@@ -370,6 +380,30 @@ public abstract class IOEngine implements Persistent {
     return ramBuffers.length;
   }
 
+  /**
+   * Get total updates
+   * @return total number of update operations
+   */
+  public long getTotalUpdates() {
+    return this.totalUpdates.get();
+  }
+  
+  /**
+   * Get total inserts
+   * @return total inserts
+   */
+  public long getTotalInserts() {
+    return this.totalInserts.get();
+  }
+  
+  /**
+   * Get total deletes
+   * @return total deletes
+   */
+  public long getTotalDeletes() {
+    return this.totalDeletes.get();
+  }
+  
   /**
    * Get segment by segment id
    *
@@ -1971,7 +2005,11 @@ public abstract class IOEngine implements Persistent {
    */
   public boolean delete(byte[] key, int off, int size) throws IOException {
     // Delete from index
-    return this.index.delete(key, off, size);
+    boolean result = this.index.delete(key, off, size);
+    if (result) {
+      this.totalDeletes.incrementAndGet();
+    }
+    return result;
   }
 
   /**
@@ -1984,7 +2022,11 @@ public abstract class IOEngine implements Persistent {
    */
   public boolean delete(long keyPtr, int size) throws IOException {
     // Delete from index
-    return this.index.delete(keyPtr, size);
+    boolean result = this.index.delete(keyPtr, size);
+    if (result) {
+      this.totalDeletes.incrementAndGet();
+    }
+    return result;
   }
 
   /**
@@ -2118,7 +2160,7 @@ public abstract class IOEngine implements Persistent {
 
     reportUsage(Utils.kvSize(keyLength, valueLength));
 
-    this.index.insertWithRank(
+    MutationResult result = this.index.insertWithRank(
         key,
         keyOff,
         keyLength,
@@ -2129,7 +2171,11 @@ public abstract class IOEngine implements Persistent {
         (int) offset,
         rank,
         expire);
-
+    if (result == MutationResult.INSERTED) {
+      this.totalInserts.incrementAndGet();
+    } else if (result == MutationResult.UPDATED) {
+      this.totalUpdates.incrementAndGet(); 
+    }
     return true;
   }
 
@@ -2207,8 +2253,13 @@ public abstract class IOEngine implements Persistent {
 
     reportUsage(Utils.kvSize(keyLength, valueLength));
 
-    this.index.insertWithRank(
+    MutationResult result = this.index.insertWithRank(
         keyPtr, keyLength, valuePtr, valueLength, (short) s.getId(), (int) offset, rank, expire);
+    if (result == MutationResult.INSERTED) {
+      this.totalInserts.incrementAndGet();
+    } else if (result == MutationResult.UPDATED) {
+      this.totalUpdates.incrementAndGet(); 
+    }
     return true;
   }
 
@@ -2271,6 +2322,9 @@ public abstract class IOEngine implements Persistent {
     this.recyclingSelector.save(dos);
     dos.writeLong(this.storageAllocated.get());
     dos.writeLong(this.storageUsed.get());
+    dos.writeLong(this.totalInserts.get());
+    dos.writeLong(this.totalUpdates.get());
+    dos.writeLong(this.totalDeletes.get());
     dos.close();
   }
 
@@ -2298,6 +2352,9 @@ public abstract class IOEngine implements Persistent {
     this.recyclingSelector.load(dis);
     this.storageAllocated.set(dis.readLong());
     this.storageUsed.set(dis.readLong());
+    this.totalInserts.set(dis.readLong());
+    this.totalUpdates.set(dis.readLong());
+    this.totalDeletes.set(dis.readLong());
     dis.close();
   }
 
