@@ -173,8 +173,12 @@ public class FileIOEngine extends IOEngine {
        return this.memoryDataReader.read(
          this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset); 
     } else {
-      return this.fileDataReader.read(
+      long start = System.nanoTime();
+      int result = this.fileDataReader.read(
         this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset);
+      long end = System.nanoTime();
+      this.totalIOReadDuration.addAndGet(end - start);
+      return result;
     }
   }
 
@@ -201,8 +205,12 @@ public class FileIOEngine extends IOEngine {
        return this.memoryDataReader.readValueRange(
          this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset, rangeStart, rangeSize); 
     } else {
-      return this.fileDataReader.readValueRange(
+      long start = System.nanoTime();
+      int result = this.fileDataReader.readValueRange(
         this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset, rangeStart, rangeSize);
+      long end = System.nanoTime();
+      this.totalIOReadDuration.addAndGet(end - start);
+      return result;
     }
   }
   
@@ -218,7 +226,11 @@ public class FileIOEngine extends IOEngine {
     if (s.isOffheap()) {
       return this.memoryDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
     } else {
-      return this.fileDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
+      long start = System.nanoTime();
+      int result = this.fileDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
+      long end = System.nanoTime();
+      this.totalIOReadDuration.addAndGet(end - start);
+      return result;
     }
   }
 
@@ -236,8 +248,12 @@ public class FileIOEngine extends IOEngine {
       return this.memoryDataReader.readValueRange(this, key, keyOffset, keySize, 
         sid, offset, size, buffer, rangeStart, rangeSize);
     } else {
-      return this.fileDataReader.readValueRange(this, key, keyOffset, keySize, 
+      long start = System.nanoTime();
+      int result = this.fileDataReader.readValueRange(this, key, keyOffset, keySize, 
         sid, offset, size, buffer, rangeStart, rangeSize);
+      long end = System.nanoTime();
+      this.totalIOReadDuration.addAndGet(end - start);
+      return result;
     }
   }
   
@@ -253,7 +269,11 @@ public class FileIOEngine extends IOEngine {
     if (s.isOffheap()) {
       return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
     } else {
-      return this.fileDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
+      long start = System.nanoTime();
+      int result = this.fileDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
+      long end = System.nanoTime();
+      this.totalIOReadDuration.addAndGet(end - start);
+      return result;
     }
   }
 
@@ -271,8 +291,12 @@ public class FileIOEngine extends IOEngine {
       return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, offset,
         size, buffer, bufOffset, rangeStart, rangeSize);
     } else {
-      return this.fileDataReader.readValueRange(this, keyPtr, keySize, sid, offset, 
+      long start = System.nanoTime();
+      int result = this.fileDataReader.readValueRange(this, keyPtr, keySize, sid, offset, 
         size, buffer, bufOffset, rangeStart, rangeSize);
+      long end = System.nanoTime();
+      this.totalIOReadDuration.addAndGet(end - start);
+      return result;
     }
   }
   
@@ -288,7 +312,11 @@ public class FileIOEngine extends IOEngine {
     if (s.isOffheap()) {
       return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer);
     } else {
-      return this.fileDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer);
+      long start = System.nanoTime();
+      int result = this.fileDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer);
+      long end = System.nanoTime();
+      this.totalIOReadDuration.addAndGet(end - start);
+      return result;
     }
   }
 
@@ -306,8 +334,12 @@ public class FileIOEngine extends IOEngine {
       return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, 
         offset, size, buffer, rangeStart, rangeSize);
     } else {
-      return this.fileDataReader.readValueRange(this, keyPtr, keySize, sid, offset, 
+      long start = System.nanoTime();
+      int result = this.fileDataReader.readValueRange(this, keyPtr, keySize, sid, offset, 
         size, buffer, rangeStart, rangeSize);
+      long end = System.nanoTime();
+      this.totalIOReadDuration.addAndGet(end - start);
+      return result;
     }
   }
   

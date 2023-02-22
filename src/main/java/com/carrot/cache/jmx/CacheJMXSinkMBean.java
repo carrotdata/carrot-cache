@@ -219,5 +219,17 @@ public interface CacheJMXSinkMBean {
    */
   long getgc_bytes_freed();
   
+  /**
+   * Get IO average read operation duration
+   * @return duration
+   */
+  long getio_avg_read_duration();
+  
+  /** 
+   * Get IO average read size
+   * 
+   */
+  long getio_avg_read_size();
+  
   
 }

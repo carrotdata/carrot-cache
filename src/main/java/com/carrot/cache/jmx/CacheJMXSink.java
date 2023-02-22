@@ -270,4 +270,16 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     return self;
   }
 
+  @Override
+  public long getio_avg_read_duration() {
+    // in microseconds
+    long duration = cache.getEngine().getTotalIOReadDuration() / 1000;
+    return duration / gettotal_gets();
+  }
+
+  @Override
+  public long getio_avg_read_size() {
+    return getoverall_bytes_read() / gettotal_gets();
+  }
+
 }

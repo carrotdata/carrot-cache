@@ -105,6 +105,9 @@ public abstract class IOEngine implements Persistent {
   /* Total number of delete operations */
   protected AtomicLong totalDeletes = new AtomicLong();
   
+  /* Total duration in ns of all read operations*/
+  protected AtomicLong totalIOReadDuration = new AtomicLong();
+  
   /*
    * RAM buffers accumulates incoming PUT's before submitting them to an IOEngine
    */
@@ -404,6 +407,13 @@ public abstract class IOEngine implements Persistent {
     return this.totalDeletes.get();
   }
   
+  /**
+   * Get total IO read duration
+   * @return duration of all read operations so far in ns
+   */
+  public long getTotalIOReadDuration() {
+    return this.totalIOReadDuration.get();
+  }
   /**
    * Get segment by segment id
    *
@@ -2325,6 +2335,7 @@ public abstract class IOEngine implements Persistent {
     dos.writeLong(this.totalInserts.get());
     dos.writeLong(this.totalUpdates.get());
     dos.writeLong(this.totalDeletes.get());
+    dos.writeLong(this.totalIOReadDuration.get());
     dos.close();
   }
 
@@ -2355,6 +2366,7 @@ public abstract class IOEngine implements Persistent {
     this.totalInserts.set(dis.readLong());
     this.totalUpdates.set(dis.readLong());
     this.totalDeletes.set(dis.readLong());
+    this.totalIOReadDuration.set(dis.readLong());
     dis.close();
   }
 
