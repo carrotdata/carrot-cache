@@ -19,10 +19,10 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 
 import com.carrot.cache.util.Utils;
+
+import static com.carrot.cache.io.IOUtils.readFully;
 import static com.carrot.cache.util.Utils.getItemSize;
 import static com.carrot.cache.util.Utils.getKeyOffset;
-
-import static com.carrot.cache.util.IOUtils.readFully;
 
 public class BaseFileDataReader implements DataReader {
 

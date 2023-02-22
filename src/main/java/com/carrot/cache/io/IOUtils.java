@@ -12,7 +12,7 @@
  * express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.carrot.cache.util;
+package com.carrot.cache.io;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;

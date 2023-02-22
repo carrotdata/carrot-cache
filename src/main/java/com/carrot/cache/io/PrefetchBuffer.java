@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 
-import com.carrot.cache.util.IOUtils;
 import com.carrot.cache.util.Utils;
 //FIXME: handling last sK-V in a file which is less than 6 bytes total
 public final class PrefetchBuffer {
