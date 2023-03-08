@@ -2116,7 +2116,7 @@ public abstract class IOEngine implements Persistent {
       int rank)
       throws IOException {
     int groupRank = rank;
-    return put(key, keyOff, keyLength, value, valueOff, valueLength, expire, rank, groupRank);
+    return put(key, keyOff, keyLength, value, valueOff, valueLength, expire, rank, groupRank, false);
   }
   /**
    * Put key-value into a cache 
@@ -2142,7 +2142,8 @@ public abstract class IOEngine implements Persistent {
       int valueLength,
       long expire,
       int rank,
-      int groupRank)
+      int groupRank,
+      boolean scavenger)
       throws IOException {
     checkRank(rank);
     checkRank(groupRank);
@@ -2183,7 +2184,7 @@ public abstract class IOEngine implements Persistent {
         expire);
     if (result == MutationResult.INSERTED) {
       this.totalInserts.incrementAndGet();
-    } else if (result == MutationResult.UPDATED) {
+    } else if (result == MutationResult.UPDATED && !scavenger) {
       this.totalUpdates.incrementAndGet(); 
     }
     return true;
@@ -2221,7 +2222,7 @@ public abstract class IOEngine implements Persistent {
       long keyPtr, int keyLength, long valuePtr, int valueLength, 
       long expire, int rank) throws IOException {
     int groupRank = rank;
-    return put(keyPtr, keyLength, valuePtr, valueLength, expire, rank, groupRank);
+    return put(keyPtr, keyLength, valuePtr, valueLength, expire, rank, groupRank, false);
   }
   /**
    * Put key-value into a cache with a rank and group rank
@@ -2237,7 +2238,7 @@ public abstract class IOEngine implements Persistent {
    */
   public boolean put(
       long keyPtr, int keyLength, long valuePtr, int valueLength, 
-      long expire, int rank, int groupRank)
+      long expire, int rank, int groupRank, boolean scavenger)
       throws IOException {
     checkRank(rank);
     checkRank(groupRank);
@@ -2267,7 +2268,7 @@ public abstract class IOEngine implements Persistent {
         keyPtr, keyLength, valuePtr, valueLength, (short) s.getId(), (int) offset, rank, expire);
     if (result == MutationResult.INSERTED) {
       this.totalInserts.incrementAndGet();
-    } else if (result == MutationResult.UPDATED) {
+    } else if (result == MutationResult.UPDATED && !scavenger) {
       this.totalUpdates.incrementAndGet(); 
     }
     return true;

@@ -706,7 +706,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     expire = adjustExpirationTime(expire);
     // Add to the cache
     boolean result = false;
-    result = engine.put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank);
+    result = engine.put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank, scavenger);
     if (result) {
       reportThroughputController(Utils.kvSize(keySize, valSize));
     }
@@ -924,7 +924,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     expire = adjustExpirationTime(expire);
     // Add to the cache
     boolean result = false;
-    result = engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, groupRank);
+    result = engine.put(key, keyOffset, keySize, value, valOffset, 
+      valSize, expire, rank, groupRank, scavenger);
     if (result) {
       reportThroughputController(Utils.kvSize(keySize, valSize));
     }
@@ -1874,12 +1875,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       if (used >= max) {
         if (this.victimCache == null) {
           // Enable eviction only if we do not have victim cache to avoid deadlock
-          this.engine.setEvictionEnabled(true);
+          //this.engine.setEvictionEnabled(true);
         }
         this.tcEnabled = true;
         startScavengers();
       } else if (used < min){
-        this.engine.setEvictionEnabled(false);
+        //this.engine.setEvictionEnabled(false);
       }
     }
   }
