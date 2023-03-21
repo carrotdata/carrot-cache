@@ -77,19 +77,33 @@ public class ObjectCache {
    * @param c native cache instance
    */
   ObjectCache(Cache c){
-    Objects.requireNonNull(c, "cache is null");    
+    Objects.requireNonNull(c, "Cache is null");    
     this.cache = c;
     initIOPools();
   }
-    
+  
+  /**
+   * Adds Kryo's serialization listener. 
+   * @param l listener
+   */
   public void addSerdeInitializationListener(SerdeInitializationListener l) {
     this.listeners.add(l);
   }
   
+  /**
+   * Adds key-value classes pair 
+   * @param key key's class
+   * @param value value's class
+   */
   public void addKeyValueClasses(Class<?> key, Class<?> value) {
     this.keyValueClassMap.put(key,  value);
   }
   
+  /**
+   * Sets default expiration time for key's class 
+   * @param keyClass key's class
+   * @param expire expiration time in milliseconds (relative)
+   */
   public void setKeyClassExpire(Class<?> keyClass, long expire) {
     keyExpireMap.put(keyClass, expire);
   }
@@ -138,7 +152,7 @@ public class ObjectCache {
    * @param value value object
    * @param expire expiration time (absolute)
    * @param force if true - bypass admission controller
-   * @return y=true on success, false  - otherwise
+   * @return true on success, false  - otherwise
    * @throws IOException
    */
   public boolean put(Object key, Object value, long expire, boolean force) throws IOException {
@@ -179,7 +193,7 @@ public class ObjectCache {
     Class<?> valueClass = this.keyValueClassMap.get(key.getClass());
     
     if (valueClass == null) {
-      throw new IOException(String.format("Value class is not registered for key class %s", key.getClass()));
+      throw new IOException(String.format("Value class is not registered for the key class %s", key.getClass()));
     }
     
     try {
@@ -234,7 +248,12 @@ public class ObjectCache {
           value = valueLoader.call();
           if (value != null) {
             long expire = getExpireForKey(key);
-            put(key, value, expire);
+            // This time is relative
+            if (expire > 0) {
+              put(key, value, System.currentTimeMillis() + expire);
+            } else {
+              put(key, value, 0L);              
+            }
           }
         } catch (Exception e) {
           throw new IOException(e);
@@ -292,6 +311,7 @@ public class ObjectCache {
     } finally {
       release(outKey);
       release(kryo);
+      // Remove key from waiting set (if any, just in case)
       waitingKeys.remove(key);
     }
   }
@@ -413,7 +433,7 @@ public class ObjectCache {
         kryo.register(entry.getKey());
         kryo.register(entry.getValue());
       }
-      for (SerdeInitializationListener l:listeners) {
+      for (SerdeInitializationListener l: listeners) {
         l.initSerde(kryo);
       }
     } else {
