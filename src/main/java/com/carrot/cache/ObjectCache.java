@@ -20,6 +20,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.logging.log4j.LogManager;
@@ -52,8 +53,9 @@ public class ObjectCache {
   /** Kryo object serialization pool*/
   private ObjectPool<Kryo> kryos;
   
+  /** Key - Value class map */
   private Map<Class<?>, Class<?>> keyValueClassMap = new ConcurrentHashMap<Class<?>, Class<?>>();
-  
+    
   /** Kryo initialization listeners */
   private List<SerdeInitializationListener> listeners = 
       Collections.synchronizedList(new ArrayList<>());
@@ -63,6 +65,12 @@ public class ObjectCache {
   
   /** Object pool for Kryo outputs */
   static ObjectPool<Output> outputs;
+  
+  /** To support loading cache **/
+  private Map<Object, Object> waitingKeys = new ConcurrentHashMap<>();
+  
+  /* Each key class can have associated expiration time in milliseconds*/
+  private Map<Class<?>, Long> keyExpireMap = new ConcurrentHashMap<Class<?>, Long>();
   
   /**
    * Default constructor
@@ -80,6 +88,10 @@ public class ObjectCache {
   
   public void addKeyValueClasses(Class<?> key, Class<?> value) {
     this.keyValueClassMap.put(key,  value);
+  }
+  
+  public void setKeyClassExpire(Class<?> keyClass, long expire) {
+    keyExpireMap.put(keyClass, expire);
   }
   
   private void initIOPools() {
@@ -199,6 +211,66 @@ public class ObjectCache {
   }
   
   /**
+   * Get cache value with value loader
+   * @param key key
+   * @param valueLoader value loader
+   * @return value
+   * @throws IOException
+   */
+  public Object get(Object key, Callable<?> valueLoader) throws IOException {
+    Object value = get(key);
+    if (value != null) {
+      return value;
+    }
+    Object v = waitingKeys.get(key);
+    if (v != null) {
+      return waitAndGet(key);
+    } else {
+      Object prev = waitingKeys.putIfAbsent(key, Boolean.TRUE);
+      if (prev != null) {
+        return waitAndGet(key);
+      } else {
+        try {
+          value = valueLoader.call();
+          if (value != null) {
+            long expire = getExpireForKey(key);
+            put(key, value, expire);
+          }
+        } catch (Exception e) {
+          throw new IOException(e);
+        } finally {
+          waitingKeys.remove(key);
+        }
+      }
+    }
+    return value;
+  }
+  
+  private long getExpireForKey(Object key) {
+    Long expire = keyExpireMap.get(key.getClass());
+    if (expire == null) {
+      return 0;
+    }
+    return expire;
+  }
+  
+  private Object waitAndGet(Object key) throws IOException {
+    // Loading in progress
+    while(waitingKeys.get(key) != null) {
+      try {
+        Thread.sleep(1);
+      } catch(InterruptedException e) {
+      }
+    }
+    // Repeat call
+    Object value = get(key);
+    if (value == null) {
+      // Loader failed
+      throw new IOException(String.format("Failed to load value for key {}", key.toString()));
+    }
+    return value;
+  }
+  /**
    * Delete object by key
    * @param key object key
    * @return true on success, false - otherwise
@@ -220,6 +292,7 @@ public class ObjectCache {
     } finally {
       release(outKey);
       release(kryo);
+      waitingKeys.remove(key);
     }
   }
   
