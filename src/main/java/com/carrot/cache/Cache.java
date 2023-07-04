@@ -234,15 +234,18 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.maximumCacheSize = this.conf.getCacheMaximumSize(cacheName);
     this.maximumKeyValueSize = this.conf.getKeyValueMaximumSize(cacheName);
     long segmentSize = this.conf.getCacheSegmentSize(cacheName);
-    if (this.maximumKeyValueSize > (1 << 30) || 
-        this.maximumKeyValueSize > segmentSize  - 16) {
-      LOG.warn("Maximum key-value size can not exceed 1GB and data segment size {}", segmentSize);
-      this.maximumKeyValueSize = (int) Math.min(1 << 30, segmentSize - 16);
+    // check if it is larger than 2GB
+    if (segmentSize > 1 << 31) {
+      throw new IllegalArgumentException(String.format("Data segment size %d exceeds the limit of 2GB", segmentSize));
+    }
+    int maxSize = 1 << 28; // 256MB - VarINT size coding limit
+    int min = Math.min(maxSize, (int) segmentSize);
+
+    if (this.maximumKeyValueSize > min - 8) {
+      LOG.warn("Maximum key-value size {} can not exceed 256MB and data segment size {}", segmentSize, min);
+      this.maximumKeyValueSize = min - 8;
     } else if (this.maximumKeyValueSize == 0) {
-      if (segmentSize > 1L << 30) {
-        segmentSize = 1L << 30;
-      }
-      this.maximumKeyValueSize = (int)(segmentSize - 16);
+      this.maximumKeyValueSize = min - 8;
     }
     
     Scavenger.registerCache(cacheName);
@@ -871,8 +874,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   private boolean isGreaterThanMaxSize(int keySize, int valueSize) {
-    int size = Utils.kvSize(keySize, valueSize);
-    return size > this.maximumKeyValueSize; 
+    long size = Utils.kvSizeL(keySize, valueSize);
+    boolean res = size > this.maximumKeyValueSize; 
+    LOG.warn("Unable to cache. Serialized size {} of key-value exceeds the limit of {}.", size, maximumKeyValueSize);
+    return res;
   }
   
   private boolean putDirectly(

@@ -831,11 +831,24 @@ public class Utils {
     return s;
   }
   
-  /* The total size of a K-V pair in the storage */
+  /** 
+   * 
+   * The total size of a K-V pair in the storage
+   *
+   **/
   public static int kvSize(int keySize, int valSize) {
     return keySize + valSize + Utils.sizeUVInt(valSize) + Utils.sizeUVInt(keySize);
   }
   
+  /**
+   * Safe version (no overflow)
+   * @param keySize
+   * @param valSize
+   * @return serialized size of k-v
+   */
+  public static long kvSizeL(int keySize, int valSize) {
+    return (long) keySize + valSize + Utils.sizeUVInt(valSize) + Utils.sizeUVInt(keySize);
+  }
   /**
    * Get value offset in serialized key-value record
    * @param keySize key size
