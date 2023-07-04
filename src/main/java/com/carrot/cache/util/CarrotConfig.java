@@ -288,6 +288,12 @@ public class CarrotConfig {
   /* Maximum Key Value size to cache */
   public static final String CACHE_MAX_KEY_VALUE_SIZE_KEY = "c2.cache.max-key-value-size";
   
+  /* Object Cache initial output buffer size */
+  public final static String OBJECT_CACHE_INITIAL_BUFFER_SIZE_KEY = "c2.objectcache.initial-buffer-size";
+  
+  /* Object Cache maximum output buffer size */
+  public final static String OBJECT_CACHE_MAX_BUFFER_SIZE_KEY = "c2.objectcache.max-buffer-size";
+  
   /**Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
@@ -436,45 +442,54 @@ public class CarrotConfig {
   /** Default value for start bin limit in seconds */
   public static final long DEFAULT_CACHE_EXPIRATION_BIN_START_VALUE = 60;// in seconds
   
+  /** Default value for cache expiration multiplier  */
   public static final double DEFAULT_CACHE_EXPIRATION_MULTIPLIER_VALUE = 2;
   
-  /**Default minimum active data set ratio */
+  /** Default minimum active data set ratio */
   public final static double DEFAULT_CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO = 0.0;
   
-  /**Default IO pool size */
+  /** Default IO pool size */
   public final static int DEFAULT_CACHE_IO_STORAGE_POOL_SIZE = 32;
   
-  /**Default cache disabled mode */
+  /** Default cache disabled mode */
   public final static boolean DEFAULT_CACHE_EVICTION_DISABLED_MODE = false;
   
-  /**Rolling window counter bins default */
+  /** Rolling window counter bins default */
   public final static int DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_BINS = 60;
   
-  /**Rolling window counter window size in seconds default */
+  /** Rolling window counter window size in seconds default */
   public final static int DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_DURATION = 3600;
   
-  /**Victim cache promotion on hit default value*/
+  /** Victim cache promotion on hit default value*/
   public final static boolean DEFAULT_CACHE_VICTIM_PROMOTION_ON_HIT = true;
   
-  /**Default hybrid inverse mode of operation */
+  /** Default hybrid inverse mode of operation */
   public final static boolean DEFAULT_CACHE_HYBRID_INVERSE_MODE = false;
   
-  /**Default victim promotion threshold */
+  /** Default victim promotion threshold */
   public final static double DEFAULT_CACHE_VICTIM_PROMOTION_THRESHOLD = 0.9;
   
-  /**Default cache spin wait time on high pressure - PUT operation*/
+  /** Default cache spin wait time on high pressure - PUT operation*/
   public final static long DEFAULT_CACHE_SPIN_WAIT_TIME_NS = 10000;// 10000 nanoseconds
   
-  /**Default domain name for JMX metrics */
+  /** Default domain name for JMX metrics */
   public final static String DEFAULT_CACHE_JMX_METRICS_DOMAIN_NAME = "com.carrot.cache";
   
-  /**Default streaming support buffer size */
+  /** Default streaming support buffer size */
   public final static int DEFAULT_CACHE_STREAMING_SUPPORT_BUFFER_SIZE = 1 << 22;
   
-  /**Default cache maximum wait time on PUT (due to full storage) in ms */
+  /** Default cache maximum wait time on PUT (due to full storage) in ms */
   public final static int DEFAULT_CACHE_MAX_WAIT_ON_PUT_MS = 20; // Wait up to 20ms when storage is full
   
+  /** Default value for maximum key-value size */
   public final static int DEFAULT_CACHE_MAX_KEY_VALUE_SIZE = 0; // no limit, limit is defined by data segment size 
+  
+  /** Default initial size for object cache output buffer */
+  public final static int DEFAULT_OBJECT_CACHE_INITIAL_BUFFER_SIZE = 1 << 16;
+  
+  /** Default maximum size for object cache output buffer */
+  public final static int DEFAULT_OBJECT_CACHE_MAX_BUFFER_SIZE = -1; // Unlimited
+  
   // Statics
   static CarrotConfig instance;
 
@@ -2104,5 +2119,48 @@ public class CarrotConfig {
     props.setProperty(cacheName + "." + CACHE_MAX_KEY_VALUE_SIZE_KEY, Integer.toString(size));
   }
   
+  /**
+   * Get object cache initial output buffer size
+   * @param cacheName cache name
+   * @return initial size
+   */
+  public int getObjectCacheInitialOutputBufferSize(String cacheName) {
+    String value = props.getProperty(cacheName + "." + OBJECT_CACHE_INITIAL_BUFFER_SIZE_KEY);
+    if (value != null) {
+      return Integer.parseInt(value);
+    }
+    return (int) getLongProperty(OBJECT_CACHE_INITIAL_BUFFER_SIZE_KEY, DEFAULT_OBJECT_CACHE_INITIAL_BUFFER_SIZE);
+  }
+  
+  /**
+   * Sets object cache initial output buffer size
+   * @param cacheName cache name
+   * @param size initial size
+   */
+  public void setObjectCacheInitialOutputBufferSize(String cacheName,int size) {
+    props.setProperty(cacheName + "." + OBJECT_CACHE_INITIAL_BUFFER_SIZE_KEY, Integer.toString(size));
+  }
+  
+  /**
+   * Get object cache maximum output buffer size
+   * @param cacheName cache name
+   * @return maximum size (-1 - unlimited)
+   */
+  public int getObjectCacheMaxOutputBufferSize(String cacheName) {
+    String value = props.getProperty(cacheName + "." + OBJECT_CACHE_MAX_BUFFER_SIZE_KEY);
+    if (value != null) {
+      return Integer.parseInt(value);
+    }
+    return (int) getLongProperty(OBJECT_CACHE_MAX_BUFFER_SIZE_KEY, DEFAULT_OBJECT_CACHE_MAX_BUFFER_SIZE);
+  }
+  
+  /**
+   * Sets object cache maximum output buffer size
+   * @param cacheName cache name
+   * @param size maximum size
+   */
+  public void setObjectCacheMaxOutputBufferSize(String cacheName,int size) {
+    props.setProperty(cacheName + "." + OBJECT_CACHE_INITIAL_BUFFER_SIZE_KEY, Integer.toString(size));
+  }
 }
 

@@ -72,6 +72,12 @@ public class ObjectCache {
   /* Each key class can have associated expiration time in milliseconds*/
   private Map<Class<?>, Long> keyExpireMap = new ConcurrentHashMap<Class<?>, Long>();
   
+  /* Initial output buffer size */
+  private int initialOutBufferSize;
+  
+  /* Maximum output buffer size */
+  private int maxOutBufferSize;
+  
   /**
    * Default constructor
    * @param c native cache instance
@@ -109,7 +115,10 @@ public class ObjectCache {
   }
   
   private void initIOPools() {
-    int poolSize = cache.getCacheConfig().getIOStoragePoolSize(cache.getName());
+    CarrotConfig config = cache.getCacheConfig();
+    int poolSize = config.getIOStoragePoolSize(cache.getName());
+    this.initialOutBufferSize = config.getObjectCacheInitialOutputBufferSize(cache.getName());
+    this.maxOutBufferSize = config.getObjectCacheMaxOutputBufferSize(cache.getName());
     if (inputs == null) {
       synchronized(ObjectPool.class) {
         if (inputs == null) {
@@ -413,7 +422,7 @@ public class ObjectCache {
   Output getOutput() {
     Output out = outputs.poll();
     if (out == null) {
-      out = new Output(INITIAL_BUFFER_SIZE);
+      out = new Output(initialOutBufferSize, maxOutBufferSize);
     } else {
       out.reset();
     }

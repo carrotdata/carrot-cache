@@ -17,6 +17,7 @@ package com.carrot.cache.util;
 
 import static org.junit.Assert.assertEquals;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -31,6 +32,46 @@ import com.carrot.cache.expire.ExpireSupport;
 
 public class TestProjectUtils {
 
+  class TestClass {
+    List<String> list;
+    TestClass(List<String> param){
+      this.list = param;
+      System.out.println("OK");
+    }
+  }
+  
+  @Test
+  public void testReflection() {
+    List<String> list = new ArrayList<>();
+    list.add("test");
+    
+    try {
+      Constructor<?> cstr = TestProjectUtils.TestClass.class.getDeclaredConstructor(this.getClass(),List.class);
+      
+      cstr.setAccessible(true);
+      cstr.newInstance(this, list);
+    } catch ( SecurityException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch (InstantiationException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch (IllegalAccessException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch (IllegalArgumentException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch (InvocationTargetException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } catch (NoSuchMethodException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    
+    System.out.println(list.getClass());
+  }
   @Test
   public void testObjectArray() throws SecurityException, IllegalAccessException, IllegalArgumentException, 
   InvocationTargetException, NoSuchFieldException, ClassNotFoundException {
