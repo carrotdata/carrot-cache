@@ -658,6 +658,61 @@ public class Builder {
   }
   
   /**
+   * With object cache initial output buffer size
+   * @param cacheName cache name
+   * @param size initial size in bytes
+   * @return builder instance
+   */
+  public Builder withObjectCacheInitialOutputBufferSize(String cacheName, int size) {
+    conf.setObjectCacheInitialOutputBufferSize(cacheName, size);
+    return this;
+  }
+  
+  /**
+   * With object cache maximum output buffer size
+   * @param cacheName cache name
+   * @param size maximum size in bytes
+   * @return builder instance
+   */
+  public Builder withObjectCacheMaximumOutputBufferSize(String cacheName, int size) {
+    conf.setObjectCacheMaxOutputBufferSize(cacheName, size);
+    return this;
+  }
+  
+  /**
+   * With Thread-Local-Storage supported
+   * @param cacheName cache name
+   * @param supported true or false
+   * @return builder instance
+   */
+  public Builder withTLSSUpported(String cacheName, boolean supported) {
+    conf.setCacheTLSSupported(cacheName, supported);
+    return this;
+  }
+  
+  /**
+   * With cache TLS initial output buffer size
+   * @param cacheName cache name
+   * @param size initial size in bytes
+   * @return builder instance
+   */
+  public Builder withCacheTLSInitialBufferSize(String cacheName, int size) {
+    conf.setCacheTLSInitialBufferSize(cacheName, size);
+    return this;
+  }
+  
+  /**
+   * With object cache maximum output buffer size
+   * @param cacheName cache name
+   * @param size maximum size in bytes
+   * @return builder instance
+   */
+  public Builder withCacheTLSMaximumBufferSize(String cacheName, int size) {
+    conf.setCacheTLSMaxBufferSize(cacheName, size);
+    return this;
+  }
+  
+  /**
    * Build cache
    * @return
    * @throws IOException

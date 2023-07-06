@@ -294,6 +294,15 @@ public class CarrotConfig {
   /* Object Cache maximum output buffer size */
   public final static String OBJECT_CACHE_MAX_BUFFER_SIZE_KEY = "c2.objectcache.max-buffer-size";
   
+  /* Is Thread-Local-Storage supported */
+  public final static String CACHE_TLS_SUPPORTED_KEY = "c2.cache.tls-supported";
+  
+  /* TLS buffer initial size key */
+  public final static String CACHE_TLS_INITIAL_BUFFER_SIZE_KEY = "c2.cache.tls-initial-buffer-size";
+  
+  /* TLS buffer maximum key size */
+  public final static String CACHE_TLS_MAXIMUM_BUFFER_SIZE_KEY = "c2.cache.tls-maximum-buffer-size";
+
   /**Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
@@ -488,7 +497,16 @@ public class CarrotConfig {
   public final static int DEFAULT_OBJECT_CACHE_INITIAL_BUFFER_SIZE = 1 << 16;
   
   /** Default maximum size for object cache output buffer */
-  public final static int DEFAULT_OBJECT_CACHE_MAX_BUFFER_SIZE = -1; // Unlimited
+  public final static int DEFAULT_OBJECT_CACHE_MAX_BUFFER_SIZE = -1; // Unlimited; TODO change to 2GB?
+  
+  /** Default Thread-Local-Storage supported*/
+  public final static boolean DEFAULT_CACHE_TLS_SUPPORTED = false;
+  
+  /** Default initial size for TLS buffer */
+  public final static int DEFAULT_CACHE_TLS_INITIAL_BUFFER_SIZE = 1 << 16; // 64KB
+  
+  /** Default initial size for TLS buffer */
+  public final static int DEFAULT_CACHE_TLS_MAXIMUM_BUFFER_SIZE = Integer.MAX_VALUE; // 2GB 
   
   // Statics
   static CarrotConfig instance;
@@ -2161,6 +2179,74 @@ public class CarrotConfig {
    */
   public void setObjectCacheMaxOutputBufferSize(String cacheName,int size) {
     props.setProperty(cacheName + "." + OBJECT_CACHE_INITIAL_BUFFER_SIZE_KEY, Integer.toString(size));
+  }
+  
+  /**
+   * Get Thread-Local-Storage supported
+   * @param cacheName cache name
+   * @return true if supported, false - otherwise
+   */
+  public boolean getCacheTLSSupported (String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_TLS_SUPPORTED_KEY);
+    if (value == null) {
+      return getBooleanProperty(CACHE_TLS_SUPPORTED_KEY, 
+        DEFAULT_CACHE_TLS_SUPPORTED);
+    } else {
+      return Boolean.parseBoolean(value);
+    }
+  }
+  
+  /**
+   * Set Thread-Local-Storage supported
+   * @param cacheName cache name
+   * @param v true or false
+   */
+  public void setCacheTLSSupported (String cacheName, boolean v) {
+    props.setProperty(cacheName + "." + CACHE_TLS_SUPPORTED_KEY, Boolean.toString(v));
+  }
+  
+  /**
+   * Get cache TLS initial buffer size
+   * @param cacheName cache name
+   * @return maximum size 
+   */
+  public int getCacheTLSInitialBufferSize(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_TLS_INITIAL_BUFFER_SIZE_KEY);
+    if (value != null) {
+      return Integer.parseInt(value);
+    }
+    return (int) getLongProperty(CACHE_TLS_INITIAL_BUFFER_SIZE_KEY, DEFAULT_CACHE_TLS_INITIAL_BUFFER_SIZE);
+  }
+  
+  /**
+   * Sets cache TLS initial buffer size
+   * @param cacheName cache name
+   * @param size maximum size
+   */
+  public void setCacheTLSInitialBufferSize(String cacheName,int size) {
+    props.setProperty(cacheName + "." + CACHE_TLS_INITIAL_BUFFER_SIZE_KEY, Integer.toString(size));
+  }
+  
+  /**
+   * Get cache TLS maximum buffer size
+   * @param cacheName cache name
+   * @return maximum size 
+   */
+  public int getCacheTLSMaxBufferSize(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_TLS_MAXIMUM_BUFFER_SIZE_KEY);
+    if (value != null) {
+      return Integer.parseInt(value);
+    }
+    return (int) getLongProperty(CACHE_TLS_MAXIMUM_BUFFER_SIZE_KEY, DEFAULT_CACHE_TLS_MAXIMUM_BUFFER_SIZE);
+  }
+  
+  /**
+   * Sets cache TLS maximum buffer size
+   * @param cacheName cache name
+   * @param size maximum size
+   */
+  public void setCacheTLSMaxBufferSize(String cacheName,int size) {
+    props.setProperty(cacheName + "." + CACHE_TLS_MAXIMUM_BUFFER_SIZE_KEY, Integer.toString(size));
   }
 }
 
