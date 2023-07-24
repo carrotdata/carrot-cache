@@ -685,7 +685,7 @@ public class Builder {
    * @param supported true or false
    * @return builder instance
    */
-  public Builder withTLSSUpported(String cacheName, boolean supported) {
+  public Builder withTLSSupported(String cacheName, boolean supported) {
     conf.setCacheTLSSupported(cacheName, supported);
     return this;
   }

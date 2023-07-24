@@ -24,7 +24,6 @@ public class TestFileCacheGetAPI extends TestOffheapCacheGetAPI{
   @Before
   public void setUp() throws IOException {
     this.offheap = false;
-    cache = createCache();
     this.numRecords = 100000;
     this.r = new Random();
   }

@@ -2186,7 +2186,7 @@ public class CarrotConfig {
    * @param cacheName cache name
    * @return true if supported, false - otherwise
    */
-  public boolean getCacheTLSSupported (String cacheName) {
+  public boolean isCacheTLSSupported (String cacheName) {
     String value = props.getProperty(cacheName + "." + CACHE_TLS_SUPPORTED_KEY);
     if (value == null) {
       return getBooleanProperty(CACHE_TLS_SUPPORTED_KEY, 

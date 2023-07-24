@@ -165,7 +165,17 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /* Cache type*/
   Type type;
   
+  /* shutdown is in progress */
   volatile boolean shutdownInProgress = false;
+  
+  /* Thread - local buffer */
+  ThreadLocal<byte[]> tlsBuffer;
+  
+  /* Thread-local storage enabled */
+  boolean tlsEnabled;
+  
+  /* TLS buffer maximum size in bytes */
+  int tlsBufferMaxSize;
   
   /**
    *  Constructor to use 
@@ -235,7 +245,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.maximumKeyValueSize = this.conf.getKeyValueMaximumSize(cacheName);
     long segmentSize = this.conf.getCacheSegmentSize(cacheName);
     // check if it is larger than 2GB
-    if (segmentSize > 1 << 31) {
+    if (segmentSize > (2L * 1024 * 1024 * 1024)) {
       throw new IllegalArgumentException(String.format("Data segment size %d exceeds the limit of 2GB", segmentSize));
     }
     int maxSize = 1 << 28; // 256MB - VarINT size coding limit
@@ -247,8 +257,31 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     } else if (this.maximumKeyValueSize == 0) {
       this.maximumKeyValueSize = min - 8;
     }
-    
+    initTLS();
     Scavenger.registerCache(cacheName);
+  }
+  
+  private void initTLS() {
+    this.tlsEnabled = this.conf.isCacheTLSSupported(cacheName);
+    if (this.tlsEnabled) {
+      int size = this.conf.getCacheTLSInitialBufferSize(cacheName);
+      this.tlsBufferMaxSize = this.conf.getCacheTLSMaxBufferSize(cacheName);
+      byte[] buf = new byte[size];
+      this.tlsBuffer = new ThreadLocal<byte[]>();
+      this.tlsBuffer.set(buf);
+    }
+  }
+
+  private byte[] ensureTLSBufferSize(int size) {
+    if (!this.tlsEnabled || size > this.tlsBufferMaxSize) {
+      return null;
+    }
+    byte[] buf = this.tlsBuffer.get();
+    if (buf.length < size) {
+      buf = new byte[size];
+      this.tlsBuffer.set(buf);
+    }
+    return buf;
   }
   
   void initAll() throws IOException {
@@ -1222,6 +1255,259 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public InputStream getInputStream(byte[] key, int off, int len) throws IOException {
     return  CacheInputStream.openStream(this, key, off, len);
   }
+  
+  /**
+   * Get cached value only (if any)
+   * @param key key buffer
+   * @return value or null
+   * @throws IOException
+   */
+  public byte[] get(byte[] key) 
+      throws IOException {
+    return get(key, 0, key.length, true);
+  }
+  
+  /**
+   * Get cached value only (if any)
+   * @param key key buffer
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @return value or null
+   * @throws IOException
+   */
+  public byte[] get(byte[] key, int keyOffset, int keySize) 
+      throws IOException {
+    return get(key, keyOffset, keySize, true);
+  }
+  
+  /**
+   * Get cached value only (if any)
+   *
+   * @param key key buffer
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @param hit if true - its a hit
+   * @return value or null
+   * @throws IOException 
+   */
+  public byte[] get(byte[] key, int keyOffset, int keySize, boolean hit) throws IOException {
+
+    byte[] buffer = this.tlsEnabled ? this.tlsBuffer.get() : new byte[0];
+    long result = getKeyValue(key, keyOffset, keySize, hit, buffer, 0);
+    if (result < 0) {
+      return null;
+    }
+    if (result > buffer.length) {
+      while (true) {
+        
+        buffer = ensureTLSBufferSize((int) result);
+        if (buffer == null) {
+          buffer = new byte[(int) result];
+        }
+        result = getKeyValue(key, keyOffset, keySize, hit, buffer, 0);
+        if (result < 0) return null;
+        if (result <= buffer.length) {
+          break;
+        }
+      }
+    }
+    int pos = 0;
+    int kSize = Utils.readUVInt(buffer, pos);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    pos += kSizeSize;
+    int vSize = Utils.readUVInt(buffer, pos);
+    int vSizeSize = Utils.sizeUVInt(vSize);
+    pos += vSizeSize + kSize;
+    byte[] buf = new byte[vSize];
+    System.arraycopy(buffer, pos, buf, 0, vSize);
+    return buf;
+  }
+
+  /**
+   * Get cached key-value pair (if any)
+   * returned value must be processed in the same thread 
+   * @param key key buffer
+   * @return key - value pair
+   * @throws IOException 
+   */
+  public byte[] getKeyValue(byte[] key) throws IOException {
+    return getKeyValue(key, 0, key.length, true);
+  }
+  
+  /**
+   * Get cached key-value pair (if any)
+   * returned value must be processed in the same thread 
+   * @param key key buffer
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @return key - value pair
+   * @throws IOException 
+   */
+  public byte[] getKeyValue(byte[] key, int keyOffset, int keySize) throws IOException {
+    return getKeyValue(key, keyOffset, keySize, true);
+  }
+  
+  /**
+   * Get cached key-value pair (if any)
+   * returned value must be processed in the same thread 
+   * @param key key buffer
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @param hit if true - its a hit
+   * @return key - value pair
+   * @throws IOException 
+   */
+  public byte[] getKeyValue(byte[] key, int keyOffset, int keySize, boolean hit)
+      throws IOException {
+
+    byte[] buffer = this.tlsEnabled ? this.tlsBuffer.get() : new byte[0];
+    long result = getKeyValue(key, keyOffset, keySize, hit, buffer, 0);
+    if (result < 0) {
+      return null;
+    }
+    if (result > buffer.length) {
+      while (true) {
+        buffer = ensureTLSBufferSize((int) result);
+        if (buffer == null) {
+          buffer = new byte[(int) result];
+        }
+        result = getKeyValue(key, keyOffset, keySize, hit, buffer, 0);
+        if (result < 0) return null;
+        if (result <= buffer.length) {
+          break;
+        }
+      }
+    }
+
+    int size = 0;
+    int off = 0;
+    int kSize = Utils.readUVInt(buffer, off);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    off += kSizeSize;
+    int vSize = Utils.readUVInt(buffer, off);
+    int vSizeSize = Utils.sizeUVInt(vSize);
+    size = kSize + vSize + kSizeSize + vSizeSize;
+    if (this.tlsEnabled || size < buffer.length) {
+      byte[] buf = new byte[(int) size];
+      System.arraycopy(buffer, 0, buf, 0, buf.length);
+      return buf;
+    }
+    return buffer;
+  }
+  
+
+  /**
+   * Get cached value only (if any)
+   * @param keyPtr key buffer address
+   * @param keySize key size
+   * @return value or null
+   * @throws IOException
+   */
+  public byte[] get(long keyPtr, int keySize) 
+      throws IOException {
+    return get(keyPtr, keySize, true);
+  }
+  
+  /**
+   * Get cached value only (if any)
+   *
+   * @param keyPtr key buffer address
+   * @param keySize key size
+   * @param hit if true - its a hit
+   * @return value or null
+   * @throws IOException 
+   */
+  public byte[] get(long keyPtr, int keySize, boolean hit) throws IOException {
+
+    byte[] buffer = this.tlsEnabled ? this.tlsBuffer.get() : new byte[0];
+    long result = getKeyValue(keyPtr, keySize, hit, buffer, 0);
+    if (result < 0) {
+      return null;
+    }
+    if (result > buffer.length) {
+      while (true) {
+        buffer = ensureTLSBufferSize((int) result);
+        if (buffer == null) {
+          buffer = new byte[(int) result];
+        }
+        result = getKeyValue(keyPtr, keySize, hit, buffer, 0);
+        if (result < 0) return null;
+        if (result <= buffer.length) {
+          break;
+        }
+      }
+    }
+    int pos = 0;
+    int kSize = Utils.readUVInt(buffer, pos);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    pos += kSizeSize;
+    int vSize = Utils.readUVInt(buffer, pos);
+    int vSizeSize = Utils.sizeUVInt(vSize);
+    pos += vSizeSize + kSize;
+    byte[] buf = new byte[vSize];
+    System.arraycopy(buffer, pos, buf, 0, vSize);
+    return buf;
+  }
+
+  
+  /**
+   * Get cached key-value pair (if any)
+   * returned value must be processed in the same thread 
+   * @param keyPtr key buffer address
+   * @param keySize key size
+   * @return key - value pair
+   * @throws IOException 
+   */
+  public byte[] getKeyValue(long keyPtr,  int keySize) throws IOException {
+    return getKeyValue(keyPtr, keySize, true);
+  }
+  
+  /**
+   * Get cached key-value pair (if any)
+   * returned value must be processed in the same thread 
+   * @param key key buffer
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @param hit if true - its a hit
+   * @return key - value pair
+   * @throws IOException 
+   */
+  public byte[] getKeyValue(long keyPtr, int keySize, boolean hit) throws IOException {
+
+    byte[] buffer = this.tlsEnabled ? this.tlsBuffer.get() : new byte[0];
+    long result = getKeyValue(keyPtr, keySize, hit, buffer, 0);
+    if (result < 0) {
+      return null;
+    }
+    if (result > buffer.length) {
+      while (true) {
+        buffer = ensureTLSBufferSize((int) result);
+        if (buffer == null) {
+          buffer = new byte[(int) result];
+        }
+        result = getKeyValue(keyPtr,  keySize, hit, buffer, 0);
+        if (result < 0) return null;
+        if (result <= buffer.length) {
+          break;
+        }
+      }
+    }
+    int size = 0;
+    int off = 0;
+    int kSize = Utils.readUVInt(buffer, off);
+    int kSizeSize = Utils.sizeUVInt(kSize);
+    off += kSizeSize;
+    int vSize = Utils.readUVInt(buffer, off);
+    int vSizeSize = Utils.sizeUVInt(vSize);
+    size = kSize + vSize + kSizeSize + vSizeSize;
+    if (this.tlsEnabled || size < buffer.length) {
+      byte[] buf = new byte[(int) size];
+      System.arraycopy(buffer, 0, buf, 0, buf.length);
+      return buf;
+    }
+    return buffer;
+  }
+  
   
   /**
    * Get cached item only (if any)

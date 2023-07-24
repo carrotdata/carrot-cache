@@ -61,15 +61,18 @@ public class TestOffheapCacheGetAPI {
   double scavDumpBelowRatio = 0.5;
   double minActiveRatio = 0.90;
   
+  boolean tlsEnabled = false;
+  int tlsInitialBufferSize = 32;
+  
   @Before
   public void setUp() throws IOException {
     this.offheap = true;
-    cache = createCache();
     this.numRecords = 100000;
     this.r = new Random();
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
     System.out.printf("r.seed=%d\n", seed);
+
   }
   
   @After
@@ -101,7 +104,9 @@ public class TestOffheapCacheGetAPI {
       .withMainQueueIndexFormat(CompactBlockWithExpireIndexFormat.class.getName())
       .withCacheRootDir(rootDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
-      .withEvictionDisabledMode(true);
+      .withEvictionDisabledMode(true)
+      .withTLSSupported(cacheName, tlsEnabled)
+      .withCacheTLSInitialBufferSize(cacheName, tlsInitialBufferSize);
     
     if (offheap) {
       return builder.buildMemoryCache();
@@ -167,7 +172,7 @@ public class TestOffheapCacheGetAPI {
     return count;
   }
   
-  protected void verifyMemoryCache(int num) throws IOException {
+  protected void verifyMemoryCacheBuffer(int num) throws IOException {
     int bufferSize = safeBufferSize();
     ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
     
@@ -188,7 +193,6 @@ public class TestOffheapCacheGetAPI {
     int bufferSize = safeBufferSize();
     byte[] buffer = new byte[bufferSize];
     for (int i = 0; i < num; i++) {
-      //System.out.printf("Bytes %d\n", i);
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = value.length;
@@ -198,22 +202,56 @@ public class TestOffheapCacheGetAPI {
     }
   }
   
+  protected void verifyBytesCacheAllocated(int num) throws IOException {
+    for (int i = 0; i < num; i++) {
+      byte[] key = keys[i];
+      byte[] value = values[i];
+      byte[] read = cache.get(key, 0, key.length, false);
+      assertTrue(read != null);
+      assertTrue(Utils.compareTo(read, 0, read.length, value, 0, value.length) == 0);
+    }
+  }
+  
   protected void verifyKeyValueBytesCache(int num) throws IOException {
     int bufferSize = safeBufferSize();
     byte[] buffer = new byte[bufferSize];
     for (int i = 0; i < num; i++) {
-     // System.out.printf("Bytes %d\n", i);
       byte[] key = keys[i];
       byte[] value = values[i];
-      long expSize = Utils.kvSize(key.length, value.length);
+      int keySize = key.length;
+      int valueSize = value.length;
+      long expSize = Utils.kvSize(keySize, valueSize);
       long size = cache.getKeyValue(key, 0, key.length, false, buffer, 0);
       assertEquals(expSize, size);
       int kSize = Utils.getKeySize(buffer, 0);
       int kSizeSize = Utils.sizeUVInt(kSize);
-      assertEquals(key.length, kSize);
+      int off = kSizeSize;
+      assertEquals(keySize, kSize);
       int vSize = Utils.getValueSize(buffer, 0);
       int vSizeSize = Utils.sizeUVInt(vSize);
-      int off = kSizeSize + vSizeSize;
+      off += vSizeSize;
+      assertEquals(valueSize, vSize);
+      assertTrue( Utils.compareTo(buffer, off, kSize, key, 0, key.length) == 0);
+      off += kSize;
+      assertTrue( Utils.compareTo(buffer, off, vSize, value, 0, value.length) == 0);
+    }
+  }
+  
+  protected void verifyKeyValueBytesCacheAllocated(int num) throws IOException {
+    
+    for (int i = 0; i < num; i++) {
+      byte[] key = keys[i];
+      byte[] value = values[i];
+      long expSize = Utils.kvSize(key.length, value.length);
+      byte[] buffer = cache.getKeyValue(key, 0, key.length, false);
+      assertEquals(expSize, buffer.length);
+      int kSize = Utils.getKeySize(buffer, 0);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      assertEquals(key.length, kSize);
+      int off = kSizeSize;
+      int vSize = Utils.getValueSize(buffer, 0);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      off += vSizeSize;
       assertEquals(value.length, vSize);
       assertTrue( Utils.compareTo(buffer, off, kSize, key, 0, key.length) == 0);
       off += kSize;
@@ -240,7 +278,7 @@ public class TestOffheapCacheGetAPI {
     }    
   }
   
-  protected void verifyMemoryCacheBytes(int num) throws IOException {
+  protected void verifyMemoryCache(int num) throws IOException {
     int bufferSize = safeBufferSize();
     byte[] buffer = new byte[bufferSize];
     for (int i = 0; i < num; i++) {
@@ -253,6 +291,75 @@ public class TestOffheapCacheGetAPI {
       long size = cache.get(keyPtr, keySize, false, buffer, 0);
       assertEquals(expSize, size);
       assertTrue( Utils.compareTo(buffer, 0, value.length, valuePtr, expSize) == 0);
+    }
+  }
+  
+  protected void verifyKeyValueMemoryCache(int num) throws IOException {
+    int bufferSize = safeBufferSize();
+    byte[] buffer = new byte[bufferSize];
+    for (int i = 0; i < num; i++) {
+     
+      long keyPtr = mKeys[i];
+      long valuePtr = mValues[i];
+      int keySize = keys[i].length;
+      int valueSize = values[i].length;
+      long expSize = Utils.kvSize(keySize, valueSize);
+      long size = cache.getKeyValue(keyPtr, keySize, false, buffer, 0);
+      assertEquals(expSize, size);
+      int kSize = Utils.getKeySize(buffer, 0);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      int off = kSizeSize;
+      assertEquals(keySize, kSize);
+      int vSize = Utils.getValueSize(buffer, 0);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      off += vSizeSize;
+      assertEquals(valueSize, vSize);
+      assertTrue(Utils.compareTo(buffer, off, kSize, keyPtr, keySize) == 0);
+      off += kSize;
+      assertTrue( Utils.compareTo(buffer, off, vSize, valuePtr, valueSize) == 0);
+    }
+  }
+  
+  
+  protected void verifyMemoryCacheAllocated(int num) throws IOException {
+    
+    for (int i = 0; i < num; i++) {
+      byte[] key = keys[i];
+      byte[] value = values[i];
+      int expSize = value.length;
+      int keySize = key.length;
+      long keyPtr = mKeys[i];
+      long valuePtr = mValues[i];
+      byte[] buffer = cache.get(keyPtr, keySize, false);
+      assertEquals(expSize, buffer.length);
+      assertTrue(Utils.compareTo(buffer, 0, value.length, valuePtr, expSize) == 0);
+    }
+  }
+  
+  protected void verifyKeyValueMemoryCacheAllocated(int num) throws IOException {
+    
+    for (int i = 0; i < num; i++) {
+      byte[] key = keys[i];
+      byte[] value = values[i];
+      long keyPtr = mKeys[i];
+      long valuePtr = mValues[i];
+      int keySize = key.length;
+      int valueSize = value.length;
+      byte[] buffer = cache.getKeyValue(keyPtr, keySize, false);
+      assertTrue(buffer != null);
+      int kSize = Utils.getKeySize(buffer, 0);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      assertEquals(keySize, kSize);
+      int off = kSizeSize;
+      
+      int vSize = Utils.getValueSize(buffer, 0);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      off += vSizeSize;
+      assertEquals(valueSize, vSize);
+      assertTrue( Utils.compareTo(buffer, off, kSize, keyPtr, keySize) == 0);
+      off += kSize;
+      assertTrue( Utils.compareTo(buffer, off, vSize, valuePtr, valueSize) == 0);
+
     }
   }
   
@@ -277,20 +384,41 @@ public class TestOffheapCacheGetAPI {
   
   @Test
   public void testGetAPIBytes() throws IOException {
+    cache = createCache();
     prepareData(numRecords);
     int loaded = loadBytes();
     assertEquals(this.numRecords, loaded);
-    //verifyKeyValueBytesCache(loaded);
     verifyBytesCache(loaded);
+    verifyKeyValueBytesCache(loaded);
+    verifyBytesCacheAllocated(loaded);
+    verifyKeyValueBytesCacheAllocated(loaded);
     verifyBytesCacheBuffer(loaded);
+    
   }
   
   @Test
   public void testGetAPIMemory() throws IOException{
+    cache = createCache();
     prepareData(numRecords);
     int loaded = loadMemory();
     assertEquals(this.numRecords, loaded);
     verifyMemoryCache(loaded);
-    verifyMemoryCacheBytes(loaded);
+    verifyKeyValueMemoryCache(loaded);
+    verifyMemoryCacheAllocated(loaded);
+    verifyKeyValueMemoryCacheAllocated(loaded);
+    verifyMemoryCacheBuffer(loaded);
+
+  }
+  
+  @Test
+  public void testGetAPIBytesTLS() throws IOException {
+    this.tlsEnabled = true;
+    testGetAPIBytes();  
+  } 
+  
+  @Test
+  public void testGetAPIMemoryTLS() throws IOException{
+    this.tlsEnabled = true;
+    testGetAPIMemory();
   }
 }
