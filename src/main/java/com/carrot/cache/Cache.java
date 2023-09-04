@@ -339,6 +339,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       } catch (InterruptedException e) {
       }
     }
+    Scavenger.safeShutdown(this.cacheName);
   }
   
   void finishScavenger(Scavenger s) {

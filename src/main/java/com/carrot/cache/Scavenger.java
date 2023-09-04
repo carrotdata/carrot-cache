@@ -23,6 +23,10 @@ import java.text.DateFormat;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -39,7 +43,7 @@ import com.carrot.cache.util.CarrotConfig;
 import com.carrot.cache.util.Persistent;
 import com.carrot.cache.util.Utils;
 
-public class Scavenger extends Thread {
+public class Scavenger implements Runnable {
 
   public static interface Listener {
     
@@ -262,6 +266,12 @@ public class Scavenger extends Thread {
   }
 
   /**
+   * Thread pool to run scavenger tasks
+   */
+  private static ConcurrentHashMap<String, ExecutorService> poolMap = 
+      new ConcurrentHashMap<String, ExecutorService>();
+  
+  /**
    * Map keeps statistics per cache instance (by cache name)
    */
   static ConcurrentHashMap<String, Stats> statsMap = new ConcurrentHashMap<String, Stats>();
@@ -292,6 +302,46 @@ public class Scavenger extends Thread {
     statsMap.put(cacheName,  stats);
   }
   
+  private static void initPoolForCacheName(final String cacheName) {
+    // This method is called under parent cache lock
+    if (poolMap.contains(cacheName)) {
+      return;
+    }
+    CarrotConfig config = CarrotConfig.getInstance();
+    int numThreads = config.getScavengerNumberOfThreads(cacheName);
+    ExecutorService service = Executors.newFixedThreadPool(numThreads, new ThreadFactory() {
+
+      @Override
+      public Thread newThread(Runnable r) {
+        String name = NAME + cacheName + "-" + rollingId.getAndIncrement();
+        Thread t = new Thread(r);
+        t.setName(name);
+        return t;
+      }
+      
+    });
+    poolMap.put(cacheName, service);
+  }
+  
+  private static void shutdownPools() {
+    for (String name: poolMap.keySet()) {
+      safeShutdown(name);
+    }
+  }
+  
+  public static void safeShutdown(String cacheName) {
+    ExecutorService es = poolMap.get(cacheName);
+    es.shutdownNow();
+    boolean terminated = false;
+    while (!terminated) {
+      try {
+        terminated = es.awaitTermination(10, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        //
+      }
+    }
+  }
+  
   public static void printStats() {
     for(Map.Entry<String,Stats> entry: statsMap.entrySet()) {
       String name = entry.getKey();
@@ -304,6 +354,7 @@ public class Scavenger extends Thread {
   }
   
   public final static String NAME = "c2 scavenger-";
+  
   private Stats stats;
   
   private final Cache cache;
@@ -334,7 +385,7 @@ public class Scavenger extends Thread {
   private long maxSegmentsBeforeStallDetected;
     
   public Scavenger(Cache cache) {
-    super(NAME + rollingId.getAndIncrement());
+    //super(NAME + rollingId.getAndIncrement());
     this.cache = cache;
     this.config = CarrotConfig.getInstance();
     String cacheName = this.cache.getName();
@@ -369,6 +420,7 @@ public class Scavenger extends Thread {
   
   public static void registerCache(String cacheName) {
     numInstancesMap.put(cacheName,  new AtomicInteger());
+    initPoolForCacheName(cacheName);
   }
   
   public static int getActiveThreadsCount(String cacheName) {
@@ -387,12 +439,18 @@ public class Scavenger extends Thread {
     
   }
   
+  public void start() {
+    ExecutorService service = poolMap.get(this.cache.getName());
+    service.submit(this);
+  }
+  
   /**
    * Used for testing
    */
   public static void clear() {
     statsMap.clear();
     numInstancesMap.clear();
+    shutdownPools();
   }
 
   @Override
@@ -406,6 +464,7 @@ public class Scavenger extends Thread {
       AtomicInteger numInstances = numInstancesMap.get(cache.getName());
       if (numInstances.incrementAndGet() > maxInstances) {
         // Number of instances exceeded the maximum value
+        numInstances.decrementAndGet();
         return;
       }
       LOG.debug(
