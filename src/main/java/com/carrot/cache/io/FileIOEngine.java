@@ -86,7 +86,6 @@ public class FileIOEngine extends IOEngine {
   private void initEngine() {
     try {
       this.fileDataReader = this.config.getFileDataReader(this.cacheName);
-      this.fileDataReader.init(this.cacheName);
       this.ioStoragePoolSize = this.config.getIOStoragePoolSize(this.cacheName);
       int keepAliveTime = 60; // hard-coded
       // This is actually unbounded queue (LinkedBlockingQueue w/o parameters)
@@ -492,6 +491,7 @@ public class FileIOEngine extends IOEngine {
   
   @Override
   public void shutdown() {
+    // TODO: Should we save on shutdown?
     waitForIoStoragePool();
   }
 }

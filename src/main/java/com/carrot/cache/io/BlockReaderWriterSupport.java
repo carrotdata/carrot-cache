@@ -100,6 +100,19 @@ public class BlockReaderWriterSupport {
    */
   public static long findInBlock(long ptr, byte[] key, int keyOffset, int keySize) {
     int blockDataSize = getBlockDataSize(ptr);
+    return findInBlock(ptr, blockDataSize, key, keyOffset, keySize);
+  }
+  
+  /**
+   * Find key in a memory block
+   * @param ptr block address
+   * @param blockDataSize block data size
+   * @param key key buffer
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @return address of a K-V pair or -1 (not found)
+   */
+  public static long findInBlock(long ptr, int blockDataSize, byte[] key, int keyOffset, int keySize) {
     long $ptr = ptr + META_SIZE;
     long found = IOEngine.NOT_FOUND;
 
@@ -140,6 +153,25 @@ public class BlockReaderWriterSupport {
    */
   public static long findInBlock(long ptr, long keyPtr, int keySize) {
     int blockDataSize = getBlockDataSize(ptr);
+    return findInBlock(ptr, blockDataSize, keyPtr, keySize);
+  }
+  
+  /**
+   * Find key in a memory block
+   * 
+   * There is a chance that the same key is present more than once
+   * in the block. In this case the last one will be considered as 
+   * a right one. It is not a transactional DB and consistency requirements
+   * is relaxed.
+   * 
+   * 
+   * @param ptr block address
+   * @param blockDataSize block data size
+   * @param keyPtr key address
+   * @param keySize key size
+   * @return address of a K-V pair or -1 (not found)
+   */
+  public static long findInBlock(long ptr, int blockDataSize, long keyPtr, int keySize) {
     long $ptr = ptr + META_SIZE;
     long found = IOEngine.NOT_FOUND;
     while ($ptr < ptr + blockDataSize) {
@@ -174,6 +206,20 @@ public class BlockReaderWriterSupport {
    */
   public static long findInBlock(byte[] block, int blockOff, byte[] key, int keyOffset, int keySize) {
     int blockDataSize = getBlockDataSize(block, blockOff);
+    return findInBlock(block, blockOff, blockDataSize, key, keyOffset, keySize);
+  }
+  
+  /**
+   * Find key in a block buffer
+   * @param block data block
+   * @param blockOff block offset
+   * @param blockDataSize block data size
+   * @param key key buffer
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @return offset of a K-V pair or -1 (not found)
+   */
+  public static long findInBlock(byte[] block, int blockOff, int blockDataSize, byte[] key, int keyOffset, int keySize) {
     int off = META_SIZE + blockOff;
     long found = IOEngine.NOT_FOUND;
 
@@ -207,6 +253,19 @@ public class BlockReaderWriterSupport {
    */
   public static long findInBlock(byte[] block, int blockOff, long keyPtr, int keySize) {
     int blockDataSize = getBlockDataSize(block, blockOff);
+    return findInBlock(block, blockOff, blockDataSize, keyPtr, keySize);
+  }
+  
+  /**
+   * Find key in a block buffer
+   * @param block data block
+   * @param blockOff offset in the block
+   * @param blockDataSize block data size
+   * @param keyPtr key address
+   * @param keySize key size
+   * @return offset of a K-V pair or -1 (not found)
+   */
+  public static long findInBlock(byte[] block, int blockOff, int blockDataSize, long keyPtr, int keySize) {
     int off = META_SIZE + blockOff;
     long found = IOEngine.NOT_FOUND;
 

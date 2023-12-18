@@ -40,9 +40,6 @@ public final class BlockFileSegmentScanner implements SegmentScanner {
   /** Current entry */
   int currentEntry = 0;
   
-  /** I/O engine */
-  FileIOEngine engine;
-  
   /** Prefetch buffer */
   PrefetchBuffer pBuffer;
   
@@ -57,10 +54,9 @@ public final class BlockFileSegmentScanner implements SegmentScanner {
   
   public BlockFileSegmentScanner(Segment s, FileIOEngine engine, int blockSize) throws IOException {
     this.segment = s;
-    this.engine = engine;
     this.file = engine.getOrCreateFileFor(s.getId());
     this.numEntries = s.getInfo().getTotalItems();
-    int bufSize = this.engine.getFilePrefetchBufferSize();
+    int bufSize = engine.getFilePrefetchBufferSize();
     this.pBuffer = new PrefetchBuffer(file, bufSize);
     this.blockSize = blockSize;
     initNextBlock();
@@ -137,6 +133,7 @@ public final class BlockFileSegmentScanner implements SegmentScanner {
 
   @Override
   public void close() throws IOException {
+    //FIXME
     file.close();
   }
 

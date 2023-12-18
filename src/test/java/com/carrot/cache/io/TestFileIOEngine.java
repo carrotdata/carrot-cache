@@ -54,7 +54,7 @@ public class TestFileIOEngine extends IOTestBase{
   public void testLoadReadBytesSingleSegment() throws IOException {
     /*DEBUG*/ System.out.println("testLoadReadBytesSingleSegment");
     createEngine(4 * 1024 * 1024, 4 * 1024 * 1024);
-    prepareData(10000);
+    prepareRandomData(10000);
     int loaded = loadBytesEngine(engine);
     /*DEBUG*/ System.out.println("loaded=" + loaded);
     verifyBytesEngine(engine, loaded);
@@ -65,7 +65,7 @@ public class TestFileIOEngine extends IOTestBase{
   public void testLoadReadMemorySingleSegment() throws IOException {
     /*DEBUG*/ System.out.println("testLoadReadMemorySingleSegment");
     createEngine(4 * 1024 * 1024, 4 * 1024 * 1024);
-    prepareData(10000);
+    prepareRandomData(10000);
     int loaded = loadMemoryEngine(engine);
     /*DEBUG*/ System.out.println("loaded=" + loaded);
     verifyMemoryEngine(engine, loaded);
@@ -75,7 +75,7 @@ public class TestFileIOEngine extends IOTestBase{
   public void testLoadReadBytesMultipleSegments() throws IOException {
     /*DEBUG*/ System.out.println("testLoadReadBytesMultipleSegments");
     createEngine(4 * 1024 * 1024, 20 * 4 * 1024 * 1024);
-    prepareData(100000);
+    prepareRandomData(100000);
     int loaded = loadBytesEngine(engine);
     /*DEBUG*/ System.out.println("loaded=" + loaded);
     verifyBytesEngine(engine, loaded);
@@ -86,7 +86,7 @@ public class TestFileIOEngine extends IOTestBase{
   public void testLoadReadMemoryMultipleSegments() throws IOException {
     /*DEBUG*/ System.out.println("testLoadReadMemoryMultipleSegments");
     createEngine(4 * 1024 * 1024, 20 * 4 * 1024 * 1024);
-    prepareData(100000);
+    prepareRandomData(100000);
     int loaded = loadMemoryEngine(engine);
     /*DEBUG*/ System.out.println("loaded=" + loaded);
     verifyMemoryEngine(engine, loaded);
@@ -96,7 +96,7 @@ public class TestFileIOEngine extends IOTestBase{
   public void testLoadReadBytesMultipleSegmentsWithDeletes() throws IOException {
     /*DEBUG*/ System.out.println("testLoadReadBytesMultipleSegmentsWithDeletes");
     createEngine(4 * 1024 * 1024, 20 * 4 * 1024 * 1024);
-    prepareData(100000);
+    prepareRandomData(100000);
     int loaded = loadBytesEngine(engine);
     /*DEBUG*/ System.out.println("loaded=" + loaded);
     deleteBytesEngine(engine, loaded / 2);
@@ -107,7 +107,7 @@ public class TestFileIOEngine extends IOTestBase{
   public void testLoadReadMemoryMultipleSegmentsWithDeletes() throws IOException {
     /*DEBUG*/ System.out.println("testLoadReadMemoryMultipleSegmentsWithDeletes");
     createEngine(4 * 1024 * 1024, 20 * 4 * 1024 * 1024);
-    prepareData(100000);
+    prepareRandomData(100000);
     int loaded = loadMemoryEngine(engine);
     /*DEBUG*/ System.out.println("loaded=" + loaded);
     deleteMemoryEngine(engine, loaded / 2);
@@ -124,7 +124,7 @@ public class TestFileIOEngine extends IOTestBase{
     String dataDir = dir.getAbsolutePath();
     
     createEngine(4 * 1024 * 1024, 4 * 4 * 1024 * 1024, dataDir);
-    prepareData(100000);
+    prepareRandomData(100000);
     int loaded = loadMemoryEngine(engine);
     /*DEBUG*/ System.out.println("loaded=" + loaded);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();

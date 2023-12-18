@@ -65,26 +65,32 @@ public class CarrotConfig {
   public final static String CACHE_VICTIM_NAME_KEY = "c2.victim.name";
   
   
-  /**File name for cache snapshot data */
+  /** File name for cache snapshot data */
   public final static String CACHE_SNAPSHOT_NAME = "cache.data";
   
-  /**File name for admission controller snapshot data */
+  /** File name for admission controller snapshot data */
   public final static String ADMISSION_CONTROLLER_SNAPSHOT_NAME = "ac.data";
   
-  /**File name for throughput controller snapshot data */
+  /** File name for throughput controller snapshot data */
   public final static String THROUGHPUT_CONTROLLER_SNAPSHOT_NAME = "tc.data";
   
-  /**File name for recycling selector snapshot data */
+  /** File name for recycling selector snapshot data */
   public final static String RECYCLING_SELECTOR_SNAPSHOT_NAME = "rc.data";
   
-  /**File name for admission queue snapshot data */
+  /** File name for admission queue snapshot data */
   public final static String ADMISSION_QUEUE_SNAPSHOT_NAME = "aq.data";
 
-  /**File name for scavenger statistics snapshot data */
+  /** File name for scavenger statistics snapshot data */
   public final static String SCAVENGER_STATS_SNAPSHOT_NAME = "scav.data";
   
-  /**File name for cache engine snapshot data */
+  /** File name for cache engine snapshot data */
   public final static String CACHE_ENGINE_SNAPSHOT_NAME = "engine.data";
+  
+  /** Dictionary directory name (there can be multiple dictionary versions)*/
+  public final static String DICTIONARY_DIR_NAME = "dict";
+  
+  /** Compression dictionary file name extension */
+  public final static String DICTIONARY_FILE_EXT = "dict";
   
   /**Default cache configuration file name */
   public final static String DEFAULT_CACHE_CONFIG_FILE_NAME = "cache.conf";
@@ -303,7 +309,23 @@ public class CarrotConfig {
   /* TLS buffer maximum key size */
   public final static String CACHE_TLS_MAXIMUM_BUFFER_SIZE_KEY = "c2.cache.tls-maximum-buffer-size";
 
-  /**Defaults section */
+  /* Compression configuration */
+  
+  public final static String CACHE_COMPRESSION_ENABLED_KEY = "c2.cache.compression-enabled";
+  
+  public final static String CACHE_COMPRESSION_BLOCK_SIZE_KEY = "c2.cache.compression-block-size";
+  
+  public final static String CACHE_COMPRESSION_DICTIONARY_SIZE_KEY = "c2.cache.compression-dictionary-size";
+  
+  public final static String CACHE_COMPRESSION_LEVEL_KEY = "c2.cache.compression-level";
+  
+  public final static String CACHE_COMPRESSION_CODEC_KEY = "c2.cache.compression-codec";
+  
+  public final static String CACHE_COMPRESSION_DICTIONARY_ENABLED_KEY = "c2.cache.compression-dictionary-enabled";
+
+  public final static String CACHE_COMPRESSION_KEYS_ENABLED_KEY = "c2.cache.compression-keys-enabled";
+  
+  /** Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
 
@@ -507,6 +529,27 @@ public class CarrotConfig {
   
   /** Default initial size for TLS buffer */
   public final static int DEFAULT_CACHE_TLS_MAXIMUM_BUFFER_SIZE = Integer.MAX_VALUE; // 2GB 
+  
+  /** Is cache compression enabled */
+  public final static boolean DEFAULT_CACHE_COMPRESSION_ENABLED = false;
+  
+  /** Is cache compression enabled */
+  public final static boolean DEFAULT_CACHE_COMPRESSION_DICTIONARY_ENABLED = true;
+  
+  /** Is key cache compression enabled */
+  public final static boolean DEFAULT_CACHE_COMPRESSION_KEYS_ENABLED = true;
+  
+  /** Compression block size */
+  public final static int DEFAULT_CACHE_COMPRESSION_BLOCK_SIZE = 8 * 1024;
+  
+  /** Compression dictionary size */
+  public final static int DEFAULT_CACHE_COMPRESSION_DICTIONARY_SIZE = 64 * 1024;
+  
+  /** Compression level */
+  public final static int DEFAULT_CACHE_COMPRESSION_LEVEL = 3;
+  
+  /** Compression codec type */
+  public final static String DEFAULT_CACHE_COMPRESSION_CODEC = "ZSTD";
   
   // Statics
   static CarrotConfig instance;
@@ -1049,6 +1092,15 @@ public class CarrotConfig {
    */
   public String getGlobalCacheRootDir() {
       return props.getProperty(CACHE_ROOT_DIR_PATH_KEY, DEFAULT_CACHE_ROOT_DIR_PATH);
+  }
+  
+  /**
+   * Get dictionary directory for cache
+   * @param cacheName cache name
+   * @return dictionary directory
+   */
+  public String getCacheDictionaryDir(String cacheName) {
+    return getCacheRootDir(cacheName) + File.separator + DICTIONARY_DIR_NAME;
   }
   
   /**
@@ -2248,5 +2300,166 @@ public class CarrotConfig {
   public void setCacheTLSMaxBufferSize(String cacheName,int size) {
     props.setProperty(cacheName + "." + CACHE_TLS_MAXIMUM_BUFFER_SIZE_KEY, Integer.toString(size));
   }
+  
+  /**
+   * Get cache compression enabled
+   * @param cacheName cache name
+   * @return true if supported, false - otherwise
+   */
+  public boolean isCacheCompressionEnabled (String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_ENABLED_KEY);
+    if (value == null) {
+      return getBooleanProperty(CACHE_COMPRESSION_ENABLED_KEY, 
+        DEFAULT_CACHE_COMPRESSION_ENABLED);
+    } else {
+      return Boolean.parseBoolean(value);
+    }
+  }
+  
+  /**
+   * Set cache compression enabled
+   * @param cacheName cache name
+   * @param v true or false
+   */
+  public void setCacheCompressionEnabled (String cacheName, boolean v) {
+    props.setProperty(cacheName + "." + CACHE_COMPRESSION_ENABLED_KEY, Boolean.toString(v));
+  }
+
+  /**
+   * Get cache compression block size
+   * @param cacheName cache name
+   * @return block size 
+   */
+  public int getCacheCompressionBlockSize(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_BLOCK_SIZE_KEY);
+    if (value != null) {
+      return Integer.parseInt(value);
+    }
+    return (int) getLongProperty(CACHE_COMPRESSION_BLOCK_SIZE_KEY, DEFAULT_CACHE_COMPRESSION_BLOCK_SIZE);
+  }
+  
+  /**
+   * Sets cache compression block size
+   * @param cacheName cache name
+   * @param size block size
+   */
+  public void setCacheCompressionBlockSize(String cacheName,int size) {
+    props.setProperty(cacheName + "." + CACHE_COMPRESSION_BLOCK_SIZE_KEY, Integer.toString(size));
+  }
+  
+  /**
+   * Get cache compression dictionary size
+   * @param cacheName cache name
+   * @return dictionary size 
+   */
+  public int getCacheCompressionDictionarySize(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_SIZE_KEY);
+    if (value != null) {
+      return Integer.parseInt(value);
+    }
+    return (int) getLongProperty(CACHE_COMPRESSION_DICTIONARY_SIZE_KEY, DEFAULT_CACHE_COMPRESSION_DICTIONARY_SIZE);
+  }
+  
+  /**
+   * Sets cache compression dictionary size
+   * @param cacheName cache name
+   * @param size dictionary size
+   */
+  public void setCacheCompressionDictionarySize(String cacheName,int size) {
+    props.setProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_SIZE_KEY, Integer.toString(size));
+  }
+  
+  /**
+   * Get cache compression level
+   * @param cacheName cache name
+   * @return compression level 
+   */
+  public int getCacheCompressionLevel(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_LEVEL_KEY);
+    if (value != null) {
+      return Integer.parseInt(value);
+    }
+    return (int) getLongProperty(CACHE_COMPRESSION_DICTIONARY_SIZE_KEY, DEFAULT_CACHE_COMPRESSION_DICTIONARY_SIZE);
+  }
+  
+  /**
+   * Sets cache compression level
+   * @param cacheName cache name
+   * @param compression level
+   */
+  public void setCacheCompressionLevel(String cacheName,int level) {
+    props.setProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_SIZE_KEY, Integer.toString(level));
+  }
+  
+  /**
+   * Get compression codec type
+   * @param cacheName cache name
+   * @return codec type name
+   */
+  public String getCacheCompressionCodecType(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_CODEC_KEY);
+    if (value != null) {
+      return value;
+    }
+    return getProperty(CACHE_COMPRESSION_CODEC_KEY, DEFAULT_CACHE_COMPRESSION_CODEC);
+  }
+  
+  /**
+   * Sets cache compression codec type
+   * @param cacheName cache name
+   * @param type codec type
+   */
+  public void setCacheCompressionCodecType(String cacheName, String type) {
+    props.setProperty(cacheName + "." + CACHE_COMPRESSION_CODEC_KEY, type);
+  }
+  
+  /**
+   * Get cache compression dictionary enabled
+   * @param cacheName cache name
+   * @return true if supported, false - otherwise
+   */
+  public boolean isCacheCompressionDictionaryEnabled (String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_ENABLED_KEY);
+    if (value == null) {
+      return getBooleanProperty(CACHE_COMPRESSION_DICTIONARY_ENABLED_KEY, 
+        DEFAULT_CACHE_COMPRESSION_DICTIONARY_ENABLED);
+    } else {
+      return Boolean.parseBoolean(value);
+    }
+  }
+  
+  /**
+   * Set cache compression dictionary enabled
+   * @param cacheName cache name
+   * @param v true or false
+   */
+  public void setCacheCompressionDictionaryEnabled (String cacheName, boolean v) {
+    props.setProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_ENABLED_KEY, Boolean.toString(v));
+  }
+
+  /**
+   * Get cache compression keys enabled
+   * @param cacheName cache name
+   * @return true if supported, false - otherwise
+   */
+  public boolean isCacheCompressionKeysEnabled (String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_KEYS_ENABLED_KEY);
+    if (value == null) {
+      return getBooleanProperty(CACHE_COMPRESSION_KEYS_ENABLED_KEY, 
+        DEFAULT_CACHE_COMPRESSION_KEYS_ENABLED);
+    } else {
+      return Boolean.parseBoolean(value);
+    }
+  }
+  
+  /**
+   * Set cache compression keys enabled
+   * @param cacheName cache name
+   * @param v true or false
+   */
+  public void setCacheCompressionKeysEnabled (String cacheName, boolean v) {
+    props.setProperty(cacheName + "." + CACHE_COMPRESSION_KEYS_ENABLED_KEY, Boolean.toString(v));
+  }
+  
 }
 

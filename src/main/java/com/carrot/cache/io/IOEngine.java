@@ -35,6 +35,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.carrot.cache.Cache;
 import com.carrot.cache.Scavenger;
+import com.carrot.cache.compression.CodecFactory;
 import com.carrot.cache.controllers.RecyclingSelector;
 import com.carrot.cache.index.IndexFormat;
 import com.carrot.cache.index.MemoryIndex;
@@ -202,9 +203,7 @@ public abstract class IOEngine implements Persistent {
 
     try {
       this.dataWriter = this.config.getDataWriter(this.cacheName);
-      this.dataWriter.init(this.cacheName);
       this.memoryDataReader = this.config.getMemoryDataReader(this.cacheName);
-      this.memoryDataReader.init(this.cacheName);
       this.recyclingSelector = this.config.getRecyclingSelector(cacheName);
 
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
@@ -235,9 +234,7 @@ public abstract class IOEngine implements Persistent {
 
     try {
       this.dataWriter = this.config.getDataWriter(this.cacheName);
-      this.dataWriter.init(this.cacheName);
       this.memoryDataReader = this.config.getMemoryDataReader(this.cacheName);
-      this.memoryDataReader.init(this.cacheName);
       this.recyclingSelector = this.config.getRecyclingSelector(cacheName);
 
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
@@ -679,6 +676,7 @@ public abstract class IOEngine implements Persistent {
         
         try {
           s.readLock();
+          // Check if scavenger removed this object or moved it to another segment
           int id = this.index.getSegmentId(key, keyOffset, keySize);
           if (id < 0) {
             return NOT_FOUND;
@@ -771,6 +769,7 @@ public abstract class IOEngine implements Persistent {
         
         try {
           s.readLock();
+          // Check if scavenger removed this object or moved it to another segment
           int id = this.index.getSegmentId(key, keyOffset, keySize);
           if (id < 0) {
             return NOT_FOUND;
@@ -884,6 +883,7 @@ public abstract class IOEngine implements Persistent {
         
         try {
           s.readLock();
+          // Check if scavenger removed this object or moved it to another segment
           int id = this.index.getSegmentId(keyPtr, keySize);
           if (id < 0) {
             return NOT_FOUND;
@@ -976,6 +976,7 @@ public abstract class IOEngine implements Persistent {
         
         try {
           s.readLock();
+          // Check if scavenger removed this object or moved it to another segment
           int id = this.index.getSegmentId(keyPtr, keySize);
           if (id < 0) {
             return NOT_FOUND;
@@ -1067,6 +1068,7 @@ public abstract class IOEngine implements Persistent {
 
         try {
           s.readLock();
+          // Check if scavenger removed this object or moved it to another segment
           int id = this.index.getSegmentId(key, keyOffset, keySize);
           if (id < 0) {
             return NOT_FOUND;
@@ -1157,6 +1159,7 @@ public abstract class IOEngine implements Persistent {
 
         try {
           s.readLock();
+          // Check if scavenger removed this object or moved it to another segment
           int id = this.index.getSegmentId(key, keyOffset, keySize);
           if (id < 0) {
             return NOT_FOUND;
@@ -2337,6 +2340,8 @@ public abstract class IOEngine implements Persistent {
     dos.writeLong(this.totalUpdates.get());
     dos.writeLong(this.totalDeletes.get());
     dos.writeLong(this.totalIOReadDuration.get());
+    // Codec 
+    CodecFactory.getInstance().saveCodecForCache(cacheName, dos);
     dos.close();
   }
 
@@ -2368,6 +2373,8 @@ public abstract class IOEngine implements Persistent {
     this.totalUpdates.set(dis.readLong());
     this.totalDeletes.set(dis.readLong());
     this.totalIOReadDuration.set(dis.readLong());
+    // Codec
+    CodecFactory.getInstance().initCompressionCodecForCache(cacheName, dis);
     dis.close();
   }
 

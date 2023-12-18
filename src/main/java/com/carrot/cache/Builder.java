@@ -16,6 +16,7 @@ package com.carrot.cache;
 
 import java.io.IOException;
 
+import com.carrot.cache.compression.CompressionCodec;
 import com.carrot.cache.io.FileIOEngine;
 import com.carrot.cache.io.IOEngine;
 import com.carrot.cache.io.OffheapIOEngine;
@@ -712,6 +713,76 @@ public class Builder {
     return this;
   }
   
+  /**
+   * With cache compression enabled 
+   * @param b compression enabled/disabled
+   * @return builder instance
+   */
+  public Builder withCacheCompressionEnabled(boolean b) {
+    conf.setCacheCompressionEnabled(cacheName, b);
+    return this;
+  }
+
+  /**
+   * With cache compression block size
+   * @param size block size
+   * @return builder instance
+   */
+  public Builder withCacheCompressionBlockSize(int size) {
+    conf.setCacheCompressionBlockSize(cacheName, size);
+    return this;
+  }
+  
+  /**
+   * With cache compression dictionary size
+   * @param size dictionary size
+   * @return builder instance
+   */
+  public Builder withCacheCompressionDictionarySize(int size) {
+    conf.setCacheCompressionDictionarySize(cacheName, size);
+    return this;
+  }
+  
+  /**
+   * With cache compression level
+   * @param level compression level
+   * @return builder instance
+   */
+  public Builder withCacheCompressionLevel(int level) {
+    conf.setCacheCompressionLevel(cacheName, level);
+    return this;
+  }
+  
+  /**
+   * With cache compression codec type
+   * @param type codec type
+   * @return builder instance
+   */
+  public Builder withCacheCompressionCodecType(CompressionCodec.Type type) {
+    conf.setCacheCompressionCodecType(cacheName, type.name());
+    return this;
+  }
+  
+  /**
+   * With cache compression dictionary enabled 
+   * @param b compression dictionary enabled/disabled
+   * @return builder instance
+   */
+  public Builder withCacheCompressionDictionaryEnabled(boolean b) {
+    conf.setCacheCompressionDictionaryEnabled(cacheName, b);
+    return this;
+  }
+  
+  /**
+   * With cache compression keys enabled 
+   * @param b compression keys enabled/disabled
+   * @return builder instance
+   */
+  public Builder withCacheCompressionKeysEnabled(boolean b) {
+    conf.setCacheCompressionKeysEnabled(cacheName, b);
+    return this;
+  }
+
   /**
    * Build cache
    * @return

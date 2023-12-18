@@ -18,9 +18,15 @@ import static com.carrot.cache.io.BlockReaderWriterSupport.META_SIZE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 import org.junit.After;
@@ -34,6 +40,8 @@ import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 
 public abstract class IOTestBase {
+  
+  protected static String cacheName = "default";
   
   int blockSize = 4096;
   int numRecords = 10;
@@ -73,7 +81,7 @@ public abstract class IOTestBase {
     }
   }
   
-  protected void prepareData(int numRecords) {
+  protected void prepareRandomData(int numRecords) {
     this.numRecords = numRecords;
     keys = new byte[numRecords][];
     values = new byte[numRecords][];
@@ -95,6 +103,38 @@ public abstract class IOTestBase {
       mValues[i] = TestUtils.randomMemory(valueSize, r);
       expires[i] = getExpire(i); // To make sure that we have distinct expiration values
     }  
+  }
+  
+  private List<String> loadGithubData() throws URISyntaxException, IOException{
+    
+    File dir = new File("src/test/resources/github");
+    File[] list = dir.listFiles();
+    ArrayList<String> dataList = new ArrayList<String>();
+    for (File ff: list) {
+      String s = Files.readString(Paths.get(ff.toURI()));
+      dataList.add(s);
+    }
+    return dataList;
+  }
+  
+  protected void prepareGithubData(int numRecords) throws URISyntaxException, IOException {
+    this.numRecords = numRecords;
+    keys = new byte[numRecords][];
+    values = new byte[numRecords][];
+    mKeys = new long[numRecords];
+    mValues = new long[numRecords];
+    expires = new long[numRecords];
+    String key = "testkey";
+    List<String> dataList = loadGithubData();
+    String[] sdata = new String[dataList.size()];
+    dataList.toArray(sdata);
+    for (int i = 0; i < numRecords; i++) {
+      keys[i] = (key + i).getBytes();
+      values[i] = sdata[ i % sdata.length].getBytes();
+      mKeys[i] = TestUtils.copyToMemory(keys[i]);
+      mValues[i] = TestUtils.copyToMemory(values[i]);
+      expires[i] = getExpire(i); // To make sure that we have distinct expiration values
+    }
   }
   
   protected long getExpire(int n) {

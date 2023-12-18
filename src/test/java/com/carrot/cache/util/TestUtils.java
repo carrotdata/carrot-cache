@@ -108,6 +108,11 @@ public class TestUtils {
     return mem;
   }
   
+  public static long copyToMemory(byte[] arr) {
+    long mem = UnsafeAccess.malloc(arr.length);
+    UnsafeAccess.copy(arr,  0,  mem, arr.length);
+    return mem;
+  }
   
   public static DataOutputStream getOutputStreamForTest() {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();

@@ -161,7 +161,7 @@ public abstract class TestCacheBase extends IOTestBase {
     // Create cache
     this.cache = createCache();
     this.expireTime = 1000; 
-    prepareData(150000);
+    prepareRandomData(150000);
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);
     // Wait expireTime
@@ -196,7 +196,7 @@ public abstract class TestCacheBase extends IOTestBase {
     // Create cache
     this.cache = createCache();
     this.expireTime = 1000; 
-    prepareData(150000);
+    prepareRandomData(150000);
     int loaded = loadMemoryCache(cache);
     System.out.println("loaded=" + loaded);
     // Wait expireTime
@@ -232,7 +232,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareData(150000);
+    prepareRandomData(150000);
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);
@@ -265,7 +265,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareData(150000);
+    prepareRandomData(150000);
     // Fill cache completely (no eviction is enabled)
     int loaded = loadMemoryCache(cache);
     System.out.println("loaded=" + loaded);
@@ -299,7 +299,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareData(150000);
+    prepareRandomData(150000);
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);
@@ -334,7 +334,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareData(150000);
+    prepareRandomData(150000);
     // Fill cache completely (no eviction is enabled)
     int loaded = loadMemoryCache(cache);
     System.out.println("loaded=" + loaded);
@@ -366,7 +366,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareData(150000);
+    prepareRandomData(150000);
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);
@@ -408,7 +408,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareData(1);
+    prepareRandomData(1);
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);
@@ -467,7 +467,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache("cache1");
     
     this.expireTime = 1000000; 
-    prepareData(150000);
+    prepareRandomData(150000);
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);

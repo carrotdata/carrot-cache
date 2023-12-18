@@ -102,8 +102,11 @@ public class Segment implements Persistent {
     /* Segment data size */
     private AtomicLong dataSize = new AtomicLong(0);
     
-    /* Segment block data size - to support block - based writers*/
+    /* Segment block data size - to support block - based writers */
     private AtomicLong blockDataSize = new AtomicLong(0);
+    
+    /* Block offset for block-based compression*/
+    private AtomicLong blockOffset = new AtomicLong(0);
     
     /* Is this segment off-heap. Every segment starts as offheap, but FileIOEngine it will be converted to a file*/
     private volatile boolean offheap;
@@ -238,6 +241,22 @@ public class Segment implements Persistent {
      */
     public void setSegmentBlockDataSize(long size) {
       this.dataSize.set(size);
+    }
+    
+    /**
+     * Get (current) block offset (for block-based compression)
+     * @return offset
+     */
+    public long getBlockOffset() {
+      return this.blockOffset.get();
+    }
+    
+    /**
+     * Sets current block offset
+     * @param offset block offset
+     */
+    public void setBlockOffset(long offset) {
+      this.blockOffset.set(offset);
     }
     
     /**
@@ -404,6 +423,8 @@ public class Segment implements Persistent {
         dos.writeBoolean(isOffheap());
         // Block data size
         dos.writeLong(this.blockDataSize.get());
+        // Block offset
+        dos.writeLong(getBlockOffset());
         // Rolling Window Counter
         this.counter.save(dos);
         dos.flush();
@@ -424,6 +445,7 @@ public class Segment implements Persistent {
       this.totalEvictedItems.set(dis.readInt());
       this.offheap = dis.readBoolean();
       this.blockDataSize.set(dis.readLong());
+      this.blockOffset.set(dis.readLong());
       this.counter = new RollingWindowCounter();
       this.counter.load(dis);
     }
@@ -703,6 +725,14 @@ public class Segment implements Persistent {
     return this.info.getSegmentDataSize();
   }
   
+  /**
+   * Sets new segment data size (used if blokc compression is enabled)
+   * @param newSize new segment data size
+   */
+  public void setSegmentDataSize(long newSize) {
+    this.info.setSegmentDataSize(newSize);
+  }
+  
   public long getFullDataSize() {
     if (this.dataWriter.isBlockBased()) {
       int blockSize = this.dataWriter.getBlockSize();
@@ -710,6 +740,14 @@ public class Segment implements Persistent {
     } else {
       return getSegmentDataSize();
     }
+  }
+  
+  public long getCurrentBlockOffset() {
+    return this.info.getBlockOffset();
+  }
+  
+  public void setCurrentBlockOffset(long off) {
+    this.info.setBlockOffset(off);
   }
   
   /**

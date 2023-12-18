@@ -23,40 +23,40 @@ import java.nio.ByteBuffer;
 
 import com.carrot.cache.util.Utils;
 //FIXME: handling last sK-V in a file which is less than 6 bytes total
-public final class PrefetchBuffer {
+public class PrefetchBuffer {
   /*
    * File to prefetch - all operations on file must be 
    * synchronized
    */
-  private RandomAccessFile file;
+  protected RandomAccessFile file;
   /*
    * Current offset in a file
    */
-  private long fileOffset = Segment.META_SIZE;
+  protected long fileOffset = Segment.META_SIZE;
   /**
    * File length
    */
-  private long fileLength = 0;
+  protected long fileLength = 0;
   /*
    * Prefetch buffer data
    */
-  private byte[] buffer;
+  protected byte[] buffer;
   /*
    * Buffer size
    */
-  private int bufferSize = 0;
+  protected int bufferSize = 0;
   /**
    * Offset in a prefetch buffer
    */
-  private int bufferOffset = 0;
+  protected int bufferOffset = 0;
   /**
    * Buffer data size - the size of data currently in the prefetch buffer
    */
-  private int bufferDataSize = 0;
+  protected int bufferDataSize = 0;
   
-  private int keyLength = -1;
+  protected int keyLength = -1;
   
-  private int valueLength = -1;
+  protected int valueLength = -1;
   
   /**
    * Constructor
@@ -135,7 +135,7 @@ public final class PrefetchBuffer {
     return true;
   }
   
-  private void prefetch() throws IOException {
+  void prefetch() throws IOException {
     int toRead = (int) Math.min(this.bufferOffset, 
       this.fileLength - this.fileOffset - (bufferDataSize - bufferOffset)); 
     System.arraycopy(buffer, bufferOffset, buffer, 0, bufferDataSize - bufferOffset);

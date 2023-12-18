@@ -45,7 +45,7 @@ public class TestPrefetchBuffer extends IOTestBase {
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
     System.out.println("r.seed=" + seed);
-    prepareData(this.numRecords);
+    prepareRandomData(this.numRecords);
   }
   
   @After

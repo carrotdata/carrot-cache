@@ -49,7 +49,7 @@ public class TestSegmentBlockDataWriterReaderMemory extends IOTestBase{
     System.out.println("r.seed="+ seed);
     segment = Segment.newSegment(this.segmentSize, 1, 1);
     segment.init("default");
-    prepareData(this.numRecords);
+    prepareRandomData(this.numRecords);
     BlockDataWriter bdw = new BlockDataWriter();
     bdw.setBlockSize(blockSize);
     segment.setDataWriter(bdw);
