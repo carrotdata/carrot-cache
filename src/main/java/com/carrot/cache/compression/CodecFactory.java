@@ -42,6 +42,10 @@ public class CodecFactory {
     return factory;
   }
   
+  public void clear() {
+    codecs.clear();
+  }
+  
   /**
    * Get compression codec for cache
    * @param cacheName cache name
@@ -79,7 +83,9 @@ public class CodecFactory {
       throw new IllegalArgumentException(msg);
     }
     CompressionCodec codec = type.newCodec();
-    codec.load(is);
+    if(is != null) {
+      codec.load(is);
+    }
     codec.init(cacheName);
     codecs.put(cacheName, codec);
     return true;

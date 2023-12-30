@@ -124,6 +124,7 @@ import com.carrot.cache.util.Utils;
       // Advance segment offset
       this.offset += compSize + COMP_META_SIZE;
       this.blockOffset = 0;
+
     }
     
     public boolean hasNext() {
@@ -131,9 +132,7 @@ import com.carrot.cache.util.Utils;
     }
     
     public boolean next() {
-      if (this.blockOffset >= this.blockSize) {
-        nextBlock();
-      }
+  
       long ptr = this.bufPtr;
       
       int keySize = Utils.readUVInt(ptr + this.blockOffset);
@@ -144,6 +143,9 @@ import com.carrot.cache.util.Utils;
       this.blockOffset += valueSizeSize;
       this.blockOffset += keySize + valueSize;
       this.currentIndex++;
+      if (this.blockOffset >= this.blockSize) {
+        nextBlock();
+      }
       return true;
     }
     

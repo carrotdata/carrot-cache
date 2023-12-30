@@ -16,8 +16,8 @@ import com.github.luben.zstd.ZstdDictTrainer;
 
 public class TestZStdCompression {
 
-  private static int DICT_SIZE = 1 << 14; // 16KB
-  private static int COMP_LEVEL = 3;
+  private static int DICT_SIZE = 1 << 20; // 16KB
+  private static int COMP_LEVEL = 22;
   
   public static void main(String[] args) throws IOException {
     String dir = "/Users/vrodionov/Downloads/github";

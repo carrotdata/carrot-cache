@@ -784,6 +784,16 @@ public class Builder {
   }
 
   /**
+   * With cache compression dictionary training async
+   * @param b async mode on/off
+   * @return builder instance
+   */
+  public Builder withCacheCompressionDictionaryTrainingAsync(boolean b) {
+    conf.setCacheCompressionDictionaryTrainingAsync(cacheName, b);
+    return this;
+  }
+  
+  /**
    * Build cache
    * @return
    * @throws IOException

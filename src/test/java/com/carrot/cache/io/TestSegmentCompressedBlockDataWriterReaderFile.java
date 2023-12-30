@@ -19,59 +19,15 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.URISyntaxException;
-import java.util.Random;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import com.carrot.cache.Cache;
-import com.carrot.cache.index.MemoryIndex;
-import com.carrot.cache.index.MemoryIndex.Type;
-import com.carrot.cache.util.CarrotConfig;
 import com.carrot.cache.util.TestUtils;
-import com.carrot.cache.util.UnsafeAccess;
 
-public class TestSegmentCompressedBlockDataWriterReaderFile extends IOTestBase{
+public class TestSegmentCompressedBlockDataWriterReaderFile extends IOCompressionTestBase{
   
-  @Before
-  public void setUp() throws URISyntaxException, IOException {
-    this.index = new MemoryIndex(cacheName, Type.MQ);
-    this.segmentSize = 8 * 1024 * 1024;
-    this.numRecords = 10000;
-    
-    this.r = new Random();
-    long seed = System.currentTimeMillis();
-    r.setSeed(seed);
-    
-    System.out.println("r.seed="+ seed);
-    this.segment = Segment.newSegment(this.segmentSize, 1, 1);
-    this.segment.init(cacheName);
-  }
-  
-  private void initTest(boolean randomData, boolean dictionaryEnabled) throws URISyntaxException, IOException {
-    if (randomData) {
-      prepareRandomData(numRecords);
-    } else {
-      prepareGithubData(numRecords);
-    }
-    if (!dictionaryEnabled) {
-      CarrotConfig config = CarrotConfig.getInstance();
-      config.setCacheCompressionDictionaryEnabled(cacheName, dictionaryEnabled);
-    }
-    CompressedBlockDataWriter writer = new CompressedBlockDataWriter();
-    writer.init(cacheName);
-    this.segment.setDataWriter(writer);
-  }
-  
-  @After
-  public void tearDown() throws IOException {
-    super.tearDown();
-    this.segment.dispose();
-    UnsafeAccess.mallocStats.printStats();
-
-  }
   
   @Test
   public void testWritesBytesNoDictionaryNotRandom() throws IOException, URISyntaxException {
@@ -96,7 +52,6 @@ public class TestSegmentCompressedBlockDataWriterReaderFile extends IOTestBase{
     initTest(false, true);
     testWritesBytes();
   }
-  
   
   private void testWritesBytes() throws IOException {
     int count = loadBytes();
@@ -179,4 +134,26 @@ public class TestSegmentCompressedBlockDataWriterReaderFile extends IOTestBase{
     verifyScannerFile(scanner, count);
   }
   
+  @Test
+  public void testSegmentScannerWithDictionary() throws IOException, URISyntaxException {
+    initTest(false, true);
+    int count = loadBytes();
+    RandomAccessFile file = TestUtils.saveToFile(segment);
+    DataReader reader = new CompressedBlockFileDataReader();
+    reader.init(cacheName);
+    FileIOEngine engine  = Mockito.mock(FileIOEngine.class);
+    Mockito.when(engine.getSegmentById(Mockito.anyInt())).thenReturn(segment);
+    Cache cache = Mockito.mock(Cache.class);
+    Mockito.when(cache.getName()).thenReturn("default");
+    Mockito.when(engine.getOrCreateFileFor(Mockito.anyInt())).thenReturn(file);
+    Mockito.when(engine.getFileFor(Mockito.anyInt())).thenReturn(file);
+    Mockito.when(engine.getFilePrefetchBufferSize()).thenReturn(1024 * 1024);
+    // Must be sealed for scanner
+    segment.seal();
+    
+    verifyBytesWithReader(count, reader, engine);
+    
+    SegmentScanner scanner = reader.getSegmentScanner(engine, segment);
+    verifyScannerFile(scanner, count);
+  }
 }

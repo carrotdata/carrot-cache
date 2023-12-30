@@ -48,7 +48,6 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       buffers.set(buf);
     }
   }
-  
   private String cacheName;
   
   private CompressionCodec codec;
@@ -97,6 +96,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     int uncompressedSize = UnsafeAccess.toInt(ptr + offset + SIZE_OFFSET);
     int dictVersion = UnsafeAccess.toInt(ptr + offset + DICT_VER_OFFSET);
     int compressedSize = UnsafeAccess.toInt(ptr + offset + COMP_SIZE_OFFSET);
+    
     if (dictVersion >= 0) {
       // TODO: sanity check on values
       checkBuffer(uncompressedSize);
@@ -127,15 +127,15 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     } else { // Block is not compressed
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
-      int off = (int) BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, key, keyOffset, keySize);
-      if (off < 0) {
+      long addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, key, keyOffset, keySize);
+      if (addr < 0) {
         return IOEngine.NOT_FOUND;
       }
-      size = getItemSize(ptr + offset + off);
+      size = getItemSize(addr);
       if (size > avail) {
         return size;
       }
-      UnsafeAccess.copy(ptr + offset + off, buffer, bufOffset, size);
+      UnsafeAccess.copy(addr, buffer, bufOffset, size);
     }
     return size;
   }
@@ -174,7 +174,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
         return IOEngine.NOT_FOUND;
       }
       // Find key-value in the buffer
-      int offAdj = COMP_META_SIZE - META_SIZE;
+      int offAdj = - META_SIZE;
       int off = (int) BlockReaderWriterSupport.findInBlock(buf, offAdj, dsize, key, keyOffset, keySize);
       if (off < 0) {
         return IOEngine.NOT_FOUND;
@@ -194,11 +194,11 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     } else { // Block is not compressed
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
-      int off = (int) BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, key, keyOffset, keySize);
-      if (off < 0) {
+      long addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, key, keyOffset, keySize);
+      if (addr < 0) {
         return IOEngine.NOT_FOUND;
       }
-      size = getItemSize(ptr + offset + off);
+      size = getItemSize(addr);
       if (size > avail) {
         return size;
       }
@@ -208,7 +208,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       // return IOEngine.NOT_FOUND;
       // }
       int pos = buffer.position();
-      UnsafeAccess.copy(ptr + offset + off, buffer, size);
+      UnsafeAccess.copy(addr, buffer, size);
       buffer.position(pos);
     }
     return size;
@@ -267,15 +267,15 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     } else { // Block is not compressed
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
-      int off = (int) BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, keyPtr, keySize);
-      if (off < 0) {
+      long addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, keyPtr, keySize);
+      if (addr < 0) {
         return IOEngine.NOT_FOUND;
       }
-      size = getItemSize(ptr + offset + off);
+      size = getItemSize(addr);
       if (size > avail) {
         return size;
       }
-      UnsafeAccess.copy(ptr + offset + off, buffer, bufOffset, size);
+      UnsafeAccess.copy(addr, buffer, bufOffset, size);
     }
     return size;
   }
@@ -314,7 +314,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
         return IOEngine.NOT_FOUND;
       }
       // Find key-value in the buffer
-      int offAdj = COMP_META_SIZE - META_SIZE;
+      int offAdj = - META_SIZE;
       int off = (int) BlockReaderWriterSupport.findInBlock(buf, offAdj, dsize, keyPtr, keySize);
       if (off < 0) {
         return IOEngine.NOT_FOUND;
@@ -334,11 +334,11 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     } else { // Block is not compressed
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
-      int off = (int) BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, keyPtr, keySize);
-      if (off < 0) {
+      long addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, keyPtr, keySize);
+      if (addr < 0) {
         return IOEngine.NOT_FOUND;
       }
-      size = getItemSize(ptr + offset + off);
+      size = getItemSize(addr);
       if (size > avail) {
         return size;
       }
@@ -348,7 +348,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       // return IOEngine.NOT_FOUND;
       // }
       int pos = buffer.position();
-      UnsafeAccess.copy(ptr + offset + off, buffer, size);
+      UnsafeAccess.copy(addr, buffer, size);
       buffer.position(pos);
     }
     return size;
@@ -425,12 +425,12 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     } else {
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
-      int off = (int) BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, key, keyOffset, keySize);
-      if (off < 0) {
+      long addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, key, keyOffset, keySize);
+      if (addr < 0) {
         return IOEngine.NOT_FOUND;
       }
       
-      int valueSize = Utils.getValueSize(ptr + offset + off);
+      int valueSize = Utils.getValueSize(addr);
 
       if (valueSize < rangeStart) {
         // TODO: better handling
@@ -441,7 +441,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
         rangeSize = valueSize - rangeStart;
       }
 
-      int valueOffset = Utils.getValueOffset(ptr + offset + off);
+      int valueOffset = Utils.getValueOffset(addr);
 
       valueOffset += rangeStart;
 
@@ -449,7 +449,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       // // Rare situation - wrong segment - hash collision
       // return IOEngine.NOT_FOUND;
       // }
-      UnsafeAccess.copy(ptr + offset + off + valueOffset, buffer, bufOffset, rangeSize);
+      UnsafeAccess.copy(addr + valueOffset, buffer, bufOffset, rangeSize);
       // Now buffer contains both: key and value, we need to compare keys
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
 
@@ -518,11 +518,11 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     } else {
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
-      int off = (int) BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, key, keyOffset, keySize);
-      if (off < 0) {
+      long addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, key, keyOffset, keySize);
+      if (addr < 0) {
         return IOEngine.NOT_FOUND;
       }      
-      int valueSize = Utils.getValueSize(ptr + offset + off);
+      int valueSize = Utils.getValueSize(addr);
 
       if (valueSize < rangeStart) {
         // TODO: better handling
@@ -531,13 +531,13 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       if (valueSize < rangeStart + rangeSize) {
         rangeSize = valueSize - rangeStart;
       }
-      int valueOffset = Utils.getValueOffset(ptr + offset + off);
+      int valueOffset = Utils.getValueOffset(addr);
       valueOffset += rangeStart;
       // if (s.getSegmentDataSize() < offset + valueOffset + rangeSize) {
       // // Rare situation - wrong segment - hash collision
       // return IOEngine.NOT_FOUND;
       // }
-      UnsafeAccess.copy(ptr + offset + off + valueOffset, buffer,  rangeSize);
+      UnsafeAccess.copy(addr + valueOffset, buffer,  rangeSize);
     }
     buffer.position(pos);
     return rangeSize;
@@ -612,12 +612,12 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     } else {
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
-      int off = (int) BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, keyPtr, keySize);
-      if (off < 0) {
+      long addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, keyPtr, keySize);
+      if (addr < 0) {
         return IOEngine.NOT_FOUND;
       }
       
-      int valueSize = Utils.getValueSize(ptr + offset + off);
+      int valueSize = Utils.getValueSize(addr);
 
       if (valueSize < rangeStart) {
         // TODO: better handling
@@ -628,7 +628,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
         rangeSize = valueSize - rangeStart;
       }
 
-      int valueOffset = Utils.getValueOffset(ptr + offset + off);
+      int valueOffset = Utils.getValueOffset(addr);
 
       valueOffset += rangeStart;
 
@@ -636,7 +636,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       // // Rare situation - wrong segment - hash collision
       // return IOEngine.NOT_FOUND;
       // }
-      UnsafeAccess.copy(ptr + offset + off + valueOffset, buffer, bufOffset, rangeSize);
+      UnsafeAccess.copy(addr + valueOffset, buffer, bufOffset, rangeSize);
       // Now buffer contains both: key and value, we need to compare keys
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
 
@@ -704,11 +704,11 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     } else {
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
-      int off = (int) BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, keyPtr, keySize);
-      if (off < 0) {
+      long addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, keyPtr, keySize);
+      if (addr < 0) {
         return IOEngine.NOT_FOUND;
       }      
-      int valueSize = Utils.getValueSize(ptr + offset + off);
+      int valueSize = Utils.getValueSize(addr);
 
       if (valueSize < rangeStart) {
         // TODO: better handling
@@ -717,13 +717,13 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       if (valueSize < rangeStart + rangeSize) {
         rangeSize = valueSize - rangeStart;
       }
-      int valueOffset = Utils.getValueOffset(ptr + offset + off);
+      int valueOffset = Utils.getValueOffset(addr);
       valueOffset += rangeStart;
       // if (s.getSegmentDataSize() < offset + valueOffset + rangeSize) {
       // // Rare situation - wrong segment - hash collision
       // return IOEngine.NOT_FOUND;
       // }
-      UnsafeAccess.copy(ptr + offset + off + valueOffset, buffer,  rangeSize);
+      UnsafeAccess.copy(addr + valueOffset, buffer,  rangeSize);
     }
     buffer.position(pos);
     return rangeSize;

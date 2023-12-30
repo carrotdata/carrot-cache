@@ -325,6 +325,8 @@ public class CarrotConfig {
 
   public final static String CACHE_COMPRESSION_KEYS_ENABLED_KEY = "c2.cache.compression-keys-enabled";
   
+  public final static String CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC_KEY = "c2.cache.compression-dictionary-training-async";
+  
   /** Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
@@ -550,6 +552,9 @@ public class CarrotConfig {
   
   /** Compression codec type */
   public final static String DEFAULT_CACHE_COMPRESSION_CODEC = "ZSTD";
+  
+  /** Compression dictionary training async */
+  public final static boolean DEFAULT_CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC = true;
   
   // Statics
   static CarrotConfig instance;
@@ -2379,7 +2384,7 @@ public class CarrotConfig {
     if (value != null) {
       return Integer.parseInt(value);
     }
-    return (int) getLongProperty(CACHE_COMPRESSION_DICTIONARY_SIZE_KEY, DEFAULT_CACHE_COMPRESSION_DICTIONARY_SIZE);
+    return (int) getLongProperty(CACHE_COMPRESSION_LEVEL_KEY, DEFAULT_CACHE_COMPRESSION_LEVEL);
   }
   
   /**
@@ -2461,5 +2466,28 @@ public class CarrotConfig {
     props.setProperty(cacheName + "." + CACHE_COMPRESSION_KEYS_ENABLED_KEY, Boolean.toString(v));
   }
   
+  /**
+   * Get cache compression training async mode
+   * @param cacheName cache name
+   * @return true if supported, false - otherwise
+   */
+  public boolean isCacheCompressionDictionaryTrainingAsync (String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC_KEY);
+    if (value == null) {
+      return getBooleanProperty(CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC_KEY, 
+        DEFAULT_CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC);
+    } else {
+      return Boolean.parseBoolean(value);
+    }
+  }
+  
+  /**
+   * Set cache compression dictionary training async mode
+   * @param cacheName cache name
+   * @param v true or false
+   */
+  public void setCacheCompressionDictionaryTrainingAsync (String cacheName, boolean v) {
+    props.setProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC_KEY, Boolean.toString(v));
+  }
 }
 

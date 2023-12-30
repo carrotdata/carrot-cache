@@ -22,55 +22,16 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.util.Random;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-
-import com.carrot.cache.index.MemoryIndex;
-import com.carrot.cache.index.MemoryIndex.Type;
-import com.carrot.cache.util.CarrotConfig;
 
 /**
  * 
  * Test dictionary off/ on, compressible/non-compressible data
  *
  */
-public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOTestBase{
-  
-  @Before
-  public void setUp() throws URISyntaxException, IOException {
-    this.index = new MemoryIndex(cacheName, Type.MQ);
-    this.segmentSize = 8 * 1024 * 1024;
-    this.numRecords = 10000;
-    this.r = new Random();
-    this.segment = Segment.newSegment(this.segmentSize, 1, 1);
-    this.segment.init(cacheName);
-  }
-
-  private void initTest(boolean randomData, boolean dictionaryEnabled) throws URISyntaxException, IOException {
-    if (randomData) {
-      prepareRandomData(numRecords);
-    } else {
-      prepareGithubData(numRecords);
-    }
-    if (!dictionaryEnabled) {
-      CarrotConfig config = CarrotConfig.getInstance();
-      config.setCacheCompressionDictionaryEnabled(cacheName, dictionaryEnabled);
-    }
-    CompressedBlockDataWriter writer = new CompressedBlockDataWriter();
-    writer.init(cacheName);
-    this.segment.setDataWriter(writer);
-  }
-  
-  @After
-  public void tearDown() throws IOException {
-    super.tearDown();
-    this.segment.dispose();
-  }
-  
+public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompressionTestBase{
   @Test
   public void testWritesBytesNoDictionaryNotRandom() throws IOException, URISyntaxException {
     initTest(false, false);
@@ -89,6 +50,7 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOTestBase
     testWritesBytes();
   }
   
+  //@Ignore
   @Test
   public void testWritesBytesDictionaryNotRandom() throws IOException, URISyntaxException {
     initTest(false, true);
@@ -97,24 +59,32 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOTestBase
   
   private void testWritesBytes() throws IOException {
     int count = loadBytes();
+    /*DEBUG*/ System.out.println("count=" + count);
     long expire = expires[count - 1];
     assertEquals(expire, segment.getInfo().getMaxExpireAt());
+    long t1 = System.nanoTime();
     verifyBytes(count);
-    
+    long t2 = System.nanoTime();
+    /*DEBUG*/ System.out.println("verified bytes in " + (t2-t1)/1000+ " micros");
     DataReader reader = new CompressedBlockMemoryDataReader();
     reader.init(cacheName);
     IOEngine engine  = Mockito.mock(IOEngine.class);
     Mockito.when(engine.getSegmentById(Mockito.anyInt())).thenReturn(segment);
+    t1 = System.nanoTime();
     verifyBytesWithReader(count, reader, engine);
+    t2 = System.nanoTime();
+    /*DEBUG*/ System.out.println("verified bytes reader in " + (t2-t1)/1000+ " micros");
+
     verifyBytesWithReaderByteBuffer(count, reader, engine);
   }
   
+
   @Test
   public void testWritesMemoryNoDictionaryNotRandom() throws IOException, URISyntaxException {
     initTest(false, false);
     testWritesMemory();
   }
- 
+
   @Test
   public void testWritesMemoryNoDictionaryRandom() throws IOException, URISyntaxException {
     initTest(true, false);
@@ -137,13 +107,19 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOTestBase
     int count = loadMemory(); 
     long expire = expires[count - 1];
     assertEquals(expire, segment.getInfo().getMaxExpireAt());
+    long t1 = System.nanoTime();
     verifyMemory(count);
-    
+    long t2 = System.nanoTime();
+    /*DEBUG*/ System.out.println("verified memory in " + (t2 -t1)/1000 + " micros");
     DataReader reader = new CompressedBlockMemoryDataReader();
     reader.init(cacheName);
     IOEngine engine  = Mockito.mock(IOEngine.class);
     Mockito.when(engine.getSegmentById(Mockito.anyInt())).thenReturn(segment);
+    t1 = System.nanoTime();
     verifyMemoryWithReader(count, reader, engine);
+    t2 = System.nanoTime();
+    /*DEBUG*/ System.out.println("verified memory reader in " + (t2 -t1)/1000 + " micros");
+
     verifyMemoryWithReaderByteBuffer(count, reader, engine);
 
   }
@@ -159,7 +135,10 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOTestBase
     // Seal the segment
     segment.seal();
     SegmentScanner scanner = reader.getSegmentScanner(engine, segment);
+    long t1 = System.nanoTime();
     verifyScanner(scanner, count);
+    long t2 = System.nanoTime();
+    /*DEBUG*/ System.out.println("verified scanner in " + (t2-t1)/1000 + " micros");
   }
   
   @Test
@@ -167,7 +146,8 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOTestBase
     initTest(false, false);
 
     int count = loadBytes();
- 
+    verifyBytes(count);
+
     // now save Info and Segment separately
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
@@ -190,4 +170,50 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOTestBase
     verifyBytesWithReader(count, reader, engine);
   }
   
+  
+  @Test
+  public void testSegmentScannerWithDictionary() throws IOException, URISyntaxException {
+    initTest(false, true);
+    int count = loadBytes();
+    DataReader reader = new CompressedBlockMemoryDataReader();
+    reader.init(cacheName);
+    IOEngine engine  = Mockito.mock(IOEngine.class);
+    Mockito.when(engine.getSegmentById(Mockito.anyInt())).thenReturn(segment);
+    // Seal the segment
+    segment.seal();
+    SegmentScanner scanner = reader.getSegmentScanner(engine, segment);
+    long t1 = System.nanoTime();
+    verifyScanner(scanner, count);
+    long t2 = System.nanoTime();
+    /*DEBUG*/ System.out.println("verified scanner in " + (t2-t1)/1000 + " micros");
+  }
+  
+  @Test
+  public void testSaveLoadWithDictionary() throws IOException, URISyntaxException {
+    initTest(false, true);
+
+    int count = loadBytes();
+    verifyBytes(count);
+
+    // now save Info and Segment separately
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(baos);
+    segment.save(dos);
+    // Now load back
+    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    DataInputStream dis = new DataInputStream(bais);
+    Segment seg = new Segment();
+    seg.load(dis);
+    DataWriter writer = new CompressedBlockDataWriter();
+    writer.init(cacheName);
+    seg.setDataWriter(writer);
+    segment.dispose();
+    segment = seg;
+    verifyBytes(count);
+    DataReader reader = new CompressedBlockMemoryDataReader();
+    reader.init(cacheName);
+    IOEngine engine  = Mockito.mock(IOEngine.class);
+    Mockito.when(engine.getSegmentById(Mockito.anyInt())).thenReturn(segment);
+    verifyBytesWithReader(count, reader, engine);
+  }
 }

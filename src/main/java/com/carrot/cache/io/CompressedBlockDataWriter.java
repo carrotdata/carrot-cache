@@ -122,6 +122,8 @@ public class CompressedBlockDataWriter implements DataWriter {
     return currentBlockOffset;
   }
   
+  static long compressTime;
+  
   /**
    * Compresses last block in the segment
    * updates block meta: sets compression dictionary version
@@ -133,15 +135,19 @@ public class CompressedBlockDataWriter implements DataWriter {
    * @return compressed size (excluding meta header)
    */
   private int compressBlock(long addr, int size) {
+    
     int compressedSize = 0;
     int dictVersion = 0;
     int toCompress = size - COMP_META_SIZE;
     checkCodec();
     dictVersion = this.codec.getCurrentDictionaryVersion();
+    long t1 = System.nanoTime();
     compressedSize = this.codec.compress(addr + COMP_META_SIZE, toCompress, dictVersion);
+    compressTime += System.nanoTime() - t1;
+    ///*DEBUG*/ System.out.println("compress time=" + compressTime / 1000 + " len=" + toCompress + " dict="+ dictVersion);
     //Update block header
     UnsafeAccess.putInt(addr + SIZE_OFFSET, toCompress);
-    if(compressedSize >= toCompress) {
+    if(compressedSize >= toCompress || compressedSize == 0) {
       dictVersion = -1; // no compression
       compressedSize = toCompress;
     }
@@ -255,6 +261,8 @@ public class CompressedBlockDataWriter implements DataWriter {
     long off = s.getCurrentBlockOffset();
     // clear first 12 bytes
     UnsafeAccess.setMemory(blockAddr + off, COMP_META_SIZE, (byte) 0);
+    // set dictId to -1 (not compressed)
+    UnsafeAccess.putInt(blockAddr + off + DICT_VER_OFFSET, -1);
     s.setSegmentDataSize(off + COMP_META_SIZE);
   }
   
@@ -291,7 +299,7 @@ public class CompressedBlockDataWriter implements DataWriter {
    */
   @Override
   public boolean isBlockBased() {
-    return true;
+    return false;
   }
   
   /**

@@ -45,7 +45,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
       return new byte[INIT_BUFFER_SIZE];
     }    
   };
-  
+
   /**
    * Dictionary map. keys: cache names, values: map dictId -> data
    */
@@ -81,6 +81,31 @@ public class ZstdCompressionCodec implements CompressionCodec {
   };
   
   /**
+   * For testing
+   */
+  public static void reset() {
+    dictCacheMap.clear();
+    HashMap<String, HashMap<Integer, ZstdCompressCtx>> compContext = compContextMap.get();
+    if (compContext != null) {
+      for (HashMap<Integer, ZstdCompressCtx> v: compContext.values()) {
+        for (ZstdCompressCtx ctxt: v.values()) {
+          ctxt.reset();
+        }
+      }
+    }
+    compContextMap.set(new HashMap<String, HashMap<Integer,ZstdCompressCtx>>());
+    HashMap<String, HashMap<Integer, ZstdDecompressCtx>> decompContext =decompContextMap.get();
+    if (decompContext != null) {
+      for (HashMap<Integer, ZstdDecompressCtx> v: decompContext.values()) {
+        for (ZstdDecompressCtx ctxt: v.values()) {
+          ctxt.reset();
+        }
+      }
+    }
+    decompContextMap.set(new HashMap<String, HashMap<Integer,ZstdDecompressCtx>>());
+  }
+  
+  /**
    * Cache name
    */
   private String cacheName;
@@ -111,6 +136,9 @@ public class ZstdCompressionCodec implements CompressionCodec {
   /* List of data pointers for training */
   private ConcurrentLinkedQueue<Long> trainingData;
   
+  /* Is dictionary training in async mode*/
+  private boolean trainingAsync;
+  
   /**
    * Codec statistics
    */
@@ -118,16 +146,18 @@ public class ZstdCompressionCodec implements CompressionCodec {
   
   @Override
   public int compress(long ptr, int len, int dictId) {
-    long startTime = System.nanoTime();
     byte[] buf = getBuffer(len);
     ZstdCompressCtx currentCtx = getCompressContext(dictId);    
+    
+    long startTime = System.nanoTime();
     int compressedSize = currentCtx.compressNativeByteArray(buf, 0, buf.length, ptr, len);
+    long endTime = System.nanoTime();
+
     if (compressedSize > len) {
       // do not copy
       return compressedSize;
     }
     UnsafeAccess.copy(buf, 0, ptr, compressedSize);
-    long endTime = System.nanoTime();
     this.stats.compressedRaw.addAndGet(len);
     this.stats.compressed.addAndGet(compressedSize);
     this.stats.compressionTime.addAndGet(endTime - startTime);
@@ -208,16 +238,21 @@ public class ZstdCompressionCodec implements CompressionCodec {
     return currentCtxt;
   }
   
+  static int counter = 0;
+  
   @Override
   public int decompress(long ptr, int size, byte[] buffer, int dictId) {
+    
     long startTime = System.nanoTime();
   
+    
     ZstdDecompressCtx currentCtxt = getDecompressContext(dictId);
     if (currentCtxt == null) {
       return 0;
     }
     int decompressedSize = currentCtxt.decompressNativeByteArray(buffer, 0, buffer.length, ptr, size);
     long endTime = System.nanoTime();
+    //*DEBUG*/ System.out.println("counter=" + (counter ++) + " decomp time=" + (endTime - startTime) + " decomp size=" + decompressedSize) ;
     this.stats.decompressedRaw.addAndGet(decompressedSize);
     this.stats.decompressed.addAndGet(size);
     this.stats.decompressionTime.addAndGet(endTime - startTime);
@@ -262,6 +297,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
     this.dictSize = config.getCacheCompressionDictionarySize(cacheName);
     this.compLevel = config.getCacheCompressionLevel(cacheName);
     this.dictionaryEnabled = config.isCacheCompressionDictionaryEnabled(cacheName);
+    this.trainingAsync = config.isCacheCompressionDictionaryTrainingAsync(cacheName);
     String dictDir = config.getCacheDictionaryDir(cacheName);
     File dir = new File(dictDir);
     this.stats = new Stats(compLevel, dictSize, Type.ZSTD);
@@ -279,8 +315,8 @@ public class ZstdCompressionCodec implements CompressionCodec {
   private byte[] getBuffer(int required) {
     byte[] buf = buffers.get();
     //FIXME: this is not safe
-    if (buf == null || buf.length < required + 100) {
-      buf = new byte[required + 100];
+    if (buf == null || buf.length < 2 * required) {
+      buf = new byte[2 * required];
       buffers.set(buf);
     }
     return buf;
@@ -369,6 +405,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
   }
 
   private synchronized void startTraining() {
+    /*DEBUG*/ System.out.println("START TRAINING");
     if (this.trainingInProgress) return;
     this.trainingDataSize = new AtomicInteger();
     this.trainingData = new ConcurrentLinkedQueue<Long>();
@@ -434,6 +471,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
   private void finishTraining() {
     if (this.finalizingTraining) return;
     this.finalizingTraining = true;
+    /*DEBUG*/ System.out.println("FINISH TRAINING");
 
     Runnable r = () -> {
       byte[] dict;
@@ -464,8 +502,12 @@ public class ZstdCompressionCodec implements CompressionCodec {
         e.printStackTrace();
       }
     };
-    // Run training session
-    new Thread(r).start();
+    if (this.trainingAsync) {
+      // Run training session
+      new Thread(r).start();
+    } else {
+      r.run();
+    }
   }
 
   @Override

@@ -66,7 +66,7 @@ import com.carrot.cache.util.Utils;
     /**
      * Current block size (decompressed)
      */
-    int blockSize = 0;
+    int blockSize = 4096;
     
     /**
      * Internal buffer
@@ -99,7 +99,6 @@ import com.carrot.cache.util.Utils;
       }
       int bufSize = engine.getFilePrefetchBufferSize();
       this.prefetch = new PrefetchBuffer(file, bufSize);
-      this.prefetch.skip(Segment.META_SIZE);
       nextBlock();
       
     }
@@ -144,9 +143,7 @@ import com.carrot.cache.util.Utils;
     }
     
     public boolean next() throws IOException {
-      if (this.blockOffset >= this.blockSize) {
-        nextBlock();
-      }      
+      
       int keySize = Utils.readUVInt(buf, this.blockOffset);
       int keySizeSize = Utils.sizeUVInt(keySize);
       this.blockOffset += keySizeSize;
@@ -155,6 +152,9 @@ import com.carrot.cache.util.Utils;
       this.blockOffset += valueSizeSize;
       this.blockOffset += keySize + valueSize;
       this.currentIndex++;
+      if (this.blockOffset >= this.blockSize) {
+        nextBlock();
+      }      
       return true;
     }
     

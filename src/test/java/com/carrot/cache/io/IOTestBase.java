@@ -107,7 +107,7 @@ public abstract class IOTestBase {
   
   private List<String> loadGithubData() throws URISyntaxException, IOException{
     
-    File dir = new File("src/test/resources/github");
+    File dir = new File("./src/test/resources/github");
     File[] list = dir.listFiles();
     ArrayList<String> dataList = new ArrayList<String>();
     for (File ff: list) {
@@ -138,13 +138,13 @@ public abstract class IOTestBase {
   }
   
   protected long getExpire(int n) {
-    return System.currentTimeMillis() + n * 100000;
+    return System.currentTimeMillis() + n * 100000L;
   }
   
   protected int loadBytes() {
     int count = 0;
     int sid = this.segment.getId();
-
+    long start = System.currentTimeMillis();
     IndexFormat format = this.index != null? this.index.getIndexFormat(): null;
     int indexSize = this.index != null? format.indexEntrySize(): 0;
     long indexBuf = this.index != null? UnsafeAccess.malloc(indexSize): 0L;
@@ -169,6 +169,7 @@ public abstract class IOTestBase {
     if (indexBuf > 0) {
       UnsafeAccess.free(indexBuf);
     }
+    System.out.println("time="+ (System.currentTimeMillis() - start));
     return count;
   }
   
@@ -505,6 +506,7 @@ public abstract class IOTestBase {
   protected void verifyScanner(SegmentScanner scanner, int num) throws IOException {
     int n = 0;
     while(scanner.hasNext()) {
+      long t0 = System.nanoTime();
       byte[] key = keys[n];
       byte[] value = values[n];
       long keyPtr = scanner.keyAddress();
@@ -520,6 +522,7 @@ public abstract class IOTestBase {
     }
     assertEquals(num, n);
     scanner.close();
+
   }
   
   protected void verifyScannerFile(SegmentScanner scanner, int num) throws IOException {
@@ -770,6 +773,7 @@ public abstract class IOTestBase {
       assertEquals(indexSize, (int) result);
       
       int offset = (int) format.getOffset(indexBuf);
+
       int size = format.getKeyValueSize(indexBuf);
       int expSize = Utils.kvSize(key.length, value.length);
       assertEquals(expSize, size);

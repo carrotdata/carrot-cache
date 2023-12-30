@@ -69,7 +69,7 @@ public class CompressedBlockFileDataReader implements DataReader {
   
   private CompressionCodec codec;
   
-  private int blockSize;
+  private int blockSize = 4096;
   
   @Override
   public void init(String cacheName) {
@@ -149,7 +149,7 @@ public class CompressedBlockFileDataReader implements DataReader {
       UnsafeAccess.copy(readBuffer, boff, compBuffer, 0, decompressedSize);
     }
     int offAdj = -META_SIZE;
-    off = (int) findInBlock(compBuffer, offAdj, key, keyOffset, keySize);
+    off = (int) findInBlock(compBuffer, offAdj, decompressedSize, key, keyOffset, keySize);
     if (off < 0) {
       return IOEngine.NOT_FOUND;
     }
@@ -225,7 +225,7 @@ public class CompressedBlockFileDataReader implements DataReader {
       }
       int offAdj = -META_SIZE;
 
-      int off = (int) findInBlock(compBuffer, offAdj, key, keyOffset, keySize);
+      int off = (int) findInBlock(compBuffer, offAdj, decompressedSize, key, keyOffset, keySize);
       if (off < 0) {
         return IOEngine.NOT_FOUND;
       }
@@ -300,7 +300,7 @@ public class CompressedBlockFileDataReader implements DataReader {
       UnsafeAccess.copy(readBuffer, boff, compBuffer, 0, decompressedSize);
     }
     int offAdj = -META_SIZE;
-    off = (int) findInBlock(compBuffer, offAdj, keyPtr, keySize);
+    off = (int) findInBlock(compBuffer, offAdj, decompressedSize, keyPtr, keySize);
     if (off < 0) {
       return IOEngine.NOT_FOUND;
     }
@@ -368,7 +368,7 @@ public class CompressedBlockFileDataReader implements DataReader {
       }
       int offAdj = -META_SIZE;
 
-      int off = (int) findInBlock(compBuffer, offAdj, keyPtr, keySize);
+      int off = (int) findInBlock(compBuffer, offAdj, decompressedSize, keyPtr, keySize);
       if (off < 0) {
         return IOEngine.NOT_FOUND;
       }
