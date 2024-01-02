@@ -31,25 +31,25 @@ public class TestSegmentCompressedBlockDataWriterReaderFile extends IOCompressio
   
   @Test
   public void testWritesBytesNoDictionaryNotRandom() throws IOException, URISyntaxException {
-    initTest(false, false);
+    initTestForSegment(false, false);
     testWritesBytes();
   }
  
   @Test
   public void testWritesBytesNoDictionaryRandom() throws IOException, URISyntaxException {
-    initTest(true, false);
+    initTestForSegment(true, false);
     testWritesBytes();
   }
   
   @Test
   public void testWritesBytesDictionaryRandom() throws IOException, URISyntaxException {
-    initTest(true, true);
+    initTestForSegment(true, true);
     testWritesBytes();
   }
   
   @Test
   public void testWritesBytesDictionaryNotRandom() throws IOException, URISyntaxException {
-    initTest(false, true);
+    initTestForSegment(false, true);
     testWritesBytes();
   }
   
@@ -72,25 +72,25 @@ public class TestSegmentCompressedBlockDataWriterReaderFile extends IOCompressio
   
   @Test
   public void testWritesMemoryNoDictionaryNotRandom() throws IOException, URISyntaxException {
-    initTest(false, false);
+    initTestForSegment(false, false);
     testWritesMemory();
   }
  
   @Test
   public void testWritesMemoryNoDictionaryRandom() throws IOException, URISyntaxException {
-    initTest(true, false);
+    initTestForSegment(true, false);
     testWritesMemory();
   }
   
   @Test
   public void testWritesMemoryDictionaryRandom() throws IOException, URISyntaxException {
-    initTest(true, true);
+    initTestForSegment(true, true);
     testWritesMemory();
   }
   
   @Test
   public void testWritesMemoryDictionaryNotRandom() throws IOException, URISyntaxException {
-    initTest(false, true);
+    initTestForSegment(false, true);
     testWritesMemory();
   }
   
@@ -113,7 +113,7 @@ public class TestSegmentCompressedBlockDataWriterReaderFile extends IOCompressio
 
   @Test
   public void testSegmentScanner() throws IOException, URISyntaxException {
-    initTest(false, false);
+    initTestForSegment(false, false);
     int count = loadBytes();
     RandomAccessFile file = TestUtils.saveToFile(segment);
     DataReader reader = new CompressedBlockFileDataReader();
@@ -136,7 +136,7 @@ public class TestSegmentCompressedBlockDataWriterReaderFile extends IOCompressio
   
   @Test
   public void testSegmentScannerWithDictionary() throws IOException, URISyntaxException {
-    initTest(false, true);
+    initTestForSegment(false, true);
     int count = loadBytes();
     RandomAccessFile file = TestUtils.saveToFile(segment);
     DataReader reader = new CompressedBlockFileDataReader();

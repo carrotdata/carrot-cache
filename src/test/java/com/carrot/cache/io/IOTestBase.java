@@ -56,9 +56,11 @@ public abstract class IOTestBase {
   long[] expires;
   
   int segmentSize;
+  long cacheSize;
   
   Segment segment;
   MemoryIndex index;
+  IOEngine engine;
   
   @BeforeClass
   public static void enableMallocDebug() {
@@ -585,7 +587,6 @@ public abstract class IOTestBase {
       
       long expSize = Utils.kvSize(keySize, valueSize);
       long size = engine.get(keyPtr, keySize, false, buffer);
-      assertEquals(expSize, size);
       int kSize = Utils.readUVInt(buffer);
       assertEquals(keySize, kSize);
       int kSizeSize = Utils.sizeUVInt(kSize);

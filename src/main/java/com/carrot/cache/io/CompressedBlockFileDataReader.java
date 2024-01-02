@@ -129,11 +129,12 @@ public class CompressedBlockFileDataReader implements DataReader {
     int compSize = UnsafeAccess.toInt(readBuffer, COMP_SIZE_OFFSET);
     int dictId = UnsafeAccess.toInt(readBuffer, DICT_VER_OFFSET);
     int boff = COMP_META_SIZE;
-    if (compSize > toRead - COMP_META_SIZE) {
+    int sizeToRead = dictId >= 0? compSize: decompressedSize;
+    if (sizeToRead > toRead - COMP_META_SIZE) {
       // means that this is a single item larger than a block
-      checkReadBuffer(compSize);
+      checkReadBuffer(sizeToRead);
       readBuffer = readBuffers.get();
-      readFully(file, offset + COMP_META_SIZE, readBuffer, 0, compSize);
+      readFully(file, offset + COMP_META_SIZE, readBuffer, 0, sizeToRead);
       boff = 0;
     }
     
@@ -204,11 +205,12 @@ public class CompressedBlockFileDataReader implements DataReader {
       int compSize = UnsafeAccess.toInt(readBuffer, COMP_SIZE_OFFSET);
       int dictId = UnsafeAccess.toInt(readBuffer, DICT_VER_OFFSET);
       int boff = COMP_META_SIZE;
-      if (compSize > toRead - COMP_META_SIZE) {
+      int sizeToRead = dictId >= 0? compSize: decompressedSize;
+      if (sizeToRead > toRead - COMP_META_SIZE) {
         // means that this is a single item larger than a block
-        checkReadBuffer(compSize);
+        checkReadBuffer(sizeToRead);
         readBuffer = readBuffers.get();
-        readFully(file, offset + COMP_META_SIZE, readBuffer, 0, compSize);
+        readFully(file, offset + COMP_META_SIZE, readBuffer, 0, sizeToRead);
         boff = 0;
       }
       
@@ -280,11 +282,12 @@ public class CompressedBlockFileDataReader implements DataReader {
     int compSize = UnsafeAccess.toInt(readBuffer, COMP_SIZE_OFFSET);
     int dictId = UnsafeAccess.toInt(readBuffer, DICT_VER_OFFSET);
     int boff = COMP_META_SIZE;
-    if (compSize > toRead - COMP_META_SIZE) {
+    int sizeToRead = dictId >= 0? compSize: decompressedSize;
+    if (sizeToRead > toRead - COMP_META_SIZE) {
       // means that this is a single item larger than a block
-      checkReadBuffer(compSize);
+      checkReadBuffer(sizeToRead);
       readBuffer = readBuffers.get();
-      readFully(file, offset + COMP_META_SIZE, readBuffer, 0, compSize);
+      readFully(file, offset + COMP_META_SIZE, readBuffer, 0, sizeToRead);
       boff = 0;
     }
     
@@ -347,11 +350,12 @@ public class CompressedBlockFileDataReader implements DataReader {
       int compSize = UnsafeAccess.toInt(readBuffer, COMP_SIZE_OFFSET);
       int dictId = UnsafeAccess.toInt(readBuffer, DICT_VER_OFFSET);
       int boff = COMP_META_SIZE;
-      if (compSize > toRead - COMP_META_SIZE) {
+      int sizeToRead = dictId >= 0? compSize: decompressedSize;
+      if (sizeToRead > toRead - COMP_META_SIZE) {
         // means that this is a single item larger than a block
-        checkReadBuffer(compSize);
+        checkReadBuffer(sizeToRead);
         readBuffer = readBuffers.get();
-        readFully(file, offset + COMP_META_SIZE, readBuffer, 0, compSize);
+        readFully(file, offset + COMP_META_SIZE, readBuffer, 0, sizeToRead);
         boff = 0;
       }
       

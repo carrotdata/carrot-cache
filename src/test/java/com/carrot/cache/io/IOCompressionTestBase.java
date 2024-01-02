@@ -24,6 +24,8 @@ import static com.carrot.cache.compression.CompressionCodec.SIZE_OFFSET;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Random;
 
@@ -59,14 +61,33 @@ public class IOCompressionTestBase extends IOTestBase {
     }
   }
   
-  protected void initTest(boolean randomData, boolean dictionaryEnabled) throws URISyntaxException, IOException {
+  protected void initTestForSegment(boolean randomData, boolean dictionaryEnabled) throws URISyntaxException, IOException {
+    initTest(randomData, dictionaryEnabled);
+    CompressedBlockDataWriter writer = new CompressedBlockDataWriter();
+    writer.init(cacheName);
+    this.segment.setDataWriter(writer);
+  }
+  
+  protected void initTestForEngine(boolean randomData, boolean dictionaryEnabled) throws URISyntaxException, IOException {
+    initTest(randomData, dictionaryEnabled);
+    CarrotConfig config = CarrotConfig.getInstance();
+    config.setCacheSegmentSize(cacheName, this.segmentSize);
+    config.setCacheMaximumSize(cacheName, this.cacheSize);
+  }
+  
+  protected void initTest(boolean randomData, boolean dictionaryEnabled) throws IOException, URISyntaxException {
     /*DEBUG*/ System.out.println("Test dictionary=" + dictionaryEnabled + " random data=" + randomData);
     if (randomData) {
       prepareRandomData(numRecords);
     } else {
       prepareGithubData(numRecords);
     }
+    Path dataDir = Files.createTempDirectory("test");
+    File rootDir = dataDir.toFile();
+    rootDir.deleteOnExit();
+    
     CarrotConfig config = CarrotConfig.getInstance();
+    config.setCacheRootDir(cacheName, rootDir.getAbsolutePath());
     config.setCacheCompressionDictionaryEnabled(cacheName, dictionaryEnabled);
     config.setCacheCompressionEnabled(cacheName, true);
     config.setCacheTLSSupported(cacheName, true);
@@ -82,16 +103,15 @@ public class IOCompressionTestBase extends IOTestBase {
     }
     
     initCodec();
-    CompressedBlockDataWriter writer = new CompressedBlockDataWriter();
-    writer.init(cacheName);
-    this.segment.setDataWriter(writer);
   }
   
   @After
   public void tearDown() throws IOException {
-    System.out.println("Data size=" + segment.getSegmentDataSize()); 
+    //System.out.println("Data size=" + segment.getSegmentDataSize()); 
     super.tearDown();
-    this.segment.dispose();
+    if (segment != null) {
+      this.segment.dispose();
+    }
     ZstdCompressionCodec.reset();
   }
   

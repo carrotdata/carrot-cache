@@ -83,10 +83,10 @@ public class CodecFactory {
       throw new IllegalArgumentException(msg);
     }
     CompressionCodec codec = type.newCodec();
+    codec.init(cacheName);
     if(is != null) {
       codec.load(is);
     }
-    codec.init(cacheName);
     codecs.put(cacheName, codec);
     return true;
   }

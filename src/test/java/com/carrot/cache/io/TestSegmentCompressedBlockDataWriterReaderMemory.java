@@ -34,26 +34,26 @@ import org.mockito.Mockito;
 public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompressionTestBase{
   @Test
   public void testWritesBytesNoDictionaryNotRandom() throws IOException, URISyntaxException {
-    initTest(false, false);
+    initTestForSegment(false, false);
     testWritesBytes();
   }
  
   @Test
   public void testWritesBytesNoDictionaryRandom() throws IOException, URISyntaxException {
-    initTest(true, false);
+    initTestForSegment(true, false);
     testWritesBytes();
   }
   
   @Test
   public void testWritesBytesDictionaryRandom() throws IOException, URISyntaxException {
-    initTest(true, true);
+    initTestForSegment(true, true);
     testWritesBytes();
   }
   
   //@Ignore
   @Test
   public void testWritesBytesDictionaryNotRandom() throws IOException, URISyntaxException {
-    initTest(false, true);
+    initTestForSegment(false, true);
     testWritesBytes();
   }
   
@@ -81,25 +81,25 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompress
 
   @Test
   public void testWritesMemoryNoDictionaryNotRandom() throws IOException, URISyntaxException {
-    initTest(false, false);
+    initTestForSegment(false, false);
     testWritesMemory();
   }
 
   @Test
   public void testWritesMemoryNoDictionaryRandom() throws IOException, URISyntaxException {
-    initTest(true, false);
+    initTestForSegment(true, false);
     testWritesMemory();
   }
   
   @Test
   public void testWritesMemoryDictionaryRandom() throws IOException, URISyntaxException {
-    initTest(true, true);
+    initTestForSegment(true, true);
     testWritesMemory();
   }
   
   @Test
   public void testWritesMemoryDictionaryNotRandom() throws IOException, URISyntaxException {
-    initTest(false, true);
+    initTestForSegment(false, true);
     testWritesMemory();
   }
   
@@ -126,7 +126,7 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompress
   
   @Test
   public void testSegmentScanner() throws IOException, URISyntaxException {
-    initTest(false, false);
+    initTestForSegment(false, false);
     int count = loadBytes();
     DataReader reader = new CompressedBlockMemoryDataReader();
     reader.init(cacheName);
@@ -143,7 +143,7 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompress
   
   @Test
   public void testSaveLoad() throws IOException, URISyntaxException {
-    initTest(false, false);
+    initTestForSegment(false, false);
 
     int count = loadBytes();
     verifyBytes(count);
@@ -173,7 +173,7 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompress
   
   @Test
   public void testSegmentScannerWithDictionary() throws IOException, URISyntaxException {
-    initTest(false, true);
+    initTestForSegment(false, true);
     int count = loadBytes();
     DataReader reader = new CompressedBlockMemoryDataReader();
     reader.init(cacheName);
@@ -190,7 +190,7 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompress
   
   @Test
   public void testSaveLoadWithDictionary() throws IOException, URISyntaxException {
-    initTest(false, true);
+    initTestForSegment(false, true);
 
     int count = loadBytes();
     verifyBytes(count);

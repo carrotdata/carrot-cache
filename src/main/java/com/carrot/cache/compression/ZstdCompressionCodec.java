@@ -172,12 +172,16 @@ public class ZstdCompressionCodec implements CompressionCodec {
     if (ctxMap == null) {
       ctxMap = new HashMap<Integer, ZstdCompressCtx>();
       Map<Integer, byte[]> dictMap = dictCacheMap.get(this.cacheName);
-      for (Map.Entry<Integer, byte[]> e: dictMap.entrySet()) {
-        ZstdDictCompress dictCompress = new ZstdDictCompress(e.getValue(), this.compLevel);
-        ZstdCompressCtx compContext = new ZstdCompressCtx();
-        compContext.loadDict(dictCompress);
-        compContext.setLevel(this.compLevel);
-        ctxMap.put(e.getKey(), compContext);
+      if (dictMap != null) {
+        for (Map.Entry<Integer, byte[]> e: dictMap.entrySet()) {
+          ZstdDictCompress dictCompress = new ZstdDictCompress(e.getValue(), this.compLevel);
+          ZstdCompressCtx compContext = new ZstdCompressCtx();
+          compContext.loadDict(dictCompress);
+          compContext.setLevel(this.compLevel);
+          ctxMap.put(e.getKey(), compContext);
+        }
+      } else {
+        dictCacheMap.putIfAbsent(cacheName, new HashMap<Integer, byte[]>());
       }
       compContextMap.get().put(this.cacheName, ctxMap);
       // Initialize dictionary id = 0 (no dictionary)
@@ -210,12 +214,15 @@ public class ZstdCompressionCodec implements CompressionCodec {
     if (ctxMap == null) {
       ctxMap = new HashMap<Integer, ZstdDecompressCtx>();
       Map<Integer, byte[]> dictMap = dictCacheMap.get(this.cacheName);
-      for (Map.Entry<Integer, byte[]> e: dictMap.entrySet()) {
-        ZstdDictDecompress dictDecompress = new ZstdDictDecompress(e.getValue());
-        ZstdDecompressCtx decompContext = new ZstdDecompressCtx();
-        decompContext.loadDict(dictDecompress);
-        ctxMap.put(e.getKey(), decompContext);
-        
+      if (dictMap != null) {
+        for (Map.Entry<Integer, byte[]> e: dictMap.entrySet()) {
+          ZstdDictDecompress dictDecompress = new ZstdDictDecompress(e.getValue());
+          ZstdDecompressCtx decompContext = new ZstdDecompressCtx();
+          decompContext.loadDict(dictDecompress);
+          ctxMap.put(e.getKey(), decompContext);
+        }
+      } else {
+        dictCacheMap.putIfAbsent(cacheName, new HashMap<Integer, byte[]>());
       }
       decompContextMap.get().put(this.cacheName, ctxMap);
       // Initialize dictionary id = 0 (no dictionary)

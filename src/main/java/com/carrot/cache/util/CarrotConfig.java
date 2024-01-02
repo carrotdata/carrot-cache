@@ -586,6 +586,12 @@ public class CarrotConfig {
   }
   
   /**
+   * Used for testing only
+   */
+  public static void setInstance(CarrotConfig config) {
+    instance = config;
+  }
+  /**
    * Merge configuration to the main configuration
    * @param props properties
    */
@@ -1105,7 +1111,19 @@ public class CarrotConfig {
    * @return dictionary directory
    */
   public String getCacheDictionaryDir(String cacheName) {
-    return getCacheRootDir(cacheName) + File.separator + DICTIONARY_DIR_NAME;
+    String value = getCacheRootDir(cacheName);
+    value += File.separator + cacheName + File.separator + DICTIONARY_DIR_NAME;
+    // check if directory exists
+    Path p = Paths.get(value);
+    if (Files.notExists(p)) {
+      try {
+        Files.createDirectories(p);
+      } catch (IOException e) {
+        LOG.error(e);
+        return null;
+      }
+    }
+    return value;
   }
   
   /**
