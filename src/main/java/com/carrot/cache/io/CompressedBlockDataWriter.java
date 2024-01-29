@@ -58,7 +58,7 @@ public class CompressedBlockDataWriter implements DataWriter {
   public long append(Segment s, long keyPtr, int keySize, long valuePtr, int valueSize) {
     
     processEmptySegment(s);
-    
+    checkCodec();
     if (codec.isTrainingRequired()) {
       if (this.compressKeys) {
         codec.addTrainingData(keyPtr, keySize);
@@ -96,6 +96,8 @@ public class CompressedBlockDataWriter implements DataWriter {
           // kind of edge case 
           return -1;
         } 
+        // Add meta section size of a next block
+        s.incrDataSize(COMP_META_SIZE);
         // else start new block, advance currentBlockOffset
         currentBlockOffset += COMP_META_SIZE + compSize;
         s.setCurrentBlockOffset(currentBlockOffset);
@@ -166,8 +168,8 @@ public class CompressedBlockDataWriter implements DataWriter {
       int valueOffset,
       int valueSize) {
 
-   processEmptySegment(s);
-    
+    processEmptySegment(s);
+    checkCodec();
     if (codec.isTrainingRequired()) {
       if (this.compressKeys) {
         codec.addTrainingData(key, keyOffset, keySize);
@@ -205,6 +207,8 @@ public class CompressedBlockDataWriter implements DataWriter {
           // kind of edge case 
           return -1;
         } 
+        // Add meta section size of a next block
+        s.incrDataSize(COMP_META_SIZE);
         // else start new block, advance currentBlockOffset
         currentBlockOffset += COMP_META_SIZE + compSize;
         s.setCurrentBlockOffset(currentBlockOffset);

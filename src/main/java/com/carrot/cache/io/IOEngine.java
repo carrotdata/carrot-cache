@@ -2136,6 +2136,8 @@ public abstract class IOEngine implements Persistent {
    * @return true on success, false - otherwise
    * @throws IOException
    */
+  
+  private int sid = -1;
   public boolean put(
       byte[] key,
       int keyOff,
@@ -2152,6 +2154,7 @@ public abstract class IOEngine implements Persistent {
     checkRank(groupRank);
 
     Segment s = getRAMSegmentByRank(groupRank);
+
     if (s == null) {
       // We silently ignore PUT operation due to lack of resources
       // TODO: update stats
@@ -2159,6 +2162,8 @@ public abstract class IOEngine implements Persistent {
     }
     // Offset must less 32bit
     long offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength, expire);
+    //if(offset < 3000)
+    //*DEBUG*/ System.out.println(offset);
     if (offset < 0) {
       if(!s.isSealed()) {
         save(s); // removes segment from RAM buffers

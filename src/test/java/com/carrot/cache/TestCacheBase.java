@@ -27,6 +27,7 @@ import java.util.Random;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.carrot.cache.controllers.MinAliveRecyclingSelector;
@@ -48,13 +49,21 @@ public abstract class TestCacheBase extends IOTestBase {
   double scavDumpBelowRatio = 0.5;
   double minActiveRatio = 0.90;
   int maxKeyValueSize = 0;
-      
+  
+  String recycleSelector = MinAliveRecyclingSelector.class.getName();
+  String dataWriter = BlockDataWriter.class.getName();
+  String dataReaderMemory = BlockMemoryDataReader.class.getName();
+  String dataReaderFile = BlockFileDataReader.class.getName();
+  String indexFormat = CompactBlockWithExpireIndexFormat.class.getName();
+  
   @Before
   public void setUp() throws IOException {
     this.r = new Random();
     long seed = System.currentTimeMillis();
     System.out.println("r.seed=" + seed);
     r.setSeed(seed);
+    this.numRecords = 150000;
+
   }
   
   @After
@@ -65,37 +74,7 @@ public abstract class TestCacheBase extends IOTestBase {
   }
   
   protected Cache createCache() throws IOException {
-    String cacheName = "cache";
-    // Data directory
-    Path path = Files.createTempDirectory(null);
-    File  dir = path.toFile();
-    dir.deleteOnExit();
-    String rootDir = dir.getAbsolutePath();
-    
-    Builder builder = new Builder(cacheName);
-    
-    builder
-      .withCacheDataSegmentSize(segmentSize)
-      .withCacheMaximumSize(maxCacheSize)
-      .withScavengerRunInterval(scavengerInterval)
-      .withScavengerDumpEntryBelowStart(scavDumpBelowRatio)
-      .withRecyclingSelector(MinAliveRecyclingSelector.class.getName())
-      .withDataWriter(BlockDataWriter.class.getName())
-      .withMemoryDataReader(BlockMemoryDataReader.class.getName())
-      .withFileDataReader(BlockFileDataReader.class.getName())
-      .withMainQueueIndexFormat(CompactBlockWithExpireIndexFormat.class.getName())
-      .withCacheRootDir(rootDir)
-      .withMinimumActiveDatasetRatio(minActiveRatio)
-      .withCacheStreamingSupportBufferSize(1 << 19)
-      .withEvictionDisabledMode(true);
-    if (maxKeyValueSize > 0) {
-      builder.withMaximumKeyValueSize(cacheName, maxKeyValueSize);
-    }
-    if (offheap) {
-      return builder.buildMemoryCache();
-    } else {
-      return builder.buildDiskCache();
-    }
+    return createCache("cache");
   }
   
   protected Cache createCache(String cacheName) throws IOException {
@@ -112,11 +91,11 @@ public abstract class TestCacheBase extends IOTestBase {
       .withCacheMaximumSize(maxCacheSize)
       .withScavengerRunInterval(scavengerInterval)
       .withScavengerDumpEntryBelowStart(scavDumpBelowRatio)
-      .withRecyclingSelector(MinAliveRecyclingSelector.class.getName())
-      .withDataWriter(BlockDataWriter.class.getName())
-      .withMemoryDataReader(BlockMemoryDataReader.class.getName())
-      .withFileDataReader(BlockFileDataReader.class.getName())
-      .withMainQueueIndexFormat(CompactBlockWithExpireIndexFormat.class.getName())
+      .withRecyclingSelector(recycleSelector)
+      .withDataWriter(dataWriter)
+      .withMemoryDataReader(dataReaderMemory)
+      .withFileDataReader(dataReaderFile)
+      .withMainQueueIndexFormat(indexFormat)
       .withCacheRootDir(rootDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
       .withCacheStreamingSupportBufferSize(1 << 19)
@@ -139,6 +118,7 @@ public abstract class TestCacheBase extends IOTestBase {
   @Test
   public void testBigKeyValue() throws IOException {
     System.out.println("Test big key value");
+    this.numRecords = 0;
     this.maxKeyValueSize = 100000;
     Scavenger.clear();
     this.cache = createCache();
@@ -154,6 +134,10 @@ public abstract class TestCacheBase extends IOTestBase {
     assertFalse(result);
   }
   
+  protected void prepareData() {
+    prepareRandomData(numRecords);
+  }
+  
   @Test
   public void testAllExpiredBytes() throws IOException {
     System.out.println("Test all expired bytes");
@@ -161,7 +145,7 @@ public abstract class TestCacheBase extends IOTestBase {
     // Create cache
     this.cache = createCache();
     this.expireTime = 1000; 
-    prepareRandomData(150000);
+    prepareData();
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);
     // Wait expireTime
@@ -196,7 +180,7 @@ public abstract class TestCacheBase extends IOTestBase {
     // Create cache
     this.cache = createCache();
     this.expireTime = 1000; 
-    prepareRandomData(150000);
+    prepareData();
     int loaded = loadMemoryCache(cache);
     System.out.println("loaded=" + loaded);
     // Wait expireTime
@@ -232,7 +216,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareRandomData(150000);
+    prepareData();
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);
@@ -265,7 +249,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareRandomData(150000);
+    prepareData();
     // Fill cache completely (no eviction is enabled)
     int loaded = loadMemoryCache(cache);
     System.out.println("loaded=" + loaded);
@@ -299,7 +283,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareRandomData(150000);
+    prepareData();
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);
@@ -324,6 +308,7 @@ public abstract class TestCacheBase extends IOTestBase {
 
   }
   
+  
   @Test
   public void testNoExpiredWithDeletesMemory() throws IOException {
     System.out.println("Test no expired with deletes memory");
@@ -334,7 +319,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareRandomData(150000);
+    prepareData();
     // Fill cache completely (no eviction is enabled)
     int loaded = loadMemoryCache(cache);
     System.out.println("loaded=" + loaded);
@@ -366,7 +351,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareRandomData(150000);
+    prepareData();
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);
@@ -408,7 +393,8 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache();
     
     this.expireTime = 1000000; 
-    prepareRandomData(1);
+    this.numRecords= 1;
+    prepareData();
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);
@@ -467,7 +453,7 @@ public abstract class TestCacheBase extends IOTestBase {
     this.cache = createCache("cache1");
     
     this.expireTime = 1000000; 
-    prepareRandomData(150000);
+    prepareData();
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
     System.out.println("loaded=" + loaded);

@@ -513,7 +513,10 @@ public class ZstdCompressionCodec implements CompressionCodec {
       // Run training session
       new Thread(r).start();
     } else {
+      long start = System.currentTimeMillis();
       r.run();
+      long end = System.currentTimeMillis();
+      /*DEBUG*/ System.out.println("TIME=" + (end -start)+"ms");
     }
   }
 

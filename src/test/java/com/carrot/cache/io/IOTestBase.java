@@ -44,7 +44,7 @@ public abstract class IOTestBase {
   protected static String cacheName = "default";
   
   int blockSize = 4096;
-  int numRecords = 10;
+  protected int numRecords = 10;
   int maxKeySize = 32;
   int maxValueSize = 5000;
   public Random r;
@@ -206,7 +206,7 @@ public abstract class IOTestBase {
     while(count < this.numRecords) {
       long expire = expires[count];
       byte[] key = keys[count];
-      byte[] value = values[count];      
+      byte[] value = values[count];  
       boolean result = cache.put(key, value, expire);
       if (!result) {
         break;
