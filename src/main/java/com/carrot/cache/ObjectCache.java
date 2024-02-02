@@ -538,12 +538,21 @@ public class ObjectCache {
   }
  
   /**
-   * Get total used memory (storage)
+   * Get total used memory (storage) - before compression
    *
    * @return used memory
    */
   public long getStorageUsed() {
     return this.cache.getStorageUsed();
+  }
+  
+  /**
+   * Get total used memory (storage) - after compression
+   *
+   * @return used memory
+   */
+  public long getStorageUsedActual() {
+    return this.cache.getStorageUsedActual();
   }
   
   /**

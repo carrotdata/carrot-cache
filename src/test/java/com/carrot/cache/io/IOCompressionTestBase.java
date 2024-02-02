@@ -34,7 +34,7 @@ import org.junit.Before;
 
 import com.carrot.cache.compression.CodecFactory;
 import com.carrot.cache.compression.CompressionCodec;
-import com.carrot.cache.compression.ZstdCompressionCodec;
+import com.carrot.cache.compression.zstd.ZstdCompressionCodec;
 import com.carrot.cache.index.MemoryIndex;
 import com.carrot.cache.index.MemoryIndex.Type;
 import com.carrot.cache.util.CarrotConfig;

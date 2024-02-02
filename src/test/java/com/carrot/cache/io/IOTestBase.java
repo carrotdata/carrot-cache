@@ -62,6 +62,7 @@ public abstract class IOTestBase {
   MemoryIndex index;
   IOEngine engine;
   
+  
   @BeforeClass
   public static void enableMallocDebug() {
 //    UnsafeAccess.setMallocDebugEnabled(true);

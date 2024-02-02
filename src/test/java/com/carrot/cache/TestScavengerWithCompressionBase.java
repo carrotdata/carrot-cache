@@ -26,26 +26,22 @@ import org.junit.Before;
 import com.carrot.cache.compression.CodecFactory;
 import com.carrot.cache.compression.CompressionCodec;
 import com.carrot.cache.compression.zstd.ZstdCompressionCodec;
-import com.carrot.cache.index.BaseIndexFormat;
 import com.carrot.cache.index.CompactBaseWithExpireIndexFormat;
 import com.carrot.cache.io.CompressedBlockDataWriter;
 import com.carrot.cache.io.CompressedBlockFileDataReader;
 import com.carrot.cache.io.CompressedBlockMemoryDataReader;
 import com.carrot.cache.util.CarrotConfig;
 
-public class TestCacheWithCompressionBase extends TestCacheBase {
+public class TestScavengerWithCompressionBase extends TestScavengerBase {
   
-  boolean randomData = false;
   boolean dictionaryEnabled = true;   
   boolean asyncTrainingMode = false;
-  static String cacheName1 = "cache1";
-  static String cacheName2 = "cache2";
-  
   
   @Before
   public void setUp() throws IOException {
     super.setUp();
     this.numRecords = 150000;
+    this.randomData = false;
     // We need expiration support
     this.indexFormat = CompactBaseWithExpireIndexFormat.class.getName();
   }
@@ -63,7 +59,7 @@ public class TestCacheWithCompressionBase extends TestCacheBase {
     return createCache(cacheName);
   }
   
-  @Override
+  
   protected Cache createCache(String cacheName) throws IOException {
     initTest(cacheName);
     // Data directory
@@ -88,9 +84,7 @@ public class TestCacheWithCompressionBase extends TestCacheBase {
       .withMinimumActiveDatasetRatio(minActiveRatio)
       .withCacheStreamingSupportBufferSize(1 << 19)
       .withEvictionDisabledMode(true);
-    if (maxKeyValueSize > 0) {
-      builder.withMaximumKeyValueSize(cacheName, maxKeyValueSize);
-    }
+    
     if (offheap) {
       return builder.buildMemoryCache();
     } else {
@@ -122,8 +116,6 @@ public class TestCacheWithCompressionBase extends TestCacheBase {
   
   protected void cleanDictionaries() {
     cleanDictionaries(cacheName);
-    cleanDictionaries(cacheName1);
-    cleanDictionaries(cacheName2);
   }
   
   protected void cleanDictionaries(String cacheName) {
@@ -143,20 +135,6 @@ public class TestCacheWithCompressionBase extends TestCacheBase {
     CompressionCodec codec = factory.getCompressionCodecForCache(cacheName);
     if (codec == null) {
       factory.initCompressionCodecForCache(cacheName, null);
-    }
-  }
-  
-  @Override
-  protected void prepareData() {
-    /*DEBUG*/ System.out.println("Test dictionary=" + dictionaryEnabled + " random data=" + randomData);
-    if (randomData) {
-      prepareRandomData(numRecords);
-    } else {
-      try {
-        prepareGithubData(numRecords);
-      } catch(Exception e) {
-        throw new RuntimeException(e);
-      }
     }
   }
   

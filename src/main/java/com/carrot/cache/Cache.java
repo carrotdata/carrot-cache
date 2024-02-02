@@ -463,6 +463,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   /**
+   * Get total used memory (storage) when compression is on
+   *
+   * @return used memory
+   */
+  public long getStorageUsedActual() {
+    return this.engine.getStorageUsedActual();
+  }
+  /**
    * Get total allocated memory
    *
    * @return total allocated memory
@@ -502,7 +510,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public double getStorageAllocatedRatio() {
     if (this.maximumCacheSize == 0) return 0;
-    return (double) getStorageUsed() / this.maximumCacheSize;
+    return (double) getStorageUsedActual() / this.maximumCacheSize;
   }
 
   /**
@@ -901,7 +909,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   private boolean storageIsFull(int keySize, int valueSize) {
     // OK, eviction is disabled
     // check used and maximum storage size
-    long used = getStorageUsed();
+    long used = getStorageUsedActual();
     long max = getMaximumCacheSize();
     int size = Utils.kvSize(keySize, valueSize);
     return used + size > max;
@@ -940,6 +948,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       while(storageIsFull(keySize, valSize) && 
           (System.currentTimeMillis() - start) < this.waitOnPutTimeMs) {
         // Start scavengers if not running 
+        //FIXME: Bad, very bad, can stuck  
         startScavengers(); 
         Utils.onSpinWait(this.spinWaitTimeNs);
       }

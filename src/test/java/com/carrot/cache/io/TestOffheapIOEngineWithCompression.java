@@ -26,7 +26,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.carrot.cache.compression.ZstdCompressionCodec;
+import com.carrot.cache.compression.zstd.ZstdCompressionCodec;
 import com.carrot.cache.util.CarrotConfig;
 
 public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{

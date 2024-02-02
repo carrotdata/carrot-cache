@@ -954,15 +954,21 @@ public class Segment implements Persistent {
     this.info.updateEvictedDeleted(1);
   }
   
+  public static int n = 0;
+  public static int u = 0;
   /**
    * Update expired counter and total rank
    * @param expire expiration time
    */
   public void updateExpired(long expire) {
+    n++;
     if (this.info.getCreationTime() > expire) {
+      /*DEBUG*/ System.out.println("created=" + this.info.getCreationTime() + " expire=" + expire + 
+        " diff=" + (expire - this.info.getCreationTime()));
       return; // do nothing - segment was recycled recently
     }
     this.info.updateExpired();
+    u++;
   }
     
   /**

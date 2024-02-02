@@ -35,6 +35,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.carrot.cache.compression.zstd.ZstdCompressionCodec;
 import com.carrot.cache.util.Persistent;
 import com.carrot.cache.util.Utils;
 
@@ -67,30 +68,30 @@ public interface CompressionCodec extends Persistent {
     /**
      * Compressed raw size (total)
      */
-    AtomicLong compressedRaw = new AtomicLong();
+    private AtomicLong compressedRaw = new AtomicLong();
     /**
      * Compressed size (total)
      */
-    AtomicLong compressed = new AtomicLong();
+    private AtomicLong compressed = new AtomicLong();
     
     /**
      * Decompressed raw size (total)
      */
-    AtomicLong decompressedRaw = new AtomicLong();
+    private AtomicLong decompressedRaw = new AtomicLong();
     
     /**
      * Decompressed size
      */
-    AtomicLong decompressed = new AtomicLong();
+    private AtomicLong decompressed = new AtomicLong();
     /**
      * Compression time (nanoseconds)
      */
-    AtomicLong compressionTime = new AtomicLong();
+    private AtomicLong compressionTime = new AtomicLong();
     
     /**
      * Decompression time (nanoseconds)
      */
-    AtomicLong decompressionTime = new AtomicLong();
+    private AtomicLong decompressionTime = new AtomicLong();
     
     /**
      * Compression level
@@ -116,7 +117,7 @@ public interface CompressionCodec extends Persistent {
      * @param dictSize dictionary size
      * @param type codec type
      */
-    Stats(int level, int dictSize, Type type) {
+    public Stats(int level, int dictSize, Type type) {
       this.compressionLevel = level;
       this.dictSize = dictSize;
       this.codecType= type;
@@ -151,7 +152,7 @@ public interface CompressionCodec extends Persistent {
      * @return size
      */
     public long getCompressedRawSize() {
-      return compressedRaw.get();
+      return getCompressedRaw().get();
     }
     
     /**
@@ -159,7 +160,7 @@ public interface CompressionCodec extends Persistent {
      * @return size
      */
     public long getCompressedSize() {
-      return compressed.get();
+      return getCompressed().get();
     }
     
     /**
@@ -167,8 +168,8 @@ public interface CompressionCodec extends Persistent {
      * @return compression ratio
      */
     public double getCompressionRatio() {
-      if (compressed.get() == 0) return 0.;
-      return (double) compressedRaw.get() / compressed.get();
+      if (getCompressed().get() == 0) return 0.;
+      return (double) getCompressedRaw().get() / getCompressed().get();
     }
     
     /**
@@ -176,9 +177,9 @@ public interface CompressionCodec extends Persistent {
      * @return compression throughput
      */
     public double getCompressionThroughput() {
-      long time = compressionTime.get(); // in nanoseconds
+      long time = getCompressionTime().get(); // in nanoseconds
       if (time == 0) return 0.;
-      long total = compressedRaw.get();
+      long total = getCompressedRaw().get();
       return (double) total * 1000000000 / time;
     }
     
@@ -187,7 +188,7 @@ public interface CompressionCodec extends Persistent {
      * @return size
      */
     public long getDecompressedRawSize() {
-      return decompressedRaw.get();
+      return getDecompressedRaw().get();
     }
     
     /**
@@ -195,7 +196,7 @@ public interface CompressionCodec extends Persistent {
      * @return size
      */
     public long getDecompressedSize() {
-      return decompressed.get();
+      return getDecompressed().get();
     }
     
     /**
@@ -203,8 +204,8 @@ public interface CompressionCodec extends Persistent {
      * @return decompression ratio
      */
     public double getDecompressionRatio() {
-      if (decompressed.get() == 0) return 0.;
-      return (double) decompressedRaw.get() / decompressed.get();
+      if (getDecompressed().get() == 0) return 0.;
+      return (double) getDecompressedRaw().get() / getDecompressed().get();
     }
     
     /**
@@ -212,9 +213,9 @@ public interface CompressionCodec extends Persistent {
      * @return compression throughput
      */
     public double getDecompressionThroughput() {
-      long time = decompressionTime.get(); // in nanoseconds
+      long time = getDecompressionTime().get(); // in nanoseconds
       if (time == 0) return 0.;
-      long total = decompressedRaw.get();
+      long total = getDecompressedRaw().get();
       return (double) total * 1000000000 / time;
     }
 
@@ -224,12 +225,12 @@ public interface CompressionCodec extends Persistent {
       dos.writeInt(compressionLevel);
       dos.writeInt(dictSize);
       dos.writeInt(codecType.ordinal());
-      dos.writeLong(compressedRaw.get());
-      dos.writeLong(compressed.get());
-      dos.writeLong(decompressedRaw.get());
-      dos.writeLong(decompressed.get());
-      dos.writeLong(compressionTime.get());
-      dos.writeLong(decompressionTime.get());
+      dos.writeLong(getCompressedRaw().get());
+      dos.writeLong(getCompressed().get());
+      dos.writeLong(getDecompressedRaw().get());
+      dos.writeLong(getDecompressed().get());
+      dos.writeLong(getCompressionTime().get());
+      dos.writeLong(getDecompressionTime().get());
     }
 
     @Override
@@ -238,12 +239,60 @@ public interface CompressionCodec extends Persistent {
       this.compressionLevel = dis.readInt();
       this.dictSize = dis.readInt();
       this.codecType = Type.values()[dis.readInt()];
-      this.compressedRaw = new AtomicLong(dis.readLong());
-      this.compressed = new AtomicLong(dis.readLong());
-      this.decompressedRaw = new AtomicLong(dis.readLong());
-      this.decompressed = new AtomicLong(dis.readLong());
-      this.compressionTime = new AtomicLong(dis.readLong());
-      this.decompressionTime = new AtomicLong(dis.readLong());
+      this.setCompressedRaw(new AtomicLong(dis.readLong()));
+      this.setCompressed(new AtomicLong(dis.readLong()));
+      this.setDecompressedRaw(new AtomicLong(dis.readLong()));
+      this.setDecompressed(new AtomicLong(dis.readLong()));
+      this.setCompressionTime(new AtomicLong(dis.readLong()));
+      this.setDecompressionTime(new AtomicLong(dis.readLong()));
+    }
+
+    public AtomicLong getDecompressedRaw() {
+      return decompressedRaw;
+    }
+
+    public void setDecompressedRaw(AtomicLong decompressedRaw) {
+      this.decompressedRaw = decompressedRaw;
+    }
+
+    public AtomicLong getDecompressed() {
+      return decompressed;
+    }
+
+    public void setDecompressed(AtomicLong decompressed) {
+      this.decompressed = decompressed;
+    }
+
+    public AtomicLong getDecompressionTime() {
+      return decompressionTime;
+    }
+
+    public void setDecompressionTime(AtomicLong decompressionTime) {
+      this.decompressionTime = decompressionTime;
+    }
+
+    public AtomicLong getCompressedRaw() {
+      return compressedRaw;
+    }
+
+    public void setCompressedRaw(AtomicLong compressedRaw) {
+      this.compressedRaw = compressedRaw;
+    }
+
+    public AtomicLong getCompressed() {
+      return compressed;
+    }
+
+    public void setCompressed(AtomicLong compressed) {
+      this.compressed = compressed;
+    }
+
+    public AtomicLong getCompressionTime() {
+      return compressionTime;
+    }
+
+    public void setCompressionTime(AtomicLong compressionTime) {
+      this.compressionTime = compressionTime;
     }
     
   }

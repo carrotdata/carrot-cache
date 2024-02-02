@@ -481,6 +481,7 @@ public class Scavenger implements Runnable {
         }
         s = engine.getSegmentForRecycling();
         if (s == null) {
+          /*DEBUG*/ System.out.println("no more segments to recycle");
           break;
         }
         if (shouldStopOn(s)) {
@@ -533,17 +534,24 @@ public class Scavenger implements Runnable {
         "scavenger [{}] finished at {} allocated storage={} maximum storage=%{}", cache.getName(),
         format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
 
+
   }
 
   private boolean shouldStopOn(Segment s) {
     long expire = s.getInfo().getMaxExpireAt();
     long n = s.getAliveItems();
+
     long currentTime = System.currentTimeMillis();
     IOEngine engine = cache.getEngine();
+    
+    String msg = "sid=" + s.getId() + " expire=" 
+        + expire + " current=" + currentTime + " alive=" + n + " size=" + engine.size();
     if (engine.size() == 0) {
+      //*DEBUG*/ System.out.println("F: " + msg);
       return true;
     }
     if ((expire > 0 && expire <= currentTime) || n == 0) {
+      //*DEBUG*/ System.out.println("C: " + msg);
       return false;
     }
 //    double sratio = (double) s.getAliveItems() / s.getTotalItems();    
@@ -559,6 +567,7 @@ public class Scavenger implements Runnable {
 //      }
 //      cleanDeletedOnly = cleanDeletedOnly && usage < stopRatio;
 //    }
+    /*DEBUG*/ System.out.println("usage=" + usage + " stopRatio=" + stopRatio + " stop scav=" + (usage < stopRatio));
     return /*activeRatio >= minActiveRatio && */usage < stopRatio;   
   }
 

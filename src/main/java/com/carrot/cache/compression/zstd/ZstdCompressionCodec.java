@@ -1,4 +1,4 @@
-package com.carrot.cache.compression;
+package com.carrot.cache.compression.zstd;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.carrot.cache.compression.CompressionCodec;
 import com.carrot.cache.util.CarrotConfig;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
@@ -158,9 +159,9 @@ public class ZstdCompressionCodec implements CompressionCodec {
       return compressedSize;
     }
     UnsafeAccess.copy(buf, 0, ptr, compressedSize);
-    this.stats.compressedRaw.addAndGet(len);
-    this.stats.compressed.addAndGet(compressedSize);
-    this.stats.compressionTime.addAndGet(endTime - startTime);
+    this.stats.getCompressedRaw().addAndGet(len);
+    this.stats.getCompressed().addAndGet(compressedSize);
+    this.stats.getCompressionTime().addAndGet(endTime - startTime);
     // update statistics
     return compressedSize;
   }
@@ -260,9 +261,9 @@ public class ZstdCompressionCodec implements CompressionCodec {
     int decompressedSize = currentCtxt.decompressNativeByteArray(buffer, 0, buffer.length, ptr, size);
     long endTime = System.nanoTime();
     //*DEBUG*/ System.out.println("counter=" + (counter ++) + " decomp time=" + (endTime - startTime) + " decomp size=" + decompressedSize) ;
-    this.stats.decompressedRaw.addAndGet(decompressedSize);
-    this.stats.decompressed.addAndGet(size);
-    this.stats.decompressionTime.addAndGet(endTime - startTime);
+    this.stats.getDecompressedRaw().addAndGet(decompressedSize);
+    this.stats.getDecompressed().addAndGet(size);
+    this.stats.getDecompressionTime().addAndGet(endTime - startTime);
     return decompressedSize;
   }
 
@@ -276,9 +277,9 @@ public class ZstdCompressionCodec implements CompressionCodec {
     }
     int decompressedSize = currentCtxt.decompressByteArray(buffer, 0, buffer.length, src, srcOffset, srcSize);
     long endTime = System.nanoTime();
-    this.stats.decompressedRaw.addAndGet(decompressedSize);
-    this.stats.decompressed.addAndGet(srcSize);
-    this.stats.decompressionTime.addAndGet(endTime - startTime);
+    this.stats.getDecompressedRaw().addAndGet(decompressedSize);
+    this.stats.getDecompressed().addAndGet(srcSize);
+    this.stats.getDecompressionTime().addAndGet(endTime - startTime);
     return decompressedSize;
   }
   
@@ -291,9 +292,9 @@ public class ZstdCompressionCodec implements CompressionCodec {
     }
     int decompressedSize = currentCtxt.decompressNativeNative(buffer, bufSize, ptr, size);
     long endTime = System.nanoTime();
-    this.stats.decompressedRaw.addAndGet(decompressedSize);
-    this.stats.decompressed.addAndGet(size);
-    this.stats.decompressionTime.addAndGet(endTime - startTime);
+    this.stats.getDecompressedRaw().addAndGet(decompressedSize);
+    this.stats.getDecompressed().addAndGet(size);
+    this.stats.getDecompressionTime().addAndGet(endTime - startTime);
     return decompressedSize;
   }
   

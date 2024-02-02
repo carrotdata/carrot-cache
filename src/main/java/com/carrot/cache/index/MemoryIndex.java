@@ -2038,6 +2038,8 @@ public final class MemoryIndex implements Persistent {
     long retPtr = ptr;
 
     if (isEvictionEnabled()) {
+      //TODO: WHAT IS THAT?
+      // It looks like this is pro-active eviction during insert
       if (this.expiredEvictedBalance.get() <= 0) {
         doEviction(ptr); // TODO: take into account size of a new item
       } else {

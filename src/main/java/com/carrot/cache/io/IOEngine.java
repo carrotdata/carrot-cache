@@ -257,7 +257,7 @@ public abstract class IOEngine implements Persistent {
   }
 
   /**
-   * Get storage used
+   * Get storage used (uncompressed size)
    *
    * @return size
    */
@@ -265,6 +265,21 @@ public abstract class IOEngine implements Persistent {
     return this.storageUsed.get();
   }
 
+  /**
+   * This method should be called when compression is enabled
+   * @return actual storage usage
+   */
+  public final long getStorageUsedActual() {
+    long used = 0;
+    for(int i = 0; i < dataSegments.length; i++) {
+      if (dataSegments[i] == null) {
+        continue;
+      }
+      used += dataSegments[i].getSegmentDataSize();
+    }
+    return used;
+  }
+  
   /**
    * Get storage allocation as a ratio of a maximum storage size
    *
@@ -281,7 +296,6 @@ public abstract class IOEngine implements Persistent {
    * @return new storage allocation value
    */
   public long reportAllocation(long value) {
-    // *DEBUG*/ System.out.println("alloced: "+ value);
     long v = this.storageAllocated.addAndGet(value);
     if (this.aListener != null) {
       // This must the Cache
@@ -2137,7 +2151,6 @@ public abstract class IOEngine implements Persistent {
    * @throws IOException
    */
   
-  private int sid = -1;
   public boolean put(
       byte[] key,
       int keyOff,
@@ -2166,6 +2179,7 @@ public abstract class IOEngine implements Persistent {
     //*DEBUG*/ System.out.println(offset);
     if (offset < 0) {
       if(!s.isSealed()) {
+        //FIXME: is it sync call
         save(s); // removes segment from RAM buffers
       }
       s = getRAMSegmentByRank(groupRank);
@@ -2445,12 +2459,18 @@ public abstract class IOEngine implements Persistent {
    */
   public long activeSize() {
     long total = 0;
+    long t = 0, ev = 0, exp = 0; 
     for (Segment s : this.dataSegments) {
       if (s == null) {
         continue;
       }
+      t += s.getTotalItems();
+      ev += s.getNumberEvictedDeletedItems();
+      exp += s.getNumberExpiredItems();
       total += s.getTotalItems() - s.getNumberEvictedDeletedItems() - s.getNumberExpiredItems();
     }
+    /*DEBUG*/ System.out.println("total=" + t + " ev=" + ev + " exp=" + exp);
+
     return total;
   }
 
