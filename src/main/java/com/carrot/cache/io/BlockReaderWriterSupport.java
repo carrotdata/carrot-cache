@@ -128,6 +128,9 @@ public class BlockReaderWriterSupport {
         $ptr += kSize + vSize;
         continue;
       }
+      if ($ptr + kSize >= ptr + blockDataSize) {
+        break;
+      }
       if (Utils.compareTo(key, keyOffset, keySize, $ptr, kSize) == 0) {
         $ptr -= kSizeSize + vSizeSize;
         found = $ptr;
@@ -186,6 +189,9 @@ public class BlockReaderWriterSupport {
         $ptr += kSize + vSize;
         continue;
       }
+      if ($ptr + kSize >= ptr + blockDataSize) {
+        break;
+      }
       if (Utils.compareTo(keyPtr, keySize, $ptr, kSize) == 0) {
         $ptr -= kSizeSize + vSizeSize;
         found = $ptr;
@@ -235,6 +241,9 @@ public class BlockReaderWriterSupport {
         off += kSize + vSize;
         continue;
       }
+      if (off + kSize >= blockDataSize) {
+        break;
+      }
       if (Utils.compareTo(key, keyOffset, keySize, block, off, kSize) == 0) {
         found = off - kSizeSize - vSizeSize;
       }
@@ -280,6 +289,9 @@ public class BlockReaderWriterSupport {
       if (kSize != keySize) {
         off += kSize + vSize;
         continue;
+      }
+      if (off + kSize >= blockDataSize) {
+        break;
       }
       if (Utils.compareTo(block, off, kSize, keyPtr, keySize) == 0) {
         found = off - kSizeSize - vSizeSize;

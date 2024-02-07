@@ -1425,7 +1425,7 @@ public final class MemoryIndex implements Persistent {
           }
           long expire = this.indexFormat.getExpire(ptr, $ptr);
           long current = System.currentTimeMillis();
-          int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
+          int rank = this.evictionPolicy.getRankForIndex(this.numRanks, count, numEntries);
 
           if (expire > 0 && current > expire) {
             // For expired items rank does not matter

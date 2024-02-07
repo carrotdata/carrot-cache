@@ -126,8 +126,8 @@ public abstract class TestCacheMultithreadedZipfBase {
       .withAdmissionController(acClz.getName())
       .withSLRUInsertionPoint(slruInsertionPoint)
       .withCacheSpinWaitTimeOnHighPressure(spinOnWaitTime)
-      .withRollingWindowDuration(cacheName, windowSize)
-      .withRollingWindowBinsCount(cacheName, binsCount)
+      .withRollingWindowDuration(windowSize)
+      .withRollingWindowBinsCount(binsCount)
       .withScavengerNumberOfThreads(scavNumberThreads);
     builder = withAddedConfigurations(builder);
     if (offheap) {
@@ -250,7 +250,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   }
   
   
-  protected final boolean loadBytesStream(int n) throws IOException {
+  protected boolean loadBytesStream(int n) throws IOException {
     Random r = new Random(testStartTime + n);
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);
@@ -262,7 +262,7 @@ public abstract class TestCacheMultithreadedZipfBase {
     return result;
   }
   
-  protected final boolean verifyBytesStream(int n, byte[] buffer) throws IOException {
+  protected boolean verifyBytesStream(int n, byte[] buffer) throws IOException {
     
     Random r = new Random(testStartTime + n);
     
@@ -293,7 +293,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   }
 
 
-  protected final boolean loadMemoryStream(int n) throws IOException {
+  protected boolean loadMemoryStream(int n) throws IOException {
     Random r = new Random(testStartTime + n);
     
     int keySize = nextKeySize(r);
@@ -307,7 +307,7 @@ public abstract class TestCacheMultithreadedZipfBase {
     return result;
   }
   
-  protected final boolean verifyMemoryStream(int n, ByteBuffer buffer) throws IOException {
+  protected boolean verifyMemoryStream(int n, ByteBuffer buffer) throws IOException {
 
     Random r = new Random(testStartTime + n);
     
@@ -344,7 +344,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   }
   
   protected void testContinuosLoadBytesRun() throws IOException {
-    long start = System.currentTimeMillis();
+   
     // Create cache after setting is configuration parameters
     this.cache = createCache();
     this.numIterations = this.numIterations > 0? this.numIterations: this.numRecords;
@@ -355,16 +355,16 @@ public abstract class TestCacheMultithreadedZipfBase {
         // TODO Auto-generated catch block
         e.printStackTrace();
     }};
-    
+    long start = System.currentTimeMillis();
     Thread[] all = startAll(r);
     joinAll(all);
     long stop = System.currentTimeMillis();
     Scavenger.printStats();
-    System.out.printf("Thread=%s time=%dms\n", Thread.currentThread().getName(), stop - start);
+    System.out.printf("Thread=%s time=%dms rps=%d\n", Thread.currentThread().getName(), stop - start,
+      (this.numThreads * (long) this.numIterations) * 1000 / (stop - start));
   }
   
   protected void testContinuosLoadMemoryRun() throws IOException {
-    long start = System.currentTimeMillis();
     // Create cache after setting is configuration parameters
     this.cache = createCache();
     this.numIterations = this.numIterations > 0? this.numIterations: this.numRecords;
@@ -376,12 +376,12 @@ public abstract class TestCacheMultithreadedZipfBase {
         // TODO Auto-generated catch block
         e.printStackTrace();
     }};
-    
+    long start = System.currentTimeMillis();
     Thread[] all = startAll(r);
     joinAll(all);
     long stop = System.currentTimeMillis();
     Scavenger.printStats();
-    System.out.printf("Time=%dms\n", stop - start);
-  }
+    System.out.printf("Thread=%s time=%dms rps=%d\n", Thread.currentThread().getName(), stop - start,
+      (this.numThreads * (long) this.numIterations) * 1000 / (stop - start));  }
   
 }

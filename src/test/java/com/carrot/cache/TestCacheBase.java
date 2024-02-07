@@ -101,7 +101,7 @@ public abstract class TestCacheBase extends IOTestBase {
       .withCacheStreamingSupportBufferSize(1 << 19)
       .withEvictionDisabledMode(true);
     if (maxKeyValueSize > 0) {
-      builder.withMaximumKeyValueSize(cacheName, maxKeyValueSize);
+      builder.withMaximumKeyValueSize(maxKeyValueSize);
     }
     if (offheap) {
       return builder.buildMemoryCache();

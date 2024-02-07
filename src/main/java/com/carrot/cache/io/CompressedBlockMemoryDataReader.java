@@ -96,9 +96,20 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     int uncompressedSize = UnsafeAccess.toInt(ptr + offset + SIZE_OFFSET);
     int dictVersion = UnsafeAccess.toInt(ptr + offset + DICT_VER_OFFSET);
     int compressedSize = UnsafeAccess.toInt(ptr + offset + COMP_SIZE_OFFSET);
-    
+    // sanity check 
+    //TODO: add to corrupted reads
+    if (uncompressedSize <= 0 || compressedSize <= 0) {
+      return IOEngine.NOT_FOUND;
+    }
+    long segSize = s.getSegmentDataSize();
+    if (uncompressedSize > segSize || compressedSize > segSize) {
+      return IOEngine.NOT_FOUND;
+    }
     if (dictVersion >= 0) {
       // TODO: sanity check on values
+      if (segSize < offset + COMP_META_SIZE + compressedSize) {
+        return IOEngine.NOT_FOUND;
+      }
       checkBuffer(uncompressedSize);
       // Decompress
       byte[] buf = buffers.get();
@@ -117,17 +128,21 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       if (size > avail) {
         return size;
       }
-      // TODO: remove this?
-      // if (s.getSegmentDataSize() < offset + size) {
-      // // Rare situation - wrong segment - hash collision
-      // return IOEngine.NOT_FOUND;
-      // }
+      if (segSize < offset + size) {
+      // Rare situation - wrong segment - hash collision
+        return IOEngine.NOT_FOUND;
+      }
 
       UnsafeAccess.copy(buf, off, buffer, bufOffset, size);
-    } else { // Block is not compressed
+    } else if (dictVersion == -1) { // Block is not compressed
+      if (segSize < offset + COMP_META_SIZE + uncompressedSize) {
+        return IOEngine.NOT_FOUND;
+      }
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
+      
       long addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, key, keyOffset, keySize);
+      
       if (addr < 0) {
         return IOEngine.NOT_FOUND;
       }
@@ -135,7 +150,15 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       if (size > avail) {
         return size;
       }
+      if (segSize < offset + size) {
+      // Rare situation - wrong segment - hash collision
+        return IOEngine.NOT_FOUND;
+      }
       UnsafeAccess.copy(addr, buffer, bufOffset, size);
+    } else {
+      // Race condition with Scavenger
+      //TODO: add to corrupted reads
+      return IOEngine.NOT_FOUND;
     }
     return size;
   }
@@ -164,8 +187,19 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     int uncompressedSize = UnsafeAccess.toInt(ptr + offset + SIZE_OFFSET);
     int dictVersion = UnsafeAccess.toInt(ptr + offset + DICT_VER_OFFSET);
     int compressedSize = UnsafeAccess.toInt(ptr + offset + COMP_SIZE_OFFSET);
+    // sanity check
+    if (uncompressedSize <= 0 ||compressedSize <= 0) {
+      return IOEngine.NOT_FOUND;
+    }
+    long segSize = s.getSegmentDataSize();
+    if (uncompressedSize > segSize || compressedSize > segSize) {
+      return IOEngine.NOT_FOUND;
+    }
     if (dictVersion >= 0) {
       // TODO: sanity check on values
+      if (segSize < offset + COMP_META_SIZE + compressedSize) {
+        return IOEngine.NOT_FOUND;
+      }
       checkBuffer(uncompressedSize);
       // Decompress
       byte[] buf = buffers.get();
@@ -184,14 +218,17 @@ public class CompressedBlockMemoryDataReader implements DataReader {
         return size;
       }
       // TODO: remove this?
-      // if (s.getSegmentDataSize() < offset + size) {
-      // // Rare situation - wrong segment - hash collision
-      // return IOEngine.NOT_FOUND;
-      // }
+      if (segSize < offset + size) {
+       // Rare situation - wrong segment - hash collision
+       return IOEngine.NOT_FOUND;
+      }
       int pos = buffer.position();
       UnsafeAccess.copy(buf, off, buffer, pos, size);
       buffer.position(pos);
-    } else { // Block is not compressed
+    } else if (dictVersion == -1){ // Block is not compressed
+      if (segSize < offset + COMP_META_SIZE + uncompressedSize) {
+        return IOEngine.NOT_FOUND;
+      }
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
       long addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, key, keyOffset, keySize);
@@ -203,13 +240,15 @@ public class CompressedBlockMemoryDataReader implements DataReader {
         return size;
       }
       // TODO: remove this?
-      // if (s.getSegmentDataSize() < offset + size) {
-      // // Rare situation - wrong segment - hash collision
-      // return IOEngine.NOT_FOUND;
-      // }
+       if (segSize < offset + size) {
+         // Rare situation - wrong segment - hash collision
+         return IOEngine.NOT_FOUND;
+       }
       int pos = buffer.position();
       UnsafeAccess.copy(addr, buffer, size);
       buffer.position(pos);
+    } else {
+      return IOEngine.NOT_FOUND;
     }
     return size;
   }
@@ -237,8 +276,19 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     int uncompressedSize = UnsafeAccess.toInt(ptr + offset + SIZE_OFFSET);
     int dictVersion = UnsafeAccess.toInt(ptr + offset + DICT_VER_OFFSET);
     int compressedSize = UnsafeAccess.toInt(ptr + offset + COMP_SIZE_OFFSET);
+    // sanity check
+    if (uncompressedSize <= 0 || compressedSize <= 0) {
+      return IOEngine.NOT_FOUND;
+    }
+    long segSize = s.getSegmentDataSize();
+    if (uncompressedSize > segSize || compressedSize > segSize) {
+      return IOEngine.NOT_FOUND;
+    }
     if (dictVersion >= 0) {
       // TODO: sanity check on values
+      if (segSize < offset + COMP_META_SIZE + compressedSize) {
+        return IOEngine.NOT_FOUND;
+      }
       checkBuffer(uncompressedSize);
       // Decompress
       byte[] buf = buffers.get();
@@ -257,14 +307,16 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       if (size > avail) {
         return size;
       }
-      // TODO: remove this?
-      // if (s.getSegmentDataSize() < offset + size) {
-      // // Rare situation - wrong segment - hash collision
-      // return IOEngine.NOT_FOUND;
-      // }
+      if (segSize < offset + size) {
+        // Rare situation - wrong segment - hash collision
+        return IOEngine.NOT_FOUND;
+      }
 
       UnsafeAccess.copy(buf, off, buffer, bufOffset, size);
-    } else { // Block is not compressed
+    } else if (dictVersion == -1){ // Block is not compressed
+      if (segSize < offset + COMP_META_SIZE + uncompressedSize) {
+        return IOEngine.NOT_FOUND;
+      }
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
       long addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, keyPtr, keySize);
@@ -275,7 +327,14 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       if (size > avail) {
         return size;
       }
+      // TODO: remove this?
+      if (segSize < offset + size) {
+        // Rare situation - wrong segment - hash collision
+        return IOEngine.NOT_FOUND;
+      }
       UnsafeAccess.copy(addr, buffer, bufOffset, size);
+    } else {
+      return IOEngine.NOT_FOUND;
     }
     return size;
   }
@@ -304,8 +363,19 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     int uncompressedSize = UnsafeAccess.toInt(ptr + offset + SIZE_OFFSET);
     int dictVersion = UnsafeAccess.toInt(ptr + offset + DICT_VER_OFFSET);
     int compressedSize = UnsafeAccess.toInt(ptr + offset + COMP_SIZE_OFFSET);
+    // sanity check
+    if (uncompressedSize <= 0 || compressedSize <= 0) {
+      return IOEngine.NOT_FOUND;
+    }
+    long segSize = s.getSegmentDataSize();
+    if (uncompressedSize > segSize || compressedSize > segSize) {
+      return IOEngine.NOT_FOUND;
+    }
     if (dictVersion >= 0) {
       // TODO: sanity check on values
+      if (segSize < offset + COMP_META_SIZE + compressedSize) {
+        return IOEngine.NOT_FOUND;
+      }
       checkBuffer(uncompressedSize);
       // Decompress
       byte[] buf = buffers.get();
@@ -324,17 +394,30 @@ public class CompressedBlockMemoryDataReader implements DataReader {
         return size;
       }
       // TODO: remove this?
-      // if (s.getSegmentDataSize() < offset + size) {
-      // // Rare situation - wrong segment - hash collision
-      // return IOEngine.NOT_FOUND;
-      // }
+      if (segSize < offset + size) {
+        // Rare situation - wrong segment - hash collision
+        return IOEngine.NOT_FOUND;
+      }
       int pos = buffer.position();
       UnsafeAccess.copy(buf, off, buffer, pos, size);
       buffer.position(pos);
-    } else { // Block is not compressed
+    } else if (dictVersion == -1){ // Block is not compressed
+      // TODO: sanity check on values
+      if (segSize < offset + COMP_META_SIZE + uncompressedSize) {
+        return IOEngine.NOT_FOUND;
+      }
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
-      long addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, keyPtr, keySize);
+      long addr = 0;
+      try {
+        addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, keyPtr, keySize);
+      } catch (Exception e) {
+        System.err.println(" : ptr="+ ptr + " usize="+ uncompressedSize + 
+          " cSize=" + compressedSize + " dictVersion=" + dictVersion + " offset=" + offset+ " segmentSize="+ s.getSegmentDataSize()+ 
+          " valid=" + s.isValid());
+        e.printStackTrace();
+        System.exit(-1);
+      }
       if (addr < 0) {
         return IOEngine.NOT_FOUND;
       }
@@ -343,13 +426,15 @@ public class CompressedBlockMemoryDataReader implements DataReader {
         return size;
       }
       // TODO: remove this?
-      // if (s.getSegmentDataSize() < offset + size) {
-      // // Rare situation - wrong segment - hash collision
-      // return IOEngine.NOT_FOUND;
-      // }
+      if (s.getSegmentDataSize() < offset + size) {
+        // Rare situation - wrong segment - hash collision
+        return IOEngine.NOT_FOUND;
+      }
       int pos = buffer.position();
       UnsafeAccess.copy(addr, buffer, size);
       buffer.position(pos);
+    } else {
+      return IOEngine.NOT_FOUND;
     }
     return size;
   }
@@ -381,10 +466,20 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     int uncompressedSize = UnsafeAccess.toInt(ptr + offset + SIZE_OFFSET);
     int dictVersion = UnsafeAccess.toInt(ptr + offset + DICT_VER_OFFSET);
     int compressedSize = UnsafeAccess.toInt(ptr + offset + COMP_SIZE_OFFSET);
+    // sanity check 
+    //TODO: add to corrupted reads
+    if (uncompressedSize <= 0 || compressedSize <= 0) {
+      return IOEngine.NOT_FOUND;
+    }
+    long segSize = s.getSegmentDataSize();
+    if (uncompressedSize > segSize || compressedSize > segSize) {
+      return IOEngine.NOT_FOUND;
+    }
     if (dictVersion >= 0) {
       // TODO: sanity check on values
-      checkBuffer(uncompressedSize);
-
+      if (segSize < offset + COMP_META_SIZE + compressedSize) {
+        return IOEngine.NOT_FOUND;
+      }      checkBuffer(uncompressedSize);
       // Decompress
       byte[] buf = buffers.get();
       int dsize = codec.decompress(ptr + offset + COMP_META_SIZE, compressedSize, buf, dictVersion);
@@ -414,15 +509,19 @@ public class CompressedBlockMemoryDataReader implements DataReader {
 
       valueOffset += rangeStart;
 
-      // if (s.getSegmentDataSize() < offset + valueOffset + rangeSize) {
-      // // Rare situation - wrong segment - hash collision
-      // return IOEngine.NOT_FOUND;
-      // }
+      if (segSize < offset + valueOffset + rangeSize) {
+        // Rare situation - wrong segment - hash collision
+        return IOEngine.NOT_FOUND;
+      }
       UnsafeAccess.copy(buf, off + valueOffset, buffer, bufOffset, rangeSize);
       // Now buffer contains both: key and value, we need to compare keys
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
 
-    } else {
+    } else if (dictVersion == -1) {
+      // TODO: sanity check on values
+      if (segSize < offset + COMP_META_SIZE + uncompressedSize) {
+        return IOEngine.NOT_FOUND;
+      }
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
       long addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, key, keyOffset, keySize);
@@ -445,14 +544,15 @@ public class CompressedBlockMemoryDataReader implements DataReader {
 
       valueOffset += rangeStart;
 
-      // if (s.getSegmentDataSize() < offset + valueOffset + rangeSize) {
-      // // Rare situation - wrong segment - hash collision
-      // return IOEngine.NOT_FOUND;
-      // }
+      if (segSize < offset + valueOffset + rangeSize) {
+        // Rare situation - wrong segment - hash collision
+        return IOEngine.NOT_FOUND;
+      }
       UnsafeAccess.copy(addr + valueOffset, buffer, bufOffset, rangeSize);
       // Now buffer contains both: key and value, we need to compare keys
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
-
+    } else {
+      return IOEngine.NOT_FOUND;
     }
     return rangeSize;
 
@@ -484,9 +584,19 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     int dictVersion = UnsafeAccess.toInt(ptr + offset + DICT_VER_OFFSET);
     int compressedSize = UnsafeAccess.toInt(ptr + offset + COMP_SIZE_OFFSET);
     int pos = buffer.position();
-
+    //TODO: add to corrupted reads
+    if (uncompressedSize <= 0 || compressedSize <= 0) {
+      return IOEngine.NOT_FOUND;
+    }
+    long segSize = s.getSegmentDataSize();
+    if (uncompressedSize > segSize || compressedSize > segSize) {
+      return IOEngine.NOT_FOUND;
+    }
     if (dictVersion >= 0) {
       // TODO: sanity check on values
+      if (segSize < offset + COMP_META_SIZE + compressedSize) {
+        return IOEngine.NOT_FOUND;
+      }   
       checkBuffer(uncompressedSize);
       // Decompress
       byte[] buf = buffers.get();
@@ -510,12 +620,15 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       }
       int valueOffset = Utils.getValueOffset(buf, off);
       valueOffset += rangeStart;
-      // if (s.getSegmentDataSize() < offset + valueOffset + rangeSize) {
-      // // Rare situation - wrong segment - hash collision
-      // return IOEngine.NOT_FOUND;
-      // }      
+      if (segSize < offset + valueOffset + rangeSize) {
+        // Rare situation - wrong segment - hash collision
+        return IOEngine.NOT_FOUND;
+      }      
       UnsafeAccess.copy(buf, off + valueOffset, buffer, pos, rangeSize);
-    } else {
+    } else if (dictVersion == -1){
+      if (segSize < offset + COMP_META_SIZE + uncompressedSize) {
+        return IOEngine.NOT_FOUND;
+      }  
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
       long addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, key, keyOffset, keySize);
@@ -533,11 +646,13 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       }
       int valueOffset = Utils.getValueOffset(addr);
       valueOffset += rangeStart;
-      // if (s.getSegmentDataSize() < offset + valueOffset + rangeSize) {
-      // // Rare situation - wrong segment - hash collision
-      // return IOEngine.NOT_FOUND;
-      // }
+      if (segSize < offset + valueOffset + rangeSize) {
+        // Rare situation - wrong segment - hash collision
+        return IOEngine.NOT_FOUND;
+      }
       UnsafeAccess.copy(addr + valueOffset, buffer,  rangeSize);
+    } else {
+      return IOEngine.NOT_FOUND;
     }
     buffer.position(pos);
     return rangeSize;
@@ -568,10 +683,20 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     int uncompressedSize = UnsafeAccess.toInt(ptr + offset + SIZE_OFFSET);
     int dictVersion = UnsafeAccess.toInt(ptr + offset + DICT_VER_OFFSET);
     int compressedSize = UnsafeAccess.toInt(ptr + offset + COMP_SIZE_OFFSET);
+    //TODO: add to corrupted reads
+    if (uncompressedSize <= 0 || compressedSize <= 0) {
+      return IOEngine.NOT_FOUND;
+    }
+    long segSize = s.getSegmentDataSize();
+    if (uncompressedSize > segSize || compressedSize > segSize) {
+      return IOEngine.NOT_FOUND;
+    }
     if (dictVersion >= 0) {
       // TODO: sanity check on values
+      if (segSize < offset + COMP_META_SIZE + compressedSize) {
+        return IOEngine.NOT_FOUND;
+      }  
       checkBuffer(uncompressedSize);
-
       // Decompress
       byte[] buf = buffers.get();
       int dsize = codec.decompress(ptr + offset + COMP_META_SIZE, compressedSize, buf, dictVersion);
@@ -601,15 +726,19 @@ public class CompressedBlockMemoryDataReader implements DataReader {
 
       valueOffset += rangeStart;
 
-      // if (s.getSegmentDataSize() < offset + valueOffset + rangeSize) {
-      // // Rare situation - wrong segment - hash collision
-      // return IOEngine.NOT_FOUND;
-      // }
+      if (segSize < offset + valueOffset + rangeSize) {
+        // Rare situation - wrong segment - hash collision
+        return IOEngine.NOT_FOUND;
+      }
       UnsafeAccess.copy(buf, off + valueOffset, buffer, bufOffset, rangeSize);
       // Now buffer contains both: key and value, we need to compare keys
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
 
-    } else {
+    } else if (dictVersion == -1) {
+      // TODO: sanity check on values
+      if (segSize < offset + COMP_META_SIZE + uncompressedSize) {
+        return IOEngine.NOT_FOUND;
+      }  
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
       long addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, keyPtr, keySize);
@@ -632,14 +761,16 @@ public class CompressedBlockMemoryDataReader implements DataReader {
 
       valueOffset += rangeStart;
 
-      // if (s.getSegmentDataSize() < offset + valueOffset + rangeSize) {
-      // // Rare situation - wrong segment - hash collision
-      // return IOEngine.NOT_FOUND;
-      // }
+      if (segSize < offset + valueOffset + rangeSize) {
+        // Rare situation - wrong segment - hash collision
+        return IOEngine.NOT_FOUND;
+      }
       UnsafeAccess.copy(addr + valueOffset, buffer, bufOffset, rangeSize);
       // Now buffer contains both: key and value, we need to compare keys
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
 
+    } else {
+      return IOEngine.NOT_FOUND;
     }
     return rangeSize;
   }
@@ -670,9 +801,19 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     int dictVersion = UnsafeAccess.toInt(ptr + offset + DICT_VER_OFFSET);
     int compressedSize = UnsafeAccess.toInt(ptr + offset + COMP_SIZE_OFFSET);
     int pos = buffer.position();
-
+    //TODO: add to corrupted reads
+    if (uncompressedSize <= 0 || compressedSize <= 0) {
+      return IOEngine.NOT_FOUND;
+    }
+    long segSize = s.getSegmentDataSize();
+    if (uncompressedSize > segSize || compressedSize > segSize) {
+      return IOEngine.NOT_FOUND;
+    }
     if (dictVersion >= 0) {
       // TODO: sanity check on values
+      if (segSize < offset + COMP_META_SIZE + compressedSize) {
+        return IOEngine.NOT_FOUND;
+      }
       checkBuffer(uncompressedSize);
       // Decompress
       byte[] buf = buffers.get();
@@ -696,12 +837,16 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       }
       int valueOffset = Utils.getValueOffset(buf, off);
       valueOffset += rangeStart;
-      // if (s.getSegmentDataSize() < offset + valueOffset + rangeSize) {
-      // // Rare situation - wrong segment - hash collision
-      // return IOEngine.NOT_FOUND;
-      // }      
+      if (segSize < offset + valueOffset + rangeSize) {
+        // Rare situation - wrong segment - hash collision
+        return IOEngine.NOT_FOUND;
+      }      
       UnsafeAccess.copy(buf, off + valueOffset, buffer, pos, rangeSize);
-    } else {
+    } else if (dictVersion == -1){
+      // TODO: sanity check on values
+      if (segSize < offset + COMP_META_SIZE + uncompressedSize) {
+        return IOEngine.NOT_FOUND;
+      }
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
       long addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, keyPtr, keySize);
@@ -719,11 +864,13 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       }
       int valueOffset = Utils.getValueOffset(addr);
       valueOffset += rangeStart;
-      // if (s.getSegmentDataSize() < offset + valueOffset + rangeSize) {
-      // // Rare situation - wrong segment - hash collision
-      // return IOEngine.NOT_FOUND;
-      // }
+      if (segSize < offset + valueOffset + rangeSize) {
+        // Rare situation - wrong segment - hash collision
+        return IOEngine.NOT_FOUND;
+      }
       UnsafeAccess.copy(addr + valueOffset, buffer,  rangeSize);
+    } else {
+      return IOEngine.NOT_FOUND;
     }
     buffer.position(pos);
     return rangeSize;

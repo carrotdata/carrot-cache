@@ -21,9 +21,12 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import java.util.stream.Stream;
 
@@ -114,6 +117,13 @@ public class TestUtils {
     return mem;
   }
   
+  public static long copyToMemory(String s) {
+    byte[] arr = s.getBytes();
+    long mem = UnsafeAccess.malloc(arr.length);
+    UnsafeAccess.copy(arr,  0,  mem, arr.length);
+    return mem;
+  }
+  
   public static DataOutputStream getOutputStreamForTest() {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     return new DataOutputStream(baos);
@@ -184,4 +194,30 @@ public class TestUtils {
     p = Paths.get(dataDir);
     deleteDir(p);
   }
+  
+  public static List<byte[]> loadGithubDataAsBytes() throws URISyntaxException, IOException{
+    
+    File dir = new File("./src/test/resources/github");
+    File[] list = dir.listFiles();
+    ArrayList<byte[]> dataList = new ArrayList<byte[]>();
+    for (File ff: list) {
+      String s = Files.readString(Paths.get(ff.toURI()));
+      dataList.add(s.getBytes());
+    }
+    return dataList;
+  }
+  
+  public static List<Long> loadGithubDataAsMemory() throws URISyntaxException, IOException{
+    
+    File dir = new File("./src/test/resources/github");
+    File[] list = dir.listFiles();
+    ArrayList<Long> dataList = new ArrayList<Long>();
+    for (File ff: list) {
+      String s = Files.readString(Paths.get(ff.toURI()));
+      long ptr = copyToMemory(s);
+      dataList.add(ptr);
+    }
+    return dataList;
+  }
+    
 }

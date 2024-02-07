@@ -105,8 +105,8 @@ public class TestOffheapCacheGetAPI {
       .withCacheRootDir(rootDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
       .withEvictionDisabledMode(true)
-      .withTLSSupported(cacheName, tlsEnabled)
-      .withCacheTLSInitialBufferSize(cacheName, tlsInitialBufferSize);
+      .withTLSSupported(tlsEnabled)
+      .withCacheTLSInitialBufferSize(tlsInitialBufferSize);
     
     if (offheap) {
       return builder.buildMemoryCache();

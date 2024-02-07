@@ -627,88 +627,80 @@ public class Builder {
   
   /**
    * With rolling window duration
-   * @param cacheName
    * @param duration
    * @return builder instance 
    */
-  public Builder withRollingWindowDuration(String cacheName, int duration) {
+  public Builder withRollingWindowDuration(int duration) {
     conf.setRollingWindowDuration(cacheName, duration);
     return this;
   }
   
   /**
    * With rolling window bins count
-   * @param cacheName
    * @param count number of bins
    * @return builder instance 
    */
-  public Builder withRollingWindowBinsCount(String cacheName, int count) {
+  public Builder withRollingWindowBinsCount(int count) {
     conf.setRollingWindowNumberBins(cacheName, count);
     return this;
   }
   
   /**
    * With cache maximum value size
-   * @param cacheName cache name
    * @param size maximum size
    * @return builder instance
    */
-  public Builder withMaximumKeyValueSize(String cacheName, int size) {
+  public Builder withMaximumKeyValueSize(int size) {
     conf.setKeyValueMaximumSize(cacheName, size);
     return this;
   }
   
   /**
    * With object cache initial output buffer size
-   * @param cacheName cache name
    * @param size initial size in bytes
    * @return builder instance
    */
-  public Builder withObjectCacheInitialOutputBufferSize(String cacheName, int size) {
+  public Builder withObjectCacheInitialOutputBufferSize(int size) {
     conf.setObjectCacheInitialOutputBufferSize(cacheName, size);
     return this;
   }
   
   /**
    * With object cache maximum output buffer size
-   * @param cacheName cache name
    * @param size maximum size in bytes
    * @return builder instance
    */
-  public Builder withObjectCacheMaximumOutputBufferSize(String cacheName, int size) {
+  public Builder withObjectCacheMaximumOutputBufferSize(int size) {
     conf.setObjectCacheMaxOutputBufferSize(cacheName, size);
     return this;
   }
   
   /**
    * With Thread-Local-Storage supported
-   * @param cacheName cache name
    * @param supported true or false
    * @return builder instance
    */
-  public Builder withTLSSupported(String cacheName, boolean supported) {
+  public Builder withTLSSupported(boolean supported) {
     conf.setCacheTLSSupported(cacheName, supported);
     return this;
   }
   
   /**
    * With cache TLS initial output buffer size
-   * @param cacheName cache name
    * @param size initial size in bytes
    * @return builder instance
    */
-  public Builder withCacheTLSInitialBufferSize(String cacheName, int size) {
+  public Builder withCacheTLSInitialBufferSize(int size) {
     conf.setCacheTLSInitialBufferSize(cacheName, size);
     return this;
   }
   
   /**
    * With object cache maximum output buffer size
-   * @param cacheName cache name
    * @param size maximum size in bytes
    * @return builder instance
    */
-  public Builder withCacheTLSMaximumBufferSize(String cacheName, int size) {
+  public Builder withCacheTLSMaximumBufferSize(int size) {
     conf.setCacheTLSMaxBufferSize(cacheName, size);
     return this;
   }

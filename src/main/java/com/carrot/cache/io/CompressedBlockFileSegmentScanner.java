@@ -190,10 +190,10 @@ import com.carrot.cache.util.Utils;
     
     /**
      * Get current key's address
-     * @return keys address
+     * @return keys address or 0 (if not supported)
      */
     public final long keyAddress() {
-      throw new UnsupportedOperationException();
+      return 0; 
     }
     
     private final int keyOffset() {
@@ -211,7 +211,7 @@ import com.carrot.cache.util.Utils;
      * @return values address
      */
     public final long valueAddress() {
-      throw new UnsupportedOperationException();
+      return 0;
     }
 
     private final int valueOffset() {

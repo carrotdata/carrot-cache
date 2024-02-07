@@ -15,6 +15,7 @@
 package com.carrot.cache;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -31,7 +32,7 @@ import com.carrot.cache.eviction.FIFOEvictionPolicy;
 import com.carrot.cache.eviction.LRUEvictionPolicy;
 import com.carrot.cache.util.TestUtils;
 
-public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithreadedZipf {
+public class TestHybridCompressedCacheMultithreadedZipf extends TestOffheapCompressedCacheMultithreadedZipf {
   
   int victim_segmentSize = 16 * 1024 * 1024;
   
@@ -52,14 +53,16 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
   protected Class<? extends AdmissionController> victim_acClz = BaseAdmissionController.class;
   
   @Override
-  public void setUp() {
+  public void setUp() throws IOException, URISyntaxException {
+    super.setUp();
     // Parent cache
     this.offheap = true;
     this.numRecords = 2000000;
     this.numIterations = 2 * this.numRecords;
-    this.numThreads = 4;
+    this.numThreads = 1;
     this.minActiveRatio = 0.9;
     this.maxCacheSize = 10L * this.segmentSize;
+   
     // victim cache
     this.victim_segmentSize = 4 * 1024 * 1024;
     this.victim_maxCacheSize = 1000L * this.victim_segmentSize;

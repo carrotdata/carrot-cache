@@ -120,6 +120,7 @@ public class CompressedBlockFileDataReader implements DataReader {
 
     int off = 0;
     // Read first block
+    //TODO: we can improve read speed if we do 4K aligned reads
     int toRead =(int) Math.min(blockSize, file.length() - offset);
     // Check buffers
     checkReadBuffer(toRead);

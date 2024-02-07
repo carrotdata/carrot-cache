@@ -909,6 +909,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   private boolean storageIsFull(int keySize, int valueSize) {
     // OK, eviction is disabled
     // check used and maximum storage size
+    //FIXME: calculating of storageusedActual can be costly
     long used = getStorageUsedActual();
     long max = getMaximumCacheSize();
     int size = Utils.kvSize(keySize, valueSize);
@@ -2465,9 +2466,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   public void printStats() {
-    System.out.printf("Cache[%s]: storage size=%d data size=%d items=%d hit rate=%f, puts=%d, bytes written=%d\n",
-      this.cacheName, getStorageAllocated(), getStorageUsed(), size(), 
-      getHitRate(), getTotalWrites(), getTotalWritesSize());
+    double compRatio = (double)getStorageUsed() / getStorageAllocated();
+    System.out.printf("Cache[%s]: storage size=%d data size=%d comp ratio=%f items=%d hit rate=%f, gets=%d, puts=%d, bytes written=%d\n",
+      this.cacheName, getStorageAllocated(), getStorageUsed(), compRatio, size(), 
+      getHitRate(), getTotalGets(), getTotalWrites(), getTotalWritesSize());
     if (this.victimCache != null) {
        this.victimCache.printStats();
     }

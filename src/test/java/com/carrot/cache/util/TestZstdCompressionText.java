@@ -17,7 +17,7 @@ import com.github.luben.zstd.ZstdDictTrainer;
 
 public class TestZstdCompressionText {
 
-  private static int DICT_SIZE = 1 << 18; // 16KB
+  private static int DICT_SIZE = 1 << 20; // 16KB
   private static int COMP_LEVEL = 3;
   
   public static void main(String[] args) throws IOException {
@@ -48,7 +48,7 @@ public class TestZstdCompressionText {
      compContext.loadDict(dictCompress);
      compContext.setLevel(COMP_LEVEL);
 
-     int n = 160;
+     int n = 80;
      System.out.printf("Group of:%d\n", n);
      List<byte[]> group = groupOf(trainingList, n);
      //group = group.subList(group.size()/2, group.size());

@@ -94,9 +94,12 @@ public abstract class IOEngine implements Persistent {
   /* Total allocated storage size (in bytes) */
   protected AtomicLong storageAllocated = new AtomicLong();
 
-  /* Total storage used size in bytes */
+  /* Total storage used size in bytes (uncompressed)*/
   protected AtomicLong storageUsed = new AtomicLong();
 
+  /* Total storage used size in bytes (compressed)*/
+  protected AtomicLong storageUsedActual = new AtomicLong();
+  
   /* Upsert operation - update existing one*/
   protected AtomicLong totalUpdates = new AtomicLong();
   
@@ -222,8 +225,9 @@ public abstract class IOEngine implements Persistent {
     this.config = conf;
     this.segmentSize = this.config.getCacheSegmentSize(this.cacheName);
     this.maxStorageSize = this.config.getCacheMaximumSize(this.cacheName);
-    this.numSegments = (int) (this.maxStorageSize / this.segmentSize);
     int num = this.config.getNumberOfPopularityRanks(this.cacheName);
+    this.numSegments = (int) (this.maxStorageSize / this.segmentSize) + 1 + num;
+
     this.ramBuffers = new Segment[num];
     this.dataSegments = new Segment[this.numSegments];
     this.index = new MemoryIndex(this, MemoryIndex.Type.MQ);
@@ -272,12 +276,13 @@ public abstract class IOEngine implements Persistent {
   public final long getStorageUsedActual() {
     long used = 0;
     for(int i = 0; i < dataSegments.length; i++) {
-      if (dataSegments[i] == null) {
+      if (dataSegments[i] == null || !dataSegments[i].isValid()) {
         continue;
       }
       used += dataSegments[i].getSegmentDataSize();
     }
     return used;
+//    return this.storageUsedActual.get();
   }
   
   /**
@@ -314,6 +319,16 @@ public abstract class IOEngine implements Persistent {
     return this.storageUsed.addAndGet(value);
   }
 
+  /**
+   * Report actual usage
+   *
+   * @param value usage value
+   * @return new storage usage value
+   */
+  public long reportUsageActual(long value) {
+    return this.storageUsedActual.addAndGet(value);
+  }
+  
   /**
    * Get cache name
    *
@@ -1868,7 +1883,7 @@ public abstract class IOEngine implements Persistent {
   }
 
   /**
-   * Get cached itemrange
+   * Get cached item range
    *
    * @param id data segment id to read from
    * @param offset data segment offset
@@ -1997,6 +2012,13 @@ public abstract class IOEngine implements Persistent {
     Segment s = this.recyclingSelector.selectForRecycling(dataSegments);
     if (s != null && !s.isSealed()) {
       throw new RuntimeException("Segment for recycling must be sealed");
+    }
+    //*DEBUG*/ System.out.println("Recycle sid=" + s.getId() + " address=" + s.getAddress()+ "\n");
+    for(int i = 0; i < dataSegments.length; i++) {
+      Segment seg = dataSegments[i];
+//      if (seg != null)
+//      System.out.println("sid=" + seg.getId() + " rank=" + seg.getInfo().getGroupRank() + 
+//        " addresss="+seg.getAddress() + " sealed="+ seg.isSealed() + "valid=" + seg.isValid());
     }
     return s;
   }
@@ -2312,6 +2334,7 @@ public abstract class IOEngine implements Persistent {
           return null;
         }
         if (this.dataSegments[id] == null) {
+          //*DEBUG*/ System.out.println("get rank=" + rank +" data seg=" + dataSegments.length);
           s = Segment.newSegment((int) this.segmentSize, id, rank);
           s.init(this.cacheName);
           reportAllocation(this.segmentSize);
@@ -2355,6 +2378,7 @@ public abstract class IOEngine implements Persistent {
     this.recyclingSelector.save(dos);
     dos.writeLong(this.storageAllocated.get());
     dos.writeLong(this.storageUsed.get());
+    dos.writeLong(this.storageUsedActual.get());
     dos.writeLong(this.totalInserts.get());
     dos.writeLong(this.totalUpdates.get());
     dos.writeLong(this.totalDeletes.get());
@@ -2388,6 +2412,7 @@ public abstract class IOEngine implements Persistent {
     this.recyclingSelector.load(dis);
     this.storageAllocated.set(dis.readLong());
     this.storageUsed.set(dis.readLong());
+    this.storageUsedActual.set(dis.readLong());
     this.totalInserts.set(dis.readLong());
     this.totalUpdates.set(dis.readLong());
     this.totalDeletes.set(dis.readLong());
@@ -2469,7 +2494,7 @@ public abstract class IOEngine implements Persistent {
       exp += s.getNumberExpiredItems();
       total += s.getTotalItems() - s.getNumberEvictedDeletedItems() - s.getNumberExpiredItems();
     }
-    /*DEBUG*/ System.out.println("total=" + t + " ev=" + ev + " exp=" + exp);
+    //*DEBUG*/ System.out.println("total=" + t + " ev=" + ev + " exp=" + exp);
 
     return total;
   }

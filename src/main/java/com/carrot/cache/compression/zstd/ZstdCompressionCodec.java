@@ -252,15 +252,17 @@ public class ZstdCompressionCodec implements CompressionCodec {
   public int decompress(long ptr, int size, byte[] buffer, int dictId) {
     
     long startTime = System.nanoTime();
-  
-    
     ZstdDecompressCtx currentCtxt = getDecompressContext(dictId);
     if (currentCtxt == null) {
       return 0;
     }
-    int decompressedSize = currentCtxt.decompressNativeByteArray(buffer, 0, buffer.length, ptr, size);
+    int decompressedSize = 0;
+    try {
+      decompressedSize= currentCtxt.decompressNativeByteArray(buffer, 0, buffer.length, ptr, size);
+    } catch(Throwable t) {
+      return 0; // failed
+    }
     long endTime = System.nanoTime();
-    //*DEBUG*/ System.out.println("counter=" + (counter ++) + " decomp time=" + (endTime - startTime) + " decomp size=" + decompressedSize) ;
     this.stats.getDecompressedRaw().addAndGet(decompressedSize);
     this.stats.getDecompressed().addAndGet(size);
     this.stats.getDecompressionTime().addAndGet(endTime - startTime);
@@ -275,7 +277,12 @@ public class ZstdCompressionCodec implements CompressionCodec {
     if (currentCtxt == null) {
       return 0;
     }
-    int decompressedSize = currentCtxt.decompressByteArray(buffer, 0, buffer.length, src, srcOffset, srcSize);
+    int decompressedSize = 0;
+    try {
+      decompressedSize = currentCtxt.decompressByteArray(buffer, 0, buffer.length, src, srcOffset, srcSize);
+    } catch (Throwable t) {
+      return 0;
+    }
     long endTime = System.nanoTime();
     this.stats.getDecompressedRaw().addAndGet(decompressedSize);
     this.stats.getDecompressed().addAndGet(srcSize);
@@ -290,7 +297,12 @@ public class ZstdCompressionCodec implements CompressionCodec {
     if (currentCtxt == null) {
       return 0;
     }
-    int decompressedSize = currentCtxt.decompressNativeNative(buffer, bufSize, ptr, size);
+    int decompressedSize = 0;
+    try {
+      decompressedSize = currentCtxt.decompressNativeNative(buffer, bufSize, ptr, size);
+    } catch (Throwable t) {
+      return 0;
+    }
     long endTime = System.nanoTime();
     this.stats.getDecompressedRaw().addAndGet(decompressedSize);
     this.stats.getDecompressed().addAndGet(size);
@@ -422,6 +434,9 @@ public class ZstdCompressionCodec implements CompressionCodec {
 
   @Override
   public synchronized void addTrainingData(byte[]... data) {
+    if (!trainingInProgress) {
+      return;
+    }
     for(byte[] b: data) {
       long ptr = UnsafeAccess.malloc(b.length + Utils.SIZEOF_INT);
       UnsafeAccess.copy(b, 0, ptr + Utils.SIZEOF_INT, b.length);
@@ -434,6 +449,9 @@ public class ZstdCompressionCodec implements CompressionCodec {
 
   @Override
   public synchronized void addTrainingData(byte[] data, int off, int len) {
+    if (!trainingInProgress) {
+      return;
+    }
     long ptr = UnsafeAccess.malloc(len + Utils.SIZEOF_INT);
     UnsafeAccess.copy(data, 0, ptr + Utils.SIZEOF_INT, len);
     UnsafeAccess.putInt(ptr, len);
@@ -444,6 +462,9 @@ public class ZstdCompressionCodec implements CompressionCodec {
 
   @Override
   public synchronized void addTrainingData(long ptr, int size) {
+    if (!trainingInProgress) {
+      return;
+    }
     long $ptr = UnsafeAccess.malloc(size + Utils.SIZEOF_INT);
     UnsafeAccess.copy(ptr, $ptr + Utils.SIZEOF_INT, size);
     UnsafeAccess.putInt($ptr,  size);

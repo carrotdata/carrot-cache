@@ -102,6 +102,9 @@ public class Segment implements Persistent {
     /* Segment data size */
     private AtomicLong dataSize = new AtomicLong(0);
     
+    /* Segment data size uncompressed */
+    private AtomicLong dataSizeUncompressed = new AtomicLong(0);
+    
     /* Segment block data size - to support block - based writers */
     private AtomicLong blockDataSize = new AtomicLong(0);
     
@@ -228,6 +231,22 @@ public class Segment implements Persistent {
     }
     
     /**
+     * Get segment data size
+     * @return segment data size
+     */
+    public long getSegmentDataSizeUncompressed() {
+      return this.dataSizeUncompressed.get();
+    }
+    
+    /**
+     * Sets segment data size
+     * @param size segment data size
+     */
+    public void setSegmentDataSizeUncompressed(long size) {
+      this.dataSizeUncompressed.set(size);
+    }
+    
+    /**
      * Get segment block data size
      * @return segment block data size
      */
@@ -347,6 +366,15 @@ public class Segment implements Persistent {
     }
      
     /**
+     * Increment data size uncompressed
+     * @param incr increment
+     * @return new data size
+     */
+    public long incrementDataSizeUncompressed(int incr) {
+      return this.dataSizeUncompressed.addAndGet(incr);
+    }
+     
+    /**
      * Increment block data size
      * @param incr increment
      * @return new data size
@@ -411,6 +439,8 @@ public class Segment implements Persistent {
         dos.writeLong(getSegmentSize());
         // Data size
         dos.writeLong(getSegmentDataSize());
+        // Data size
+        dos.writeLong(getSegmentDataSizeUncompressed());
         // Number of entries
         dos.writeInt(getTotalItems());
         // Total number of expected to expire items
@@ -439,6 +469,7 @@ public class Segment implements Persistent {
       this.creationTime = dis.readLong();
       this.size = dis.readLong();
       this.dataSize.set(dis.readLong());
+      this.dataSizeUncompressed.set(dis.readLong());
       this.totalItems.set(dis.readInt());
       this.totalExpectedToExpireItems.set(dis.readInt());
       this.totalExpiredItems.set(dis.readInt());
@@ -567,6 +598,7 @@ public class Segment implements Persistent {
    */
   public static Segment newSegment(int size, int id, int rank) {
     long ptr = UnsafeAccess.mallocZeroed(size);
+    //*DEBUG*/ System.out.println("new segment: id=" + id + "  ptr=" + ptr +" rank=" + rank);
     return new Segment(ptr, size, id, rank);
   }
   
@@ -723,6 +755,22 @@ public class Segment implements Persistent {
    */
   public long getSegmentDataSize() {
     return this.info.getSegmentDataSize();
+  }
+  
+  /**
+   * Sets new segment data size uncompressed
+   * @param newSize new segment data size
+   */
+  public void setSegmentDataSizeUncompressed(long newSize) {
+    this.info.setSegmentDataSizeUncompressed(newSize);
+  }
+  
+  /**
+   * Get segment's data size uncompressed
+   * @return segment's data size
+   */
+  public long getSegmentDataSizeUncompressed() {
+    return this.info.getSegmentDataSizeUncompressed();
   }
   
   /**
@@ -963,8 +1011,8 @@ public class Segment implements Persistent {
   public void updateExpired(long expire) {
     n++;
     if (this.info.getCreationTime() > expire) {
-      /*DEBUG*/ System.out.println("created=" + this.info.getCreationTime() + " expire=" + expire + 
-        " diff=" + (expire - this.info.getCreationTime()));
+      //*DEBUG*/ System.out.println("created=" + this.info.getCreationTime() + " expire=" + expire + 
+      //  " diff=" + (expire - this.info.getCreationTime()));
       return; // do nothing - segment was recycled recently
     }
     this.info.updateExpired();

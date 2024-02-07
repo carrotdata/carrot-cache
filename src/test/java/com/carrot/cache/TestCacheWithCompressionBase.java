@@ -26,7 +26,6 @@ import org.junit.Before;
 import com.carrot.cache.compression.CodecFactory;
 import com.carrot.cache.compression.CompressionCodec;
 import com.carrot.cache.compression.zstd.ZstdCompressionCodec;
-import com.carrot.cache.index.BaseIndexFormat;
 import com.carrot.cache.index.CompactBaseWithExpireIndexFormat;
 import com.carrot.cache.io.CompressedBlockDataWriter;
 import com.carrot.cache.io.CompressedBlockFileDataReader;
@@ -89,7 +88,7 @@ public class TestCacheWithCompressionBase extends TestCacheBase {
       .withCacheStreamingSupportBufferSize(1 << 19)
       .withEvictionDisabledMode(true);
     if (maxKeyValueSize > 0) {
-      builder.withMaximumKeyValueSize(cacheName, maxKeyValueSize);
+      builder.withMaximumKeyValueSize(maxKeyValueSize);
     }
     if (offheap) {
       return builder.buildMemoryCache();

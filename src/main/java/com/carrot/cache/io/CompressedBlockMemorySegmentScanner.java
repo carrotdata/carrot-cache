@@ -271,4 +271,11 @@ import com.carrot.cache.util.Utils;
     public long getOffset() {
       return this.offset;
     }
+
+    @Override
+    public boolean isDirect() {
+      return true;
+    }
+    
+    
   }

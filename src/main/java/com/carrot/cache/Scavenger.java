@@ -19,8 +19,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.text.DateFormat;
-import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -441,6 +439,7 @@ public class Scavenger implements Runnable {
   
   public void start() {
     ExecutorService service = poolMap.get(this.cache.getName());
+    //*DEBUG*/ System.out.println("start scavenger");
     service.submit(this);
   }
   
@@ -455,21 +454,23 @@ public class Scavenger implements Runnable {
 
   @Override
   public void run() {
-    
     long runStart = System.currentTimeMillis();
     IOEngine engine = this.cache.getEngine();
-    DateFormat format = DateFormat.getDateTimeInstance();
+   // DateFormat format = DateFormat.getDateTimeInstance();
+    //*DEBUG*/ System.out.println(">>> start scav");
+
     Segment s = null;
     try {
       AtomicInteger numInstances = numInstancesMap.get(cache.getName());
       if (numInstances.incrementAndGet() > maxInstances) {
         // Number of instances exceeded the maximum value
-        numInstances.decrementAndGet();
+       numInstances.decrementAndGet();
+       //*DEBUG*/ System.out.println("Too many scavengers, current=" + num);
         return;
       }
-      LOG.debug(
-          "scavenger [{}] started at {} allocated storage={} maximum storage={}", cache.getName(),
-          format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
+//      LOG.debug(
+//          "scavenger [{}] started at {} allocated storage={} maximum storage={}", cache.getName(),
+//          format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
 
       boolean finished = false;
       
@@ -477,15 +478,18 @@ public class Scavenger implements Runnable {
       
       while (!finished) {
         if (Thread.currentThread().isInterrupted()) {
+          /*DEBUG*/ System.out.println("interrupted scav");
           break;
         }
         s = engine.getSegmentForRecycling();
         if (s == null) {
-          /*DEBUG*/ System.out.println("no more segments to recycle");
+          //*DEBUG*/ System.out.println("no more segments to recycle");
           break;
         }
         if (shouldStopOn(s)) {
           s.setRecycling(false);
+          //*DEBUG*/ System.out.println("scav stopped on s=" + s.getId());
+
           break;
         }
         //TODO: make it more smarter, calculate maxSegmentsBeforeStallDetected using maximum number of segments
@@ -516,36 +520,39 @@ public class Scavenger implements Runnable {
             s == null? -1: s.getId(), s==null? null: Boolean.toString(s.isOffheap()), 
                 s == null? null: Boolean.toString(s.isSealed()));
           LOG.error(e);
+          e.printStackTrace();
           return;
         }
         // Update admission controller statistics
         engine.finishRecycling(s);
         segmentsProcessed++;
       }
+    } catch (Exception e) {
+      /*DEBUG*/e.printStackTrace();
     } finally {
       AtomicInteger numInstances = numInstancesMap.get(cache.getName());
       numInstances.decrementAndGet();
       this.cache.finishScavenger(this);
+      //*DEBUG*/ System.out.println(">>>finish scav, num=" + num);
     }
     long runEnd = System.currentTimeMillis();
     // Update stats
     stats.totalRunTimes.addAndGet(runEnd - runStart);
-    LOG.debug(
-        "scavenger [{}] finished at {} allocated storage={} maximum storage=%{}", cache.getName(),
-        format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
-
+//    LOG.debug(
+//        "scavenger [{}] finished at {} allocated storage={} maximum storage=%{}", cache.getName(),
+//        format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
 
   }
 
   private boolean shouldStopOn(Segment s) {
     long expire = s.getInfo().getMaxExpireAt();
     long n = s.getAliveItems();
-
+    //long total = s.getTotalItems();
     long currentTime = System.currentTimeMillis();
     IOEngine engine = cache.getEngine();
     
-    String msg = "sid=" + s.getId() + " expire=" 
-        + expire + " current=" + currentTime + " alive=" + n + " size=" + engine.size();
+//    String msg = "sid=" + s.getId() + " expire=" 
+//        + expire + " current=" + currentTime + " alive=" + n + " total=" + total;
     if (engine.size() == 0) {
       //*DEBUG*/ System.out.println("F: " + msg);
       return true;
@@ -567,7 +574,8 @@ public class Scavenger implements Runnable {
 //      }
 //      cleanDeletedOnly = cleanDeletedOnly && usage < stopRatio;
 //    }
-    /*DEBUG*/ System.out.println("usage=" + usage + " stopRatio=" + stopRatio + " stop scav=" + (usage < stopRatio));
+    //*DEBUG*/ System.out.println(msg + " usage=" + usage + " stopRatio=" + stopRatio + " stop scav=" + (usage < stopRatio));
+    
     return /*activeRatio >= minActiveRatio && */usage < stopRatio;   
   }
 
@@ -611,8 +619,9 @@ public class Scavenger implements Runnable {
     int deleted = 0;
     int expired = 0;
     int notFound = 0;
+    int submitted = 0;
     ResultWithRankAndExpire result = new ResultWithRankAndExpire();
-
+//*DEBUG*/ System.out.println("dumpBelowRatio=" + dumpBelowRatio);
     try {
       
       sc = engine.getScanner(s); // acquires read lock
@@ -670,6 +679,7 @@ public class Scavenger implements Runnable {
               sc.getValue(valueBuffer, 0);
               this.cache.put(keyBuffer, 0, keySize, valueBuffer, 0, valSize, expire, rank, groupRank, true, true);
             }
+            submitted++;
             break;
         }
         sc.next();
@@ -688,6 +698,7 @@ public class Scavenger implements Runnable {
     stats.totalItemsScanned.addAndGet(scanned);
     stats.totalItemsDeleted.addAndGet(deleted);
     stats.totalItemsNotFound.addAndGet(notFound);
+    //*DEBUG*/ System.out.println("deleted=" + deleted + " expired=" + expired + " not found="+ notFound+ " submitted=" + submitted);
     return (deleted + expired + notFound) == 0;
   }
 

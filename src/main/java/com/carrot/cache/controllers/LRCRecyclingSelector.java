@@ -33,7 +33,14 @@ public class LRCRecyclingSelector implements RecyclingSelector {
     long minCreationTime = Long.MAX_VALUE;
     for(int i = 0; i < segments.length; i++) {
       Segment s = segments[i];
+      if (s != null) {
+        ///*DEBUG*/ System.out.println("check sid" + s.getId() + " sealed=" + s.isSealed() + " recycly=" + s.isRecycling());
+
+      } else {
+        ///*DEBUG*/ System.out.println("s== null");
+      }
       if (s == null || !s.isSealed() || s.isRecycling()) {
+        
         continue;
       }
       Segment.Info info = s.getInfo();
@@ -41,17 +48,22 @@ public class LRCRecyclingSelector implements RecyclingSelector {
       long currentTime = System.currentTimeMillis();
       if (info.getTotalActiveItems() == 0 || 
           (maxExpireAt > 0 && maxExpireAt < currentTime)){
+        /*DEBUG*/ System.out.println(" empty or expired sid=" + s.getId());
         return s;
       }
       long time = info.getCreationTime();
       if (time < minCreationTime) {
         minCreationTime = time;
         selection = s;
+        /*DEBUG*/ System.out.println(" time =" + s.getId());
+
       }
     }
     if (selection != null) {
       selection.setRecycling(true);
     }
+    /*DEBUG*/ System.out.println(" selection=" + selection);
+
     return selection;
   }
 }
