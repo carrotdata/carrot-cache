@@ -146,12 +146,16 @@ public class CompressedBlockDataWriter implements DataWriter {
     long t1 = System.nanoTime();
     compressedSize = this.codec.compress(addr + COMP_META_SIZE, toCompress, dictVersion);
     compressTime += System.nanoTime() - t1;
-    ///*DEBUG*/ System.out.println("compress time=" + compressTime / 1000 + " len=" + toCompress + " dict="+ dictVersion);
     //Update block header
     UnsafeAccess.putInt(addr + SIZE_OFFSET, toCompress);
-    if(compressedSize >= toCompress || compressedSize == 0) {
+    if(compressedSize >= toCompress ) {
       dictVersion = -1; // no compression
       compressedSize = toCompress;
+    }
+    if (compressedSize == 0) {
+      System.err.println("compressed size=0");
+      Thread.dumpStack();
+      System.exit(-1);
     }
     UnsafeAccess.putInt(addr + DICT_VER_OFFSET, dictVersion);
     UnsafeAccess.putInt(addr + COMP_SIZE_OFFSET, compressedSize);

@@ -134,7 +134,7 @@ public abstract class TestScavengerBase extends IOTestBase {
     }
     /*DEBUG*/ System.out.println("Time=" + System.currentTimeMillis());
     long allocated = cache.getStorageAllocated();
-    long used = cache.getStorageUsed();
+    long used = cache.getRawDataSize();
     long actualUsed = cache.getStorageUsedActual();
     long size = cache.size();
     long activeSize = cache.activeSize();
@@ -145,7 +145,7 @@ public abstract class TestScavengerBase extends IOTestBase {
     verifyBytesCacheNot(cache, loaded);
     
     allocated = cache.getStorageAllocated();
-    used = cache.getStorageUsed();
+    used = cache.getRawDataSize();
     actualUsed = cache.getStorageUsedActual();
     size = cache.size();
     activeSize = cache.activeSize();
@@ -156,7 +156,7 @@ public abstract class TestScavengerBase extends IOTestBase {
     scavenger.run();
     
     allocated = cache.getStorageAllocated();
-    used = cache.getStorageUsed();
+    used = cache.getRawDataSize();
     actualUsed = cache.getStorageUsedActual();
 
     size = cache.size();
@@ -191,7 +191,7 @@ public abstract class TestScavengerBase extends IOTestBase {
     }
     /*DEBUG*/ System.out.println("Time=" + System.currentTimeMillis());
     long allocated = cache.getStorageAllocated();
-    long used = cache.getStorageUsed();
+    long used = cache.getRawDataSize();
     long actualUsed = cache.getStorageUsedActual();
     long size = cache.size();
     long activeSize = cache.activeSize();
@@ -199,7 +199,7 @@ public abstract class TestScavengerBase extends IOTestBase {
       allocated, used, actualUsed, size, activeSize));
     
     allocated = cache.getStorageAllocated();
-    used = cache.getStorageUsed();
+    used = cache.getRawDataSize();
     actualUsed = cache.getStorageUsedActual();
     size = cache.size();
     activeSize = cache.activeSize();
@@ -210,7 +210,7 @@ public abstract class TestScavengerBase extends IOTestBase {
     scavenger.run();
     
     allocated = cache.getStorageAllocated();
-    used = cache.getStorageUsed();
+    used = cache.getRawDataSize();
     actualUsed = cache.getStorageUsedActual();
 
     size = cache.size();
@@ -303,7 +303,7 @@ public abstract class TestScavengerBase extends IOTestBase {
     int deleted = deleteBytesCache(cache, loaded / 17);
   
     long allocated = cache.getStorageAllocated();
-    long used = cache.getStorageUsed();
+    long used = cache.getRawDataSize();
     long size = cache.size();
     long activeSize = cache.activeSize();
     System.out.println(String.format("Before scan: allocated=%d, used=%d, size=%d, active=%d", 

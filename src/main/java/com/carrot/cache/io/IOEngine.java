@@ -62,6 +62,8 @@ public abstract class IOEngine implements Persistent {
 
   public static int NOT_FOUND = -1;
 
+  public static int READ_ERROR = -2;
+  
   public static enum IOEngineEvent {
     DATA_SIZE_CHANGED; // size of a data changed
   }
@@ -95,10 +97,10 @@ public abstract class IOEngine implements Persistent {
   protected AtomicLong storageAllocated = new AtomicLong();
 
   /* Total storage used size in bytes (uncompressed)*/
-  protected AtomicLong storageUsed = new AtomicLong();
+  protected AtomicLong rawDataSize = new AtomicLong();
 
   /* Total storage used size in bytes (compressed)*/
-  protected AtomicLong storageUsedActual = new AtomicLong();
+  protected AtomicLong storageUsed = new AtomicLong();
   
   /* Upsert operation - update existing one*/
   protected AtomicLong totalUpdates = new AtomicLong();
@@ -265,15 +267,15 @@ public abstract class IOEngine implements Persistent {
    *
    * @return size
    */
-  public long getStorageUsed() {
-    return this.storageUsed.get();
+  public long getRawDataSize() {
+    return this.rawDataSize.get();
   }
 
   /**
    * This method should be called when compression is enabled
    * @return actual storage usage
    */
-  public final long getStorageUsedActual() {
+  public final long getStorageUsed() {
     long used = 0;
     for(int i = 0; i < dataSegments.length; i++) {
       if (dataSegments[i] == null || !dataSegments[i].isValid()) {
@@ -315,18 +317,18 @@ public abstract class IOEngine implements Persistent {
    * @param value usage value
    * @return new storage usage value
    */
-  public long reportUsage(long value) {
-    return this.storageUsed.addAndGet(value);
+  public long reportRawDataSize(long value) {
+    return this.rawDataSize.addAndGet(value);
   }
 
   /**
-   * Report actual usage
+   * Report actual usage (compressed or raw if compression not enabled)
    *
    * @param value usage value
    * @return new storage usage value
    */
-  public long reportUsageActual(long value) {
-    return this.storageUsedActual.addAndGet(value);
+  public long reportStorageUsed(long value) {
+    return this.storageUsed.addAndGet(value);
   }
   
   /**
@@ -1965,13 +1967,16 @@ public abstract class IOEngine implements Persistent {
    * @param seg data segment 
    */
   public void disposeDataSegment(Segment seg) {
+    //FIXME: does not work for compressed data
     long dataSize = seg.getInfo().getSegmentDataSize();
     try {
       seg.writeLock();
       seg.dispose();
       dataSegments[seg.getId()] = null;
       reportAllocation(-this.segmentSize);
-      reportUsage(-dataSize);
+      //FIXME: must update actual usage (compressed)
+      // usage uncompressed was updated in Scavenger
+      //reportUsage(-dataSize);
     } finally {
       seg.setRecycling(false);
       seg.writeUnlock();
@@ -2012,13 +2017,6 @@ public abstract class IOEngine implements Persistent {
     Segment s = this.recyclingSelector.selectForRecycling(dataSegments);
     if (s != null && !s.isSealed()) {
       throw new RuntimeException("Segment for recycling must be sealed");
-    }
-    //*DEBUG*/ System.out.println("Recycle sid=" + s.getId() + " address=" + s.getAddress()+ "\n");
-    for(int i = 0; i < dataSegments.length; i++) {
-      Segment seg = dataSegments[i];
-//      if (seg != null)
-//      System.out.println("sid=" + seg.getId() + " rank=" + seg.getInfo().getGroupRank() + 
-//        " addresss="+seg.getAddress() + " sealed="+ seg.isSealed() + "valid=" + seg.isValid());
     }
     return s;
   }
@@ -2213,7 +2211,7 @@ public abstract class IOEngine implements Persistent {
       offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength, expire);
     }
 
-    reportUsage(Utils.kvSize(keyLength, valueLength));
+    reportRawDataSize(Utils.kvSize(keyLength, valueLength));
 
     MutationResult result = this.index.insertWithRank(
         key,
@@ -2306,7 +2304,7 @@ public abstract class IOEngine implements Persistent {
       offset = s.append(keyPtr, keyLength, valuePtr, valueLength, expire);
     }
 
-    reportUsage(Utils.kvSize(keyLength, valueLength));
+    reportRawDataSize(Utils.kvSize(keyLength, valueLength));
 
     MutationResult result = this.index.insertWithRank(
         keyPtr, keyLength, valuePtr, valueLength, (short) s.getId(), (int) offset, rank, expire);
@@ -2377,8 +2375,8 @@ public abstract class IOEngine implements Persistent {
     this.index.save(dos);
     this.recyclingSelector.save(dos);
     dos.writeLong(this.storageAllocated.get());
+    dos.writeLong(this.rawDataSize.get());
     dos.writeLong(this.storageUsed.get());
-    dos.writeLong(this.storageUsedActual.get());
     dos.writeLong(this.totalInserts.get());
     dos.writeLong(this.totalUpdates.get());
     dos.writeLong(this.totalDeletes.get());
@@ -2411,8 +2409,8 @@ public abstract class IOEngine implements Persistent {
     this.index.load(dis);
     this.recyclingSelector.load(dis);
     this.storageAllocated.set(dis.readLong());
+    this.rawDataSize.set(dis.readLong());
     this.storageUsed.set(dis.readLong());
-    this.storageUsedActual.set(dis.readLong());
     this.totalInserts.set(dis.readLong());
     this.totalUpdates.set(dis.readLong());
     this.totalDeletes.set(dis.readLong());

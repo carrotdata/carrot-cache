@@ -191,7 +191,7 @@ public final class MemoryIndex implements Persistent {
   private EvictionPolicy evictionPolicy;
   
   /* Eviction listener */
-  private EvictionListener evictionListener;
+  //private EvictionListener evictionListener;
   
   /* Index type */
   private Type indexType = Type.MQ;
@@ -296,17 +296,17 @@ public final class MemoryIndex implements Persistent {
    * Set eviction listener
    * @param aListener
    */
-  public void setEvictionListener(EvictionListener aListener) {
-    this.evictionListener = aListener;
-  }
+//  public void setEvictionListener(EvictionListener aListener) {
+//    this.evictionListener = aListener;
+//  }
   
   /**
    * Get eviction listener
    * @return eviction listener
    */
-  public EvictionListener getEvictionListener() {
-    return this.evictionListener;
-  }
+//  public EvictionListener getEvictionListener() {
+//    return this.evictionListener;
+//  }
   
   /**
    * Set index format
@@ -347,7 +347,7 @@ public final class MemoryIndex implements Persistent {
   }
   
   /**
-   * Trigger eviction on/off
+   * Trigger eviction on/off (only for AQ)
    */
   private void checkEviction() {
     if (this.indexType != Type.AQ) return;
@@ -1442,10 +1442,10 @@ public final class MemoryIndex implements Persistent {
               result.setResultRankExpire(Result.OK, rank, expire);
             }
           }
-          if (result.getResult() == Result.DELETED && this.evictionListener != null) {
-            // Report eviction
-            this.evictionListener.onEviction(ptr, $ptr);
-          } 
+//          if (result.getResult() == Result.DELETED && this.evictionListener != null) {
+//            // Report eviction
+//            this.evictionListener.onEviction(ptr, $ptr);
+//          } 
           if (result.getResult() == Result.DELETED || result.getResult() == Result.EXPIRED) {
             deleteAt(ptr, $ptr, rank, result.getResult() == Result.EXPIRED? expire: -1);
           }
@@ -2112,9 +2112,17 @@ public final class MemoryIndex implements Persistent {
     return ptr & 0x7fffffffffffffffL;
   }
   
+  private boolean isMainIndex() {
+    return this.indexType == Type.MQ;
+  }
+  
   /**
    * TODO: eviction by size
-   * Perform eviction
+   * TODO: optimize performance for main queue
+   * we can delete all expired items in one run
+   * 
+   * Perform eviction of expired items if any for main queue
+   * or evict non-popular items for admission queue 
    * @param slotPtr index-data-block address
    * @throws IOException 
    */
@@ -2130,9 +2138,13 @@ public final class MemoryIndex implements Persistent {
     // disabling search for expired items
     if (this.indexFormat.isExpirationSupported()){
       toEvict = findExpired(slotPtr);
-      expired = true;
+      if (toEvict >= 0) {
+        expired = true;
+      }
     }
-    
+    if (!expired && isMainIndex()) {
+      return; // no expired items found for Main index
+    }
     if (toEvict == -1) {
       toEvict = evictionPolicy.getEvictionCandidateIndex(slotPtr, numEntries);
     }
@@ -2140,11 +2152,11 @@ public final class MemoryIndex implements Persistent {
     if (expired) {
       expire = this.indexFormat.getExpire(slotPtr, ptr);
     }
-    // report eviction
-    if (this.evictionListener != null && !expired) {
-      // This MUST implements ALL the eviction-related logic
-      this.evictionListener.onEviction(slotPtr, ptr);
-    }
+//    // report eviction
+//    if (this.evictionListener != null && !expired && !isMainIndex()) {
+//      // This MUST implements ALL the eviction-related logic
+//      this.evictionListener.onEviction(slotPtr, ptr);
+//    }
     int rank = this.evictionPolicy.getRankForIndex(numRanks, toEvict, numEntries);
     deleteAt(slotPtr, ptr, rank, expire);
   }

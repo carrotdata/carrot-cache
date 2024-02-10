@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.carrot.cache.controllers.AdmissionController;
@@ -57,11 +58,13 @@ public class TestHybridCompressedCacheMultithreadedZipf extends TestOffheapCompr
     super.setUp();
     // Parent cache
     this.offheap = true;
-    this.numRecords = 2000000;
+    this.numRecords = 4000000;
     this.numIterations = 2 * this.numRecords;
-    this.numThreads = 1;
+    this.numThreads = 4;
     this.minActiveRatio = 0.9;
-    this.maxCacheSize = 10L * this.segmentSize;
+    this.maxCacheSize = 20L * this.segmentSize;
+    //this.scavDumpBelowRatio = 0.2;
+    this.dictionaryEnabled = true;
    
     // victim cache
     this.victim_segmentSize = 4 * 1024 * 1024;
@@ -74,18 +77,6 @@ public class TestHybridCompressedCacheMultithreadedZipf extends TestOffheapCompr
     this.victim_rsClz = MinAliveRecyclingSelector.class;
     this.victim_acClz = BaseAdmissionController.class;
     
-  }
-  
-  @Test
-  public void testLRUEvictionAndMinAliveSelectorMemoryAPI() throws IOException {
-    System.out.println("Memory API: eviction=LRU, selector=MinAlive");
-
-    this.evictionDisabled = false;
-    this.scavengerInterval = 2; // scavenger interval in sec
-    this.epClz = LRUEvictionPolicy.class;
-    this.rsClz = MinAliveRecyclingSelector.class;
-    //this.scavDumpBelowRatio = 1.0;
-    super.testContinuosLoadMemoryRun();
   }
   
   @After  

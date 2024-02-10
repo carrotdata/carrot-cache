@@ -109,6 +109,9 @@ import com.carrot.cache.util.Utils;
     }
     
     private void nextBlock() {
+      if (this.currentIndex >= segment.getTotalItems()) {
+        return;
+      }
       long ptr = segment.getAddress();
       // next blockSize
       this.blockSize = UnsafeAccess.toInt(ptr + this.offset + SIZE_OFFSET);
@@ -118,9 +121,14 @@ import com.carrot.cache.util.Utils;
       checkBuffer(this.blockSize);
       if (dictId >= 0) {
         this.codec.decompress(ptr + this.offset + COMP_META_SIZE, compSize, this.bufPtr, this.bufferSize, dictId);
+      } else if (dictId == -1){
+        UnsafeAccess.copy(ptr + this.offset + COMP_META_SIZE, this.bufPtr, this.blockSize);
       } else {
-        UnsafeAccess.copy(ptr + this.offset + COMP_META_SIZE, this.bufPtr, this.bufferSize);
-      } 
+        System.err.printf("Segment size=%d offset=%d uncompressed=%d compressed=%d dictId=%d index=%d total items=%d\n", 
+          segment.getSegmentDataSize(), offset, this.blockSize, compSize, dictId, currentIndex, segment.getTotalItems());
+        Thread.dumpStack();
+        System.exit(-1);
+      }
       // Advance segment offset
       this.offset += compSize + COMP_META_SIZE;
       this.blockOffset = 0;

@@ -2411,7 +2411,7 @@ public class CarrotConfig {
    * @param compression level
    */
   public void setCacheCompressionLevel(String cacheName,int level) {
-    props.setProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_SIZE_KEY, Integer.toString(level));
+    props.setProperty(cacheName + "." + CACHE_COMPRESSION_LEVEL_KEY, Integer.toString(level));
   }
   
   /**

@@ -30,6 +30,8 @@ public class TestCompressedCacheMultithreadedZipfBase extends TestCacheMultithre
 
   protected boolean dictionaryEnabled = true;
   protected boolean asyncTrainingMode = false;
+  protected int dictionarySize = 1 << 16;
+  protected int compLevel = 3; 
   
   protected List<byte[]> bValues;
   protected List<Long> mValues;
@@ -73,8 +75,12 @@ public class TestCompressedCacheMultithreadedZipfBase extends TestCacheMultithre
     b.withTLSSupported(true);
     b.withCacheCompressionDictionaryTrainingAsync(asyncTrainingMode);
     b.withMainQueueIndexFormat(CompactBaseIndexFormat.class.getName());
+    b.withCacheCompressionKeysEnabled(true);
+    b.withCacheCompressionDictionarySize(dictionarySize);
+    b.withCacheCompressionLevel(compLevel);
+    
     try {
-    initCodecs();
+      initCodecs();
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

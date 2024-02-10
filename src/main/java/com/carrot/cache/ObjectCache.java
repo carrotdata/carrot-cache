@@ -543,7 +543,7 @@ public class ObjectCache {
    * @return used memory
    */
   public long getStorageUsed() {
-    return this.cache.getStorageUsed();
+    return this.cache.getRawDataSize();
   }
   
   /**

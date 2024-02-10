@@ -154,7 +154,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
     int compressedSize = currentCtx.compressNativeByteArray(buf, 0, buf.length, ptr, len);
     long endTime = System.nanoTime();
 
-    if (compressedSize > len) {
+    if (compressedSize >= len) {
       // do not copy
       return compressedSize;
     }

@@ -59,7 +59,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
 
   @Override
   public long getused_size_bytes() {
-    return cache.getStorageUsed();
+    return cache.getRawDataSize();
   }
 
   @Override
@@ -72,7 +72,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   @Override
   public double getused_size_ratio() {
     long max = cache.getMaximumCacheSize();
-    long used = cache.getStorageUsed();
+    long used = cache.getRawDataSize();
     return (double) used/ max;
   }
 

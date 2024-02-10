@@ -457,7 +457,6 @@ public class Scavenger implements Runnable {
     long runStart = System.currentTimeMillis();
     IOEngine engine = this.cache.getEngine();
    // DateFormat format = DateFormat.getDateTimeInstance();
-    //*DEBUG*/ System.out.println(">>> start scav");
 
     Segment s = null;
     try {
@@ -478,18 +477,14 @@ public class Scavenger implements Runnable {
       
       while (!finished) {
         if (Thread.currentThread().isInterrupted()) {
-          /*DEBUG*/ System.out.println("interrupted scav");
           break;
         }
         s = engine.getSegmentForRecycling();
         if (s == null) {
-          //*DEBUG*/ System.out.println("no more segments to recycle");
           break;
         }
         if (shouldStopOn(s)) {
           s.setRecycling(false);
-          //*DEBUG*/ System.out.println("scav stopped on s=" + s.getId());
-
           break;
         }
         //TODO: make it more smarter, calculate maxSegmentsBeforeStallDetected using maximum number of segments
@@ -533,7 +528,6 @@ public class Scavenger implements Runnable {
       AtomicInteger numInstances = numInstancesMap.get(cache.getName());
       numInstances.decrementAndGet();
       this.cache.finishScavenger(this);
-      //*DEBUG*/ System.out.println(">>>finish scav, num=" + num);
     }
     long runEnd = System.currentTimeMillis();
     // Update stats
@@ -621,7 +615,6 @@ public class Scavenger implements Runnable {
     int notFound = 0;
     int submitted = 0;
     ResultWithRankAndExpire result = new ResultWithRankAndExpire();
-//*DEBUG*/ System.out.println("dumpBelowRatio=" + dumpBelowRatio);
     try {
       
       sc = engine.getScanner(s); // acquires read lock
@@ -658,7 +651,7 @@ public class Scavenger implements Runnable {
             stats.totalItemsExpired.incrementAndGet();
             expired++;
             break;
-          case NOT_FOUND:
+          case NOT_FOUND:// Actually deleted or overwritten
             stats.totalBytesFreed.addAndGet(totalSize);
             notFound++;
             break;
@@ -671,17 +664,25 @@ public class Scavenger implements Runnable {
             deleted++;
             break;
           case OK:
-            // Put value back into the cache - it has high popularity
-            if (isDirect) {
-              this.cache.put(keyPtr, keySize, valuePtr, valSize, expire, rank, groupRank, true, true);
-            } else {
-              valueBuffer = checkBuffer(valueBuffer, valSize, isDirect);
-              sc.getValue(valueBuffer, 0);
-              this.cache.put(keyBuffer, 0, keySize, valueBuffer, 0, valSize, expire, rank, groupRank, true, true);
-            }
             submitted++;
             break;
         }
+        Cache c = res == Result.OK? this.cache: this.cache.getVictimCache();
+        // In case of OK resubmit back to the cache, in case of DELETED and victim cache is not null
+        // submit to victim cache
+        if (c != null && (res == Result.OK || res == Result.DELETED)) {
+          // Put value back into the cache or victim cache - it has high popularity
+          if (isDirect) {
+            c.put(keyPtr, keySize, valuePtr, valSize, expire, rank, groupRank, true, true);
+          } else {
+            valueBuffer = checkBuffer(valueBuffer, valSize, isDirect);
+            sc.getValue(valueBuffer, 0);
+            c.put(keyBuffer, 0, keySize, valueBuffer, 0, valSize, expire, rank, groupRank, true, true);
+          }
+        }
+        // Update storage usage (uncompressed)
+        int kvSize = Utils.kvSize(keySize, valSize);
+        this.cache.getEngine().reportRawDataSize(-kvSize);
         sc.next();
       }
     } finally {

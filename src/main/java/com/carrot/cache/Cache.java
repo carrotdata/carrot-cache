@@ -290,7 +290,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     initThroughputController();
     startThroughputController();
     // Set eviction listener
-    this.engine.getMemoryIndex().setEvictionListener(this);
+    //this.engine.getMemoryIndex().setEvictionListener(this);
   }
 
   private void initAllDuringLoad() throws IOException {
@@ -301,7 +301,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.engine.setListener(this);
     initAdmissionController();
     initThroughputController();
-    this.engine.getMemoryIndex().setEvictionListener(this);
+    //this.engine.getMemoryIndex().setEvictionListener(this);
   }
   
   /**
@@ -458,8 +458,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *
    * @return used memory
    */
-  public long getStorageUsed() {
-    return this.engine.getStorageUsed();
+  public long getRawDataSize() {
+    return this.engine.getRawDataSize();
   }
   
   /**
@@ -468,7 +468,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @return used memory
    */
   public long getStorageUsedActual() {
-    return this.engine.getStorageUsedActual();
+    return this.engine.getStorageUsed();
   }
   /**
    * Get total allocated memory
@@ -2436,7 +2436,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   // EvictionListener
   @Override
   public void onEviction(long ibPtr, long ptr) {
-    processEviction(ibPtr, ptr);
+    //processEviction(ibPtr, ptr);
   }
   
   @Override
@@ -2466,9 +2466,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   public void printStats() {
-    double compRatio = (double)getStorageUsed() / getStorageAllocated();
-    System.out.printf("Cache[%s]: storage size=%d data size=%d comp ratio=%f items=%d hit rate=%f, gets=%d, puts=%d, bytes written=%d\n",
-      this.cacheName, getStorageAllocated(), getStorageUsed(), compRatio, size(), 
+    double compRatio = (double) getRawDataSize() / getStorageAllocated();
+    double compRatioReal = (double) getRawDataSize() / getStorageUsedActual();
+    System.out.printf("Cache[%s]: storage size=%d data size=%d comp ratio=%f comp real=%f items=%d hit rate=%f, gets=%d, puts=%d, bytes written=%d\n",
+      this.cacheName, getStorageAllocated(), getRawDataSize(), compRatio, compRatioReal, size(), 
       getHitRate(), getTotalGets(), getTotalWrites(), getTotalWritesSize());
     if (this.victimCache != null) {
        this.victimCache.printStats();

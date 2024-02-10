@@ -66,7 +66,7 @@ public class TestOffheapCompressedCacheMultithreadedZipf extends TestCompressedC
     System.out.println("Bytes API: eviction=none, selector=null");
     this.evictionDisabled = true;
     this.scavengerInterval = 100000; // disable scavenger
-    this.numRecords = 1000000;
+    //this.numRecords = 4000000;
     this.maxCacheSize = 100 * this.segmentSize;
 
     super.testContinuosLoadBytesRun();
@@ -77,12 +77,11 @@ public class TestOffheapCompressedCacheMultithreadedZipf extends TestCompressedC
     System.out.println("Memory API: eviction=none, selector=null");
     this.evictionDisabled = true;
     this.scavengerInterval = 100000; // disable scavenger
-    this.numRecords = 1000000;
+   // this.numRecords = 1000000;
     this.maxCacheSize = 100 * this.segmentSize;
     super.testContinuosLoadMemoryRun();
   }
   
-  //@Ignore
   @Test
   public void testLRUEvictionAndLRCSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=LRU, selector=LRC");
@@ -94,7 +93,6 @@ public class TestOffheapCompressedCacheMultithreadedZipf extends TestCompressedC
     super.testContinuosLoadBytesRun();
   }
   
- // @Ignore
   @Test
   public void testLRUEvictionAndLRCSelectorMemoryAPI() throws IOException {
     System.out.println("Memory API: eviction=LRU, selector=LRC");
@@ -132,7 +130,6 @@ public class TestOffheapCompressedCacheMultithreadedZipf extends TestCompressedC
     super.testContinuosLoadMemoryRun();
   }
   
-  //@Ignore
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=LRU, selector=MinAlive");
@@ -144,7 +141,6 @@ public class TestOffheapCompressedCacheMultithreadedZipf extends TestCompressedC
     super.testContinuosLoadBytesRun();
   }
   
-  //@Ignore
   @Test
   public void testLRUEvictionAndMinAliveSelectorMemoryAPI() throws IOException {
     System.out.println("Memory API: eviction=LRU, selector=MinAlive");
@@ -182,7 +178,6 @@ public class TestOffheapCompressedCacheMultithreadedZipf extends TestCompressedC
     super.testContinuosLoadMemoryRun();
   }
   
- //@Ignore
   @Test
   public void testSLRUEvictionAndLRCSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=SLRU, selector=LRC");
@@ -194,7 +189,6 @@ public class TestOffheapCompressedCacheMultithreadedZipf extends TestCompressedC
     super.testContinuosLoadBytesRun();
   }
   
- // @Ignore
   @Test
   public void testSLRUEvictionAndLRCSelectorMemoryAPI() throws IOException {
     System.out.println("Memory API: eviction=SLRU, selector=LRC");
@@ -222,19 +216,19 @@ public class TestOffheapCompressedCacheMultithreadedZipf extends TestCompressedC
   @Ignore
   @Test 
   public void runLoop() throws IOException, URISyntaxException {
-    for (int i = 0; i < 100; i++) {
-      System.out.println("Run #" + (i+1));
+    for (int i = 0; i < 1000; i++) {
+      System.out.println("\nRun #" + (i+1));
       if (i > 0) {
         setUp();
       }
-      testSLRUEvictionAndMinAliveSelectorMemoryAPI();
-      if (i < 99) {
+      //testSLRUEvictionAndMinAliveSelectorMemoryAPI();
+      testLRUEvictionAndMinAliveSelectorMemoryAPI();
+      if (i < 999) {
         tearDown();
       }
     }
   }
   
-  //@Ignore
   @Test
   public void testSLRUEvictionAndMinAliveSelectorMemoryAPI() throws IOException {
     System.out.println("Memory API: eviction=SLRU, selector=MinAlive");

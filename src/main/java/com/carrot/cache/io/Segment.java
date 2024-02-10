@@ -598,7 +598,6 @@ public class Segment implements Persistent {
    */
   public static Segment newSegment(int size, int id, int rank) {
     long ptr = UnsafeAccess.mallocZeroed(size);
-    //*DEBUG*/ System.out.println("new segment: id=" + id + "  ptr=" + ptr +" rank=" + rank);
     return new Segment(ptr, size, id, rank);
   }
   

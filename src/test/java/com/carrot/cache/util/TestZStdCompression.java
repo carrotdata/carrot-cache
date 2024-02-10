@@ -30,6 +30,7 @@ public class TestZStdCompression {
        totalSize += b.length;
        trainingList.add(b);
      }
+     System.out.printf("Total size=%d avg=%f\n", totalSize, (float) totalSize / fileList.size());
      ZstdDictTrainer trainer = new ZstdDictTrainer(totalSize, DICT_SIZE);
      List<byte[]> toTrain = trainingList.subList(0, trainingList.size()/2);
      for (byte[] b: toTrain) {
@@ -46,7 +47,7 @@ public class TestZStdCompression {
      compContext.loadDict(dictCompress);
      compContext.setLevel(COMP_LEVEL);
 
-     int n = 16;
+     int n = 8;
      System.out.printf("Group of:%d\n", n);
      List<byte[]> group = groupOf(trainingList, n);
      group = group.subList(group.size()/2, group.size());
