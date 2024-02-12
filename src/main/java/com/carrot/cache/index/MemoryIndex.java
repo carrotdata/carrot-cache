@@ -127,18 +127,16 @@ public final class MemoryIndex implements Persistent {
   
   /*
    * TODO: make this configurable
-   * TODO: Optimal block ratios (check jemalloc sizes)
-   * 512-4096 with step 256 - this is jemalloc specific
-   * sizes of allocation
-   * 256 * 2, 3, 4, ... 16
+   * TODO: Optimal block ratios (jemalloc default arena sizes)
    */
-  public static int BASE_SIZE = 128;
-  // TODO: align block multipliers with jemalloc
-  // 4K block
+  public static int BASE_SIZE = 64;
+ 
   static int[] BASE_MULTIPLIERS =
       new int[] {
-        2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 
-        22, 24, 26, 28, 30, 32, 36, 40, 44, 48, 52, 56, 60, 64, 96, 128, 160, 192, 224, 256, 512 /* 32K size max with 200 per block */
+        4 /*256*/, 5 /*320*/, 6 /*384*/, 7 /*448*/, 8 /*512*/, 10 /*640*/, 12 /*768*/, 14 /*896*/, 16 /*1024*/, 
+        20 /*1280*/, 24 /*1536*/, 28 /*1792*/, 32 /*2048*/, 
+        40 /*2560*/, 48 /*3072*/, 56 /*3584*/, 64 /*4096*/, 
+        80 /*5K*/, 96 /*6K*/, 112 /*7K*/, 128 /*8K*/
       };
 
   /**
