@@ -65,7 +65,7 @@ public abstract class TestCacheMultithreadedBase extends TestIOMultithreadedBase
       .withCacheDataSegmentSize(segmentSize)
       .withCacheMaximumSize(maxCacheSize)
       .withScavengerRunInterval(scavengerInterval)
-      .withScavengerDumpEntryBelowStart(scavDumpBelowRatio)
+      .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
       //.withCacheEvictionPolicy(LRUEvictionPolicy.class.getName())
       .withRecyclingSelector(MinAliveRecyclingSelector.class.getName())
       //.withDataWriter(BlockDataWriter.class.getName())

@@ -140,5 +140,9 @@ public class OffheapIOEngine extends IOEngine {
     }
     return NOT_FOUND;
   }
-
+  
+  @Override
+  protected boolean isOffheap() {
+    return true;
+  }
 }

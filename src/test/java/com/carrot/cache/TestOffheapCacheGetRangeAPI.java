@@ -85,7 +85,7 @@ public class TestOffheapCacheGetRangeAPI {
       .withCacheDataSegmentSize(segmentSize)
       .withCacheMaximumSize(maxCacheSize)
       .withScavengerRunInterval(scavengerInterval)
-      .withScavengerDumpEntryBelowStart(scavDumpBelowRatio)
+      .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
       .withRecyclingSelector(MinAliveRecyclingSelector.class.getName())
       .withCacheRootDir(rootDir)
       .withEvictionDisabledMode(true)

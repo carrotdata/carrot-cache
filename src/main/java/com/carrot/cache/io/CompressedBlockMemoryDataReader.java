@@ -99,16 +99,16 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     // sanity check 
     //TODO: add to corrupted reads
     if (uncompressedSize <= 0 || compressedSize <= 0) {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     long segSize = s.getSegmentDataSize();
     if (uncompressedSize > segSize || compressedSize > segSize) {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     if (dictVersion >= 0) {
       // TODO: sanity check on values
       if (segSize < offset + COMP_META_SIZE + compressedSize) {
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       checkBuffer(uncompressedSize);
       // Decompress
@@ -130,13 +130,13 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       }
       if (segSize < offset + size) {
       // Rare situation - wrong segment - hash collision
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
 
       UnsafeAccess.copy(buf, off, buffer, bufOffset, size);
     } else if (dictVersion == -1) { // Block is not compressed
       if (segSize < offset + COMP_META_SIZE + uncompressedSize) {
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
@@ -152,13 +152,13 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       }
       if (segSize < offset + size) {
       // Rare situation - wrong segment - hash collision
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       UnsafeAccess.copy(addr, buffer, bufOffset, size);
     } else {
       // Race condition with Scavenger
       //TODO: add to corrupted reads
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     return size;
   }
@@ -189,16 +189,16 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     int compressedSize = UnsafeAccess.toInt(ptr + offset + COMP_SIZE_OFFSET);
     // sanity check
     if (uncompressedSize <= 0 ||compressedSize <= 0) {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     long segSize = s.getSegmentDataSize();
     if (uncompressedSize > segSize || compressedSize > segSize) {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     if (dictVersion >= 0) {
       // TODO: sanity check on values
       if (segSize < offset + COMP_META_SIZE + compressedSize) {
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       checkBuffer(uncompressedSize);
       // Decompress
@@ -220,14 +220,14 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       // TODO: remove this?
       if (segSize < offset + size) {
        // Rare situation - wrong segment - hash collision
-       return IOEngine.NOT_FOUND;
+       return IOEngine.READ_ERROR;
       }
       int pos = buffer.position();
       UnsafeAccess.copy(buf, off, buffer, pos, size);
       buffer.position(pos);
     } else if (dictVersion == -1){ // Block is not compressed
       if (segSize < offset + COMP_META_SIZE + uncompressedSize) {
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
@@ -242,13 +242,13 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       // TODO: remove this?
        if (segSize < offset + size) {
          // Rare situation - wrong segment - hash collision
-         return IOEngine.NOT_FOUND;
+         return IOEngine.READ_ERROR;
        }
       int pos = buffer.position();
       UnsafeAccess.copy(addr, buffer, size);
       buffer.position(pos);
     } else {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     return size;
   }
@@ -278,16 +278,16 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     int compressedSize = UnsafeAccess.toInt(ptr + offset + COMP_SIZE_OFFSET);
     // sanity check
     if (uncompressedSize <= 0 || compressedSize <= 0) {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     long segSize = s.getSegmentDataSize();
     if (uncompressedSize > segSize || compressedSize > segSize) {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     if (dictVersion >= 0) {
       // TODO: sanity check on values
       if (segSize < offset + COMP_META_SIZE + compressedSize) {
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       checkBuffer(uncompressedSize);
       // Decompress
@@ -309,13 +309,13 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       }
       if (segSize < offset + size) {
         // Rare situation - wrong segment - hash collision
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
 
       UnsafeAccess.copy(buf, off, buffer, bufOffset, size);
     } else if (dictVersion == -1){ // Block is not compressed
       if (segSize < offset + COMP_META_SIZE + uncompressedSize) {
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
@@ -330,11 +330,11 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       // TODO: remove this?
       if (segSize < offset + size) {
         // Rare situation - wrong segment - hash collision
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       UnsafeAccess.copy(addr, buffer, bufOffset, size);
     } else {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     return size;
   }
@@ -365,16 +365,16 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     int compressedSize = UnsafeAccess.toInt(ptr + offset + COMP_SIZE_OFFSET);
     // sanity check
     if (uncompressedSize <= 0 || compressedSize <= 0) {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     long segSize = s.getSegmentDataSize();
     if (uncompressedSize > segSize || compressedSize > segSize) {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     if (dictVersion >= 0) {
       // TODO: sanity check on values
       if (segSize < offset + COMP_META_SIZE + compressedSize) {
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       checkBuffer(uncompressedSize);
       // Decompress
@@ -396,7 +396,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       // TODO: remove this?
       if (segSize < offset + size) {
         // Rare situation - wrong segment - hash collision
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       int pos = buffer.position();
       UnsafeAccess.copy(buf, off, buffer, pos, size);
@@ -404,7 +404,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     } else if (dictVersion == -1){ // Block is not compressed
       // TODO: sanity check on values
       if (segSize < offset + COMP_META_SIZE + uncompressedSize) {
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
@@ -428,13 +428,13 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       // TODO: remove this?
       if (s.getSegmentDataSize() < offset + size) {
         // Rare situation - wrong segment - hash collision
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       int pos = buffer.position();
       UnsafeAccess.copy(addr, buffer, size);
       buffer.position(pos);
     } else {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     return size;
   }
@@ -469,17 +469,18 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     // sanity check 
     //TODO: add to corrupted reads
     if (uncompressedSize <= 0 || compressedSize <= 0) {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     long segSize = s.getSegmentDataSize();
     if (uncompressedSize > segSize || compressedSize > segSize) {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     if (dictVersion >= 0) {
       // TODO: sanity check on values
       if (segSize < offset + COMP_META_SIZE + compressedSize) {
-        return IOEngine.NOT_FOUND;
-      }      checkBuffer(uncompressedSize);
+        return IOEngine.READ_ERROR;
+      }      
+      checkBuffer(uncompressedSize);
       // Decompress
       byte[] buf = buffers.get();
       int dsize = codec.decompress(ptr + offset + COMP_META_SIZE, compressedSize, buf, dictVersion);
@@ -511,7 +512,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
 
       if (segSize < offset + valueOffset + rangeSize) {
         // Rare situation - wrong segment - hash collision
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       UnsafeAccess.copy(buf, off + valueOffset, buffer, bufOffset, rangeSize);
       // Now buffer contains both: key and value, we need to compare keys
@@ -520,7 +521,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     } else if (dictVersion == -1) {
       // TODO: sanity check on values
       if (segSize < offset + COMP_META_SIZE + uncompressedSize) {
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
@@ -546,13 +547,13 @@ public class CompressedBlockMemoryDataReader implements DataReader {
 
       if (segSize < offset + valueOffset + rangeSize) {
         // Rare situation - wrong segment - hash collision
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       UnsafeAccess.copy(addr + valueOffset, buffer, bufOffset, rangeSize);
       // Now buffer contains both: key and value, we need to compare keys
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
     } else {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     return rangeSize;
 
@@ -586,16 +587,16 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     int pos = buffer.position();
     //TODO: add to corrupted reads
     if (uncompressedSize <= 0 || compressedSize <= 0) {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     long segSize = s.getSegmentDataSize();
     if (uncompressedSize > segSize || compressedSize > segSize) {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     if (dictVersion >= 0) {
       // TODO: sanity check on values
       if (segSize < offset + COMP_META_SIZE + compressedSize) {
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }   
       checkBuffer(uncompressedSize);
       // Decompress
@@ -622,12 +623,12 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       valueOffset += rangeStart;
       if (segSize < offset + valueOffset + rangeSize) {
         // Rare situation - wrong segment - hash collision
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }      
       UnsafeAccess.copy(buf, off + valueOffset, buffer, pos, rangeSize);
     } else if (dictVersion == -1){
       if (segSize < offset + COMP_META_SIZE + uncompressedSize) {
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }  
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
@@ -648,11 +649,11 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       valueOffset += rangeStart;
       if (segSize < offset + valueOffset + rangeSize) {
         // Rare situation - wrong segment - hash collision
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       UnsafeAccess.copy(addr + valueOffset, buffer,  rangeSize);
     } else {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     buffer.position(pos);
     return rangeSize;
@@ -685,16 +686,16 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     int compressedSize = UnsafeAccess.toInt(ptr + offset + COMP_SIZE_OFFSET);
     //TODO: add to corrupted reads
     if (uncompressedSize <= 0 || compressedSize <= 0) {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     long segSize = s.getSegmentDataSize();
     if (uncompressedSize > segSize || compressedSize > segSize) {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     if (dictVersion >= 0) {
       // TODO: sanity check on values
       if (segSize < offset + COMP_META_SIZE + compressedSize) {
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }  
       checkBuffer(uncompressedSize);
       // Decompress
@@ -728,7 +729,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
 
       if (segSize < offset + valueOffset + rangeSize) {
         // Rare situation - wrong segment - hash collision
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       UnsafeAccess.copy(buf, off + valueOffset, buffer, bufOffset, rangeSize);
       // Now buffer contains both: key and value, we need to compare keys
@@ -737,7 +738,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     } else if (dictVersion == -1) {
       // TODO: sanity check on values
       if (segSize < offset + COMP_META_SIZE + uncompressedSize) {
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }  
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
@@ -763,14 +764,14 @@ public class CompressedBlockMemoryDataReader implements DataReader {
 
       if (segSize < offset + valueOffset + rangeSize) {
         // Rare situation - wrong segment - hash collision
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       UnsafeAccess.copy(addr + valueOffset, buffer, bufOffset, rangeSize);
       // Now buffer contains both: key and value, we need to compare keys
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
 
     } else {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     return rangeSize;
   }
@@ -803,16 +804,16 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     int pos = buffer.position();
     //TODO: add to corrupted reads
     if (uncompressedSize <= 0 || compressedSize <= 0) {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     long segSize = s.getSegmentDataSize();
     if (uncompressedSize > segSize || compressedSize > segSize) {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     if (dictVersion >= 0) {
       // TODO: sanity check on values
       if (segSize < offset + COMP_META_SIZE + compressedSize) {
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       checkBuffer(uncompressedSize);
       // Decompress
@@ -839,13 +840,13 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       valueOffset += rangeStart;
       if (segSize < offset + valueOffset + rangeSize) {
         // Rare situation - wrong segment - hash collision
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }      
       UnsafeAccess.copy(buf, off + valueOffset, buffer, pos, rangeSize);
     } else if (dictVersion == -1){
       // TODO: sanity check on values
       if (segSize < offset + COMP_META_SIZE + uncompressedSize) {
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       // Find key-value in the buffer
       int offAdj = COMP_META_SIZE - META_SIZE;
@@ -866,11 +867,11 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       valueOffset += rangeStart;
       if (segSize < offset + valueOffset + rangeSize) {
         // Rare situation - wrong segment - hash collision
-        return IOEngine.NOT_FOUND;
+        return IOEngine.READ_ERROR;
       }
       UnsafeAccess.copy(addr + valueOffset, buffer,  rangeSize);
     } else {
-      return IOEngine.NOT_FOUND;
+      return IOEngine.READ_ERROR;
     }
     buffer.position(pos);
     return rangeSize;

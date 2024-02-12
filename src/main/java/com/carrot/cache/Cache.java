@@ -538,6 +538,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   /**
+   * Get total failed gets 
+   * @return total failed gets
+   */
+  public long getTotalFailedGets() {
+    return this.engine.getTotalFailedReads();
+  }
+  
+  /**
    * Total gets size
    * @return size
    */
@@ -2468,9 +2476,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public void printStats() {
     double compRatio = (double) getRawDataSize() / getStorageAllocated();
     double compRatioReal = (double) getRawDataSize() / getStorageUsedActual();
-    System.out.printf("Cache[%s]: storage size=%d data size=%d comp ratio=%f comp real=%f items=%d hit rate=%f, gets=%d, puts=%d, bytes written=%d\n",
+    System.out.printf("Cache[%s]: storage size=%d data size=%d comp ratio=%f comp real=%f items=%d hit rate=%f, gets=%d, failed gets=%d, puts=%d, bytes written=%d\n",
       this.cacheName, getStorageAllocated(), getRawDataSize(), compRatio, compRatioReal, size(), 
-      getHitRate(), getTotalGets(), getTotalWrites(), getTotalWritesSize());
+      getHitRate(), getTotalGets(), getTotalFailedGets(), getTotalWrites(), getTotalWritesSize());
     if (this.victimCache != null) {
        this.victimCache.printStats();
     }

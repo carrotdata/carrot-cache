@@ -833,7 +833,7 @@ public class CarrotConfig {
 
   
   /**
-   * Gets scavenger dump entry below - start
+   * Gets scavenger dump entry below - minimum
    * @param cacheName cache name
    * @return dump entry below ratio
    */
@@ -846,16 +846,16 @@ public class CarrotConfig {
   }
 
   /**
-   * Sets scavenger dump entry below - start
+   * Sets scavenger dump entry below - minimum
    * @param cacheName cache name
    * @param ratio entry below ratio start
    */
-  public void setScavengerDumpEntryBelowStart(String cacheName, double ratio) {
+  public void setScavengerDumpEntryBelowMin(String cacheName, double ratio) {
     props.setProperty(cacheName + "."+ SCAVENGER_DUMP_ENTRY_BELOW_MIN_KEY, Double.toString(ratio));
   }
   
   /**
-   * Gets scavenger dump entry below - stop
+   * Gets scavenger dump entry below - maximum
    * @param cacheName cache name
    * @return dump entry below ratio
    */
@@ -868,11 +868,11 @@ public class CarrotConfig {
   }
   
   /**
-   * Sets scavenger dump entry below - stop
+   * Sets scavenger dump entry below - maximum
    * @param cacheName cache name
    * @param ratio entry below ratio stop
    */
-  public void setScavengerDumpEntryBelowStop(String cacheName, double ratio) {
+  public void setScavengerDumpEntryBelowMax(String cacheName, double ratio) {
     props.setProperty(cacheName + "."+ SCAVENGER_DUMP_ENTRY_BELOW_MAX_KEY, Double.toString(ratio));
   }
   

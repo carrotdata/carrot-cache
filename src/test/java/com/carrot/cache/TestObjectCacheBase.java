@@ -70,7 +70,7 @@ public abstract class TestObjectCacheBase  {
       .withCacheDataSegmentSize(segmentSize)
       .withCacheMaximumSize(maxCacheSize)
       .withScavengerRunInterval(scavengerInterval)
-      .withScavengerDumpEntryBelowStart(scavDumpBelowRatio)
+      .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
       .withRecyclingSelector(MinAliveRecyclingSelector.class.getName())
       .withDataWriter(BaseDataWriter.class.getName())
       .withMemoryDataReader(BaseMemoryDataReader.class.getName())

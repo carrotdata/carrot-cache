@@ -111,6 +111,12 @@ public abstract class IOEngine implements Persistent {
   /* Total number of delete operations */
   protected AtomicLong totalDeletes = new AtomicLong();
   
+  /* Total read operations (gets) */
+  protected AtomicLong totalReads  = new AtomicLong();
+ 
+  /* Total failed reads */
+  protected AtomicLong totalFailedReads = new AtomicLong();
+  
   /* Total duration in ns of all read operations*/
   protected AtomicLong totalIOReadDuration = new AtomicLong();
   
@@ -442,6 +448,23 @@ public abstract class IOEngine implements Persistent {
   public long getTotalIOReadDuration() {
     return this.totalIOReadDuration.get();
   }
+  
+  /**
+   * Get total number of read operations
+   * @return total number of reads
+   */
+  public long getTotalReads() {
+    return this.totalReads.get();
+  }
+  
+  /**
+   * Get total number of failed read operations
+   * @return total number of failed reads
+   */
+  public long getTotalFailedReads() {
+    return this.totalFailedReads.get();
+  }
+  
   /**
    * Get segment by segment id
    *
@@ -520,25 +543,38 @@ public abstract class IOEngine implements Persistent {
         if (s == null || !s.isValid()) {
           return NOT_FOUND;
         }
-        
-        try {
-          s.readLock();
-          int id = this.index.getSegmentId(keyPtr, keySize);
-          if (id < 0) {
-            return NOT_FOUND;
-          }
-          if (id != sid) {
+        // Make up to 3 attempts
+        int maxAttempts = 3;
+        int attempt = 0;
+        int res = NOT_FOUND;
+        while (attempt++ < maxAttempts) {
+          try {
+            s.readLock();
+            int id = this.index.getSegmentId(keyPtr, keySize);
+            if (id < 0) {
+              return NOT_FOUND;
+            }
+            if (id != sid) {
+              s.readUnlock();
+              return get(keyPtr, keySize, hit, buffer, bufOffset);
+            }
+            // Read the data
+            res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer, bufOffset);
+            if (res >= 0) {
+              access(s, res, hit);
+            } else if (res == READ_ERROR) {
+              continue;
+            }
+            return res;
+          } finally {
             s.readUnlock();
-            return get(keyPtr, keySize, hit, buffer, bufOffset);
           }
-          // Read the data
-          int res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer, bufOffset);
-          access(s, res, hit);
-          return res;
-        } finally {
-          s.readUnlock();
+        }
+        if (res == READ_ERROR) {
+          this.totalFailedReads.incrementAndGet();
         }
       }
+      return NOT_FOUND;
     } finally {
       UnsafeAccess.free(buf);
     }
@@ -705,25 +741,40 @@ public abstract class IOEngine implements Persistent {
           return NOT_FOUND;
         }
         
-        try {
-          s.readLock();
-          // Check if scavenger removed this object or moved it to another segment
-          int id = this.index.getSegmentId(key, keyOffset, keySize);
-          if (id < 0) {
-            return NOT_FOUND;
-          }
-          if (id != sid) {
+        // Make up to 3 attempts
+        int maxAttempts = 3;
+        int attempt = 0;
+        int res = NOT_FOUND;
+        while (attempt++ < maxAttempts) {
+          try {
+            s.readLock();
+            // Check if scavenger removed this object or moved it to another segment
+            int id = this.index.getSegmentId(key, keyOffset, keySize);
+            if (id < 0) {
+              return NOT_FOUND;
+            }
+            if (id != sid) {
+              s.readUnlock();
+              return get(key, keyOffset, keySize, hit, buffer, bufOffset);
+            }
+            // Read the data
+            res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer, bufOffset);
+            if (res >= 0) {
+              access(s, res, hit);
+            } else  if (res == IOEngine.READ_ERROR) {
+              // next attempt
+              continue;
+            }
+            return res;
+          } finally {
             s.readUnlock();
-            return get(key, keyOffset, keySize, hit, buffer, bufOffset);
           }
-          // Read the data
-          int res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer, bufOffset);
-          access(s, res, hit);
-          return res;
-        } finally {
-          s.readUnlock();
+        }
+        if (res == READ_ERROR) {
+          this.totalFailedReads.incrementAndGet();
         }
       }
+      return NOT_FOUND;
     } finally {
       UnsafeAccess.free(buf);
     }
@@ -911,26 +962,39 @@ public abstract class IOEngine implements Persistent {
         if (s == null || !s.isValid()) {
           return NOT_FOUND;
         }
-        
-        try {
-          s.readLock();
-          // Check if scavenger removed this object or moved it to another segment
-          int id = this.index.getSegmentId(keyPtr, keySize);
-          if (id < 0) {
-            return NOT_FOUND;
-          }
-          if (id != sid) {
+        // Make up to 3 attempts
+        int maxAttempts = 3;
+        int attempt = 0;
+        int res = NOT_FOUND;
+        while (attempt++ < maxAttempts) {
+          try {
+            s.readLock();
+            // Check if scavenger removed this object or moved it to another segment
+            int id = this.index.getSegmentId(keyPtr, keySize);
+            if (id < 0) {
+              return NOT_FOUND;
+            }
+            if (id != sid) {
+              s.readUnlock();
+              return get(keyPtr, keySize, hit, buffer);
+            }
+            // Read the data
+            res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer);
+            if (res >= 0) {
+              access(s, res, hit);
+            } else if (res == READ_ERROR) {
+              this.totalFailedReads.incrementAndGet();
+            }
+            return res;
+          } finally {
             s.readUnlock();
-            return get(keyPtr, keySize, hit, buffer);
           }
-          // Read the data
-          int res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer);
-          access(s, res, hit);
-          return res;
-        } finally {
-          s.readUnlock();
+        }
+        if (res == READ_ERROR) {
+          this.totalFailedReads.incrementAndGet();
         }
       }
+      return NOT_FOUND;
     } finally {
       UnsafeAccess.free(buf);
      // this.index.unlock(slot);
@@ -1096,26 +1160,39 @@ public abstract class IOEngine implements Persistent {
         if (s == null || !s.isValid()) {
           return NOT_FOUND;
         }
-
-        try {
-          s.readLock();
-          // Check if scavenger removed this object or moved it to another segment
-          int id = this.index.getSegmentId(key, keyOffset, keySize);
-          if (id < 0) {
-            return NOT_FOUND;
-          }
-          if (id != sid) {
+        // Make up to 3 attempts
+        int maxAttempts = 3;
+        int attempt = 0;
+        int res = NOT_FOUND;
+        while (attempt++ < maxAttempts) {
+          try {
+            s.readLock();
+            // Check if scavenger removed this object or moved it to another segment
+            int id = this.index.getSegmentId(key, keyOffset, keySize);
+            if (id < 0) {
+              return NOT_FOUND;
+            }
+            if (id != sid) {
+              s.readUnlock();
+              return get(key, keyOffset, keySize, hit, buffer);
+            }
+            // Read the data
+            res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer);
+            if (res >=0) {
+              access(s, res, hit);
+            } else if (res == READ_ERROR) {
+              continue;
+            }
+            return res;
+          } finally {
             s.readUnlock();
-            return get(key, keyOffset, keySize, hit, buffer);
           }
-          // Read the data
-          int res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer);
-          access(s, res, hit);
-          return res;
-        } finally {
-          s.readUnlock();
+        }
+        if (res == READ_ERROR) {
+          this.totalFailedReads.incrementAndGet();
         }
       }
+      return NOT_FOUND;
     } finally {
       UnsafeAccess.free(buf);
     }
@@ -1239,11 +1316,20 @@ public abstract class IOEngine implements Persistent {
     if (buffer == null || size > 0 && (buffer.length - bufOffset) < size) {
       throw new IllegalArgumentException();
     }
-    int len = getFromRAMBuffers(id, offset, size, key, keyOffset, keySize, buffer, bufOffset);
-    if (len > 0) {
-      return len;
+    this.totalReads.incrementAndGet();
+    int result = getFromRAMBuffers(id, offset, size, key, keyOffset, keySize, buffer, bufOffset);
+    if (result >= 0) {
+      return result;
     }
-    return getInternal(id, offset, size, key, keyOffset, keySize, buffer, bufOffset);
+    if (result == READ_ERROR) {
+      //this.totalFailedReads.incrementAndGet();
+      return result;
+    }
+    if (!isOffheap()) {
+      return getInternal(id, offset, size, key, keyOffset, keySize, buffer, bufOffset);
+    } else {
+      return NOT_FOUND;
+    }
   }
 
   /**
@@ -1266,12 +1352,20 @@ public abstract class IOEngine implements Persistent {
     if (buffer == null) {
       throw new IllegalArgumentException("buffer is null");
     }
-    int len = getRangeFromRAMBuffers(sid, offset, keyValueSize, key, keyOffset, keySize, 
+    this.totalReads.incrementAndGet();
+
+    int result = getRangeFromRAMBuffers(sid, offset, keyValueSize, key, keyOffset, keySize, 
       rangeStart, rangeSize, buffer, bufOffset);
-    if (len > 0) {
-      return len;
+    if (result >= 0) {
+      return result;
     }
-    return getRangeInternal(sid, offset, keyValueSize, key, keyOffset, keySize, rangeStart, rangeSize, buffer, bufOffset);
+    if(result == READ_ERROR) {
+      this.totalFailedReads.incrementAndGet();
+    }
+    if (!isOffheap()) {
+      return getRangeInternal(sid, offset, keyValueSize, key, keyOffset, keySize, rangeStart, rangeSize, buffer, bufOffset);
+    }
+    return NOT_FOUND;
   }
   
   /**
@@ -1292,11 +1386,20 @@ public abstract class IOEngine implements Persistent {
     if (buffer == null || size > 0 && (buffer.length - bufOffset) < size) {
       throw new IllegalArgumentException();
     }
-    int len = getFromRAMBuffers(id, offset, size, keyPtr, keySize, buffer, bufOffset);
-    if (len > 0) {
-      return len;
+    this.totalReads.incrementAndGet();
+
+    int result = getFromRAMBuffers(id, offset, size, keyPtr, keySize, buffer, bufOffset);
+    if (result >= 0) {
+      return result;
     }
-    return getInternal(id, offset, size, keyPtr, keySize, buffer, bufOffset);
+    if(result == READ_ERROR) {
+      //this.totalFailedReads.incrementAndGet();
+      return result;
+    }
+    if (!isOffheap()) {
+      return getInternal(id, offset, size, keyPtr, keySize, buffer, bufOffset);
+    }
+    return NOT_FOUND;
   }
 
   /**
@@ -1320,12 +1423,20 @@ public abstract class IOEngine implements Persistent {
     if (buffer == null) {
       throw new IllegalArgumentException("buffer is null");
     }
-    int len = getRangeFromRAMBuffers(id, offset, size, keyPtr, keySize, rangeStart, 
+    this.totalReads.incrementAndGet();
+
+    int result = getRangeFromRAMBuffers(id, offset, size, keyPtr, keySize, rangeStart, 
       rangeSize, buffer, bufOffset);
-    if (len > 0) {
-      return len;
+    if (result >= 0) {
+      return result;
     }
-    return getRangeInternal(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer, bufOffset);
+    if(result == READ_ERROR) {
+      this.totalFailedReads.incrementAndGet();
+    }
+    if (!isOffheap()) {
+      return getRangeInternal(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer, bufOffset);
+    }
+    return NOT_FOUND;
   }
   
   /**
@@ -1359,12 +1470,12 @@ public abstract class IOEngine implements Persistent {
         }
         // OK it is in memory
         try {
-           this.memoryDataReader.read(
+          return this.memoryDataReader.read(
               this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset);
         } catch (IOException e) {
           // never happens
+          return READ_ERROR;
         }
-        return NOT_FOUND;
       }
     } finally {
       if (s != null) {
@@ -1412,8 +1523,8 @@ public abstract class IOEngine implements Persistent {
               this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset, rangeStart, rangeSize);
         } catch (IOException e) {
           // never happens
+          return READ_ERROR;
         }
-        return NOT_FOUND;
       }
     } finally {
       if (s != null) {
@@ -1441,15 +1552,17 @@ public abstract class IOEngine implements Persistent {
       if (s != null) {
         s.readLock();
         // now check s again
-        if (!s.isOffheap()) return NOT_FOUND;
+        if (!s.isOffheap()) {
+          return NOT_FOUND;
+        }
         // OK it is in memory
         try {
           return this.memoryDataReader.read(
               this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
         } catch (IOException e) {
           // never happens
+          return READ_ERROR;
         }
-        return NOT_FOUND;
       }
     } finally {
       if (s != null) {
@@ -1480,15 +1593,17 @@ public abstract class IOEngine implements Persistent {
       if (s != null) {
         s.readLock();
         // now check s again
-        if (!s.isOffheap()) return NOT_FOUND;
+        if (!s.isOffheap()) {
+          return NOT_FOUND;
+        }
         // OK it is in memory
         try {
           return this.memoryDataReader.readValueRange(
               this, keyPtr, keySize, sid, offset, size, buffer, bufOffset, rangeStart, rangeSize);
         } catch (IOException e) {
           // never happens
+          return READ_ERROR;
         }
-        return NOT_FOUND;
       }
     } finally {
       if (s != null) {
@@ -1516,15 +1631,17 @@ public abstract class IOEngine implements Persistent {
       if (s != null) {
         s.readLock();
         // now check s again
-        if (!s.isOffheap()) return NOT_FOUND;
+        if (!s.isOffheap()) {
+          return NOT_FOUND;
+        }
         // OK it is in memory
         try {
           return this.memoryDataReader.read(
               this, key, keyOffset, keySize, sid, offset, size, buffer);
         } catch (IOException e) {
           // never happens
+          return READ_ERROR;
         }
-        return NOT_FOUND;
       }
     } finally {
       if (s != null) {
@@ -1556,15 +1673,17 @@ public abstract class IOEngine implements Persistent {
       if (s != null) {
         s.readLock();
         // now check s again
-        if (!s.isOffheap()) return NOT_FOUND;
+        if (!s.isOffheap()) {
+          return NOT_FOUND;
+        }
         // OK it is in memory
         try {
           return this.memoryDataReader.readValueRange(
               this, key, keyOffset, keySize, sid, offset, size, buffer, rangeStart, rangeSize);
         } catch (IOException e) {
           // never happens
+          return READ_ERROR;
         }
-        return NOT_FOUND;
       }
     } finally {
       if (s != null) {
@@ -1593,14 +1712,16 @@ public abstract class IOEngine implements Persistent {
       if (s != null) {
         s.readLock();
         // now check s again
-        if (!s.isOffheap()) return NOT_FOUND;
+        if (!s.isOffheap()) {
+          return NOT_FOUND;
+        }
         // OK it is in memory
         try {
           return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer);
         } catch (IOException e) {
           // never happens
+          return READ_ERROR;
         }
-        return NOT_FOUND;
       }
     } finally {
       if (s != null) {
@@ -1631,15 +1752,17 @@ public abstract class IOEngine implements Persistent {
       if (s != null) {
         s.readLock();
         // now check s again
-        if (!s.isOffheap()) return NOT_FOUND;
+        if (!s.isOffheap()) {
+          return NOT_FOUND;
+        }
         // OK it is in memory
         try {
           return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, 
             offset, size, buffer, rangeStart, rangeSize);
         } catch (IOException e) {
           // never happens
+          return READ_ERROR;
         }
-        return NOT_FOUND;
       }
     } finally {
       if (s != null) {
@@ -1828,12 +1951,23 @@ public abstract class IOEngine implements Persistent {
   private int get(
       int id, long offset, int size, byte[] key, int keyOffset, int keySize, ByteBuffer buffer)
       throws IOException {
-    if (buffer == null || buffer.remaining() < size) throw new IllegalArgumentException();
-    int len = getFromRAMBuffers(id, offset, size, key, keyOffset, keySize, buffer);
-    if (len > 0) {
-      return len;
+    if (buffer == null || buffer.remaining() < size) {
+      throw new IllegalArgumentException();
     }
-    return getInternal(id, offset, size, key, keyOffset, keySize, buffer);
+    this.totalReads.incrementAndGet();
+
+    int result = getFromRAMBuffers(id, offset, size, key, keyOffset, keySize, buffer);
+    if (result >= 0) {
+      return result;
+    }
+    if (result == READ_ERROR) {
+      //this.totalFailedReads.incrementAndGet();
+      return result;
+    }
+    if (!isOffheap()) {
+      return getInternal(id, offset, size, key, keyOffset, keySize, buffer);
+    }
+    return NOT_FOUND;
   }
 
   /**
@@ -1857,11 +1991,19 @@ public abstract class IOEngine implements Persistent {
     if (buffer == null) {
       throw new IllegalArgumentException("buffer is null");
     }
-    int len = getRangeFromRAMBuffers(id, offset, size, key, keyOffset, keySize, rangeStart, rangeSize, buffer);
-    if (len > 0) {
-      return len;
+    this.totalReads.incrementAndGet();
+
+    int result = getRangeFromRAMBuffers(id, offset, size, key, keyOffset, keySize, rangeStart, rangeSize, buffer);
+    if (result >= 0) {
+      return result;
     }
-    return getRangeInternal(id, offset, size, key, keyOffset, keySize, rangeStart, rangeSize, buffer);
+    if (result == READ_ERROR) {
+      this.totalFailedReads.incrementAndGet();
+    }
+    if (!isOffheap()) {
+      return getRangeInternal(id, offset, size, key, keyOffset, keySize, rangeStart, rangeSize, buffer);
+    }
+    return NOT_FOUND;
   }
   
   /**
@@ -1875,13 +2017,24 @@ public abstract class IOEngine implements Persistent {
    */
   private int get(int id, long offset, int size, long keyPtr, int keySize, ByteBuffer buffer)
       throws IOException {
-    if (buffer == null || buffer.remaining() < size) throw new IllegalArgumentException();
-    int len = getFromRAMBuffers(id, offset, size, keyPtr, keySize, buffer);
-
-    if (len > 0) {
-      return len;
+    if (buffer == null || buffer.remaining() < size) {
+      throw new IllegalArgumentException();
     }
-    return getInternal(id, offset, size, keyPtr, keySize, buffer);
+    this.totalReads.incrementAndGet();
+
+    int result = getFromRAMBuffers(id, offset, size, keyPtr, keySize, buffer);
+
+    if (result >= 0) {
+      return result;
+    }
+    if (result == READ_ERROR) {
+      //this.totalFailedReads.incrementAndGet();
+      return result;
+    }
+    if (!isOffheap()) {
+      return getInternal(id, offset, size, keyPtr, keySize, buffer);
+    }
+    return NOT_FOUND;
   }
 
   /**
@@ -1899,12 +2052,20 @@ public abstract class IOEngine implements Persistent {
     if (buffer == null) {
       throw new IllegalArgumentException("buffer is null");
     }
-    int len = getRangeFromRAMBuffers(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer);
+    this.totalReads.incrementAndGet();
 
-    if (len > 0) {
-      return len;
+    int result = getRangeFromRAMBuffers(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer);
+
+    if (result >= 0) {
+      return result;
     }
-    return getRangeInternal(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer);
+    if (result == READ_ERROR) {
+      this.totalFailedReads.incrementAndGet();
+    }
+    if (!isOffheap()) {
+      return getRangeInternal(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer);
+    }
+    return NOT_FOUND;
   }
   /**
    * Save data segment
@@ -2381,6 +2542,8 @@ public abstract class IOEngine implements Persistent {
     dos.writeLong(this.totalUpdates.get());
     dos.writeLong(this.totalDeletes.get());
     dos.writeLong(this.totalIOReadDuration.get());
+    dos.writeLong(this.totalReads.get());
+    dos.writeLong(this.totalFailedReads.get());
     // Codec 
     CodecFactory.getInstance().saveCodecForCache(cacheName, dos);
     dos.close();
@@ -2415,6 +2578,8 @@ public abstract class IOEngine implements Persistent {
     this.totalUpdates.set(dis.readLong());
     this.totalDeletes.set(dis.readLong());
     this.totalIOReadDuration.set(dis.readLong());
+    this.totalReads.set(dis.readLong());
+    this.totalFailedReads.set(dis.readLong());
     // Codec
     CodecFactory.getInstance().initCompressionCodecForCache(cacheName, dis);
     dis.close();
@@ -2492,8 +2657,6 @@ public abstract class IOEngine implements Persistent {
       exp += s.getNumberExpiredItems();
       total += s.getTotalItems() - s.getNumberEvictedDeletedItems() - s.getNumberExpiredItems();
     }
-    //*DEBUG*/ System.out.println("total=" + t + " ev=" + ev + " exp=" + exp);
-
     return total;
   }
 
@@ -2563,4 +2726,7 @@ public abstract class IOEngine implements Persistent {
     });
     return this.dataSegments;
   }
+  
+  
+  protected abstract boolean isOffheap() ;
 }

@@ -116,7 +116,7 @@ public abstract class TestCacheMultithreadedZipfBase {
       .withCacheDataSegmentSize(segmentSize)
       .withCacheMaximumSize(maxCacheSize)
       .withScavengerRunInterval(scavengerInterval)
-      .withScavengerDumpEntryBelowStart(scavDumpBelowRatio)
+      .withScavengerDumpEntryBelowMax(scavDumpBelowRatio)
       .withCacheEvictionPolicy(epClz.getName())
       .withRecyclingSelector(rsClz.getName())
       .withCacheRootDir(rootDir)

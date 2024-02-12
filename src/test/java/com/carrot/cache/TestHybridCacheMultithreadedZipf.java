@@ -113,7 +113,7 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
       .withCacheDataSegmentSize(victim_segmentSize)
       .withCacheMaximumSize(victim_maxCacheSize)
       .withScavengerRunInterval(victim_scavengerInterval)
-      .withScavengerDumpEntryBelowStart(victim_scavDumpBelowRatio)
+      .withScavengerDumpEntryBelowMin(victim_scavDumpBelowRatio)
       .withCacheEvictionPolicy(victim_epClz.getName())
       .withRecyclingSelector(victim_rsClz.getName())
       .withCacheRootDir(rootDir)

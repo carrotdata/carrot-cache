@@ -136,22 +136,22 @@ public class Builder {
   }
   
   /**
-   * With scavenger dump entry below start
+   * With scavenger dump entry below minimum
    * @param start dump entry below start value
    * @return builder instance
    */
-  public Builder withScavengerDumpEntryBelowStart(double start) {
-    conf.setScavengerDumpEntryBelowStart(this.cacheName, start);
+  public Builder withScavengerDumpEntryBelowMin(double start) {
+    conf.setScavengerDumpEntryBelowMin(this.cacheName, start);
     return this;
   }
   
   /**
-   * With scavenger dump entry below stop
+   * With scavenger dump entry below maximum
    * @param stop dump entry below stop value
    * @return builder instance
    */
-  public Builder withScavengerDumpEntryBelowStop(double stop) {
-    conf.setScavengerDumpEntryBelowStop(this.cacheName, stop);
+  public Builder withScavengerDumpEntryBelowMax(double stop) {
+    conf.setScavengerDumpEntryBelowMax(this.cacheName, stop);
     return this;
   }
   

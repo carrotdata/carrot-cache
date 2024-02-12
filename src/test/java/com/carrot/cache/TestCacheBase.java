@@ -90,7 +90,7 @@ public abstract class TestCacheBase extends IOTestBase {
       .withCacheDataSegmentSize(segmentSize)
       .withCacheMaximumSize(maxCacheSize)
       .withScavengerRunInterval(scavengerInterval)
-      .withScavengerDumpEntryBelowStart(scavDumpBelowRatio)
+      .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
       .withRecyclingSelector(recycleSelector)
       .withDataWriter(dataWriter)
       .withMemoryDataReader(dataReaderMemory)

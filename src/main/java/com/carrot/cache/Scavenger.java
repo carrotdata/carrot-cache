@@ -378,7 +378,7 @@ public class Scavenger implements Runnable {
   private static AtomicLong rollingId = new AtomicLong();
   
   /* Clean deleted only items - do not purge low ranks*/
-  private boolean cleanDeletedOnly = true;
+  private boolean beforeStallDetected = true;
   
   private long maxSegmentsBeforeStallDetected;
     
@@ -394,9 +394,9 @@ public class Scavenger implements Runnable {
     if (stats == null) {
       stats = new Stats(cache.getName());
       statsMap.put(cache.getName(), stats);
-      dumpBelowRatio = this.config.getScavengerDumpEntryBelowMax(cacheName);
+      dumpBelowRatio = this.config.getScavengerDumpEntryBelowMin(cacheName);
       dumpBelowRatioMin = dumpBelowRatio;
-      dumpBelowRatioMax = this.config.getScavengerDumpEntryBelowMin(cacheName);
+      dumpBelowRatioMax = this.config.getScavengerDumpEntryBelowMax(cacheName);
       adjStep = this.config.getScavengerDumpEntryBelowAdjStep(cacheName);
       stopRatio =  this.config.getScavengerStopMemoryRatio(cacheName);
       stats.dumpBelowRatio = dumpBelowRatio;
@@ -431,15 +431,14 @@ public class Scavenger implements Runnable {
     long segmentSize = this.cache.getCacheConfig().getCacheSegmentSize(cache.getName());
     long maxSegments = maxCacheSize / segmentSize;
     double startRatio = this.cache.getCacheConfig().getScavengerStartMemoryRatio(cache.getName());
-    double range = startRatio - stopRatio;
-    // TODO on this value
-    return (int) (2 * maxSegments * range);
+    double rangeToScan = startRatio - stopRatio;
+    // TODO on this value. We expect that 50% of segment data will be cleaned on average
+    return (int) (2 * maxSegments * rangeToScan);
     
   }
   
   public void start() {
     ExecutorService service = poolMap.get(this.cache.getName());
-    //*DEBUG*/ System.out.println("start scavenger");
     service.submit(this);
   }
   
@@ -492,7 +491,7 @@ public class Scavenger implements Runnable {
         if (segmentsProcessed >= maxSegmentsBeforeStallDetected) {
           // This should never happen if eviction is disabled
           dumpBelowRatio = dumpBelowRatioMax;// improve scavenger's performance - dump everything
-          cleanDeletedOnly = false;
+          beforeStallDetected = false;
         }
         engine.startRecycling(s);
         long maxExpire = s.getInfo().getMaxExpireAt();
@@ -502,9 +501,9 @@ public class Scavenger implements Runnable {
         }
         try {
           finished = cleanSegment(s);
-          if (finished && cleanDeletedOnly) {
+          if (finished && beforeStallDetected) {
             // continue with purging low rank elements
-            cleanDeletedOnly = false;
+            beforeStallDetected = false;
             finished = false;
           }
           // Dispose segment
@@ -630,7 +629,7 @@ public class Scavenger implements Runnable {
         final int valSize = sc.valueLength();
         final int totalSize = Utils.kvSize(keySize, valSize);
         stats.totalBytesScanned.addAndGet(totalSize);
-        double ratio = cleanDeletedOnly? 0: dumpBelowRatio;
+        double ratio = dumpBelowRatio; //beforeStallDetected? 0: dumpBelowRatio;
         if (isDirect) {
           result = index.checkDeleteKeyForScavenger(s.getId(), keyPtr, keySize, result, ratio);
         } else {

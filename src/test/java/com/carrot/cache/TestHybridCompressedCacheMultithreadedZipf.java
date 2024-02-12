@@ -20,8 +20,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.junit.After;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import com.carrot.cache.controllers.AdmissionController;
 import com.carrot.cache.controllers.BaseAdmissionController;
@@ -63,7 +61,7 @@ public class TestHybridCompressedCacheMultithreadedZipf extends TestOffheapCompr
     this.numThreads = 4;
     this.minActiveRatio = 0.9;
     this.maxCacheSize = 20L * this.segmentSize;
-    //this.scavDumpBelowRatio = 0.2;
+    this.scavDumpBelowRatio = 1.0;
     this.dictionaryEnabled = true;
    
     // victim cache
@@ -107,7 +105,7 @@ public class TestHybridCompressedCacheMultithreadedZipf extends TestOffheapCompr
       .withCacheDataSegmentSize(victim_segmentSize)
       .withCacheMaximumSize(victim_maxCacheSize)
       .withScavengerRunInterval(victim_scavengerInterval)
-      .withScavengerDumpEntryBelowStart(victim_scavDumpBelowRatio)
+      .withScavengerDumpEntryBelowMax(victim_scavDumpBelowRatio)
       .withCacheEvictionPolicy(victim_epClz.getName())
       .withRecyclingSelector(victim_rsClz.getName())
       .withCacheRootDir(rootDir)

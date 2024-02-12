@@ -85,7 +85,7 @@ public abstract class TestCacheMultithreadedStreamBase {
       .withCacheDataSegmentSize(segmentSize)
       .withCacheMaximumSize(maxCacheSize)
       .withScavengerRunInterval(scavengerInterval)
-      .withScavengerDumpEntryBelowStart(scavDumpBelowRatio)
+      .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
       .withCacheEvictionPolicy(LRUEvictionPolicy.class.getName())
       .withRecyclingSelector(LRCRecyclingSelector.class.getName())
       //.withDataWriter(BlockDataWriter.class.getName())

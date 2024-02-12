@@ -77,7 +77,7 @@ public class TestCacheWithCompressionBase extends TestCacheBase {
       .withCacheDataSegmentSize(segmentSize)
       .withCacheMaximumSize(maxCacheSize)
       .withScavengerRunInterval(scavengerInterval)
-      .withScavengerDumpEntryBelowStart(scavDumpBelowRatio)
+      .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
       .withRecyclingSelector(recycleSelector)
       .withDataWriter(dataWriter)
       .withMemoryDataReader(dataReaderMemory)

@@ -494,4 +494,9 @@ public class FileIOEngine extends IOEngine {
     // TODO: Should we save on shutdown?
     waitForIoStoragePool();
   }
+  
+  @Override
+  protected boolean isOffheap() {
+    return false;
+  }
 }
