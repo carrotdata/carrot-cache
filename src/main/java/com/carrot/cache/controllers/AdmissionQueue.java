@@ -54,22 +54,22 @@ public class AdmissionQueue implements Persistent {
   private static final Logger LOG = LogManager.getLogger(AdmissionQueue.class);
   
   /* Maximum AQ current size */
-  private double currentMaxSizeRatio;
+  protected double currentMaxSizeRatio;
   
   /* Global maximum AQ size */
-  private double globalMaxSizeRatio;
+  protected double globalMaxSizeRatio;
   
   /* Global minimum AQ size */
-  private double globalMinSizeRatio;
+  protected double globalMinSizeRatio;
   
   /* Memory index - the queue itself */
-  private MemoryIndex index;
+  protected MemoryIndex index;
   
   /* Cache */
-  private Cache cache;
+  protected Cache cache;
   
   /* Cache name */
-  private String cacheName;
+  protected String cacheName;
   
   /* Tracks total insert number */
   private AtomicLong totalPuts = new AtomicLong();
@@ -78,7 +78,7 @@ public class AdmissionQueue implements Persistent {
   private AtomicLong totalSize = new AtomicLong();
   
   /* Maximum cache size */
-  private long maxCacheSize;
+  protected long maxCacheSize;
   
   /**
    * Public constructor

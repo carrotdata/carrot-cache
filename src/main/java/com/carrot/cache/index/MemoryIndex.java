@@ -51,7 +51,7 @@ public final class MemoryIndex implements Persistent {
   private static final Logger LOG = LogManager.getLogger(MemoryIndex.class);
   
   /** This is value which guarantees that rehashing won't break*/
-  private static final int MAX_INDEX_ENTRIES_PER_BLOCK = 350;
+  public static int MAX_INDEX_ENTRIES_PER_BLOCK = 350;
   
   public static enum MutationResult{
     INSERTED, /* Operation succeeded */ 

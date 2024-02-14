@@ -70,7 +70,7 @@ public class TestHybridCompressedCacheMultithreadedZipf extends TestOffheapCompr
     this.victim_minActiveRatio = 0.5;
     this.victim_scavDumpBelowRatio = 0.5;
     this.victim_scavengerInterval = 10;
-    this.victim_promoteOnHit = false;
+    this.victim_promoteOnHit = true;
     this.victim_epClz = LRUEvictionPolicy.class;
     this.victim_rsClz = MinAliveRecyclingSelector.class;
     this.victim_acClz = BaseAdmissionController.class;

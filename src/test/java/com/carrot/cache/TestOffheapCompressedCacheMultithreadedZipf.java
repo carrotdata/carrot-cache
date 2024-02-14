@@ -28,6 +28,7 @@ import com.carrot.cache.controllers.MRCRecyclingSelector;
 import com.carrot.cache.controllers.MinAliveRecyclingSelector;
 import com.carrot.cache.eviction.LRUEvictionPolicy;
 import com.carrot.cache.eviction.SLRUEvictionPolicy;
+import com.carrot.cache.util.UnsafeAccess;
 
 public class TestOffheapCompressedCacheMultithreadedZipf extends TestCompressedCacheMultithreadedZipfBase {
   

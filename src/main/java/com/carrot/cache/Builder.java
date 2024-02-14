@@ -276,6 +276,36 @@ public class Builder {
   }
   
   /**
+   * With promotion queue start size ratio
+   * @param ratio start size ratio
+   * @return builder instance
+   */
+  public Builder withPromotionQueueStartSizeRatio(double ratio) {
+    conf.setPromotionQueueStartSizeRatio(this.cacheName, ratio);
+    return this;
+  }
+  
+  /**
+   * With promotion queue minimum size ratio
+   * @param ratio minimum size ratio
+   * @return builder instance
+   */
+  public Builder withPromotionQueueMinSizeRatio(double ratio) {
+    conf.setPromotionQueueMinSizeRatio(cacheName, ratio);
+    return this;
+  }
+  
+  /**
+   * With promotion queue maximum size ratio
+   * @param ratio maximum size ratio
+   * @return builder instance
+   */
+  public Builder withPromotionQueueMaxSizeRatio(double ratio) {
+    conf.setPromotionQueueMaxSizeRatio(this.cacheName, ratio);
+    return this;
+  }
+  
+  /**
    * With throughput controller check interval
    * @param interval
    * @return builder instance
@@ -382,6 +412,16 @@ public class Builder {
    */
   public Builder withAdmissionController(String className) {
     conf.setAdmissionController(this.cacheName, className);
+    return this;
+  }
+  
+  /**
+   * With promotion controller
+   * @param className class name
+   * @return builder instance
+   */
+  public Builder withPromotionController(String className) {
+    conf.setPromotionController(this.cacheName, className);
     return this;
   }
   

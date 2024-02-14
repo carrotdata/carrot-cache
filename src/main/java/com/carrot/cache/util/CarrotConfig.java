@@ -29,6 +29,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.carrot.cache.controllers.AdmissionController;
+import com.carrot.cache.controllers.PromotionController;
 import com.carrot.cache.controllers.RecyclingSelector;
 import com.carrot.cache.controllers.ThroughputController;
 import com.carrot.cache.eviction.EvictionPolicy;
@@ -166,8 +167,19 @@ public class CarrotConfig {
   /**Admission Queue maximum size in fraction of a full cache size */
   public static final String ADMISSION_QUEUE_MAX_SIZE_RATIO_KEY = "c2.admission.queue-max-size-ratio";
   
+  /** Promotion Queue start size in fraction of a full cache size */
+  public static final String PROMOTION_QUEUE_START_SIZE_RATIO_KEY = "c2.promotion.queue-start-size-ratio";
   
-  /**Readmission evicted item to AQ minimum hit count threshold */
+  /** Promotion Queue minimum size in fraction of a full cache size */
+  public static final String PROMOTION_QUEUE_MIN_SIZE_RATIO_KEY = "c2.promotion.queue-min-size-ratio";
+  
+  /** Promotion Queue maximum size in fraction of a full cache size */
+  public static final String PROMOTION_QUEUE_MAX_SIZE_RATIO_KEY = "c2.promotion.queue-max-size-ratio";
+  
+  /* Random configuration parameter for random promotion controller*/
+  public static final String PROMOTION_PROBABILITY_KEY = "c2.promotion.probability";
+  
+  /** Readmission evicted item to AQ minimum hit count threshold */
   public static final String READMISSION_HIT_COUNT_MIN_KEY = "c2.readmission-hit-count-min";
   
   /**Cumulative average write rate limit  (bytes/sec) */
@@ -229,6 +241,9 @@ public class CarrotConfig {
   
   /**Class name for cache admission controller implementation */
   public static final String CACHE_ADMISSION_CONTROLLER_IMPL_KEY = "c2.admission-controller-impl";
+  
+  /**Class name for cache promotion controller implementation */
+  public static final String CACHE_PROMOTION_CONTROLLER_IMPL_KEY = "c2.promotion-controller-impl";
   
   /**Class name for cache throughput controller implementation */
   public static final String CACHE_THROUGHPUT_CONTROLLER_IMPL_KEY = "c2.throughput-controller-impl";
@@ -411,6 +426,15 @@ public class CarrotConfig {
   /**Default AQ (admission queue) maximum size a fraction of a cache size */
   public final static double DEFAULT_ADMISSION_QUEUE_MAX_SIZE_RATIO = 0.5;
 
+  /**Default AQ (admission queue) start size a fraction of a cache size */
+  public final static double DEFAULT_PROMOTION_QUEUE_START_SIZE_RATIO = 0.5;
+  
+  /**Default AQ (admission queue) minimum size a fraction of a cache size */
+  public final static double DEFAULT_PROMOTION_QUEUE_MIN_SIZE_RATIO = 0.1;
+  
+  /**Default AQ (admission queue) maximum size a fraction of a cache size */
+  public final static double DEFAULT_PROMOTION_QUEUE_MAX_SIZE_RATIO = 0.5;
+  
   /**Default disk limit - 0 unlimited*/
   public static final long DEFAULT_DISK_LIMIT = 0; // Unlimited
   
@@ -555,6 +579,9 @@ public class CarrotConfig {
   
   /** Compression dictionary training async */
   public final static boolean DEFAULT_CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC = true;
+  
+  /** Default probability for random promotion controller */
+  public final static double DEFAULT_PROMOTION_PROBABILITY = 0.1d;
   
   // Statics
   static CarrotConfig instance;
@@ -1201,6 +1228,94 @@ public class CarrotConfig {
   }
   
   /**
+   * Get promotion queue start size ratio for a given cache name
+   * @param cacheName cache name
+   * @return AQ start size ratio relative to the maximum cache size
+   */
+  public double getPromotionQueueStartSizeRatio(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ PROMOTION_QUEUE_START_SIZE_RATIO_KEY);
+    if (value != null) {
+      return Double.parseDouble(value);
+    }
+    return getDoubleProperty(PROMOTION_QUEUE_START_SIZE_RATIO_KEY, DEFAULT_PROMOTION_QUEUE_START_SIZE_RATIO);
+  }
+  
+  /**
+   * Set promotion queue start size ratio for a given cache name
+   * @param cacheName cache name
+   * @param ratio AQ start size ratio relative to the maximum cache size
+   */
+  public void setPromotionQueueStartSizeRatio(String cacheName, double ratio) {
+    props.setProperty(cacheName + "."+ PROMOTION_QUEUE_START_SIZE_RATIO_KEY, Double.toString(ratio));
+  }
+  
+  /**
+   * Get admission queue minimum size ratio for a given cache name
+   * @param cacheName cache name
+   * @return AQ minimum size ratio relative to the maximum cache size
+   */
+  public double getPromotionQueueMinSizeRatio(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ PROMOTION_QUEUE_MIN_SIZE_RATIO_KEY);
+    if (value != null) {
+      return Double.parseDouble(value);
+    }
+    return getDoubleProperty(PROMOTION_QUEUE_MIN_SIZE_RATIO_KEY, DEFAULT_PROMOTION_QUEUE_MIN_SIZE_RATIO);
+  }
+  
+  /**
+   * Set promotion queue minimum size ratio for a given cache name
+   * @param cacheName cache name
+   * @param ratio AQ minimum size ratio relative to the maximum cache size
+   */
+  public void setPromotionQueueMinSizeRatio(String cacheName, double ratio ) {
+    props.setProperty(cacheName + "."+ PROMOTION_QUEUE_MIN_SIZE_RATIO_KEY, Double.toString(ratio));
+  }
+  
+  /**
+   * Get promotion queue maximum size ratio for a given cache name
+   * @param cacheName cache name
+   * @return AQ maximum size ratio relative to the maximum cache size
+   */
+  public double getPromotionQueueMaxSizeRatio(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ PROMOTION_QUEUE_MAX_SIZE_RATIO_KEY);
+    if (value != null) {
+      return Double.parseDouble(value);
+    }
+    return getDoubleProperty(PROMOTION_QUEUE_MAX_SIZE_RATIO_KEY, DEFAULT_PROMOTION_QUEUE_MAX_SIZE_RATIO);
+  }
+  
+  /**
+   * Set promotion queue maximum size ratio for a given cache name
+   * @param cacheName cache name
+   * @param ratio AQ maximum size ratio relative to the maximum cache size
+   */
+  public void setPromotionQueueMaxSizeRatio(String cacheName, double ratio) {
+    props.setProperty(cacheName + "."+ PROMOTION_QUEUE_MAX_SIZE_RATIO_KEY, Double.toString(ratio));
+  }
+  
+  /**
+   * Get promotion probability for a given cache name
+   * @param cacheName cache name
+   * @return probability
+   */
+  public double getPromotionProbability(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ PROMOTION_PROBABILITY_KEY);
+    if (value != null) {
+      return Double.parseDouble(value);
+    }
+    return getDoubleProperty(PROMOTION_PROBABILITY_KEY, DEFAULT_PROMOTION_PROBABILITY);
+  }
+  
+  /**
+   * Set promotion probability for a given key
+   * @param cacheName cache name
+   * @param probability 
+   */ 
+  public void setPromotionProbability(String cacheName, double probability) {
+    props.setProperty(cacheName + "."+ PROMOTION_QUEUE_MAX_SIZE_RATIO_KEY, Double.toString(probability));
+  }
+  
+  /**
    * Get throughput check interval for a given cache name
    * @param cacheName cache name
    * @return interval in ms for a given cache name
@@ -1520,6 +1635,41 @@ public class CarrotConfig {
    * @param className admission controller class name
    */
   public void setAdmissionController(String cacheName, String className) {
+    props.setProperty(cacheName + "." + CACHE_ADMISSION_CONTROLLER_IMPL_KEY, className);
+  }
+  
+  /**
+   * Get cache promotion controller implementation by cache name
+   * 
+   * @param cacheName cache name
+   * @return promotion controller instance
+   * @throws ClassNotFoundException
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   */
+  public PromotionController getPromotionController(String cacheName)
+      throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+    String value = props.getProperty(cacheName + "." + CACHE_PROMOTION_CONTROLLER_IMPL_KEY);
+    if (value == null) {
+      value = props.getProperty(CACHE_PROMOTION_CONTROLLER_IMPL_KEY);
+    }
+    if (value == null) {
+      // default implementation;
+      return null;
+    }
+    @SuppressWarnings("unchecked")
+    Class<PromotionController> clz = (Class<PromotionController>) Class.forName(value);
+    PromotionController instance = clz.newInstance();
+    return instance;
+  }
+  
+  /**
+   * Set cache promotion controller implementation by cache name
+   * 
+   * @param cacheName cache name
+   * @param className admission controller class name
+   */
+  public void setPromotionController(String cacheName, String className) {
     props.setProperty(cacheName + "." + CACHE_ADMISSION_CONTROLLER_IMPL_KEY, className);
   }
   
