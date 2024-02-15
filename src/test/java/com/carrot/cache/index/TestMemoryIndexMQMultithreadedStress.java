@@ -53,6 +53,10 @@ public class TestMemoryIndexMQMultithreadedStress extends TestMemoryIndexMultith
       MutationResult result = memoryIndex.insert(keys[i], 0, keySize, buf, entrySize);
       if (result == MutationResult.INSERTED) {
         total++;
+      } else {
+        /*DEBUG*/ System.err.println("Failed insert, loaded=" + i);
+        memoryIndex.dump();
+        System.exit(-1);
       }
     }
     long end = System.currentTimeMillis();
@@ -117,6 +121,10 @@ public class TestMemoryIndexMQMultithreadedStress extends TestMemoryIndexMultith
       MutationResult result = memoryIndex.insert(mKeys[i], keySize, buf, entrySize);
       if (result == MutationResult.INSERTED) {
         total++;
+      } else {
+        /*DEBUG*/ System.err.println("Failed insert, loaded=" + i);
+        memoryIndex.dump();
+        System.exit(-1);
       }
     }
     long end = System.currentTimeMillis();
@@ -166,8 +174,13 @@ public class TestMemoryIndexMQMultithreadedStress extends TestMemoryIndexMultith
   
   @Test
   public void stress() {
-    for (int i = 0; i < 100; i++) {
-      System.out.printf("STRESS RUN=%d of %d\n", i, 100);
+   
+    int current_slot_size = 0;
+    int max = 100;
+    for (int i = 0; i < max; i++) {
+      current_slot_size = getCurrentSlotSize(i, max);
+      System.out.printf("STRESS RUN=%d of %d slot size=%d\n", i, max, current_slot_size);
+      MemoryIndex.MAX_INDEX_ENTRIES_PER_BLOCK = current_slot_size;
       setUp();
       testLoadReadWithRehashBytesMT();
       tearDown();
@@ -187,6 +200,12 @@ public class TestMemoryIndexMQMultithreadedStress extends TestMemoryIndexMultith
     }
   }
   
+  private int getCurrentSlotSize(int i, int max) {
+    int start_slot_size = 100;
+    int max_slot_size = 350;
+    return start_slot_size + i * (max_slot_size - start_slot_size) / max;
+  }
+
   @Ignore
   @Test
   public void testLoadReadWithRehashBytesMT() {

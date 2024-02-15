@@ -51,7 +51,7 @@ public final class MemoryIndex implements Persistent {
   private static final Logger LOG = LogManager.getLogger(MemoryIndex.class);
   
   /** This is value which guarantees that rehashing won't break*/
-  public static int MAX_INDEX_ENTRIES_PER_BLOCK = 350;
+  public static int MAX_INDEX_ENTRIES_PER_BLOCK = 100;
   
   public static enum MutationResult{
     INSERTED, /* Operation succeeded */ 
@@ -235,6 +235,32 @@ public final class MemoryIndex implements Persistent {
     initLocks();
   }
   
+  public void dump() {
+    System.err.println("ref_index_base length=" + ref_index_base.get().length);
+    System.err.println("ref_index_rehash length=" + ref_index_base_rehash.get().length);
+    long[] base = ref_index_base.get();
+    long[] rehash = ref_index_base_rehash.get();
+    int min = Integer.MAX_VALUE, max = Integer.MIN_VALUE;
+    for(int i = 0; i < base.length; i++) {
+      long ptr = base[i];
+      if (ptr != 0) {
+        int n = numEntries(ptr);
+        if (n < min) min = n;
+        System.err.printf("i=%d block size=%d num entries=%d\n", i, blockSize(ptr), numEntries(ptr));
+      } else {
+        System.err.printf("i=%d\n", i);
+        long ptr1 = rehash[i * 2];
+        long ptr2 = rehash[i * 2 + 1];
+        int n1 = numEntries(ptr1);
+        int n2 = numEntries(ptr2);
+        if (n1 > max) max = n1;
+        if (n2 > max) max = n2;
+        System.err.printf("  ii=%d block size=%d num entries=%d\n", i * 2, blockSize(ptr1), numEntries(ptr1));
+        System.err.printf("  ii=%d block size=%d num entries=%d\n", i * 2 +1, blockSize(ptr2), numEntries(ptr2));
+      }
+    }
+    System.err.printf("min base=%d max rehash=%d\n", min, max);
+  }
   /**
    * Constructor
    *
@@ -528,9 +554,9 @@ public final class MemoryIndex implements Persistent {
    * @param indexBlockPtr current pointer
    * @return new pointer - can be -1 (check return value)
    */
-  long expand(long indexBlockPtr, int requiredSize) {
+  long expand(long indexBlockPtr, int requiredSize, boolean force) {
     int num = numEntries(indexBlockPtr);
-    if (num >= MAX_INDEX_ENTRIES_PER_BLOCK) {
+    if (!force && num >= MAX_INDEX_ENTRIES_PER_BLOCK) {
       return FAILED;
     }
     int blockSize = blockSize(indexBlockPtr);
@@ -548,6 +574,9 @@ public final class MemoryIndex implements Persistent {
     return ptr;
   }
 
+  long expand(long indexBlockPtr, int requiredSize) {
+    return expand(indexBlockPtr, requiredSize, false);
+  }
   /**
    * Shrink index block (after deletion, rarely needed)
    *
@@ -2036,7 +2065,7 @@ public final class MemoryIndex implements Persistent {
     long retPtr = ptr;
 
     if (isEvictionEnabled()) {
-      //TODO: WHAT IS THAT?
+      // TODO: WHAT IS THAT?
       // It looks like this is pro-active eviction during insert
       if (this.expiredEvictedBalance.get() <= 0) {
         doEviction(ptr); // TODO: take into account size of a new item
@@ -2061,41 +2090,49 @@ public final class MemoryIndex implements Persistent {
         long[] index = ref_index_base.get();
         int $slot = getSlotNumber(hash, index.length);
         if (index[$slot] == 0) {
-          return FAILED;
-        }
-        // This is done under write lock for the slot
-        rehashSlot($slot);
+          // this slot is in rehash array and it can not be expanded w/o force
+          // lets enforce expansion
+          $ptr = expand(ptr, requiredSize, true);
+          if ($ptr > 0) {
+            ptr = $ptr;
+            retPtr = ptr;
+          } else {
+            return FAILED;
+          }
+        } else {
+          // This is done under write lock for the slot
+          rehashSlot($slot);
 
-        $slot = getSlotNumber(hash, ref_index_base_rehash.get().length);
-        retPtr = 0; // for rehash we return 0;
-        ptr = ref_index_base_rehash.get()[$slot];
+          $slot = getSlotNumber(hash, ref_index_base_rehash.get().length);
+          retPtr = 0; // for rehash we return 0;
+          ptr = ref_index_base_rehash.get()[$slot];
 
-        blockSize = blockSize(ptr);
-        requiredSize =
-            dataSize(ptr) + this.indexBlockHeaderSize + (isAQ ? Utils.SIZEOF_LONG : indexSize);
-        if (blockSize < requiredSize) {
-          // Check on requiredSize again
-          // TODO: optimize in shrink - we do shrink followed by expand
-          $ptr = expand(ptr, requiredSize);
-          ptr = $ptr;
-          ref_index_base_rehash.get()[$slot] = ptr;
-        }
-        
-        long rehashed = rehashedSlots.incrementAndGet();
-        if (rehashed == ref_index_base.get().length) {
-          // Rehash is complete
-          ref_index_base.set(ref_index_base_rehash.get());
-          // TODO: Do we really need to set this to NULL?
-          ref_index_base_rehash.set(null);
-          rehashedSlots.set(0);
-          this.rehashInProgress = false;
+          blockSize = blockSize(ptr);
+          requiredSize =
+              dataSize(ptr) + this.indexBlockHeaderSize + (isAQ ? Utils.SIZEOF_LONG : indexSize);
+          if (blockSize < requiredSize) {
+            // Check on requiredSize again
+            // TODO: optimize in shrink - we do shrink followed by expand
+            $ptr = expand(ptr, requiredSize);
+            ptr = $ptr;
+            ref_index_base_rehash.get()[$slot] = ptr;
+          }
+
+          long rehashed = rehashedSlots.incrementAndGet();
+          if (rehashed == ref_index_base.get().length) {
+            // Rehash is complete
+            ref_index_base.set(ref_index_base_rehash.get());
+            // TODO: Do we really need to set this to NULL?
+            ref_index_base_rehash.set(null);
+            rehashedSlots.set(0);
+            this.rehashInProgress = false;
+          }
         }
       }
     }
     boolean inserted = insertEntry(ptr, hash, indexPtr, indexSize, rank);
     // We need to return address and info if it was INSERT or UPDATE
-    
-    return inserted? retPtr: makeUpdatePtr(retPtr);
+    return inserted ? retPtr : makeUpdatePtr(retPtr);
   }
 
   private final long makeUpdatePtr (long ptr) {
