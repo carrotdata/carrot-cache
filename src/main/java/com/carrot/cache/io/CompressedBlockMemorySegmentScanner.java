@@ -117,12 +117,14 @@ import com.carrot.cache.util.Utils;
       this.blockSize = UnsafeAccess.toInt(ptr + this.offset + SIZE_OFFSET);
       int dictId = UnsafeAccess.toInt(ptr + this.offset + DICT_VER_OFFSET);
       int compSize = UnsafeAccess.toInt(ptr + this.offset + COMP_SIZE_OFFSET);
-      
+      ///*DEBUG*/ System.out.printf("data size=%d comp data size=%d dict_id=%d", blockSize, compSize, dictId);
       checkBuffer(this.blockSize);
       if (dictId >= 0) {
-        this.codec.decompress(ptr + this.offset + COMP_META_SIZE, compSize, this.bufPtr, this.bufferSize, dictId);
+        int decompSize = this.codec.decompress(ptr + this.offset + COMP_META_SIZE, compSize, this.bufPtr, this.bufferSize, dictId);
+        //System.out.printf(" decomp size=%d\n", decompSize);
       } else if (dictId == -1){
         UnsafeAccess.copy(ptr + this.offset + COMP_META_SIZE, this.bufPtr, this.blockSize);
+        //System.out.println();
       } else {
         System.err.printf("Segment size=%d offset=%d uncompressed=%d compressed=%d dictId=%d index=%d total items=%d\n", 
           segment.getSegmentDataSize(), offset, this.blockSize, compSize, dictId, currentIndex, segment.getTotalItems());
@@ -283,7 +285,13 @@ import com.carrot.cache.util.Utils;
     @Override
     public boolean isDirect() {
       return true;
+    } 
+    
+    public long getBufferAddress() {
+      return this.bufPtr;
     }
     
-    
+    public int getBufferSize() {
+      return this.bufferSize;
+    }
   }

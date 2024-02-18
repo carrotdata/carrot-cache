@@ -61,14 +61,14 @@ public class TestHybridCompressedCacheMultithreadedZipf extends TestOffheapCompr
     this.numThreads = 4;
     this.minActiveRatio = 0.9;
     this.maxCacheSize = 20L * this.segmentSize;
-    this.scavDumpBelowRatio = 1.0;
+    this.scavDumpBelowRatio = 0.1;
     this.dictionaryEnabled = true;
    
     // victim cache
     this.victim_segmentSize = 4 * 1024 * 1024;
     this.victim_maxCacheSize = 1000L * this.victim_segmentSize;
     this.victim_minActiveRatio = 0.5;
-    this.victim_scavDumpBelowRatio = 0.5;
+    this.victim_scavDumpBelowRatio = 1.0;
     this.victim_scavengerInterval = 10;
     this.victim_promoteOnHit = true;
     this.victim_epClz = LRUEvictionPolicy.class;

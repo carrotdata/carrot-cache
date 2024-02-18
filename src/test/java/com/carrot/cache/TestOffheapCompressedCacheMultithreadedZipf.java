@@ -58,7 +58,7 @@ public class TestOffheapCompressedCacheMultithreadedZipf extends TestCompressedC
     // 
     this.scavDumpBelowRatio = 1.0;
     // We reduced cache size by 10x to account for compression (which is 10-11x)
-    this.maxCacheSize = 100 * this.segmentSize;
+    this.maxCacheSize = 20 * this.segmentSize;
     this.scavNumberThreads = 2;
   }
   
@@ -202,7 +202,6 @@ public class TestOffheapCompressedCacheMultithreadedZipf extends TestCompressedC
     super.testContinuosLoadMemoryRun();
   }
   
-  
   @Test
   public void testSLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=SLRU, selector=MinAlive");
@@ -223,7 +222,8 @@ public class TestOffheapCompressedCacheMultithreadedZipf extends TestCompressedC
         setUp();
       }
       //testSLRUEvictionAndMinAliveSelectorMemoryAPI();
-      testLRUEvictionAndMinAliveSelectorMemoryAPI();
+      //testLRUEvictionAndMinAliveSelectorMemoryAPI();
+      testLRUEvictionAndLRCSelectorBytesAPI();
       if (i < 999) {
         tearDown();
       }

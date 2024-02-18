@@ -16,6 +16,9 @@ package com.carrot.cache;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -34,6 +37,7 @@ import org.apache.logging.log4j.Logger;
 import com.carrot.cache.index.MemoryIndex;
 import com.carrot.cache.index.MemoryIndex.Result;
 import com.carrot.cache.index.MemoryIndex.ResultWithRankAndExpire;
+import com.carrot.cache.io.CompressedBlockMemorySegmentScanner;
 import com.carrot.cache.io.IOEngine;
 import com.carrot.cache.io.Segment;
 import com.carrot.cache.io.SegmentScanner;
@@ -621,7 +625,7 @@ public class Scavenger implements Runnable {
       //TODO Buffer reuse across all scavenger session
       byte[] keyBuffer = !isDirect? new byte[4096]: null;
       byte[] valueBuffer = !isDirect? new byte[4096]: null;
-      
+      int count = 0;
       while (sc.hasNext()) {
         final long keyPtr = sc.keyAddress();
         final int keySize = sc.keyLength();
@@ -630,14 +634,21 @@ public class Scavenger implements Runnable {
         final int totalSize = Utils.kvSize(keySize, valSize);
         stats.totalBytesScanned.addAndGet(totalSize);
         double ratio = dumpBelowRatio; //beforeStallDetected? 0: dumpBelowRatio;
-        if (isDirect) {
-          result = index.checkDeleteKeyForScavenger(s.getId(), keyPtr, keySize, result, ratio);
-        } else {
-          keyBuffer = checkBuffer(keyBuffer, keySize, isDirect);
-          sc.getKey(keyBuffer, 0);
-          result = index.checkDeleteKeyForScavenger(s.getId(), keyBuffer, 0, keySize, result, ratio);
+        try {
+          if (isDirect) {
+            result = index.checkDeleteKeyForScavenger(s.getId(), keyPtr, keySize, result, ratio);
+          } else {
+            keyBuffer = checkBuffer(keyBuffer, keySize, isDirect);
+            sc.getKey(keyBuffer, 0);
+            result =
+                index.checkDeleteKeyForScavenger(s.getId(), keyBuffer, 0, keySize, result, ratio);
+          }
+        } catch (RuntimeException e) {
+          System.err.printf("seg data size=%d num=%d count=%d\n", s.getSegmentDataSize(),
+            s.getTotalItems(), count);
+          debugSave(s);
+          System.exit(-1);
         }
-
         Result res = result.getResult();
         int rank = result.getRank();
         long expire = result.getExpire();
@@ -669,6 +680,25 @@ public class Scavenger implements Runnable {
         Cache c = res == Result.OK? this.cache: this.cache.getVictimCache();
         // In case of OK resubmit back to the cache, in case of DELETED and victim cache is not null
         // submit to victim cache
+        // sanity check
+        long bufptr = ((CompressedBlockMemorySegmentScanner)sc).getBufferAddress();
+        int bufSize = ((CompressedBlockMemorySegmentScanner)sc).getBufferSize();
+        boolean dump = keySize <=0 || valSize <= 0;
+        if (!dump) {
+          int kvSize = Utils.kvSize(keySize, valSize);
+          int kSizeSize = Utils.sizeUVInt(keySize);
+          int vSizeSize = Utils.sizeUVInt(valSize);
+          long kvAddress = keyPtr - kSizeSize - vSizeSize;
+          dump = kvAddress + kvSize >= bufptr + bufSize;
+          dump |= kvAddress + kvSize <= bufptr;
+        }
+        if (dump) {
+          System.err.printf("seg data size=%d num=%d count=%d res=%d keyPtr=%d keySize=%d valuePtr=%d valueSize=%d\n", s.getSegmentDataSize(),
+            s.getTotalItems(), count, res, keyPtr, keySize, valuePtr, valSize);
+          debugSave(s);
+          System.exit(-1);
+        }
+        try {
         if (c != null && (res == Result.OK || res == Result.DELETED)) {
           // Put value back into the cache or victim cache - it has high popularity
           if (isDirect) {
@@ -679,9 +709,16 @@ public class Scavenger implements Runnable {
             c.put(keyBuffer, 0, keySize, valueBuffer, 0, valSize, expire, rank, groupRank, true, true);
           }
         }
+        } catch(RuntimeException e) {
+          System.err.printf("seg data size=%d num=%d count=%d res=%s keyPtr=%d keySize=%d valuePtr=%d valueSize=%d bufPtr=%d bufSize=%d\n", s.getSegmentDataSize(),
+            s.getTotalItems(), count, res.name(), keyPtr, keySize, valuePtr, valSize, bufptr, bufSize);
+          debugSave(s);
+          System.exit(-1);
+        }
         // Update storage usage (uncompressed)
         int kvSize = Utils.kvSize(keySize, valSize);
         this.cache.getEngine().reportRawDataSize(-kvSize);
+        count++;
         sc.next();
       }
     } finally {
@@ -744,6 +781,21 @@ public class Scavenger implements Runnable {
     return (long) stats.totalBytesFreed.get() * 1000 / (System.currentTimeMillis() - runStartTime); 
   }
 
+  
+  private void debugSave(Segment s) throws IOException {
+    File f = new File("./fault_segment.data");
+    FileOutputStream fos = null;
+    try {
+      fos = new FileOutputStream(f);
+      s.save(fos);
+    } catch (FileNotFoundException e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    } finally {
+      fos.close();
+    }
+  }
+  
   public static boolean decreaseThroughput(String cacheName) {
     Stats stats = statsMap.get(cacheName);
     if (stats == null) {

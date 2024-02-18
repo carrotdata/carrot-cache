@@ -27,9 +27,11 @@ import java.util.Random;
 import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.junit.After;
 
+import com.carrot.cache.controllers.AQBasedPromotionController;
 import com.carrot.cache.controllers.AdmissionController;
 import com.carrot.cache.controllers.BaseAdmissionController;
 import com.carrot.cache.controllers.LRCRecyclingSelector;
+import com.carrot.cache.controllers.PromotionController;
 import com.carrot.cache.controllers.RecyclingSelector;
 import com.carrot.cache.eviction.EvictionPolicy;
 import com.carrot.cache.eviction.LRUEvictionPolicy;
@@ -75,6 +77,8 @@ public abstract class TestCacheMultithreadedZipfBase {
   protected Class<? extends RecyclingSelector> rsClz = LRCRecyclingSelector.class;
   
   protected Class<? extends AdmissionController> acClz = BaseAdmissionController.class;
+  
+  protected Class<? extends PromotionController> pcController = AQBasedPromotionController.class;
     
   protected double zipfAlpha = 0.9;
   
@@ -93,6 +97,12 @@ public abstract class TestCacheMultithreadedZipfBase {
   protected int windowSize = 60;
   
   protected int binsCount = 60;
+  
+  protected boolean hybridCacheInverseMode = false;
+  
+  protected boolean promotionControllerEnabled = false;
+  
+  
   
   @After  
   public void tearDown() throws IOException {
@@ -128,7 +138,8 @@ public abstract class TestCacheMultithreadedZipfBase {
       .withCacheSpinWaitTimeOnHighPressure(spinOnWaitTime)
       .withRollingWindowDuration(windowSize)
       .withRollingWindowBinsCount(binsCount)
-      .withScavengerNumberOfThreads(scavNumberThreads);
+      .withScavengerNumberOfThreads(scavNumberThreads)
+      .withCacheHybridInverseMode(hybridCacheInverseMode);
     builder = withAddedConfigurations(builder);
     if (offheap) {
       return builder.buildMemoryCache();

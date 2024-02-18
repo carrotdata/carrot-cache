@@ -237,7 +237,8 @@ public final class UnsafeAccess {
       if (!allocMap.inside(address, size)) {
         System.out.println(Thread.currentThread().getName() + ": Memory corruption: address=" + address + " size=" + size);
         Thread.dumpStack();
-        System.exit(-1);
+        //System.exit(-1);
+        throw new RuntimeException();
       }
     }
 

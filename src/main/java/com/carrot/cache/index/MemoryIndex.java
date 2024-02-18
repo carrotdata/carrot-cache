@@ -2113,9 +2113,14 @@ public final class MemoryIndex implements Persistent {
           if (blockSize < requiredSize) {
             // Check on requiredSize again
             // TODO: optimize in shrink - we do shrink followed by expand
-            $ptr = expand(ptr, requiredSize);
-            ptr = $ptr;
-            ref_index_base_rehash.get()[$slot] = ptr;
+            $ptr = expand(ptr, requiredSize, true);
+            if ($ptr > 0) {
+              ptr = $ptr;
+              ref_index_base_rehash.get()[$slot] = ptr;
+            } else {
+              // This should not happen
+              return FAILED;
+            }
           }
 
           long rehashed = rehashedSlots.incrementAndGet();

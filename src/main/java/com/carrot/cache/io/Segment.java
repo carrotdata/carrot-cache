@@ -72,8 +72,11 @@ public class Segment implements Persistent {
    */
   public static class Info implements Persistent {
     
-    /* Is segment sealed */
+    /* Is segment sealed - closed and stored by IOEngine*/
     private volatile boolean sealed;
+    
+    /* Segment is full but - do not accept new data*/
+    private volatile boolean full; 
     
     /* Segment rank */
     private int groupRank;
@@ -173,6 +176,21 @@ public class Segment implements Persistent {
       this.sealed = b;
     }
     
+    /**
+     * Is full
+     * @return true or false
+     */
+    public boolean isFull() {
+      return this.full;
+    }
+    
+    /**
+     * Set full
+     * @param b full
+     */
+    public void setFull(boolean b) {
+      this.full = b;
+    }
     
     /**
      * Get total number of cached items in this segment
@@ -429,6 +447,7 @@ public class Segment implements Persistent {
         // Write meta
         // Sealed
         dos.writeBoolean(isSealed());
+        // Full is transient - skip
         // Segment Id
         dos.writeInt(getId());
         // Rank
@@ -714,6 +733,22 @@ public class Segment implements Persistent {
   }
   
   /**
+   * Is segment full
+   * @return true or false
+   */
+  private boolean isFull() {
+    return this.info.isFull();
+  }
+  
+  /**
+   * Set segment full
+   * @param full
+   */
+  private void setFull(boolean full) {
+    this.info.setFull(full);
+  }
+  
+  /**
    * Seal segment
    */
   public void seal() {
@@ -901,17 +936,18 @@ public class Segment implements Persistent {
    */
   public long append(byte[] key, int keyOffset, int keySize, byte[] item, int itemOffset, 
       int itemSize, long expire) {
-    if (isSealed()) {
+    if (isSealed() || isFull()) {
       //TODO: check return value
       return -1;
     }
     try {
       writeLock();
-      if (isSealed()) {
+      if (isSealed() || isFull()) {
         return -1;
       }
       long offset = this.dataWriter.append(this, key, keyOffset, keySize, item, itemOffset, itemSize);
       if (offset < 0) {
+        setFull(true);
         return -1;
       }
       processExpire(expire);
@@ -969,17 +1005,18 @@ public class Segment implements Persistent {
    * @return cached entry offset in a segment or -1
    */
   public long append(long keyPtr, int keySize, long itemPtr, int itemSize, long expire) {
-    if (isSealed()) {
+    if (isSealed() || isFull()) {
       //TODO: check return value
       return -1;
     }
     try {
       writeLock();
-      if (isSealed()) {
+      if (isSealed() || isFull()) {
         return -1;
       }
       long offset = (int) this.dataWriter.append(this, keyPtr, keySize, itemPtr, itemSize);
       if (offset < 0) {
+        setFull(true);
         return -1;
       }
       processExpire(expire);
