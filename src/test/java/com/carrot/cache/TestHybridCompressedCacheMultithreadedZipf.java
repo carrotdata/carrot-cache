@@ -21,6 +21,7 @@ import java.nio.file.Path;
 
 import org.junit.After;
 
+import com.carrot.cache.controllers.AQBasedPromotionController;
 import com.carrot.cache.controllers.AdmissionController;
 import com.carrot.cache.controllers.BaseAdmissionController;
 import com.carrot.cache.controllers.LRCRecyclingSelector;
@@ -63,6 +64,8 @@ public class TestHybridCompressedCacheMultithreadedZipf extends TestOffheapCompr
     this.maxCacheSize = 20L * this.segmentSize;
     this.scavDumpBelowRatio = 0.1;
     this.dictionaryEnabled = true;
+    this.hybridCacheInverseMode = true;
+    this.pcController = AQBasedPromotionController.class;
    
     // victim cache
     this.victim_segmentSize = 4 * 1024 * 1024;

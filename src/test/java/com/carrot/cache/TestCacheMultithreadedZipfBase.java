@@ -30,6 +30,7 @@ import org.junit.After;
 import com.carrot.cache.controllers.AQBasedPromotionController;
 import com.carrot.cache.controllers.AdmissionController;
 import com.carrot.cache.controllers.BaseAdmissionController;
+import com.carrot.cache.controllers.BasePromotionController;
 import com.carrot.cache.controllers.LRCRecyclingSelector;
 import com.carrot.cache.controllers.PromotionController;
 import com.carrot.cache.controllers.RecyclingSelector;
@@ -78,7 +79,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   
   protected Class<? extends AdmissionController> acClz = BaseAdmissionController.class;
   
-  protected Class<? extends PromotionController> pcController = AQBasedPromotionController.class;
+  protected Class<? extends PromotionController> pcController = BasePromotionController.class;
     
   protected double zipfAlpha = 0.9;
   
@@ -86,6 +87,8 @@ public abstract class TestCacheMultithreadedZipfBase {
   
   protected double aqStartRatio = 0.3;
   
+  protected double pqStartRatio = 0.2;
+
   protected String parentCacheName = "default";
   
   protected String victimCacheName = "victim";
@@ -99,9 +102,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   protected int binsCount = 60;
   
   protected boolean hybridCacheInverseMode = false;
-  
-  protected boolean promotionControllerEnabled = false;
-  
+    
   
   
   @After  
@@ -139,7 +140,9 @@ public abstract class TestCacheMultithreadedZipfBase {
       .withRollingWindowDuration(windowSize)
       .withRollingWindowBinsCount(binsCount)
       .withScavengerNumberOfThreads(scavNumberThreads)
-      .withCacheHybridInverseMode(hybridCacheInverseMode);
+      .withCacheHybridInverseMode(hybridCacheInverseMode)
+      .withPromotionController(pcController.getName())
+      .withPromotionQueueStartSizeRatio(pqStartRatio);
     builder = withAddedConfigurations(builder);
     if (offheap) {
       return builder.buildMemoryCache();

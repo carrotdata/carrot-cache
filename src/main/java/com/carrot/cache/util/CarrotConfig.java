@@ -1670,7 +1670,7 @@ public class CarrotConfig {
    * @param className admission controller class name
    */
   public void setPromotionController(String cacheName, String className) {
-    props.setProperty(cacheName + "." + CACHE_ADMISSION_CONTROLLER_IMPL_KEY, className);
+    props.setProperty(cacheName + "." + CACHE_PROMOTION_CONTROLLER_IMPL_KEY, className);
   }
   
   /**
