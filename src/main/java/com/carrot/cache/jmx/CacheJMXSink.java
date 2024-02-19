@@ -21,6 +21,7 @@ import java.util.Date;
 import com.carrot.cache.Cache;
 import com.carrot.cache.Scavenger;
 import com.carrot.cache.io.IOEngine;
+import com.carrot.cache.util.CarrotConfig;
 import com.carrot.cache.util.Epoch;
 
 public class CacheJMXSink implements CacheJMXSinkMBean {
@@ -282,4 +283,72 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     return getoverall_bytes_read() / gettotal_gets();
   }
 
+  @Override
+  public boolean getcompression_enabled() {
+    String cacheName = cache.getName();
+    CarrotConfig config = CarrotConfig.getInstance();
+    return config.isCacheCompressionEnabled(cacheName);
+  }
+
+  @Override
+  public String getcompression_codec() {
+    String cacheName = cache.getName();
+    CarrotConfig config = CarrotConfig.getInstance();
+    String codec = config.getCacheCompressionCodecType(cacheName);
+    return codec != null? codec: "none";
+  }
+
+  @Override
+  public int getcompression_level() {
+    String cacheName = cache.getName();
+    CarrotConfig config = CarrotConfig.getInstance();
+    return config.getCacheCompressionLevel(cacheName);
+  }
+
+  @Override
+  public boolean getcompression_dictionary_enabled() {
+    String cacheName = cache.getName();
+    CarrotConfig config = CarrotConfig.getInstance();
+    return config.isCacheCompressionDictionaryEnabled(cacheName);
+  }
+
+  @Override
+  public int getcompression_dictionary_size() {
+    String cacheName = cache.getName();
+    CarrotConfig config = CarrotConfig.getInstance();
+    return config.getCacheCompressionDictionarySize(cacheName);
+  }
+
+  @Override
+  public long getcompressed_size_bytes() {
+    return cache.getStorageUsedActual();
+  }
+
+  /**
+   *  Compression block size
+   * @return compression block size
+   */
+  @Override
+  public int getcompression_block_size() {
+    String cacheName = cache.getName();
+    CarrotConfig config = CarrotConfig.getInstance();
+    return config.getCacheCompressionBlockSize(cacheName);
+  }
+  /**
+   * Get compression keys enabled
+   * @return true or false
+   */
+  @Override
+  public boolean getcompression_keys_enabled() {
+    String cacheName = cache.getName();
+    CarrotConfig config = CarrotConfig.getInstance();
+    return config.isCacheCompressionKeysEnabled(cacheName);
+  }
+
+  @Override
+  public double getcompression_ratio() {
+    long allocd = getallocated_size_bytes();
+    long compressed = getcompressed_size_bytes();
+    return (double) allocd / compressed;
+  }
 }

@@ -2494,7 +2494,6 @@ public abstract class IOEngine implements Persistent {
           return null;
         }
         if (this.dataSegments[id] == null) {
-          //*DEBUG*/ System.out.println("get rank=" + rank +" data seg=" + dataSegments.length);
           s = Segment.newSegment((int) this.segmentSize, id, rank);
           s.init(this.cacheName);
           reportAllocation(this.segmentSize);
@@ -2643,7 +2642,7 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get number of active cached items (still accessible)
-   *
+   * FIXME: optimize, check hot path calls
    * @return number
    */
   public long activeSize() {

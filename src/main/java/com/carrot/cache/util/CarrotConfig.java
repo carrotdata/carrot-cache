@@ -2504,11 +2504,15 @@ public class CarrotConfig {
    * @return block size 
    */
   public int getCacheCompressionBlockSize(String cacheName) {
-    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_BLOCK_SIZE_KEY);
-    if (value != null) {
-      return Integer.parseInt(value);
+    if (isCacheCompressionEnabled(cacheName)) {
+      String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_BLOCK_SIZE_KEY);
+      if (value != null) {
+        return Integer.parseInt(value);
+      }
+      return (int) getLongProperty(CACHE_COMPRESSION_BLOCK_SIZE_KEY, DEFAULT_CACHE_COMPRESSION_BLOCK_SIZE);
+    } else {
+      return -1;
     }
-    return (int) getLongProperty(CACHE_COMPRESSION_BLOCK_SIZE_KEY, DEFAULT_CACHE_COMPRESSION_BLOCK_SIZE);
   }
   
   /**
@@ -2526,11 +2530,15 @@ public class CarrotConfig {
    * @return dictionary size 
    */
   public int getCacheCompressionDictionarySize(String cacheName) {
-    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_SIZE_KEY);
-    if (value != null) {
-      return Integer.parseInt(value);
+    if (isCacheCompressionEnabled(cacheName)) {
+      String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_SIZE_KEY);
+      if (value != null) {
+        return Integer.parseInt(value);
+      }
+      return (int) getLongProperty(CACHE_COMPRESSION_DICTIONARY_SIZE_KEY, DEFAULT_CACHE_COMPRESSION_DICTIONARY_SIZE);
+    } else {
+      return -1;
     }
-    return (int) getLongProperty(CACHE_COMPRESSION_DICTIONARY_SIZE_KEY, DEFAULT_CACHE_COMPRESSION_DICTIONARY_SIZE);
   }
   
   /**
@@ -2548,11 +2556,15 @@ public class CarrotConfig {
    * @return compression level 
    */
   public int getCacheCompressionLevel(String cacheName) {
-    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_LEVEL_KEY);
-    if (value != null) {
-      return Integer.parseInt(value);
+    if (isCacheCompressionEnabled(cacheName)) {
+      String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_LEVEL_KEY);
+      if (value != null) {
+        return Integer.parseInt(value);
+      }
+      return (int) getLongProperty(CACHE_COMPRESSION_LEVEL_KEY, DEFAULT_CACHE_COMPRESSION_LEVEL);
+    } else {
+      return -1;
     }
-    return (int) getLongProperty(CACHE_COMPRESSION_LEVEL_KEY, DEFAULT_CACHE_COMPRESSION_LEVEL);
   }
   
   /**
@@ -2570,11 +2582,15 @@ public class CarrotConfig {
    * @return codec type name
    */
   public String getCacheCompressionCodecType(String cacheName) {
-    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_CODEC_KEY);
-    if (value != null) {
-      return value;
+    if (isCacheCompressionEnabled(cacheName)) {
+      String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_CODEC_KEY);
+      if (value != null) {
+        return value;
+      }
+      return getProperty(CACHE_COMPRESSION_CODEC_KEY, DEFAULT_CACHE_COMPRESSION_CODEC);
+    } else {
+      return null;
     }
-    return getProperty(CACHE_COMPRESSION_CODEC_KEY, DEFAULT_CACHE_COMPRESSION_CODEC);
   }
   
   /**
@@ -2592,12 +2608,16 @@ public class CarrotConfig {
    * @return true if supported, false - otherwise
    */
   public boolean isCacheCompressionDictionaryEnabled (String cacheName) {
-    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_ENABLED_KEY);
-    if (value == null) {
-      return getBooleanProperty(CACHE_COMPRESSION_DICTIONARY_ENABLED_KEY, 
-        DEFAULT_CACHE_COMPRESSION_DICTIONARY_ENABLED);
+    if (isCacheCompressionEnabled(cacheName)){
+      String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_ENABLED_KEY);
+      if (value == null) {
+        return getBooleanProperty(CACHE_COMPRESSION_DICTIONARY_ENABLED_KEY, 
+          DEFAULT_CACHE_COMPRESSION_DICTIONARY_ENABLED);
+      } else {
+        return Boolean.parseBoolean(value);
+      }
     } else {
-      return Boolean.parseBoolean(value);
+      return false;
     }
   }
   
@@ -2616,12 +2636,16 @@ public class CarrotConfig {
    * @return true if supported, false - otherwise
    */
   public boolean isCacheCompressionKeysEnabled (String cacheName) {
-    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_KEYS_ENABLED_KEY);
-    if (value == null) {
-      return getBooleanProperty(CACHE_COMPRESSION_KEYS_ENABLED_KEY, 
-        DEFAULT_CACHE_COMPRESSION_KEYS_ENABLED);
+    if (isCacheCompressionEnabled(cacheName)) {
+      String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_KEYS_ENABLED_KEY);
+      if (value == null) {
+        return getBooleanProperty(CACHE_COMPRESSION_KEYS_ENABLED_KEY, 
+          DEFAULT_CACHE_COMPRESSION_KEYS_ENABLED);
+      } else {
+        return Boolean.parseBoolean(value);
+      }
     } else {
-      return Boolean.parseBoolean(value);
+      return false;
     }
   }
   

@@ -46,6 +46,7 @@ public interface CacheJMXSinkMBean {
    */
   long getused_size_bytes();
   
+  
   /**
    * Get cache allocated size ratio
    * @return ratio
@@ -231,5 +232,61 @@ public interface CacheJMXSinkMBean {
    */
   long getio_avg_read_size();
   
+  /**************************************
+   * Compression
+   *************************************/
   
+  /**
+   * Is compression enabled
+   * @return tdrue or false
+   */
+  boolean getcompression_enabled();
+  
+  /**
+   * Get compression codec name
+   * @return codec name
+   */
+  String getcompression_codec();
+  
+  /**
+   * Get compression level
+   * @return compression level
+   */
+  int getcompression_level();
+  
+  /**
+   * Is compression dictionary enabled
+   * @return
+   */
+  boolean getcompression_dictionary_enabled();
+  
+  /**
+   * Get compression dictionary size
+   * @return dictionary size
+   */
+  int getcompression_dictionary_size();
+  
+  /**
+   * Get compressed data size bytes
+   * @return compressed data size
+   */
+  long getcompressed_size_bytes();
+  
+  /**
+   *  Compression block size
+   * @return compression block size
+   */
+  int getcompression_block_size();
+  
+  /**
+   * Get compression keys enabled
+   * @return true or false
+   */
+  boolean getcompression_keys_enabled();
+  
+  /**
+   * Get compression ratio
+   * @return compression ratio
+   */
+  double getcompression_ratio();
 }
