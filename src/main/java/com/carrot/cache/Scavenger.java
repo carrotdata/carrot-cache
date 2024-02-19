@@ -467,7 +467,6 @@ public class Scavenger implements Runnable {
       if (numInstances.incrementAndGet() > maxInstances) {
         // Number of instances exceeded the maximum value
        numInstances.decrementAndGet();
-       //*DEBUG*/ System.out.println("Too many scavengers, current=" + num);
         return;
       }
 //      LOG.debug(
@@ -479,7 +478,7 @@ public class Scavenger implements Runnable {
       int segmentsProcessed = 0;
       
       while (!finished) {
-        if (Thread.currentThread().isInterrupted()) {
+        if (Thread.interrupted()) {
           break;
         }
         s = engine.getSegmentForRecycling();
@@ -496,7 +495,7 @@ public class Scavenger implements Runnable {
           // This should never happen if eviction is disabled
           dumpBelowRatio = dumpBelowRatioMax;// improve scavenger's performance - dump everything
           beforeStallDetected = false;
-        }
+        }      
         engine.startRecycling(s);
         long maxExpire = s.getInfo().getMaxExpireAt();
         if (s.getInfo().getTotalActiveItems() == 0
@@ -507,8 +506,10 @@ public class Scavenger implements Runnable {
           finished = cleanSegment(s);
           if (finished && beforeStallDetected) {
             // continue with purging low rank elements
-            beforeStallDetected = false;
             finished = false;
+          } else if (finished && !shouldStopOn(s)) {
+            finished = false;
+            dumpBelowRatio = 1.0; // dump everything
           }
           // Dispose segment
           engine.disposeDataSegment(s);
@@ -544,22 +545,15 @@ public class Scavenger implements Runnable {
   private boolean shouldStopOn(Segment s) {
     long expire = s.getInfo().getMaxExpireAt();
     long n = s.getAliveItems();
-    //long total = s.getTotalItems();
     long currentTime = System.currentTimeMillis();
     IOEngine engine = cache.getEngine();
     
-//    String msg = "sid=" + s.getId() + " expire=" 
-//        + expire + " current=" + currentTime + " alive=" + n + " total=" + total;
     if (engine.size() == 0) {
-      //*DEBUG*/ System.out.println("F: " + msg);
       return true;
     }
     if ((expire > 0 && expire <= currentTime) || n == 0) {
-      //*DEBUG*/ System.out.println("C: " + msg);
       return false;
     }
-//    double sratio = (double) s.getAliveItems() / s.getTotalItems();    
-//    double minActiveRatio = config.getMinimumActiveDatasetRatio(cache.getName());
  
     double usage = engine.getStorageAllocatedRatio();
 //    double activeRatio = engine.activeSizeRatio();
@@ -571,7 +565,6 @@ public class Scavenger implements Runnable {
 //      }
 //      cleanDeletedOnly = cleanDeletedOnly && usage < stopRatio;
 //    }
-    //*DEBUG*/ System.out.println(msg + " usage=" + usage + " stopRatio=" + stopRatio + " stop scav=" + (usage < stopRatio));
     
     return /*activeRatio >= minActiveRatio && */usage < stopRatio;   
   }
@@ -619,13 +612,12 @@ public class Scavenger implements Runnable {
     int submitted = 0;
     ResultWithRankAndExpire result = new ResultWithRankAndExpire();
     try {
-      
+
       sc = engine.getScanner(s); // acquires read lock
-      boolean isDirect =  sc.isDirect();
-      //TODO Buffer reuse across all scavenger session
-      byte[] keyBuffer = !isDirect? new byte[4096]: null;
-      byte[] valueBuffer = !isDirect? new byte[4096]: null;
-      int count = 0;
+      boolean isDirect = sc.isDirect();
+      // TODO Buffer reuse across all scavenger session
+      byte[] keyBuffer = !isDirect ? new byte[4096] : null;
+      byte[] valueBuffer = !isDirect ? new byte[4096] : null;
       while (sc.hasNext()) {
         final long keyPtr = sc.keyAddress();
         final int keySize = sc.keyLength();
@@ -633,28 +625,21 @@ public class Scavenger implements Runnable {
         final int valSize = sc.valueLength();
         final int totalSize = Utils.kvSize(keySize, valSize);
         stats.totalBytesScanned.addAndGet(totalSize);
-        double ratio = dumpBelowRatio; //beforeStallDetected? 0: dumpBelowRatio;
-        try {
-          if (isDirect) {
-            result = index.checkDeleteKeyForScavenger(s.getId(), keyPtr, keySize, result, ratio);
-          } else {
-            keyBuffer = checkBuffer(keyBuffer, keySize, isDirect);
-            sc.getKey(keyBuffer, 0);
-            result =
-                index.checkDeleteKeyForScavenger(s.getId(), keyBuffer, 0, keySize, result, ratio);
-          }
-        } catch (RuntimeException e) {
-          System.err.printf("seg data size=%d num=%d count=%d\n", s.getSegmentDataSize(),
-            s.getTotalItems(), count);
-          debugSave(s);
-          System.exit(-1);
+        double ratio = dumpBelowRatio; // beforeStallDetected? 0: dumpBelowRatio;
+        if (isDirect) {
+          result = index.checkDeleteKeyForScavenger(s.getId(), keyPtr, keySize, result, ratio);
+        } else {
+          keyBuffer = checkBuffer(keyBuffer, keySize, isDirect);
+          sc.getKey(keyBuffer, 0);
+          result =
+              index.checkDeleteKeyForScavenger(s.getId(), keyBuffer, 0, keySize, result, ratio);
         }
         Result res = result.getResult();
         int rank = result.getRank();
         long expire = result.getExpire();
         scanned++;
         switch (res) {
-          
+
           case EXPIRED:
             stats.totalBytesExpired.addAndGet(totalSize);
             stats.totalBytesFreed.addAndGet(totalSize);
@@ -677,28 +662,10 @@ public class Scavenger implements Runnable {
             submitted++;
             break;
         }
-        Cache c = res == Result.OK? this.cache: this.cache.getVictimCache();
+        Cache c = res == Result.OK ? this.cache : this.cache.getVictimCache();
         // In case of OK resubmit back to the cache, in case of DELETED and victim cache is not null
         // submit to victim cache
         // sanity check
-        long bufptr = ((CompressedBlockMemorySegmentScanner)sc).getBufferAddress();
-        int bufSize = ((CompressedBlockMemorySegmentScanner)sc).getBufferSize();
-        boolean dump = keySize <=0 || valSize <= 0;
-        if (!dump) {
-          int kvSize = Utils.kvSize(keySize, valSize);
-          int kSizeSize = Utils.sizeUVInt(keySize);
-          int vSizeSize = Utils.sizeUVInt(valSize);
-          long kvAddress = keyPtr - kSizeSize - vSizeSize;
-          dump = kvAddress + kvSize >= bufptr + bufSize;
-          dump |= kvAddress + kvSize <= bufptr;
-        }
-        if (dump) {
-          System.err.printf("seg data size=%d num=%d count=%d res=%d keyPtr=%d keySize=%d valuePtr=%d valueSize=%d\n", s.getSegmentDataSize(),
-            s.getTotalItems(), count, res, keyPtr, keySize, valuePtr, valSize);
-          debugSave(s);
-          System.exit(-1);
-        }
-        try {
         if (c != null && (res == Result.OK || res == Result.DELETED)) {
           // Put value back into the cache or victim cache - it has high popularity
           if (isDirect) {
@@ -706,19 +673,13 @@ public class Scavenger implements Runnable {
           } else {
             valueBuffer = checkBuffer(valueBuffer, valSize, isDirect);
             sc.getValue(valueBuffer, 0);
-            c.put(keyBuffer, 0, keySize, valueBuffer, 0, valSize, expire, rank, groupRank, true, true);
+            c.put(keyBuffer, 0, keySize, valueBuffer, 0, valSize, expire, rank, groupRank, true,
+              true);
           }
-        }
-        } catch(RuntimeException e) {
-          System.err.printf("seg data size=%d num=%d count=%d res=%s keyPtr=%d keySize=%d valuePtr=%d valueSize=%d bufPtr=%d bufSize=%d\n", s.getSegmentDataSize(),
-            s.getTotalItems(), count, res.name(), keyPtr, keySize, valuePtr, valSize, bufptr, bufSize);
-          debugSave(s);
-          System.exit(-1);
         }
         // Update storage usage (uncompressed)
         int kvSize = Utils.kvSize(keySize, valSize);
         this.cache.getEngine().reportRawDataSize(-kvSize);
-        count++;
         sc.next();
       }
     } finally {
@@ -735,7 +696,6 @@ public class Scavenger implements Runnable {
     stats.totalItemsScanned.addAndGet(scanned);
     stats.totalItemsDeleted.addAndGet(deleted);
     stats.totalItemsNotFound.addAndGet(notFound);
-    //*DEBUG*/ System.out.println("deleted=" + deleted + " expired=" + expired + " not found="+ notFound+ " submitted=" + submitted);
     return (deleted + expired + notFound) == 0;
   }
 
@@ -782,6 +742,7 @@ public class Scavenger implements Runnable {
   }
 
   
+  @SuppressWarnings("unused")
   private void debugSave(Segment s) throws IOException {
     File f = new File("./fault_segment.data");
     FileOutputStream fos = null;

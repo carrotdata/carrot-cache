@@ -421,7 +421,9 @@ public abstract class IOTestBase {
     int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
     byte[] buffer = new byte[bufferSize];
     int failed = 0;
+    /*DEBUG*/ System.out.println("Verify =" + num);
     for (int i = 0; i < num; i++) {
+      //*DEBUG*/ System.out.println(i);
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);

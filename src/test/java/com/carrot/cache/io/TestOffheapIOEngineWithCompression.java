@@ -131,7 +131,7 @@ public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{
   
   @Test
   public void testLoadReadBytesMultipleSegmentsDictionaryRandom() throws IOException, URISyntaxException {
-    createEngine(4 * 1024 * 1024, 20 * 1024 * 1024, true, true, 10000);
+    createEngine(4 * 1024 * 1024, 20 * 1024 * 1024, true, true, 100000);
     testLoadReadBytesMultipleSegments();
   }
   

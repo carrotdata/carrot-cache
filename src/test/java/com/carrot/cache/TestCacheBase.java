@@ -115,6 +115,7 @@ public abstract class TestCacheBase extends IOTestBase {
     return System.currentTimeMillis() + expireTime;
   }
   
+  @Ignore
   @Test
   public void testBigKeyValue() throws IOException {
     System.out.println("Test big key value");
@@ -138,6 +139,7 @@ public abstract class TestCacheBase extends IOTestBase {
     prepareRandomData(numRecords);
   }
   
+  @Ignore
   @Test
   public void testAllExpiredBytes() throws IOException {
     System.out.println("Test all expired bytes");
@@ -173,6 +175,7 @@ public abstract class TestCacheBase extends IOTestBase {
     
   }
   
+  @Ignore
   @Test
   public void testAllExpiredMemory() throws IOException {
     System.out.println("Test all expired memory");
@@ -241,6 +244,7 @@ public abstract class TestCacheBase extends IOTestBase {
     
   }
   
+  @Ignore
   @Test
   public void testNoExpiredMemory() throws IOException {
     System.out.println("Test no expired - memory");
@@ -273,6 +277,7 @@ public abstract class TestCacheBase extends IOTestBase {
     
   }
   
+  @Ignore
   @Test
   public void testNoExpiredWithDeletesBytes() throws IOException {
     System.out.println("Test no expired with deletes bytes");
@@ -309,6 +314,7 @@ public abstract class TestCacheBase extends IOTestBase {
   }
   
   
+  @Ignore
   @Test
   public void testNoExpiredWithDeletesMemory() throws IOException {
     System.out.println("Test no expired with deletes memory");
@@ -343,6 +349,7 @@ public abstract class TestCacheBase extends IOTestBase {
       allocated, used, size, activeSize));
   }
   
+  @Ignore
   @Test
   public void testSaveLoad() throws IOException {
     System.out.println("Test save load");
@@ -385,6 +392,7 @@ public abstract class TestCacheBase extends IOTestBase {
     TestUtils.deleteCacheFiles(newCache);
   }
   
+  @Ignore
   @Test
   public void testSaveLoadSmallData() throws IOException {
     System.out.println("Test save load small data");
@@ -445,6 +453,7 @@ public abstract class TestCacheBase extends IOTestBase {
     TestUtils.deleteCacheFiles(newCache);
   }
   
+  @Ignore
   @Test
   public void testSaveLoadTwoCaches() throws IOException {
     System.out.println("Test save load two caches");

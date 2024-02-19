@@ -25,6 +25,7 @@ import java.io.IOException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.carrot.cache.index.MemoryIndex.MutationResult;
@@ -262,8 +263,10 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
     verifyIndexMemoryNot();
   }
   
+  @Ignore
   @Test
   public void testEvictionBytes() {
+    // We do not support pure eviction anymore - only expired items
     System.out.println("Test eviction bytes");
     int toLoad = 200000;
     
@@ -315,8 +318,10 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
     UnsafeAccess.free(buf); 
   }
   
+  @Ignore
   @Test
   public void testEvictionMemory() {
+    // We do not support pure eviction anymore - only expired items
     System.out.println("Test eviction memory");
     int toLoad = 200000;
     prepareData(toLoad);
