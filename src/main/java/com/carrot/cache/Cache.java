@@ -2603,6 +2603,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
   }
   
+  /**
+   * Not used. Not safe for usage
+   * @return
+   */
   public Segment[] getSegmentsSorted() {
     return this.engine.getDataSegmentsSorted();
   }

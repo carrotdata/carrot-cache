@@ -2362,8 +2362,6 @@ public final class MemoryIndex implements Persistent {
 
     int currentSlot = 0;
     try {
-      
-      long start = System.currentTimeMillis();
       long[] index = ref_index_base.get();
       for (int i = 0; i < index.length; i++) {
         if (index[i] == 0) continue;
@@ -2372,14 +2370,11 @@ public final class MemoryIndex implements Persistent {
         rehashSlot(i);
         unlock(i);
       }
-
       // Finalize
       this.ref_index_base.set(this.ref_index_base_rehash.get());
       this.ref_index_base_rehash.set(null);
       this.rehashedSlots.set(0);
       this.rehashInProgress = false;
-      long end = System.currentTimeMillis();
-      /*DEBUG*/ System.err.printf("Completed rehashing in %d ms\n", (end - start));
     } finally {
       unlock(currentSlot);
     }
@@ -2505,6 +2500,7 @@ public final class MemoryIndex implements Persistent {
     dos.flush();
   }
 
+  @SuppressWarnings("deprecation")
   @Override
   public void load(InputStream is) throws IOException {
     DataInputStream dis = Utils.toDataInputStream(is);

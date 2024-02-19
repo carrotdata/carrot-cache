@@ -34,11 +34,6 @@ public class LRCRecyclingSelector implements RecyclingSelector {
     for(int i = 0; i < segments.length; i++) {
       Segment s = segments[i];
       if (s == null || !s.isSealed() || s.isRecycling()) {
-//        if (s != null) {
-//          /*DEBUG*/ System.out.println("sid=" + s.getId() + " sealed=" + s.isSealed() + " recycling=" + s.isRecycling());
-//        } else {
-//          /*DEBUG*/ System.out.println("sid=" + i + " is null");
-//        }
         continue;
       }
       Segment.Info info = s.getInfo();
@@ -52,14 +47,11 @@ public class LRCRecyclingSelector implements RecyclingSelector {
       if (time < minCreationTime) {
         minCreationTime = time;
         selection = s;
-        //*DEBUG*/ System.out.println("segmet creation time =" + time);
       }
     }
     if (selection != null) {
       selection.setRecycling(true);
     }
-    //*DEBUG*/ System.out.println("segment selection=" + selection);
-
     return selection;
   }
 }

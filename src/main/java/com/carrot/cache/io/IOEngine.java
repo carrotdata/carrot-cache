@@ -2130,7 +2130,7 @@ public abstract class IOEngine implements Persistent {
    */
   public void disposeDataSegment(Segment seg) {
     //FIXME: does not work for compressed data
-    long dataSize = seg.getInfo().getSegmentDataSize();
+    //long dataSize = seg.getInfo().getSegmentDataSize();
     try {
       seg.writeLock();
       seg.dispose();
@@ -2648,14 +2648,10 @@ public abstract class IOEngine implements Persistent {
    */
   public long activeSize() {
     long total = 0;
-    long t = 0, ev = 0, exp = 0; 
     for (Segment s : this.dataSegments) {
       if (s == null) {
         continue;
       }
-      t += s.getTotalItems();
-      ev += s.getNumberEvictedDeletedItems();
-      exp += s.getNumberExpiredItems();
       total += s.getTotalItems() - s.getNumberEvictedDeletedItems() - s.getNumberExpiredItems();
     }
     return total;
