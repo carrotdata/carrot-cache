@@ -180,7 +180,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   
   /* TLS buffer maximum size in bytes */
   int tlsBufferMaxSize;
-  
+
+  /* Save cache on shutdown */
+  boolean saveOnShutdown;
   /**
    *  Constructor to use 
    *  when loading cache from a storage
@@ -260,6 +262,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       this.maximumKeyValueSize = min - 8;
     } else if (this.maximumKeyValueSize == 0) {
       this.maximumKeyValueSize = min - 8;
+    }
+    this.saveOnShutdown = this.conf.isSaveOnShutdown(cacheName);
+    if (this.saveOnShutdown) {
+      addShutdownHook();
     }
     initTLS();
     Scavenger.registerCache(cacheName);
@@ -2591,16 +2597,22 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
   }
   
-  public void shutdown() throws IOException {
+  public long shutdown() throws IOException {
     // Disable writes/reads
+    System.out.printf("Shutting down cache {}\n", cacheName);
+    long size = getStorageUsedActual();
     this.shutdownInProgress = true;
+    long start = System.currentTimeMillis();
     stopScavengers();
     // stop IOEngine
     this.engine.shutdown();
     save();
     if (this.victimCache != null) {
-      this.victimCache.shutdown();
+      size += this.victimCache.shutdown();
     }
+    long end = System.currentTimeMillis();
+    System.out.printf("Cache {} saved {} bytes in {} ms", cacheName, size, (end - start));
+    return size;
   }
   
   /**

@@ -48,13 +48,13 @@ public class CarrotConfig {
 
 
   /** List of all caches logical names, comma-separated*/
-  public final static String CACHES_NAME_LIST_KEY = "c2.caches.name-list";
+  public final static String CACHES_NAME_LIST_KEY = "caches.name-list";
   
   /**By default we have only one cache */
   public final static String DEFAULT_CACHES_NAME_LIST ="cache"; // only one cache
   
   /**Caches types ('offheap', 'file' only supported), comma-separated */
-  public final static String CACHES_TYPES_LIST_KEY ="c2.caches.types-list";
+  public final static String CACHES_TYPES_LIST_KEY ="caches.types-list";
   
   /**By default cache type is offheap */
   public final static String DEFAULT_CACHES_TYPES_LIST = "offheap";
@@ -63,7 +63,7 @@ public class CarrotConfig {
    * Cache victim name. If cache name is C1, then to lookup for its victim name 
    * we must request 'C1.victim.name' property value 
    */
-  public final static String CACHE_VICTIM_NAME_KEY = "c2.victim.name";
+  public final static String CACHE_VICTIM_NAME_KEY = "victim.name";
   
   
   /** File name for cache snapshot data */
@@ -100,247 +100,249 @@ public class CarrotConfig {
   public final static String DEFAULT_CACHE_CONFIG_DIR_NAME = "conf";
   
   /**Cache root directory - where to save cached data */
-  public final static String CACHE_ROOT_DIR_PATH_KEY = "c2.root.dir-path";
+  public final static String CACHE_ROOT_DIR_PATH_KEY = "root.dir-path";
   
   /**Default cache root directory path */
-  public final static String DEFAULT_CACHE_ROOT_DIR_PATH = "." + File.separator + "c2";
+  public final static String DEFAULT_CACHE_ROOT_DIR_PATH = "." + File.separator + "onecache";
     
   /**Data segment size */
-  public static final String CACHE_SEGMENT_SIZE_KEY = "c2.data.segment-size";
+  public static final String CACHE_SEGMENT_SIZE_KEY = "data.segment-size";
   
   /**Maximum storage limit to use for cache */
-  public static final String CACHE_MAXIMUM_SIZE_KEY = "c2.storage.max-size";
+  public static final String CACHE_MAXIMUM_SIZE_KEY = "storage.max-size";
   
   /**When to start GC (garbage collection) - size of the cache as a fraction of the maximum cache size */
-  public static final String SCAVENGER_START_RUN_RATIO_KEY = "c2.scavenger.start-ratio";
+  public static final String SCAVENGER_START_RUN_RATIO_KEY = "scavenger.start-ratio";
 
   /**When to stop GC (garbage collection) - size of the cache as a fraction of the maximum cache size */
-  public static final String SCAVENGER_STOP_RUN_RATIO_KEY = "c2.scavenger.stop-ratio";
+  public static final String SCAVENGER_STOP_RUN_RATIO_KEY = "scavenger.stop-ratio";
   
   /**Discard cached entry if it in this lower percentile - start value */
-  public static final String SCAVENGER_DUMP_ENTRY_BELOW_MIN_KEY = "c2.scavenger.dump-entry-below-min";
+  public static final String SCAVENGER_DUMP_ENTRY_BELOW_MIN_KEY = "scavenger.dump-entry-below-min";
 
   /**Discard cached entry if it in this lower percentile - stop value (maximum) */
-  public static final String SCAVENGER_DUMP_ENTRY_BELOW_MAX_KEY = "c2.scavenger.dump-entry-below-max";
+  public static final String SCAVENGER_DUMP_ENTRY_BELOW_MAX_KEY = "scavenger.dump-entry-below-max";
   
   /**Adjustment step for scavenger */
-  public static final String SCAVENGER_DUMP_ENTRY_BELOW_STEP_KEY = "c2.scavenger.dump-entry-below-step";
+  public static final String SCAVENGER_DUMP_ENTRY_BELOW_STEP_KEY = "scavenger.dump-entry-below-step";
   
   /**Scavenger number of segment processed before stall mode activated*/
-  public static final String SCAVENGER_MAX_SEGMENTS_BEFORE_STALL_KEY = "c2.scavenger.max-segments-before-stall";
+  public static final String SCAVENGER_MAX_SEGMENTS_BEFORE_STALL_KEY = "scavenger.max-segments-before-stall";
   
   /**Scavenger number of threads */
-  public static final String SCAVENGER_NUMBER_THREADS_KEY = "c2.scavenger.number-threads";
+  public static final String SCAVENGER_NUMBER_THREADS_KEY = "scavenger.number-threads";
   
   /**
    * Scavenger stop ratio (relative to a number of scanned items) when deleted-mode-only 
    * gets disabled 
    */
-  public static final String SCAVENGER_STOP_RATIO_FOR_DELETED_ONLY_MODE_KEY = "c2.scavenger.stop-ratio-deleted-only-mode";
+  public static final String SCAVENGER_STOP_RATIO_FOR_DELETED_ONLY_MODE_KEY = "scavenger.stop-ratio-deleted-only-mode";
   
   /**
    * Scavenger start ratio (relative to maximum number of data segments) when maximum value 'dumpBelowRatio' starts
    */
-  public static final String SCAVENGER_START_RATIO_FOR_DUMP_BELOW_MAX_KEY = "c2.scavenger.start-ratio-dump-below-max";
+  public static final String SCAVENGER_START_RATIO_FOR_DUMP_BELOW_MAX_KEY = "scavenger.start-ratio-dump-below-max";
 
   /**Number of popularity ranks ( default - 8) */
-  public static final String CACHE_POPULARITY_NUMBER_RANKS_KEY = "c2.popularity-number-ranks";
+  public static final String CACHE_POPULARITY_NUMBER_RANKS_KEY = "popularity-number-ranks";
   
   /** Keep active data set fraction above this threshold */
   public static final String CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO_KEY = 
-      "c2.minimum-active-dataset-ratio"; 
+      "minimum-active-dataset-ratio"; 
   /** IO storage pool size */
-  public static final String CACHE_IO_STORAGE_POOL_SIZE_KEY = "c2.storage-io-pool-size";
+  public static final String CACHE_IO_STORAGE_POOL_SIZE_KEY = "storage-io-pool-size";
   
   /**New item insertion point for SLRU (segment number 1- based)*/
-  public static final String SLRU_CACHE_INSERT_POINT_KEY = "c2.eviction.slru-insert-point";
+  public static final String SLRU_CACHE_INSERT_POINT_KEY = "eviction.slru-insert-point";
 
   /**Number of segments in SLRU eviction policy */
-  public static final String SLRU_NUMBER_SEGMENTS_KEY = "c2.eviction.slru-number-segments";
+  public static final String SLRU_NUMBER_SEGMENTS_KEY = "eviction.slru-number-segments";
   
   /**Admission Queue start size in fraction of a full cache size */
-  public static final String ADMISSION_QUEUE_START_SIZE_RATIO_KEY = "c2.admission.queue-start-size-ratio";
+  public static final String ADMISSION_QUEUE_START_SIZE_RATIO_KEY = "admission.queue-start-size-ratio";
   
   /**Admission Queue minimum size in fraction of a full cache size */
-  public static final String ADMISSION_QUEUE_MIN_SIZE_RATIO_KEY = "c2.admission.queue-min-size-ratio";
+  public static final String ADMISSION_QUEUE_MIN_SIZE_RATIO_KEY = "admission.queue-min-size-ratio";
   
   /**Admission Queue maximum size in fraction of a full cache size */
-  public static final String ADMISSION_QUEUE_MAX_SIZE_RATIO_KEY = "c2.admission.queue-max-size-ratio";
+  public static final String ADMISSION_QUEUE_MAX_SIZE_RATIO_KEY = "admission.queue-max-size-ratio";
   
   /** Promotion Queue start size in fraction of a full cache size */
-  public static final String PROMOTION_QUEUE_START_SIZE_RATIO_KEY = "c2.promotion.queue-start-size-ratio";
+  public static final String PROMOTION_QUEUE_START_SIZE_RATIO_KEY = "promotion.queue-start-size-ratio";
   
   /** Promotion Queue minimum size in fraction of a full cache size */
-  public static final String PROMOTION_QUEUE_MIN_SIZE_RATIO_KEY = "c2.promotion.queue-min-size-ratio";
+  public static final String PROMOTION_QUEUE_MIN_SIZE_RATIO_KEY = "promotion.queue-min-size-ratio";
   
   /** Promotion Queue maximum size in fraction of a full cache size */
-  public static final String PROMOTION_QUEUE_MAX_SIZE_RATIO_KEY = "c2.promotion.queue-max-size-ratio";
+  public static final String PROMOTION_QUEUE_MAX_SIZE_RATIO_KEY = "promotion.queue-max-size-ratio";
   
   /* Random configuration parameter for random promotion controller*/
-  public static final String PROMOTION_PROBABILITY_KEY = "c2.promotion.probability";
+  public static final String PROMOTION_PROBABILITY_KEY = "promotion.probability";
   
   /** Readmission evicted item to AQ minimum hit count threshold */
-  public static final String READMISSION_HIT_COUNT_MIN_KEY = "c2.readmission-hit-count-min";
+  public static final String READMISSION_HIT_COUNT_MIN_KEY = "readmission-hit-count-min";
   
   /**Cumulative average write rate limit  (bytes/sec) */
-  public static final String CACHE_WRITE_RATE_LIMIT_KEY = "c2.write.avg-rate-limit";
+  public static final String CACHE_WRITE_RATE_LIMIT_KEY = "write.avg-rate-limit";
   
   /** Promotion on hit from victim to main cache */
-  public static final String CACHE_VICTIM_PROMOTION_ON_HIT_KEY = "c2.victim.promotion-on-hit";
+  public static final String CACHE_VICTIM_PROMOTION_ON_HIT_KEY = "victim.promotion-on-hit";
   
   /*
    * Some file systems : ext4, xfs, APFS etc supports sparse files and so called 
    * "hole punching" - discarding  regions of files. We use different algorithm of compaction when file system 
    *  supports these features. Default: false.
    */
-  public static final String SPARSE_FILES_SUPPORT_KEY = "c2.sparse-files-support";
+  public static final String SPARSE_FILES_SUPPORT_KEY = "sparse-files-support";
   
   /*
    * Index starting number of slots power of 2 - L ( N = 2**L) N - number of slots 
    */
-  public static final String START_INDEX_NUMBER_OF_SLOTS_POWER_KEY = "c2.index.slots-power";
+  public static final String START_INDEX_NUMBER_OF_SLOTS_POWER_KEY = "index.slots-power";
   
   /*
    * Cache write throughput check interval key  
    */
-  public static final String THROUGHPUT_CHECK_INTERVAL_SEC_KEY = "c2.throughput.check-interval-sec"; 
+  public static final String THROUGHPUT_CHECK_INTERVAL_SEC_KEY = "throughput.check-interval-sec"; 
   
   /*
    * Scavenger run interval key (seconds)  
    */
-  public static final String SCAVENGER_RUN_INTERVAL_SEC_KEY = "c2.scavenger.run-interval-sec"; 
+  public static final String SCAVENGER_RUN_INTERVAL_SEC_KEY = "scavenger.run-interval-sec"; 
   
   /*
    * Cache write throughput controller tolerance limit
    */
-  public static final String THROUGHPUT_CONTROLLER_TOLERANCE_LIMIT_KEY = "c2.throughput.tolerance-limit";
+  public static final String THROUGHPUT_CONTROLLER_TOLERANCE_LIMIT_KEY = "throughput.tolerance-limit";
   
   /*
    *  Throughput controller number of adjustment steps
    */
-  public static final String THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS_KEY = "c2.throughput.adjustment-steps";
+  public static final String THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS_KEY = "throughput.adjustment-steps";
   
   /**
    * Does index support memory embedding
    */
-  public static final String INDEX_DATA_EMBEDDED_KEY = "c2.index.data-embedded";
+  public static final String INDEX_DATA_EMBEDDED_KEY = "index.data-embedded";
   
   /**
    * Maximum data size to embed   
    **/
-  public static final String INDEX_DATA_EMBEDDED_SIZE_KEY = "c2.index.data-embedded-max-size";
+  public static final String INDEX_DATA_EMBEDDED_SIZE_KEY = "index.data-embedded-max-size";
   
   /**Class name for main queue index format implementation */
-  public static final String INDEX_FORMAT_MAIN_QUEUE_IMPL_KEY = "c2.index.format-main-queue-impl";
+  public static final String INDEX_FORMAT_MAIN_QUEUE_IMPL_KEY = "index.format-main-queue-impl";
   
   /**Class name for admission queue index format implementation */
-  public static final String INDEX_FORMAT_ADMISSION_QUEUE_IMPL_KEY = "c2.index.format-admission-queue-impl";
+  public static final String INDEX_FORMAT_ADMISSION_QUEUE_IMPL_KEY = "index.format-admission-queue-impl";
 
   /**Class name for cache eviction policy implementation */
-  public static final String CACHE_EVICTION_POLICY_IMPL_KEY = "c2.eviction-policy-impl";
+  public static final String CACHE_EVICTION_POLICY_IMPL_KEY = "eviction-policy-impl";
   
   /**Class name for cache admission controller implementation */
-  public static final String CACHE_ADMISSION_CONTROLLER_IMPL_KEY = "c2.admission-controller-impl";
+  public static final String CACHE_ADMISSION_CONTROLLER_IMPL_KEY = "admission-controller-impl";
   
   /**Class name for cache promotion controller implementation */
-  public static final String CACHE_PROMOTION_CONTROLLER_IMPL_KEY = "c2.promotion-controller-impl";
+  public static final String CACHE_PROMOTION_CONTROLLER_IMPL_KEY = "promotion-controller-impl";
   
   /**Class name for cache throughput controller implementation */
-  public static final String CACHE_THROUGHPUT_CONTROLLER_IMPL_KEY = "c2.throughput-controller-impl";
+  public static final String CACHE_THROUGHPUT_CONTROLLER_IMPL_KEY = "throughput-controller-impl";
   
   /**Class name for cache recycling controller implementation */
-  public static final String CACHE_RECYCLING_SELECTOR_IMPL_KEY = "c2.recycling-selector-impl";
+  public static final String CACHE_RECYCLING_SELECTOR_IMPL_KEY = "recycling-selector-impl";
   
   /**Class name for cache data appender implementation */
-  public static final String CACHE_DATA_WRITER_IMPL_KEY = "c2.data-writer-impl";
+  public static final String CACHE_DATA_WRITER_IMPL_KEY = "data-writer-impl";
   
   /**Class name for cache data reader implementation (RAM)*/
-  public static final String CACHE_MEMORY_DATA_READER_IMPL_KEY = "c2.memory.data-reader-impl";
+  public static final String CACHE_MEMORY_DATA_READER_IMPL_KEY = "memory.data-reader-impl";
   
   /**Class name for cache data reader implementation (File)*/
-  public static final String CACHE_FILE_DATA_READER_IMPL_KEY = "c2.file.data-reader-impl";
+  public static final String CACHE_FILE_DATA_READER_IMPL_KEY = "file.data-reader-impl";
   
   /**Block writer block size key */
-  public static final String CACHE_BLOCK_WRITER_BLOCK_SIZE_KEY = "c2.block-writer-block-size";
+  public static final String CACHE_BLOCK_WRITER_BLOCK_SIZE_KEY = "block-writer-block-size";
   
   /**File prefetch buffer size */
-  public static final String FILE_PREFETCH_BUFFER_SIZE_KEY = "c2.file.prefetch-buffer-size";
+  public static final String FILE_PREFETCH_BUFFER_SIZE_KEY = "file.prefetch-buffer-size";
   
   /**Cache expiration support implementation key */
-  public static final String CACHE_EXPIRE_SUPPORT_IMPL_KEY = "c2.expire-support-impl";
+  public static final String CACHE_EXPIRE_SUPPORT_IMPL_KEY = "expire-support-impl";
   
   /**Random admission controller ratio start key */
-  public static final String CACHE_RANDOM_ADMISSION_RATIO_START_KEY = "c2.random.admission.ratio-start";
+  public static final String CACHE_RANDOM_ADMISSION_RATIO_START_KEY = "random.admission.ratio-start";
   
   /**Random admission controller ratio key */
-  public static final String CACHE_RANDOM_ADMISSION_RATIO_STOP_KEY = "c2.random.admission.ratio-stop";
+  public static final String CACHE_RANDOM_ADMISSION_RATIO_STOP_KEY = "random.admission.ratio-stop";
   
   /**For expiration  based admission controller */
-  public static final String CACHE_EXPIRATION_BIN_START_VALUE_KEY = "c2.expire.start-bin-value";
+  public static final String CACHE_EXPIRATION_BIN_START_VALUE_KEY = "expire.start-bin-value";
   
   /**Bin value multiplier */
-  public static final String CACHE_EXPIRATION_MULTIPLIER_VALUE_KEY = "c2.expire.multiplier-value";
+  public static final String CACHE_EXPIRATION_MULTIPLIER_VALUE_KEY = "expire.multiplier-value";
   
   /**Eviction disabled mode */
-  public static final String CACHE_EVICTION_DISABLED_MODE_KEY = "c2.eviction.disabled-mode";
+  public static final String CACHE_EVICTION_DISABLED_MODE_KEY = "eviction.disabled-mode";
   
   /**Rolling Window Counter number of bins*/
-  public static final String CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY = "c2.rwc-bins";
+  public static final String CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY = "rwc-bins";
   
   /**Rolling Window Counter window duration in seconds */
-  public static final String CACHE_ROLLING_WINDOW_COUNTER_DURATION_KEY = "c2.rwc-window";
+  public static final String CACHE_ROLLING_WINDOW_COUNTER_DURATION_KEY = "rwc-window";
   
   /**Hybrid cache mode of operation */
-  public static final String CACHE_HYBRID_INVERSE_MODE_KEY = "c2.hybrid.inverse-mode";
+  public static final String CACHE_HYBRID_INVERSE_MODE_KEY = "hybrid.inverse-mode";
   
   /**Victim cache promotion threshold  */
-  public static final String CACHE_VICTIM_PROMOTION_THRESHOLD_KEY = "c2.victim.promotion-threshold";
+  public static final String CACHE_VICTIM_PROMOTION_THRESHOLD_KEY = "victim.promotion-threshold";
   
   /**Spin wait time on high pressure in nanoseconds */
-  public static final String CACHE_SPIN_WAIT_TIME_NS_KEY = "c2.spin.wait-time-ns";
+  public static final String CACHE_SPIN_WAIT_TIME_NS_KEY = "spin.wait-time-ns";
   
   /**JMX metrics domain name */
-  public static final String CACHE_JMX_METRICS_DOMAIN_NAME_KEY = "c2.jmx.metrics-domain-name";
+  public static final String CACHE_JMX_METRICS_DOMAIN_NAME_KEY = "jmx.metrics-domain-name";
   
-  public static final String CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY = "c2.cache.streaming-buffer-size";
+  public static final String CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY = "cache.streaming-buffer-size";
   
-  public static final String CACHE_MAX_WAIT_ON_PUT_MS_KEY = "c2.cache.max-wait-on-put-ms";
+  public static final String CACHE_MAX_WAIT_ON_PUT_MS_KEY = "cache.max-wait-on-put-ms";
   
   /* Maximum Key Value size to cache */
-  public static final String CACHE_MAX_KEY_VALUE_SIZE_KEY = "c2.cache.max-key-value-size";
+  public static final String CACHE_MAX_KEY_VALUE_SIZE_KEY = "cache.max-key-value-size";
   
   /* Object Cache initial output buffer size */
-  public final static String OBJECT_CACHE_INITIAL_BUFFER_SIZE_KEY = "c2.objectcache.initial-buffer-size";
+  public final static String OBJECT_CACHE_INITIAL_BUFFER_SIZE_KEY = "objectcache.initial-buffer-size";
   
   /* Object Cache maximum output buffer size */
-  public final static String OBJECT_CACHE_MAX_BUFFER_SIZE_KEY = "c2.objectcache.max-buffer-size";
+  public final static String OBJECT_CACHE_MAX_BUFFER_SIZE_KEY = "objectcache.max-buffer-size";
   
   /* Is Thread-Local-Storage supported */
-  public final static String CACHE_TLS_SUPPORTED_KEY = "c2.cache.tls-supported";
+  public final static String CACHE_TLS_SUPPORTED_KEY = "cache.tls-supported";
   
   /* TLS buffer initial size key */
-  public final static String CACHE_TLS_INITIAL_BUFFER_SIZE_KEY = "c2.cache.tls-initial-buffer-size";
+  public final static String CACHE_TLS_INITIAL_BUFFER_SIZE_KEY = "cache.tls-initial-buffer-size";
   
   /* TLS buffer maximum key size */
-  public final static String CACHE_TLS_MAXIMUM_BUFFER_SIZE_KEY = "c2.cache.tls-maximum-buffer-size";
+  public final static String CACHE_TLS_MAXIMUM_BUFFER_SIZE_KEY = "cache.tls-maximum-buffer-size";
 
   /* Compression configuration */
   
-  public final static String CACHE_COMPRESSION_ENABLED_KEY = "c2.cache.compression-enabled";
+  public final static String CACHE_COMPRESSION_ENABLED_KEY = "cache.compression-enabled";
   
-  public final static String CACHE_COMPRESSION_BLOCK_SIZE_KEY = "c2.cache.compression-block-size";
+  public final static String CACHE_COMPRESSION_BLOCK_SIZE_KEY = "cache.compression-block-size";
   
-  public final static String CACHE_COMPRESSION_DICTIONARY_SIZE_KEY = "c2.cache.compression-dictionary-size";
+  public final static String CACHE_COMPRESSION_DICTIONARY_SIZE_KEY = "cache.compression-dictionary-size";
   
-  public final static String CACHE_COMPRESSION_LEVEL_KEY = "c2.cache.compression-level";
+  public final static String CACHE_COMPRESSION_LEVEL_KEY = "cache.compression-level";
   
-  public final static String CACHE_COMPRESSION_CODEC_KEY = "c2.cache.compression-codec";
+  public final static String CACHE_COMPRESSION_CODEC_KEY = "cache.compression-codec";
   
-  public final static String CACHE_COMPRESSION_DICTIONARY_ENABLED_KEY = "c2.cache.compression-dictionary-enabled";
+  public final static String CACHE_COMPRESSION_DICTIONARY_ENABLED_KEY = "cache.compression-dictionary-enabled";
 
-  public final static String CACHE_COMPRESSION_KEYS_ENABLED_KEY = "c2.cache.compression-keys-enabled";
+  public final static String CACHE_COMPRESSION_KEYS_ENABLED_KEY = "cache.compression-keys-enabled";
   
-  public final static String CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC_KEY = "c2.cache.compression-dictionary-training-async";
+  public final static String CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC_KEY = "cache.compression-dictionary-training-async";
+  
+  public final static String CACHE_SAVE_ON_SHUTDOWN_KEY = "cache.save-on-shutdown";
   
   /** Defaults section */
   
@@ -355,7 +357,7 @@ public class CarrotConfig {
 
   /**
    * During scavenger run, all expired entries as well as entries with popularity below this config
-   * value will be dumped, all others will be rewritten back to a cache. THis is the start value
+   * value will be dumped, all others will be rewritten back to the cache. This is the start value
    */
   public static final double DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_MIN = 0.1;
   
@@ -583,6 +585,9 @@ public class CarrotConfig {
   /** Default probability for random promotion controller */
   public final static double DEFAULT_PROMOTION_PROBABILITY = 0.1d;
   
+  /* Default save on shutdown */
+  public final static boolean DEFAULT_CACHE_SAVE_ON_SHUTDOWN = false;
+  
   // Statics
   static CarrotConfig instance;
 
@@ -648,7 +653,7 @@ public class CarrotConfig {
    * @return true or false
    */
   public static boolean isCarrotPropertyName(String name) {
-    return name.indexOf("c2.") >= 0;
+    return name.indexOf("") >= 0;
   }
   
   // Instance
@@ -2680,6 +2685,30 @@ public class CarrotConfig {
    */
   public void setCacheCompressionDictionaryTrainingAsync (String cacheName, boolean v) {
     props.setProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC_KEY, Boolean.toString(v));
+  }
+  
+  /**
+   * Get cache save on shutdown
+   * @param cacheName cache name
+   * @return true if yes, false - otherwise
+   */
+  public boolean isSaveOnShutdown (String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_SAVE_ON_SHUTDOWN_KEY);
+    if (value == null) {
+      return getBooleanProperty(CACHE_SAVE_ON_SHUTDOWN_KEY, 
+        DEFAULT_CACHE_SAVE_ON_SHUTDOWN);
+    } else {
+      return Boolean.parseBoolean(value);
+    }
+  }
+  
+  /**
+   * Set cache save on shutdown
+   * @param cacheName cache name
+   * @param v true or false
+   */
+  public void setSaveOnShutdown (String cacheName, boolean v) {
+    props.setProperty(cacheName + "." + CACHE_SAVE_ON_SHUTDOWN_KEY, Boolean.toString(v));
   }
 }
 
