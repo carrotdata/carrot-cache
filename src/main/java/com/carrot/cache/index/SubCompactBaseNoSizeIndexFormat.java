@@ -27,7 +27,7 @@ import com.carrot.cache.util.Utils;
  * It does not support expiration
  * 
  */
-public class SubCompactBaseIndexFormat implements IndexFormat {
+public class SubCompactBaseNoSizeIndexFormat implements IndexFormat {
   int  L; // index.slots.power from configuration
   
   /**
@@ -39,25 +39,26 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
     this.L = config.getStartIndexNumberOfSlotsPower(cacheName);
   }
   /*
-   * MQ Index item is 14 bytes:
+   * MQ Index item is 10 bytes:
    * 4 bytes - hashed key value (high 6 bytes of an 8 byte hash)
-   * 4 bytes - total item size (key + value) - first bit is hit count
-   * 6 bytes - location in the storage - ( 2 - segment id, 4 offset in the segment) 
+   * 6 bytes - location in the storage - (2 - segment id, 4 offset in the segment) 
    */
-  public SubCompactBaseIndexFormat() {
+  public SubCompactBaseNoSizeIndexFormat() {
   }
   
   @Override
   public boolean equals(long ptr, long hash) {
     int off = hashOffset();
     int v = UnsafeAccess.toInt(ptr + off);
+    v &= 0x7fffffff;
     hash = (int) (hash >>> (32 - L));
+    hash &= 0x7fffffff;
     return v == hash;
   }
 
   @Override
   public int indexEntrySize() {
-    return 14;
+    return 10;
   }
 
   @Override
@@ -72,8 +73,7 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
 
   @Override
   public int getKeyValueSize(long buffer) {
-    int off = sizeOffset();
-    return UnsafeAccess.toInt(buffer + off) & 0x7fffffff;
+    return -1;
   }
 
   @Override
@@ -106,18 +106,18 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
   }
 
   @Override
-  public int getHitCount(long buffer) {
-    int off = sizeOffset();
-    int ref = UnsafeAccess.toInt(buffer + off);
-    return  ref >>> 31;   
+  public int getHitCount(long ptr) {
+    int off = hashOffset();
+    int ref = UnsafeAccess.toInt(ptr + off);
+    return  ref >>> 31;  
   }
 
   @Override
   public void hit(long ptr) {
-    ptr += sizeOffset();
-    int v = UnsafeAccess.toInt(ptr);
+    int off = hashOffset();    
+    int v = UnsafeAccess.toInt(ptr + off);
     v |= 0x80000000;
-    UnsafeAccess.putInt(ptr, v);
+    UnsafeAccess.putInt(ptr + off, v);
   }
 
   @Override
@@ -148,13 +148,11 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
       long expire /* not supported here*/) 
   {
     long hash = Utils.hash64(key, keyOffset, keySize);
-    int $hash = (int)(hash >>> 32 - L);
+    int $hash = (int)(hash >>> 32 - L) & 0x7fffffff;
 
     ptr += hashOffset();
     UnsafeAccess.putInt(ptr, $hash);
     ptr += Utils.SIZEOF_INT; 
-    UnsafeAccess.putInt(ptr, dataSize);
-    ptr += Utils.SIZEOF_INT;
     UnsafeAccess.putShort(ptr, (short)sid);
     ptr += Utils.SIZEOF_SHORT; 
     UnsafeAccess.putInt(ptr, dataOffset);
@@ -174,13 +172,11 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
       long expire) 
   {
     long hash = Utils.hash64(keyPtr, keySize);
-    int $hash = (int)(hash >>> 32 - L);
+    int $hash = (int)(hash >>> 32 - L) & 0x7fffffff;
 
     ptr += hashOffset();
     UnsafeAccess.putInt(ptr, $hash);
     ptr += Utils.SIZEOF_INT; 
-    UnsafeAccess.putInt(ptr, dataSize);
-    ptr += Utils.SIZEOF_INT;
     UnsafeAccess.putShort(ptr, (short)sid);
     ptr += Utils.SIZEOF_SHORT; 
     UnsafeAccess.putInt(ptr, dataOffset);
@@ -198,14 +194,14 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
    * @return offset
    */
   int sidOffset() {
-    return 8;
+    return 4;
   }
   /**
    * Offsets in index field sections
    * @return offset
    */
   int dataOffsetOffset() {
-    return 10;
+    return 6;
   }
   
   /**
@@ -213,7 +209,7 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
    * @return offset
    */
   int sizeOffset() {
-    return 4;
+    return -1;
   }
   
   /**
@@ -223,5 +219,10 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
   int expireOffset() {
     // Not supported
     return -1;
+  }
+  
+  @Override
+  public boolean isSizeSupported() {
+    return false;
   }
 }

@@ -17,7 +17,6 @@
  */
 package com.carrot.cache.index;
 
-import com.carrot.cache.util.CarrotConfig;
 import com.carrot.cache.util.UnsafeAccess;
 import com.carrot.cache.util.Utils;
 
@@ -27,37 +26,31 @@ import com.carrot.cache.util.Utils;
  * It does not support expiration
  * 
  */
-public class SubCompactBaseIndexFormat implements IndexFormat {
-  int  L; // index.slots.power from configuration
-  
-  /**
-   * Cache name for this index format
-   * @param cacheName
-   */
-  public void setCacheName(String cacheName) {
-    CarrotConfig config = CarrotConfig.getInstance();
-    this.L = config.getStartIndexNumberOfSlotsPower(cacheName);
-  }
+public class CompactBaseNoSizeIndexFormat implements IndexFormat {
   /*
-   * MQ Index item is 14 bytes:
-   * 4 bytes - hashed key value (high 6 bytes of an 8 byte hash)
-   * 4 bytes - total item size (key + value) - first bit is hit count
+   * MQ Index item is 12 bytes:
+   * 6 bytes - hashed key value (high 6 bytes of an 8 byte hash)
    * 6 bytes - location in the storage - ( 2 - segment id, 4 offset in the segment) 
    */
-  public SubCompactBaseIndexFormat() {
+  public CompactBaseNoSizeIndexFormat() {
   }
   
   @Override
   public boolean equals(long ptr, long hash) {
     int off = hashOffset();
-    int v = UnsafeAccess.toInt(ptr + off);
-    hash = (int) (hash >>> (32 - L));
-    return v == hash;
+    int v = (int) (UnsafeAccess.toInt(ptr + off) & 0xffffffffL);
+    v &= 0x7fffffff;
+    off += Utils.SIZEOF_INT;
+    short s = (short)(UnsafeAccess.toShort(ptr + off) & 0xffff);
+    int vv = (int) (hash >>> 32);
+    vv &= 0x7fffffff;
+    short ss  = (short) (hash >>> 16);
+    return v == vv && s == ss;
   }
 
   @Override
   public int indexEntrySize() {
-    return 14;
+    return 12;
   }
 
   @Override
@@ -72,8 +65,7 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
 
   @Override
   public int getKeyValueSize(long buffer) {
-    int off = sizeOffset();
-    return UnsafeAccess.toInt(buffer + off) & 0x7fffffff;
+    return -1;
   }
 
   @Override
@@ -106,18 +98,18 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
   }
 
   @Override
-  public int getHitCount(long buffer) {
-    int off = sizeOffset();
-    int ref = UnsafeAccess.toInt(buffer + off);
+  public int getHitCount(long ptr) {
+    int off = hashOffset();
+    int ref = UnsafeAccess.toInt(ptr + off);
     return  ref >>> 31;   
   }
 
   @Override
   public void hit(long ptr) {
-    ptr += sizeOffset();
-    int v = UnsafeAccess.toInt(ptr);
+    int off = hashOffset();    
+    int v = UnsafeAccess.toInt(ptr + off);
     v |= 0x80000000;
-    UnsafeAccess.putInt(ptr, v);
+    UnsafeAccess.putInt(ptr + off, v);
   }
 
   @Override
@@ -127,9 +119,8 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
 
   @Override
   public int getHashBit(long ptr, int n) {
-    int off = hashOffset();
-    // TODO:test
-    return (UnsafeAccess.toInt(ptr + off) >>> 32 - n + L) & 1;
+    ptr += hashOffset();
+    return (int)(UnsafeAccess.toLong(ptr) >>> 64 - n) & 1;
   }
   
   @Override
@@ -148,13 +139,14 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
       long expire /* not supported here*/) 
   {
     long hash = Utils.hash64(key, keyOffset, keySize);
-    int $hash = (int)(hash >>> 32 - L);
-
+    int v = (int)(hash >>> 32);
+    v &= 0x7fffffff;
     ptr += hashOffset();
-    UnsafeAccess.putInt(ptr, $hash);
+    UnsafeAccess.putInt(ptr, v); 
     ptr += Utils.SIZEOF_INT; 
-    UnsafeAccess.putInt(ptr, dataSize);
-    ptr += Utils.SIZEOF_INT;
+    short s = (short)(hash >>> 16);
+    UnsafeAccess.putShort(ptr, s); 
+    ptr += Utils.SIZEOF_SHORT; 
     UnsafeAccess.putShort(ptr, (short)sid);
     ptr += Utils.SIZEOF_SHORT; 
     UnsafeAccess.putInt(ptr, dataOffset);
@@ -174,13 +166,13 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
       long expire) 
   {
     long hash = Utils.hash64(keyPtr, keySize);
-    int $hash = (int)(hash >>> 32 - L);
-
+    int v = (int)(hash >>> 32);
+    v &= 0x7fffffff;
     ptr += hashOffset();
-    UnsafeAccess.putInt(ptr, $hash);
+    UnsafeAccess.putInt(ptr, v); 
     ptr += Utils.SIZEOF_INT; 
-    UnsafeAccess.putInt(ptr, dataSize);
-    ptr += Utils.SIZEOF_INT;
+    UnsafeAccess.putShort(ptr, (short)(hash >>> 16)); 
+    ptr += Utils.SIZEOF_SHORT; 
     UnsafeAccess.putShort(ptr, (short)sid);
     ptr += Utils.SIZEOF_SHORT; 
     UnsafeAccess.putInt(ptr, dataOffset);
@@ -198,14 +190,14 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
    * @return offset
    */
   int sidOffset() {
-    return 8;
+    return 6;
   }
   /**
    * Offsets in index field sections
    * @return offset
    */
   int dataOffsetOffset() {
-    return 10;
+    return 8;
   }
   
   /**
@@ -213,7 +205,7 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
    * @return offset
    */
   int sizeOffset() {
-    return 4;
+    return -1;
   }
   
   /**
@@ -223,5 +215,10 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
   int expireOffset() {
     // Not supported
     return -1;
+  }
+  
+  @Override
+  public boolean isSizeSupported() {
+    return false;
   }
 }
