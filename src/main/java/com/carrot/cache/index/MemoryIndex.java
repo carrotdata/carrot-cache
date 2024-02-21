@@ -28,7 +28,6 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.carrot.cache.eviction.EvictionListener;
 import com.carrot.cache.eviction.EvictionPolicy;
 import com.carrot.cache.eviction.FIFOEvictionPolicy;
 import com.carrot.cache.io.IOEngine;
@@ -1045,6 +1044,46 @@ public final class MemoryIndex implements Persistent {
   }
 
   /**
+   * Get old and set new expiration time for a key
+   * @param key key buffer
+   * @param off offset
+   * @param size key size
+   * @return old expiration time
+   */
+  public long getAndSetExpire(byte[] key, int off, int size, long expire) {
+    if (this.indexFormat.isExpirationSupported() == false) {
+      return NOT_FOUND;
+    }
+    int slot = 0;
+    try {
+      slot = lock(key, off, size);
+      long hash = Utils.hash64(key, off, size);
+      return getAndSetExpire(hash, expire);
+    } finally {
+      unlock(slot);
+    }
+  }
+  
+  /**
+   * Get old and set new expiration time for a key
+   * @param keyPtr key address
+   * @param size key size
+   * @return old expiration time
+   */
+  public long getAndSetExpire(long keyPtr, int size, long expire) {
+    if (this.indexFormat.isExpirationSupported() == false) {
+      return NOT_FOUND;
+    }
+    int slot = 0;
+    try {
+      slot = lock(keyPtr, size);
+      long hash = Utils.hash64(keyPtr, size);
+      return getAndSetExpire(hash, expire);
+    } finally {
+      unlock(slot);
+    }
+  }
+  /**
    * Get item's expiration time
    *
    * @param key key buffer
@@ -1489,11 +1528,10 @@ public final class MemoryIndex implements Persistent {
   }
 
   /**
-   * Find index for a key's hash and copy its value to a buffer
+   *  Get expiration time from a index block by hash
    *
    * @param hash key's hash
-   * @param hit if true - promote item on hit
-   * @return found index size or -1 (not found)
+   * @return expiration time
    */
   private long getExpire(long hash) {
     long ptr = getIndexBlockForHash(hash);
@@ -1511,6 +1549,30 @@ public final class MemoryIndex implements Persistent {
     
     return NOT_FOUND;
   }
+  
+  /**
+   * Find index for a key's hash and copy its value to a buffer
+   *
+   * @param hash key's hash
+   * @param expire new expiration time
+   * @return old expiration time
+   */
+  private long getAndSetExpire(long hash, long expire) {
+    long ptr = getIndexBlockForHash(hash);
+    int numEntries = numEntries(ptr);
+    long $ptr = ptr + this.indexBlockHeaderSize;
+    int count = 0;
+
+    while (count < numEntries) {
+      if (this.indexFormat.equals($ptr, hash)) {
+        return this.indexFormat.getAndSetExpire(ptr, $ptr, expire);
+      }
+      count++;
+      $ptr += this.indexFormat.fullEntrySize($ptr);
+    }
+    return NOT_FOUND;
+  }
+  
   
   private long getIndexBlockForHash(long hash) {
     // This  method is called under lock

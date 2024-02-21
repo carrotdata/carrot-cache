@@ -51,7 +51,7 @@ public class SubCompactBaseNoSizeIndexFormat implements IndexFormat {
     int off = hashOffset();
     int v = UnsafeAccess.toInt(ptr + off);
     v &= 0x7fffffff;
-    hash = (int) (hash >>> (32 - L));
+    hash = (int) (hash >>> (32 - L + 1));
     hash &= 0x7fffffff;
     return v == hash;
   }
@@ -129,7 +129,7 @@ public class SubCompactBaseNoSizeIndexFormat implements IndexFormat {
   public int getHashBit(long ptr, int n) {
     int off = hashOffset();
     // TODO:test
-    return (UnsafeAccess.toInt(ptr + off) >>> 32 - n + L) & 1;
+    return (UnsafeAccess.toInt(ptr + off) >>> 32 - n + L - 1) & 1;
   }
   
   @Override
@@ -148,7 +148,7 @@ public class SubCompactBaseNoSizeIndexFormat implements IndexFormat {
       long expire /* not supported here*/) 
   {
     long hash = Utils.hash64(key, keyOffset, keySize);
-    int $hash = (int)(hash >>> 32 - L) & 0x7fffffff;
+    int $hash = (int)(hash >>> 32 - L + 1) & 0x7fffffff;
 
     ptr += hashOffset();
     UnsafeAccess.putInt(ptr, $hash);
@@ -172,7 +172,7 @@ public class SubCompactBaseNoSizeIndexFormat implements IndexFormat {
       long expire) 
   {
     long hash = Utils.hash64(keyPtr, keySize);
-    int $hash = (int)(hash >>> 32 - L) & 0x7fffffff;
+    int $hash = (int)(hash >>> 32 - L + 1) & 0x7fffffff;
 
     ptr += hashOffset();
     UnsafeAccess.putInt(ptr, $hash);
@@ -186,21 +186,21 @@ public class SubCompactBaseNoSizeIndexFormat implements IndexFormat {
    * Offsets in index field sections
    * @return offset
    */
-  int hashOffset() {
+  public int hashOffset() {
     return 0;
   }
   /**
    * Offsets in index field sections
    * @return offset
    */
-  int sidOffset() {
+  public int sidOffset() {
     return 4;
   }
   /**
    * Offsets in index field sections
    * @return offset
    */
-  int dataOffsetOffset() {
+  public int dataOffsetOffset() {
     return 6;
   }
   
@@ -208,7 +208,7 @@ public class SubCompactBaseNoSizeIndexFormat implements IndexFormat {
    * Size offset
    * @return offset
    */
-  int sizeOffset() {
+  public int sizeOffset() {
     return -1;
   }
   
@@ -216,7 +216,7 @@ public class SubCompactBaseNoSizeIndexFormat implements IndexFormat {
    * Offsets in index field sections
    * @return offset
    */
-  int expireOffset() {
+  public int expireOffset() {
     // Not supported
     return -1;
   }

@@ -116,6 +116,63 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
     assertEquals(expected, verified);
   }
   
+  protected void verifyGetSetExpireBytes(int expected) {
+    
+    IndexFormat format = memoryIndex.getIndexFormat();
+    if (!format.isExpirationSupported()) {
+      return;
+    }
+    int verified = 0;
+    for (int i = 0; i < numRecords; i++) {
+      
+      long expire = memoryIndex.getExpire(keys[i], 0, keySize);
+      if (!sameExpire(expires[i], expire)) {
+        continue;
+      }
+      // Set expire + 100000
+      long newExpire = expire + 100000;
+      long result = memoryIndex.getAndSetExpire(keys[i], 0,  keySize, newExpire);
+      if(!sameExpire(expires[i], result)) {
+        continue;
+      }
+      expire = memoryIndex.getExpire(keys[i], 0, keySize);
+      if(!sameExpire(newExpire, expire)) {
+        continue;
+      }
+      verified ++;
+    }
+    System.out.println("verified="+ verified);
+    assertEquals(expected, verified);
+  }
+  
+ protected void verifyGetSetExpireMemory(int expected) {
+    
+    IndexFormat format = memoryIndex.getIndexFormat();
+    if (!format.isExpirationSupported()) {
+      return;
+    }
+    int verified = 0;
+    for (int i = 0; i < numRecords; i++) {
+      long expire = memoryIndex.getExpire(mKeys[i], keySize);
+      if (!sameExpire(expires[i], expire)) {
+        continue;
+      }
+      // Set expire + 100000
+      long newExpire = expire + 100000;
+      long result = memoryIndex.getAndSetExpire(mKeys[i], keySize, newExpire);
+      if(!sameExpire(expires[i], result)) {
+        continue;
+      }
+      expire = memoryIndex.getExpire(mKeys[i], keySize);
+      if(!sameExpire(newExpire, expire)) {
+        continue;
+      }
+      verified ++;
+    }
+    System.out.println("verified="+ verified);
+    assertEquals(expected, verified);
+  }
+  
   protected int loadIndexMemory() {
     int loaded = 0;
     for(int i = 0; i < numRecords; i++) {
@@ -261,6 +318,18 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
     int loaded = loadReadMemory(1000000);
     deleteIndexMemory(loaded);
     verifyIndexMemoryNot();
+  }
+  
+  @Test
+  public void testGetSetExpireBytes() {
+    System.out.println("Test get set expire bytes");
+    loadVerifyGetSetExpireBytes(100000);
+  }
+  
+  @Test
+  public void testGetSetExpireMemory() {
+    System.out.println("Test get set expire memory");
+    loadVerifyGetSetExpireMemory(100000);
   }
   
   @Ignore
@@ -410,12 +479,32 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
   }
   
   
+  protected int loadVerifyGetSetExpireBytes(int num) {
+    prepareData(num);
+    System.out.println("prepare done");
+    int loaded = loadIndexBytes();
+    System.out.println("load done: "+ loaded);
+    long size = memoryIndex.size();
+    assertEquals(loaded, (int)size);
+    verifyGetSetExpireBytes(loaded);
+    return loaded;
+  }
+  
   protected int loadReadMemory(int num) {
     prepareData(num);
     int loaded = loadIndexMemory();
     long size = memoryIndex.size();
     assertEquals(loaded, (int) size);
     verifyIndexMemory(loaded);
+    return loaded;
+  }
+  
+  protected int loadVerifyGetSetExpireMemory(int num) {
+    prepareData(num);
+    int loaded = loadIndexMemory();
+    long size = memoryIndex.size();
+    assertEquals(loaded, (int) size);
+    verifyGetSetExpireMemory(loaded);
     return loaded;
   }
   

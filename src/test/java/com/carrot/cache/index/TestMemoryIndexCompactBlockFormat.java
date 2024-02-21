@@ -18,10 +18,9 @@ import java.util.Random;
 
 import com.carrot.cache.eviction.EvictionPolicy;
 import com.carrot.cache.eviction.SLRUEvictionPolicy;
-import com.carrot.cache.expire.ExpireSupportSecondsMinutes;
 import com.carrot.cache.util.CarrotConfig;
 
-public class TestMemoryIndexCompactFormatWithExpireSM extends TestMemoryIndexFormatBase {
+public class TestMemoryIndexCompactBlockFormat extends TestMemoryIndexFormatBase {
 
   int blockSize;
   
@@ -30,9 +29,8 @@ public class TestMemoryIndexCompactFormatWithExpireSM extends TestMemoryIndexFor
     MemoryIndex index = new MemoryIndex("default");
     EvictionPolicy policy = new SLRUEvictionPolicy();
     index.setEvictionPolicy(policy);
-    CompactBlockWithExpireIndexFormat format = new CompactBlockWithExpireIndexFormat();
+    IndexFormat format = new CompactBlockIndexFormat();
     format.setCacheName("default");
-    format.setExpireSupport(new ExpireSupportSecondsMinutes());
     index.setIndexFormat(format);
     return index;
   }
@@ -47,9 +45,5 @@ public class TestMemoryIndexCompactFormatWithExpireSM extends TestMemoryIndexFor
     return r.nextInt(n) * this.blockSize;
   }
   
-  @Override
-  long nextExpire() {
-    return System.currentTimeMillis() + 1000 * 1000;
-  }
   
 }

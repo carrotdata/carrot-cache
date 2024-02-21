@@ -135,27 +135,37 @@ public class CompactBaseNoSizeWithExpireIndexFormat extends CompactBaseNoSizeInd
   }
 
   @Override
-  int hashOffset() {
+  public int hashOffset() {
     return super.hashOffset() + ExpireSupport.FIELD_SIZE;
   }
 
   @Override
-  int sidOffset() {
+  public int sidOffset() {
     return super.sidOffset() + ExpireSupport.FIELD_SIZE;
   }
 
   @Override
-  int dataOffsetOffset() {
+  public int dataOffsetOffset() {
     return super.dataOffsetOffset() + ExpireSupport.FIELD_SIZE;
   }
 
   @Override
-  int expireOffset() {
+  public int expireOffset() {
     return 0;
   }
   
   @Override
-  int sizeOffset() {
+  public int sizeOffset() {
     return -1;
   }
+
+  @Override
+  public long getAndSetExpire(long ibPtr, long expPtr, long expire) {
+    long oldExpire = getExpire(ibPtr, expPtr);
+    ibPtr += super.getIndexBlockHeaderSize();
+    expPtr += expireOffset();
+    expireSupport.setExpire(ibPtr, expPtr, expire);
+    return oldExpire;
+  }
+
 }

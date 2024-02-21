@@ -14,13 +14,11 @@
  */
 package com.carrot.cache.index;
 
-import java.util.Random;
-
 import com.carrot.cache.eviction.EvictionPolicy;
 import com.carrot.cache.eviction.SLRUEvictionPolicy;
-import com.carrot.cache.util.CarrotConfig;
+import com.carrot.cache.expire.ExpireSupportSecondsMinutes;
 
-public class TestMemoryIndexSubCompactFormat extends TestMemoryIndexFormatBase {
+public class TestMemoryIndexCompactBaseNoSizeWithExpireFormatSM extends TestMemoryIndexFormatBase {
 
   int blockSize;
   
@@ -29,21 +27,16 @@ public class TestMemoryIndexSubCompactFormat extends TestMemoryIndexFormatBase {
     MemoryIndex index = new MemoryIndex("default");
     EvictionPolicy policy = new SLRUEvictionPolicy();
     index.setEvictionPolicy(policy);
-    IndexFormat format = new SubCompactBlockIndexFormat();
+    CompactBaseNoSizeWithExpireIndexFormat format = new CompactBaseNoSizeWithExpireIndexFormat();
     format.setCacheName("default");
+    format.setExpireSupport(new ExpireSupportSecondsMinutes());
     index.setIndexFormat(format);
     return index;
   }
-  
+
   @Override
-  int nextOffset(Random r, int max) {
-    if (this.blockSize == 0) {
-      CarrotConfig config = CarrotConfig.getInstance();
-      this.blockSize = config.getBlockWriterBlockSize("default");
-    }
-    int n = max / this.blockSize;
-    return r.nextInt(n) * this.blockSize;
+  long nextExpire() {
+    return System.currentTimeMillis() + 1000 * 1000;
   }
-  
   
 }

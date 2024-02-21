@@ -179,28 +179,28 @@ public class CompactBlockIndexFormat implements IndexFormat {
    * Offsets in index field sections
    * @return offset
    */
-  int hashOffset() {
+  public int hashOffset() {
     return 0;
   }
   /**
    * Offsets in index field sections
    * @return offset
    */
-  int sidOffset() {
+  public int sidOffset() {
     return Utils.SIZEOF_INT;
   }
   /**
    * Offsets in index field sections
    * @return offset
    */
-  int dataOffsetOffset() {
+  public int dataOffsetOffset() {
     return Utils.SIZEOF_INT + Utils.SIZEOF_SHORT;
   }
   /**
    * Offsets in index field sections
    * @return offset
    */
-  int expireOffset() {
+  public int expireOffset() {
     // Not supported
     return -1;
   }

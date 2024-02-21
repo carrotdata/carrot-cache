@@ -183,21 +183,21 @@ public class CompactBaseIndexFormat implements IndexFormat {
    * Offsets in index field sections
    * @return offset
    */
-  int hashOffset() {
+  public int hashOffset() {
     return 0;
   }
   /**
    * Offsets in index field sections
    * @return offset
    */
-  int sidOffset() {
+  public int sidOffset() {
     return 10;
   }
   /**
    * Offsets in index field sections
    * @return offset
    */
-  int dataOffsetOffset() {
+  public int dataOffsetOffset() {
     return 12;
   }
   
@@ -205,7 +205,7 @@ public class CompactBaseIndexFormat implements IndexFormat {
    * Size offset
    * @return offset
    */
-  int sizeOffset() {
+  public int sizeOffset() {
     return 6;
   }
   
@@ -213,7 +213,7 @@ public class CompactBaseIndexFormat implements IndexFormat {
    * Offsets in index field sections
    * @return offset
    */
-  int expireOffset() {
+  public int expireOffset() {
     // Not supported
     return -1;
   }

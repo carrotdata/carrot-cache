@@ -2043,6 +2043,48 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   /**
+   * Get expiration time of a key
+   * @param key key buffer
+   * @param off offset
+   * @param size key size
+   * @return time, 0 - no expire, -1 - does not exists or not supported
+   */
+  public long getExpire(byte[] key, int off, int size) {
+    long expire = this.engine.getMemoryIndex().getExpire(key, off, size);
+    return expire;
+  }
+  
+  /**
+   * Get expiration time
+   * @param keyPtr key address
+   * @param keySize key size
+   * @return time in ms since you know when, -1 not supported or does not exists
+   */
+  public long getExpire(long keyPtr, int keySize) {
+    return this.engine.getMemoryIndex().getExpire(keyPtr, keySize);
+  }
+  
+  /**
+   * Get and set expiration time of a key
+   * @param key key buffer
+   * @param off offset
+   * @param size key size
+   * @return time, 0 - no expire, -1 - does not exists or not supported
+   */
+  public long getAndSetExpire(byte[] key, int off, int size, long expire) {
+    return this.engine.getMemoryIndex().getAndSetExpire(key, off, size, expire);
+  }
+  
+  /**
+   * Get and set expiration time
+   * @param keyPtr key address
+   * @param keySize key size
+   * @return time in ms since you know when, -1 not supported or does not exists
+   */
+  public long getAndSetExpire(long keyPtr, int keySize, long expire) {
+    return this.engine.getMemoryIndex().getAndSetExpire(keyPtr, keySize, expire);
+  }
+  /**
    * Does key exist in the cache
    * @param key key
    * @return true or false

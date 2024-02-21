@@ -126,6 +126,15 @@ public interface IndexFormat extends Persistent {
   }
   
   /**
+   * Get current expiration time and set new one
+   * @param ibPtr index block address 
+   * @param expPtr pointer to expiration field
+   * @return old expiration time in ms
+   */
+  public default long getAndSetExpire(long ibPtr, long expPtr, long expire) {
+    return -1;
+  }
+  /**
    * Get hash bit value value for a given index entry address
    * @param ptr address
    * @param n bit number
@@ -230,5 +239,25 @@ public interface IndexFormat extends Persistent {
    */
   public default boolean isSizeSupported() {
     return true;
+  }
+  
+  public default int hashOffset() {
+    return 0;
+  }
+
+  public default int sidOffset() {
+    return 0;
+  }
+
+  public default int dataOffsetOffset() {
+    return 0;
+  }
+
+  public default int expireOffset() {
+    return -1;
+  }
+  
+  public default int sizeOffset() {
+    return 0;
   }
 }

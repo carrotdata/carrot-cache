@@ -190,21 +190,21 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
    * Offsets in index field sections
    * @return offset
    */
-  int hashOffset() {
+  public int hashOffset() {
     return 0;
   }
   /**
    * Offsets in index field sections
    * @return offset
    */
-  int sidOffset() {
+  public int sidOffset() {
     return 8;
   }
   /**
    * Offsets in index field sections
    * @return offset
    */
-  int dataOffsetOffset() {
+  public int dataOffsetOffset() {
     return 10;
   }
   
@@ -212,7 +212,7 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
    * Size offset
    * @return offset
    */
-  int sizeOffset() {
+  public int sizeOffset() {
     return 4;
   }
   
@@ -220,7 +220,7 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
    * Offsets in index field sections
    * @return offset
    */
-  int expireOffset() {
+  public int expireOffset() {
     // Not supported
     return -1;
   }

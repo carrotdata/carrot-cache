@@ -134,27 +134,36 @@ public class CompactBlockWithExpireIndexFormat extends CompactBlockIndexFormat {
   }
 
   @Override
-  int hashOffset() {
+  public int hashOffset() {
     return super.hashOffset() + ExpireSupport.FIELD_SIZE;
   }
 
   @Override
-  int sidOffset() {
+  public int sidOffset() {
     return super.sidOffset() + ExpireSupport.FIELD_SIZE;
   }
 
   @Override
-  int dataOffsetOffset() {
+  public int dataOffsetOffset() {
     return super.dataOffsetOffset() + ExpireSupport.FIELD_SIZE;
   }
 
   @Override
-  int expireOffset() {
+  public int expireOffset() {
     return 0;
   }
   
   @Override
   public boolean isSizeSupported() {
     return false;
+  }
+  
+  @Override
+  public long getAndSetExpire(long ibPtr, long expPtr, long expire) {
+    long oldExpire = getExpire(ibPtr, expPtr);
+    ibPtr += super.getIndexBlockHeaderSize();
+    expPtr += expireOffset();
+    expireSupport.setExpire(ibPtr, expPtr, expire);
+    return oldExpire;
   }
 }
