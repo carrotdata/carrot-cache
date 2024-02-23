@@ -1230,4 +1230,32 @@ public class Utils {
       } 
     }
   }
+  
+  public static long strToLong(byte[] buf, int off, int len) {
+    long v = 0;
+    for (int i = off; i < off + len; i++) {
+      int d = buf[i] - (byte) '0';
+      if (d < 0 || d > 9) {
+        throw new NumberFormatException();
+      }
+      v = v * 10 + d; 
+    }
+    return v;
+  }
+  
+  
+  public static int longToStr(byte[] buf, int off, long value) {
+    int numDigits = 0;
+    long v = value;
+    do { numDigits++; v /= 10; } while (v > 0);
+    if (buf.length - off < numDigits) {
+      throw new ArrayIndexOutOfBoundsException(numDigits);
+    }
+    for (int i = 0; i < numDigits; i++) {
+      int d = (int)(value % 10);
+      buf[off + numDigits - 1 - i] = (byte)(d + '0');
+      value /= 10;
+    }
+    return numDigits;
+  }
 }

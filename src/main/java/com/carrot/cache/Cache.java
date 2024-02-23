@@ -2094,7 +2094,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   /**
-   * Does key exist
+   * Does key exist (false positive are possible, but not false negatives)
    * @param key key buffer
    * @param off key offset
    * @param size key size
@@ -2102,6 +2102,34 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public boolean exists(byte[] key, int off, int size) {
     return this.engine.getMemoryIndex().exists(key, off, size);
+  }
+  
+  /**
+   * Does key exist (exact)
+   * @param key key buffer
+   * @param off key offset
+   * @param size key size
+   * @return true or false
+   * @throws IOException
+   */
+  public boolean existsExact(byte[] key, int off, int size) throws IOException {
+    byte[] buf = new byte[1];
+    long result = get(key, off, size, false, buf, 0);
+    return result >= 0;
+  }
+  
+  /**
+   * Does key exist (exact)
+   * @param key key buffer
+   * @param off key offset
+   * @param size key size
+   * @return true or false
+   * @throws IOException
+   */
+  public boolean existsExact(long keyPtr, int size) throws IOException {
+    byte[] buf = new byte[1];
+    long result = get(keyPtr, size, false, buf, 0);
+    return result >= 0;
   }
   
   /**

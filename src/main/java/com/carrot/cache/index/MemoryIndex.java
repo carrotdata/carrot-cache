@@ -172,7 +172,7 @@ public final class MemoryIndex implements Persistent {
   }
 
   /* Global locks */
-  private ReentrantLock[] locks = new ReentrantLock[1117];
+  private ReentrantLock[] locks = new ReentrantLock[10007];
   
   /** Index base array 
    * TODO: use native memory */

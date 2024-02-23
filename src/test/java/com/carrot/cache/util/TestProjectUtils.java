@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 
 import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.junit.Test;
@@ -268,6 +269,26 @@ public class TestProjectUtils {
     }
   }
   
+  @Test
+  public void testStrNumberConversions() {
+    Random r = new Random();
+    
+    byte[] buf = new byte[20];
+    for (int i = 0; i < 1000; i++) {
+      long v = r.nextLong();
+      v = Math.abs(v);
+      String s = Long.toString(v);
+      byte[] b = s.getBytes();
+      long vv = Utils.strToLong(b, 0, b.length);
+      assertEquals(v, vv);
+      int numDigits = Utils.longToStr(buf, 0, v);
+      assertEquals(b.length, numDigits);
+      String ss = new String(buf, 0, numDigits);
+      long vvv = Long.parseLong(ss);
+      assertEquals(v, vvv);
+    }
+  }
+  
   /**
    * Utility methods
    */
@@ -306,6 +327,8 @@ public class TestProjectUtils {
   public short hours2(short v) {
     return (short) (v | 0xc000);
   }
+  
+  
   
   
 }
