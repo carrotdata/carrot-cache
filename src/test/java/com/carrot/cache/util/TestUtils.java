@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 
 import org.mockito.Mockito;
 
+import com.carrot.cache.Builder;
 import com.carrot.cache.Cache;
 import com.carrot.cache.io.Segment;
 
@@ -40,6 +41,22 @@ import com.carrot.cache.io.Segment;
  *
  */
 public class TestUtils {
+  
+  
+  public static Cache createCache(long maxSize, long segmentSize, boolean offheap) throws IOException {
+    
+    Builder b = new Builder("cache");
+    b.withCacheMaximumSize(maxSize)
+    .withCacheDataSegmentSize(segmentSize)
+    .withTLSSupported(true);
+    
+    if (offheap) {
+      return b.buildMemoryCache();
+    } else {
+      return b.buildDiskCache();
+    }
+  }
+  
   
   /**
    * Creates new byte array and fill it with random data

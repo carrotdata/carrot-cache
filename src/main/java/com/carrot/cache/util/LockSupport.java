@@ -15,25 +15,25 @@ public class LockSupport {
   }
   
   public static void lock(byte[] key, int keyOff, int keySize) {
-    long hash = Utils.hash64(key, keyOff, keySize);
+    long hash = Math.abs(Utils.hash64(key, keyOff, keySize));
     ReentrantLock lock = locks[(int)(hash % locks.length)];
     lock.lock();
   }
   
   public static void unlock(byte[] key, int keyOff, int keySize) {
-    long hash = Utils.hash64(key, keyOff, keySize);
+    long hash = Math.abs(Utils.hash64(key, keyOff, keySize));
     ReentrantLock lock = locks[(int)(hash % locks.length)];
     lock.unlock();
   }
   
   public static void lock(long keyPtr, int keySize) {
-    long hash = Utils.hash64(keyPtr, keySize);
+    long hash = Math.abs(Utils.hash64(keyPtr, keySize));
     ReentrantLock lock = locks[(int)(hash % locks.length)];
     lock.lock();
   }
   
   public static void unlock(long keyPtr, int keySize) {
-    long hash = Utils.hash64(keyPtr, keySize);
+    long hash = Math.abs(Utils.hash64(keyPtr, keySize));
     ReentrantLock lock = locks[(int)(hash % locks.length)];
     lock.unlock();
   }

@@ -110,7 +110,7 @@ public class Memcached {
   public Memcached(Cache cache) {
     CarrotConfig config = CarrotConfig.getInstance();
     if(!config.isCacheTLSSupported(cache.getName())) {
-      throw new RuntimeException("thread-local storage support must be fgsenabled");
+      throw new RuntimeException("thread-local storage support must be enabled");
     }
     this.cache = cache;
   }
@@ -227,11 +227,11 @@ public class Memcached {
 
       LockSupport.lock(key, keyOffset, keySize);
       if (cache.existsExact(key, keyOffset, keySize)) {
-        return OpResult.EXISTS;
+        return OpResult.NOT_STORED;
       }
       boolean result =
           cache.put(key, keyOffset, keySize, b, 0, valueSize + Utils.SIZEOF_INT, expTime);
-      return result ? OpResult.STORED : OpResult.NOT_STORED;
+      return result ? OpResult.STORED : OpResult.ERROR;
     } catch (IOException e) {
       LOG.error(e);
       return OpResult.ERROR;
@@ -262,11 +262,11 @@ public class Memcached {
 
       LockSupport.lock(keyPtr, keySize);
       if (cache.existsExact(keyPtr, keySize)) {
-        return OpResult.EXISTS;
+        return OpResult.NOT_STORED;
       }
       boolean result =
           cache.put(keyPtr, keySize, ptr, valueSize + Utils.SIZEOF_INT, expTime);
-      return result ? OpResult.STORED : OpResult.NOT_STORED;
+      return result ? OpResult.STORED : OpResult.ERROR;
     } catch (IOException e) {
       LOG.error(e);
       return OpResult.ERROR;
@@ -299,11 +299,11 @@ public class Memcached {
 
       LockSupport.lock(key, keyOffset, keySize);
       if (!cache.existsExact(key, keyOffset, keySize)) {
-        return OpResult.NOT_FOUND;
+        return OpResult.NOT_STORED;
       }
       boolean result =
           cache.put(key, keyOffset, keySize, b, 0, valueSize + Utils.SIZEOF_INT, expTime);
-      return result ? OpResult.STORED : OpResult.NOT_STORED;
+      return result ? OpResult.STORED : OpResult.ERROR;
     } catch (IOException e) {
       LOG.error(e);
       return OpResult.ERROR;
@@ -334,11 +334,11 @@ public class Memcached {
 
       LockSupport.lock(keyPtr, keySize);
       if (!cache.existsExact(keyPtr, keySize)) {
-        return OpResult.NOT_FOUND;
+        return OpResult.NOT_STORED;
       }
       boolean result =
           cache.put(keyPtr, keySize, ptr, valueSize + Utils.SIZEOF_INT, expTime);
-      return result ? OpResult.STORED : OpResult.NOT_STORED;
+      return result ? OpResult.STORED : OpResult.ERROR;
     } catch (IOException e) {
       LOG.error(e);
       return OpResult.ERROR;
@@ -1022,5 +1022,13 @@ public class Memcached {
   @SuppressWarnings("unused")
   private long computeCAS(long valuePtr, int valueSize) {
     return Utils.hash64(valuePtr, valueSize);
+  }
+  
+  public void dispose() {
+    this.cache.dispose();
+  }
+  
+  public Cache getCache() {
+    return this.cache;
   }
 }

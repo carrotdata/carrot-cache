@@ -48,7 +48,7 @@ public class TestZstdCompressionText {
      compContext.loadDict(dictCompress);
      compContext.setLevel(COMP_LEVEL);
 
-     int n = 80;
+     int n = 10;
      System.out.printf("Group of:%d\n", n);
      List<byte[]> group = groupOf(trainingList, n);
      //group = group.subList(group.size()/2, group.size());

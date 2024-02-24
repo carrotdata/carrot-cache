@@ -90,7 +90,7 @@ public class Builder {
    * @return builder instance 
    * @throws IOException
    */
-  public Builder withCacheMaximumSize(long size) throws IOException {
+  public Builder withCacheMaximumSize(long size){
     conf.setCacheMaximumSize(this.cacheName, size);
     return this;
   }
