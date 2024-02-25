@@ -34,6 +34,7 @@ import org.mockito.Mockito;
 
 import com.carrot.cache.Builder;
 import com.carrot.cache.Cache;
+import com.carrot.cache.index.CompactBaseWithExpireIndexFormat;
 import com.carrot.cache.io.Segment;
 
 /**
@@ -43,13 +44,15 @@ import com.carrot.cache.io.Segment;
 public class TestUtils {
   
   
-  public static Cache createCache(long maxSize, long segmentSize, boolean offheap) throws IOException {
+  public static Cache createCache(long maxSize, long segmentSize, boolean offheap, boolean withExpireSupport) throws IOException {
     
     Builder b = new Builder("cache");
     b.withCacheMaximumSize(maxSize)
     .withCacheDataSegmentSize(segmentSize)
     .withTLSSupported(true);
-    
+    if (withExpireSupport) {
+      b.withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName());
+    }
     if (offheap) {
       return b.buildMemoryCache();
     } else {

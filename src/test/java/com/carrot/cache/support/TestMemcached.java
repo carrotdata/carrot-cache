@@ -21,7 +21,7 @@ public class TestMemcached {
 
   @Before
   public void setUp() throws IOException {
-    mc = new Memcached(TestUtils.createCache(400 << 20, 4 << 20, true));
+    mc = new Memcached(TestUtils.createCache(400 << 20, 4 << 20, true, true));
   }
 
   @After
@@ -658,5 +658,282 @@ public class TestMemcached {
       res = mc.delete(key, 0, key.length);
       assertTrue(res == OpResult.DELETED);
     }
+  }
+  
+  @Test
+  public void testGetsBytes() {
+    Random r = new Random();
+
+    for (int i = 0; i < 1000; i++) {
+      byte[] key = TestUtils.randomBytes(30);
+      byte[] value = TestUtils.randomBytes(200);
+      int flags = r.nextInt();
+      long expire = System.currentTimeMillis() + 10000;
+      Record rec = mc.gets(key, 0, key.length);
+      assertTrue(rec.value == null);
+      
+      OpResult res = mc.set(key, 0, key.length, value, 0, value.length, flags, expire);
+      assertTrue(res == OpResult.STORED);
+      
+      rec = mc.gets(key, 0, key.length);
+      assertTrue(rec.value != null);
+      assertTrue(Utils.compareTo(value, 0, value.length, rec.value, 0, rec.size) == 0);
+      assertEquals(flags, rec.flags);
+      long cas = mc.computeCAS(value, 0, value.length);
+      assertEquals(cas, rec.cas);
+      
+      res = mc.delete(key, 0, key.length);
+      assertTrue(res == OpResult.DELETED);
+      
+      rec = mc.get(key, 0, key.length);
+      assertTrue(rec.value == null);
+    }
+  }
+
+  @Test
+  public void testGetsMemory() {
+    Random r = new Random();
+
+    for (int i = 0; i < 1000; i++) {
+      int keySize = 30;
+      int valueSize = 200;
+      long key = TestUtils.randomMemory(keySize);
+      long value = TestUtils.randomMemory(200);
+      int flags = r.nextInt();
+      long expire = System.currentTimeMillis() + 10000;
+      
+      Record rec = mc.gets(key, keySize);
+      assertTrue(rec.value == null);
+      
+      OpResult res = mc.set(key, keySize, value, valueSize, flags, expire);
+      assertTrue(res == OpResult.STORED);
+      
+      rec = mc.gets(key, keySize);
+      assertTrue(rec.value != null);
+      assertTrue(Utils.compareTo(rec.value, 0, rec.size, value, valueSize) == 0);
+      assertEquals(flags, rec.flags);
+      long cas = mc.computeCAS(value, valueSize);
+      assertEquals(cas, rec.cas);
+      
+      res = mc.delete(key, keySize);
+      assertTrue(res == OpResult.DELETED);
+      
+      rec = mc.get(key, keySize);
+      assertTrue(rec.value == null);
+      UnsafeAccess.free(key);
+      UnsafeAccess.free(value);
+    }
+  }
+  
+  @Test
+  public void testGatsBytes() {
+    Random r = new Random();
+
+    for (int i = 0; i < 1000; i++) {
+      
+      byte[] key = TestUtils.randomBytes(30);
+      byte[] value = TestUtils.randomBytes(200);
+      int flags = r.nextInt();
+      long expire = System.currentTimeMillis() + 10000;
+      long newExpire = expire + 10000;
+      
+      Record rec = mc.gats(key, 0, key.length, newExpire);
+      assertTrue(rec.value == null);
+      
+      OpResult res = mc.set(key, 0, key.length, value, 0, value.length, flags, expire);
+      assertTrue(res == OpResult.STORED);
+      
+      rec = mc.gats(key, 0, key.length, newExpire);
+      assertTrue(rec.value != null);
+      assertTrue(Utils.compareTo(value, 0, value.length, rec.value, 0, rec.size) == 0);
+      assertEquals(flags, rec.flags);
+      long cas = mc.computeCAS(value, 0, value.length);
+      assertEquals(cas, rec.cas);
+      assertTrue(sameExpire(expire, rec.expire));
+      
+      rec = mc.gats(key, 0, key.length, newExpire);
+      assertTrue(sameExpire(newExpire, rec.expire));
+
+      res = mc.delete(key, 0, key.length);
+      assertTrue(res == OpResult.DELETED);
+      
+      rec = mc.get(key, 0, key.length);
+      assertTrue(rec.value == null);
+    }
+  }
+
+  @Test
+  public void testGatsMemory() {
+    Random r = new Random();
+
+    for (int i = 0; i < 1000; i++) {
+      int keySize = 30;
+      int valueSize = 200;
+      long key = TestUtils.randomMemory(keySize);
+      long value = TestUtils.randomMemory(200);
+      int flags = r.nextInt();
+      long expire = System.currentTimeMillis() + 10000;
+      long newExpire = expire + 10000;
+      
+      Record rec = mc.gats(key, keySize, newExpire);
+      assertTrue(rec.value == null);
+      
+      OpResult res = mc.set(key, keySize, value, valueSize, flags, expire);
+      assertTrue(res == OpResult.STORED);
+      
+      rec = mc.gats(key, keySize, newExpire);
+      assertTrue(rec.value != null);
+      assertTrue(Utils.compareTo(rec.value, 0, rec.size, value, valueSize) == 0);
+      assertEquals(flags, rec.flags);
+      long cas = mc.computeCAS(value, valueSize);
+      
+      assertEquals(cas, rec.cas);
+      assertTrue(sameExpire(expire, rec.expire));
+      rec = mc.gats(key, keySize, newExpire);
+      assertTrue(sameExpire(newExpire, rec.expire));
+
+      res = mc.delete(key, keySize);
+      assertTrue(res == OpResult.DELETED);
+      
+      rec = mc.get(key, keySize);
+      assertTrue(rec.value == null);
+      UnsafeAccess.free(key);
+      UnsafeAccess.free(value);
+    }
+  }
+  
+  @Test
+  public void testGatBytes() {
+    Random r = new Random();
+
+    for (int i = 0; i < 1000; i++) {
+      
+      byte[] key = TestUtils.randomBytes(30);
+      byte[] value = TestUtils.randomBytes(200);
+      int flags = r.nextInt();
+      long expire = System.currentTimeMillis() + 10000;
+      long newExpire = expire + 10000;
+      OpResult res = mc.set(key, 0, key.length, value, 0, value.length, flags, expire);
+      assertTrue(res == OpResult.STORED);
+      
+      Record rec = mc.gat(key, 0, key.length, newExpire);
+      assertTrue(rec.value != null);
+      assertTrue(Utils.compareTo(value, 0, value.length, rec.value, 0, rec.size) == 0);
+      assertEquals(flags, rec.flags);
+      assertTrue(sameExpire(expire, rec.expire));
+      
+      rec = mc.gat(key, 0, key.length, newExpire);
+      assertTrue(sameExpire(newExpire, rec.expire));
+
+      res = mc.delete(key, 0, key.length);
+      assertTrue(res == OpResult.DELETED);
+      rec = mc.get(key, 0, key.length);
+      assertTrue(rec.value == null);
+    }
+  }
+
+  @Test
+  public void testGatMemory() {
+    Random r = new Random();
+
+    for (int i = 0; i < 1000; i++) {
+      int keySize = 30;
+      int valueSize = 200;
+      long key = TestUtils.randomMemory(keySize);
+      long value = TestUtils.randomMemory(200);
+      int flags = r.nextInt();
+      long expire = System.currentTimeMillis() + 10000;
+      long newExpire = expire + 10000;
+      
+      Record rec = mc.gat(key, keySize, newExpire);
+      assertTrue(rec.value == null);
+      
+      OpResult res = mc.set(key, keySize, value, valueSize, flags, expire);
+      assertTrue(res == OpResult.STORED);
+      rec = mc.gat(key, keySize, newExpire);
+      assertTrue(rec.value != null);
+      assertTrue(Utils.compareTo(rec.value, 0, rec.size, value, valueSize) == 0);
+      assertEquals(flags, rec.flags);
+      assertTrue(sameExpire(expire, rec.expire));
+      
+      rec = mc.gat(key, keySize, newExpire);
+      assertTrue(sameExpire(newExpire, rec.expire));
+
+      res = mc.delete(key, keySize);
+      assertTrue(res == OpResult.DELETED);
+      
+      rec = mc.get(key, keySize);
+      assertTrue(rec.value == null);
+      UnsafeAccess.free(key);
+      UnsafeAccess.free(value);
+    }
+  }
+  
+  @Test
+  public void testTouchBytes() {
+    Random r = new Random();
+
+    for (int i = 0; i < 1000; i++) {
+      
+      byte[] key = TestUtils.randomBytes(30);
+      byte[] value = TestUtils.randomBytes(200);
+      int flags = r.nextInt();
+      long expire = System.currentTimeMillis() + 10000;
+      long newExpire = expire + 10000;
+      
+      long result = mc.touch(key, 0, key.length, newExpire);
+      assertTrue(result == -1);
+      
+      OpResult res = mc.set(key, 0, key.length, value, 0, value.length, flags, expire);
+      assertTrue(res == OpResult.STORED);
+      
+      result = mc.touch(key, 0, key.length, newExpire);
+      assertTrue(sameExpire(expire, result));
+      
+      result = mc.touch(key, 0, key.length, newExpire);
+      assertTrue(sameExpire(newExpire, result));
+      
+      res = mc.delete(key, 0, key.length);
+      assertTrue(res == OpResult.DELETED);
+      
+      Record rec = mc.get(key, 0, key.length);
+      assertTrue(rec.value == null);
+    }
+  }
+
+  @Test
+  public void testTouchMemory() {
+    Random r = new Random();
+
+    for (int i = 0; i < 1000; i++) {
+      int keySize = 30;
+      int valueSize = 200;
+      long key = TestUtils.randomMemory(keySize);
+      long value = TestUtils.randomMemory(200);
+      int flags = r.nextInt();
+      long expire = System.currentTimeMillis() + 10000;
+      long newExpire = expire + 10000;
+      
+      long result = mc.touch(key, keySize, newExpire);
+      assertTrue(result == -1);
+      
+      OpResult res = mc.set(key, keySize, value, valueSize, flags, expire);
+      assertTrue(res == OpResult.STORED);
+  
+      result = mc.touch(key, keySize, newExpire);
+      assertTrue(sameExpire(expire, result));
+
+      res = mc.delete(key, keySize);
+      assertTrue(res == OpResult.DELETED);
+      
+      Record rec = mc.get(key, keySize);
+      assertTrue(rec.value == null);
+      UnsafeAccess.free(key);
+      UnsafeAccess.free(value);
+    }
+  }
+  
+  protected boolean sameExpire (long exp, long value) {
+    return Math.abs(exp - value) <= 1000;
   }
 }

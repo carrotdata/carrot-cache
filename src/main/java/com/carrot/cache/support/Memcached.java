@@ -679,7 +679,8 @@ public class Memcached {
       LockSupport.lock(key, keyOffset, keySize);
       Record r = get(key, keyOffset, keySize);
       if (r.value != null) {
-        touch(key, keyOffset, keySize, newExpire);
+        long expire = touch(key, keyOffset, keySize, newExpire);
+        r.expire = expire;
       }
       return r;
     } finally {
@@ -698,7 +699,8 @@ public class Memcached {
       LockSupport.lock(keyPtr, keySize);
       Record r = get(keyPtr, keySize);
       if (r.value != null) {
-        touch(keyPtr, keySize, newExpire);
+        long expire =touch(keyPtr, keySize, newExpire);
+        r.expire = expire;
       }
       return r;
     } finally {
@@ -788,7 +790,8 @@ public class Memcached {
       LockSupport.lock(key, keyOffset, keySize);
       Record r = gets(key, keyOffset, keySize);
       if (r.value != null) {
-        touch(key, keyOffset, keySize, newExpire);
+        long expire = touch(key, keyOffset, keySize, newExpire);
+        r.expire = expire;
       }
       return r;
     } finally {
@@ -807,7 +810,8 @@ public class Memcached {
       LockSupport.lock(keyPtr, keySize);
       Record r = gets(keyPtr, keySize);
       if (r.value != null) {
-        touch(keyPtr, keySize, newExpire);
+        long expire = touch(keyPtr, keySize, newExpire);
+        r.expire = expire;
       }
       return r;
     } finally {
@@ -1015,12 +1019,12 @@ public class Memcached {
   
   /*************************** Utility methods ************************/
   
-  private long computeCAS(byte[] value, int valueOffset, int valueSize) {
+  long computeCAS(byte[] value, int valueOffset, int valueSize) {
     return Utils.hash64(value, valueOffset, valueSize);
   }
   
   @SuppressWarnings("unused")
-  private long computeCAS(long valuePtr, int valueSize) {
+  long computeCAS(long valuePtr, int valueSize) {
     return Utils.hash64(valuePtr, valueSize);
   }
   
