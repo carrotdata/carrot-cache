@@ -126,23 +126,9 @@ public class CacheConfig {
   /**Adjustment step for scavenger */
   public static final String SCAVENGER_DUMP_ENTRY_BELOW_STEP_KEY = "scavenger.dump-entry-below-step";
   
-  /**Scavenger number of segment processed before stall mode activated*/
-  public static final String SCAVENGER_MAX_SEGMENTS_BEFORE_STALL_KEY = "scavenger.max-segments-before-stall";
-  
   /**Scavenger number of threads */
   public static final String SCAVENGER_NUMBER_THREADS_KEY = "scavenger.number-threads";
   
-  /**
-   * Scavenger stop ratio (relative to a number of scanned items) when deleted-mode-only 
-   * gets disabled 
-   */
-  public static final String SCAVENGER_STOP_RATIO_FOR_DELETED_ONLY_MODE_KEY = "scavenger.stop-ratio-deleted-only-mode";
-  
-  /**
-   * Scavenger start ratio (relative to maximum number of data segments) when maximum value 'dumpBelowRatio' starts
-   */
-  public static final String SCAVENGER_START_RATIO_FOR_DUMP_BELOW_MAX_KEY = "scavenger.start-ratio-dump-below-max";
-
   /**Number of popularity ranks ( default - 8) */
   public static final String CACHE_POPULARITY_NUMBER_RANKS_KEY = "popularity-number-ranks";
   
@@ -179,9 +165,6 @@ public class CacheConfig {
   /* Random configuration parameter for random promotion controller*/
   public static final String PROMOTION_PROBABILITY_KEY = "promotion.probability";
   
-  /** Readmission evicted item to AQ minimum hit count threshold */
-  public static final String READMISSION_HIT_COUNT_MIN_KEY = "readmission-hit-count-min";
-  
   /**Cumulative average write rate limit  (bytes/sec) */
   public static final String CACHE_WRITE_RATE_LIMIT_KEY = "write.avg-rate-limit";
   
@@ -196,7 +179,7 @@ public class CacheConfig {
   public static final String SPARSE_FILES_SUPPORT_KEY = "sparse-files-support";
   
   /*
-   * Index starting number of slots power of 2 - L ( N = 2**L) N - number of slots 
+   * Index starting number of slots (Hash Table size) power of 2 - L ( N = 2**L) N - number of slots 
    */
   public static final String START_INDEX_NUMBER_OF_SLOTS_POWER_KEY = "index.slots-power";
   
@@ -226,7 +209,7 @@ public class CacheConfig {
   public static final String INDEX_DATA_EMBEDDED_KEY = "index.data-embedded";
   
   /**
-   * Maximum data size to embed   
+   * Maximum data size to embed (includes both: key and value)  
    **/
   public static final String INDEX_DATA_EMBEDDED_SIZE_KEY = "index.data-embedded-max-size";
   
@@ -373,22 +356,10 @@ public class CacheConfig {
   public static final double DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_STEP = 0.1;
   
   /**
-   * 
-   * Default value for scavenger max segments before stall mode activated
-   * 
-   * */
-  public static final int DEFAULT_SCAVENGER_MAX_SEGMENTS_BEFORE_STALL = 10;
-  
-  /**
    * Default number of Scavenger (Garbage collector) threads
    */
   public static final int DEFAULT_SCAVENGER_NUMBER_THREADS = 2;
-  
-  /**
-   * Default value for 'SCAVENGER_STOP_RATIO_FOR_DELETED_MODE_ONLY'
-   */
-  public static final double DEFAULT_SCAVENGER_STOP_RATIO_FOR_DELETED_ONLY_MODE = 0.5; 
-  
+
   /**
    * Default value for 'SCAVENGER_START_RATIO_FOR_FULL_DUMP_MODE_KEY'
    */
@@ -2102,30 +2073,6 @@ public class CacheConfig {
   }
   
   /**
-   * Get maximum number of processed segments before activation of a stall mode
-   * @param cacheName cache name
-   * @return number of segments
-   */
-  public int getScavengerMaxSegmentsBeforeStall(String cacheName) {
-    String value = props.getProperty(cacheName + "." + SCAVENGER_MAX_SEGMENTS_BEFORE_STALL_KEY);
-    if (value == null) {
-      return (int) getLongProperty(SCAVENGER_MAX_SEGMENTS_BEFORE_STALL_KEY, 
-        DEFAULT_SCAVENGER_MAX_SEGMENTS_BEFORE_STALL);
-    } else {
-      return Integer.parseInt(value);
-    }
-  }
-  
-  /**
-   * Set maximum number of processed segments before activation of a stall mode
-   * @param cacheName cache name
-   * @param n number of segments
-   */
-  public void setScavengerMaxSegmentsBeforeStall (String cacheName, int n) {
-    props.setProperty(cacheName + "." + SCAVENGER_MAX_SEGMENTS_BEFORE_STALL_KEY, Integer.toString(n));
-  }
-  
-  /**
    * Get hybrid cache inverse mode
    * @param cacheName cache name
    * @return true if inverse mode ON, false - otherwise
@@ -2296,53 +2243,6 @@ public class CacheConfig {
    */
   public void setCacheMaximumWaitTimeOnPut(String cacheName, long time) {
     this.props.setProperty(cacheName + "." + CACHE_MAX_WAIT_ON_PUT_MS_KEY, Long.toString(time));
-  }
-  
-  /**
-   * Set scavenger stop ratio for deleted mode only (ratio = number--of-cleaned-items / number-of-scanned-items)
-   * @param cacheName cache name
-   * @param ratio ratio 
-   */
-  public void setScavengerStopRatioForDeletedOnlyMode(String cacheName, double ratio) {
-    props.setProperty(cacheName + "."+ SCAVENGER_STOP_RATIO_FOR_DELETED_ONLY_MODE_KEY, Double.toString(ratio));
-  }
-  
-  /**
-   * Get scavenger stop ratio for deleted mode only
-   * @param cacheName cache name
-   * @return  ratio 
-   */
-  public double getScavengerStopRatioForDeletedOnlyMode(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ SCAVENGER_STOP_RATIO_FOR_DELETED_ONLY_MODE_KEY);
-    if (value != null) {
-      return Double.parseDouble(value);
-    }
-    return getDoubleProperty(SCAVENGER_STOP_RATIO_FOR_DELETED_ONLY_MODE_KEY, 
-      DEFAULT_SCAVENGER_STOP_RATIO_FOR_DELETED_ONLY_MODE);
-  }
-  
-  /**
-   * Set scavenger start ratio for dump below max (when Scavenger's 'dumpBelowRatio' reaches maximum value)
-   * ratio  = number segments scanned/ maximum number of segments in the cache)
-   * @param cacheName cache name
-   * @param ratio ratio 
-   */
-  public void setScavengerStartRatioForDumpBelowMax(String cacheName, double ratio) {
-    props.setProperty(cacheName + "."+ SCAVENGER_START_RATIO_FOR_DUMP_BELOW_MAX_KEY, Double.toString(ratio));
-  }
-  
-  /**
-   * Get scavenger start ratio for full dump mode
-   * @param cacheName cache name
-   * @return  ratio 
-   */
-  public double getScavengerStartRatioForDumpBelowMax(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ SCAVENGER_START_RATIO_FOR_DUMP_BELOW_MAX_KEY);
-    if (value != null) {
-      return Double.parseDouble(value);
-    }
-    return getDoubleProperty(SCAVENGER_START_RATIO_FOR_DUMP_BELOW_MAX_KEY, 
-      DEFAULT_SCAVENGER_START_RATIO_FOR_DUMP_BELOW_MAX);
   }
   
   /**

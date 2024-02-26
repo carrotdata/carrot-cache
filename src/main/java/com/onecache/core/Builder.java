@@ -566,16 +566,6 @@ public class Builder {
   }
   
   /**
-   * With scavenger maximum number of segments before stall mode is activated
-   * @param n max segments
-   * @return builder instance
-   */
-  public Builder withScavengerMaxSegmentsBeforeStall(int n) {
-    conf.setScavengerMaxSegmentsBeforeStall(cacheName, n);
-    return this;
-  }
-  
-  /**
    * With victim cache promotion threshold
    * @param v threshold
    * @return builder instance
@@ -642,26 +632,6 @@ public class Builder {
    */
   public Builder withCacheMaximumWaitTimeOnPut(long time) {
     conf.setCacheMaximumWaitTimeOnPut(cacheName, time);
-    return this;
-  }
-  
-  /**
-   * With scavenger stop ratio for deleted mode only
-   * @param ratio ratio relative to data size scanned
-   * @return builder instance
-   */
-  public Builder withScavengerStopRatioForDeletedOnlyMode(double ratio) {
-    conf.setScavengerStopRatioForDeletedOnlyMode(cacheName, ratio);
-    return this;
-  }
- 
-  /**
-   * With scavenger 
-   * @param ratio
-   * @return
-   */
-  public Builder withScavengerStartRatioForFullDumpMode(double ratio) {
-    conf.setScavengerStartRatioForDumpBelowMax(cacheName, ratio);
     return this;
   }
   
