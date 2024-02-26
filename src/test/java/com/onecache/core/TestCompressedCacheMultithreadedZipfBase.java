@@ -20,7 +20,7 @@ import com.onecache.core.index.CompactBaseIndexFormat;
 import com.onecache.core.io.CompressedBlockDataWriter;
 import com.onecache.core.io.CompressedBlockFileDataReader;
 import com.onecache.core.io.CompressedBlockMemoryDataReader;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.TestUtils;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
@@ -197,7 +197,7 @@ public class TestCompressedCacheMultithreadedZipfBase extends TestCacheMultithre
   
   protected void cleanDictionaries(String cacheName) {
     // Clean up dictionaries
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     String dictDir = config.getCacheDictionaryDir(cacheName);
     File dir = new File(dictDir);
     if (dir.exists()) {

@@ -21,7 +21,7 @@ import static com.onecache.core.util.Utils.getItemSize;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.UnsafeAccess;
 
 public class BlockMemoryDataReader implements DataReader {
@@ -33,7 +33,7 @@ public class BlockMemoryDataReader implements DataReader {
 
   @Override
   public void init(String cacheName) {
-    this.blockSize = CarrotConfig.getInstance().getBlockWriterBlockSize(cacheName);
+    this.blockSize = CacheConfig.getInstance().getBlockWriterBlockSize(cacheName);
   }
 
   @Override
@@ -195,7 +195,7 @@ public class BlockMemoryDataReader implements DataReader {
 
   @Override
   public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     String cacheName = engine.getCacheName();
     int blockSize = config.getBlockWriterBlockSize(cacheName);
     return new BlockMemorySegmentScanner(s, blockSize);

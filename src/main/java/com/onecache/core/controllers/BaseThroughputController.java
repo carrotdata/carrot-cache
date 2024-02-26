@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.onecache.core.Cache;
 import com.onecache.core.Scavenger;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.Utils;
 
 /**
@@ -45,7 +45,7 @@ public abstract class BaseThroughputController implements ThroughputController {
   protected double toleranceLimit;
   
   /* Cache configuration */
-  protected CarrotConfig config;
+  protected CacheConfig config;
   
   /* Cache name */
   protected String cacheName;

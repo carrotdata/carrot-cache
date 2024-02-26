@@ -21,7 +21,7 @@ import static com.onecache.core.compression.CompressionCodec.SIZE_OFFSET;
 
 import com.onecache.core.compression.CodecFactory;
 import com.onecache.core.compression.CompressionCodec;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
@@ -283,7 +283,7 @@ public class CompressedBlockDataWriter implements DataWriter {
   
   @Override
   public void init(String cacheName) {
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     this.blockSize = config.getCacheCompressionBlockSize(cacheName);
     // Can be null on initialization
     this.codec = CodecFactory.getInstance().getCompressionCodecForCache(cacheName);

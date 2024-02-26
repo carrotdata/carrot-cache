@@ -16,7 +16,7 @@ package com.onecache.core.controllers;
 
 import com.onecache.core.Cache;
 import com.onecache.core.index.MemoryIndex;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 
 public class PromotionQueue extends AdmissionQueue{
 
@@ -27,7 +27,7 @@ public class PromotionQueue extends AdmissionQueue{
    */
   public PromotionQueue(Cache cache) {
     this.cache = cache;
-    CarrotConfig conf = this.cache.getCacheConfig();
+    CacheConfig conf = this.cache.getCacheConfig();
     this.cacheName = this.cache.getName();
     this.currentMaxSizeRatio = conf.getPromotionQueueStartSizeRatio(this.cacheName);
     this.globalMaxSizeRatio = conf.getPromotionQueueMaxSizeRatio(this.cacheName);
@@ -41,7 +41,7 @@ public class PromotionQueue extends AdmissionQueue{
    */
   public PromotionQueue() {
     this.cacheName = "default";
-    CarrotConfig conf = CarrotConfig.getInstance();
+    CacheConfig conf = CacheConfig.getInstance();
     this.currentMaxSizeRatio = conf.getPromotionQueueStartSizeRatio(this.cacheName);
     this.globalMaxSizeRatio = conf.getPromotionQueueMaxSizeRatio(this.cacheName);
     this.globalMinSizeRatio = conf.getPromotionQueueMinSizeRatio(this.cacheName);
@@ -54,7 +54,7 @@ public class PromotionQueue extends AdmissionQueue{
    * Constructor for testing
    * @param conf cache configuration
    */
-  public PromotionQueue(CarrotConfig conf) {
+  public PromotionQueue(CacheConfig conf) {
     this.cacheName = "default";
     this.currentMaxSizeRatio = conf.getPromotionQueueStartSizeRatio(this.cacheName);
     this.globalMaxSizeRatio = conf.getPromotionQueueMaxSizeRatio(this.cacheName);

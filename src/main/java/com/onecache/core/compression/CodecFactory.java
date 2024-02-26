@@ -23,7 +23,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.onecache.core.compression.CompressionCodec.Type;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 
 public class CodecFactory {
   /* Logger */
@@ -64,7 +64,7 @@ public class CodecFactory {
    */
   public boolean initCompressionCodecForCache(String cacheName, InputStream is) throws IOException {
     // This method is called during cache instance initialization
-    CarrotConfig config = CarrotConfig.getInstance(); 
+    CacheConfig config = CacheConfig.getInstance(); 
     boolean enabled = config.isCacheCompressionEnabled(cacheName);
     if (!enabled) {
       return false;

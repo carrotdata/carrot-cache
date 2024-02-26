@@ -17,7 +17,7 @@ package com.onecache.core.eviction;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 
 public class SLRUEvictionPolicy implements EvictionPolicy {
   /** Logger */
@@ -37,8 +37,8 @@ public class SLRUEvictionPolicy implements EvictionPolicy {
    * Default constructor
    */
   public SLRUEvictionPolicy() {
-    this.numSegments = CarrotConfig.DEFAULT_SLRU_NUMBER_SEGMENTS;
-    this.insertPoint = CarrotConfig.DEFAULT_SLRU_CACHE_INSERT_POINT;
+    this.numSegments = CacheConfig.DEFAULT_SLRU_NUMBER_SEGMENTS;
+    this.insertPoint = CacheConfig.DEFAULT_SLRU_CACHE_INSERT_POINT;
   }
   
   /**
@@ -53,7 +53,7 @@ public class SLRUEvictionPolicy implements EvictionPolicy {
   
   @Override
   public void setCacheName(String cacheName) {
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     this.numSegments = config.getSLRUNumberOfSegments(cacheName);
     this.insertPoint = config.getSLRUInsertionPoint(cacheName);
     int numRanks = config.getNumberOfPopularityRanks(cacheName);

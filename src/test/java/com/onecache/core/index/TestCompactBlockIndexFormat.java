@@ -16,7 +16,7 @@ package com.onecache.core.index;
 
 import java.util.Random;
 
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 
 public class TestCompactBlockIndexFormat extends TestIndexFormatBase {
   int blockSize;
@@ -30,7 +30,7 @@ public class TestCompactBlockIndexFormat extends TestIndexFormatBase {
   
   protected int getDataOffset(Random r, int max) {
     if (this.blockSize == 0) {
-      CarrotConfig config = CarrotConfig.getInstance();
+      CacheConfig config = CacheConfig.getInstance();
       this.blockSize = config.getBlockWriterBlockSize("default");
     }
     int n = max / this.blockSize;

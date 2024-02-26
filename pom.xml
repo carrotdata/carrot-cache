@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <groupId>org.bigbase</groupId>
-    <artifactId>carrot-cache</artifactId>
+    <groupId>com.onecache</groupId>
+    <artifactId>onecache-core</artifactId>
     <packaging>jar</packaging>
-    <name>Carrot Cache</name>
+    <name>Onecache Core</name>
     <version>0.9.0-SNAPSHOT</version>
     <url>http://www.server.com</url>
     <build>
@@ -20,8 +20,8 @@
                 <version>3.8.0</version>
                 <configuration>
                     <!--release>8</release-->
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>11</source>
+                    <target>11</target>
                 </configuration>
             </plugin>
             <plugin>

@@ -21,7 +21,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 
 import com.onecache.core.Cache;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.Utils;
 
 /**
@@ -51,7 +51,7 @@ public class AQBasedPromotionController extends BasePromotionController
     super.setCache(cache);
     initPromotionQueue();
     /* Admission Queue */
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     String cacheName = cache.getName();
     this.aqMinRatio = config.getPromotionQueueMinSizeRatio(cacheName);
     this.aqMaxRatio = config.getPromotionQueueMaxSizeRatio(cacheName);

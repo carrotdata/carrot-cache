@@ -40,7 +40,7 @@ import com.onecache.core.controllers.RecyclingSelector;
 import com.onecache.core.index.IndexFormat;
 import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.index.MemoryIndex.MutationResult;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.Persistent;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
@@ -82,7 +82,7 @@ public abstract class IOEngine implements Persistent {
   protected final int numSegments;
 
   /* Cache configuration */
-  protected final CarrotConfig config;
+  protected final CacheConfig config;
 
   /* Default item rank */
   protected final int defaultRank;
@@ -161,7 +161,7 @@ public abstract class IOEngine implements Persistent {
   public static IOEngine getEngineForCache(Cache cache) {
     // TODO: Check NULL on return
     String cacheName = cache.getName();
-    CarrotConfig config = cache.getCacheConfig();
+    CacheConfig config = cache.getCacheConfig();
     String[] caches = config.getCacheNames();
     String[] types = config.getCacheTypes();
     if (caches == null || types == null || caches.length != types.length) {
@@ -198,7 +198,7 @@ public abstract class IOEngine implements Persistent {
    */
   public IOEngine(String cacheName) {
     this.cacheName = cacheName;
-    this.config = CarrotConfig.getInstance();
+    this.config = CacheConfig.getInstance();
     this.segmentSize = this.config.getCacheSegmentSize(this.cacheName);
     this.maxStorageSize = this.config.getCacheMaximumSize(this.cacheName);
     // Currently, maximum number of data segments is 64K
@@ -228,7 +228,7 @@ public abstract class IOEngine implements Persistent {
    *
    * @param conf cache configuration
    */
-  public IOEngine(CarrotConfig conf) {
+  public IOEngine(CacheConfig conf) {
     this.cacheName = "default";
     this.config = conf;
     this.segmentSize = this.config.getCacheSegmentSize(this.cacheName);

@@ -20,7 +20,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.onecache.core.Cache;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 
 /**
  * This admission controller can be used for RAM - based caches only.
@@ -58,7 +58,7 @@ public class ExpirationAwareAdmissionController implements AdmissionController{
   
   @Override
   public void setCache(Cache cache) throws IOException {
-    CarrotConfig conf = cache.getCacheConfig();
+    CacheConfig conf = cache.getCacheConfig();
     int numRanks = conf.getNumberOfPopularityRanks(cache.getName());
     // Number of ranks is the number of expiration bins
     this.ttlBins = new long[numRanks];

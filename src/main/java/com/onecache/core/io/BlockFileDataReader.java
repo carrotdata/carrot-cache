@@ -25,7 +25,7 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
@@ -37,7 +37,7 @@ public class BlockFileDataReader implements DataReader {
   
   @Override
   public void init(String cacheName) {
-    this.blockSize = CarrotConfig.getInstance().getBlockWriterBlockSize(cacheName);      
+    this.blockSize = CacheConfig.getInstance().getBlockWriterBlockSize(cacheName);      
   }
 
   @Override
@@ -340,7 +340,7 @@ public class BlockFileDataReader implements DataReader {
   @Override
   public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
     String cacheName = engine.getCacheName();
-    int blockSize = CarrotConfig.getInstance().getBlockWriterBlockSize(cacheName);
+    int blockSize = CacheConfig.getInstance().getBlockWriterBlockSize(cacheName);
     return new BlockFileSegmentScanner(s, (FileIOEngine) engine, blockSize);
   }
 }

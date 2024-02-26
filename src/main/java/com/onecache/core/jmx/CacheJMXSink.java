@@ -21,7 +21,7 @@ import java.util.Date;
 import com.onecache.core.Cache;
 import com.onecache.core.Scavenger;
 import com.onecache.core.io.IOEngine;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.Epoch;
 
 public class CacheJMXSink implements CacheJMXSinkMBean {
@@ -286,14 +286,14 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   @Override
   public boolean getcompression_enabled() {
     String cacheName = cache.getName();
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     return config.isCacheCompressionEnabled(cacheName);
   }
 
   @Override
   public String getcompression_codec() {
     String cacheName = cache.getName();
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     String codec = config.getCacheCompressionCodecType(cacheName);
     return codec != null? codec: "none";
   }
@@ -301,21 +301,21 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   @Override
   public int getcompression_level() {
     String cacheName = cache.getName();
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     return config.getCacheCompressionLevel(cacheName);
   }
 
   @Override
   public boolean getcompression_dictionary_enabled() {
     String cacheName = cache.getName();
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     return config.isCacheCompressionDictionaryEnabled(cacheName);
   }
 
   @Override
   public int getcompression_dictionary_size() {
     String cacheName = cache.getName();
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     return config.getCacheCompressionDictionarySize(cacheName);
   }
 
@@ -331,7 +331,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   @Override
   public int getcompression_block_size() {
     String cacheName = cache.getName();
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     return config.getCacheCompressionBlockSize(cacheName);
   }
   /**
@@ -341,7 +341,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   @Override
   public boolean getcompression_keys_enabled() {
     String cacheName = cache.getName();
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     return config.isCacheCompressionKeysEnabled(cacheName);
   }
 

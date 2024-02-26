@@ -30,7 +30,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.Persistent;
 import com.onecache.core.util.RollingWindowCounter;
 import com.onecache.core.util.UnsafeAccess;
@@ -560,7 +560,7 @@ public class Segment implements Persistent {
   }
   
   public void init(String cacheName) {
-    CarrotConfig conf = CarrotConfig.getInstance();
+    CacheConfig conf = CacheConfig.getInstance();
     int numBins = conf.getRollingWindowNumberBins(cacheName);
     int windowsDuration = conf.getRollingWindowDuration(cacheName);
     this.info.counter = new RollingWindowCounter(numBins, windowsDuration);

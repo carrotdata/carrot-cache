@@ -17,12 +17,12 @@ package com.onecache.core.io;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 
 public class TestFileIOEngineWithCompression extends TestOffheapIOEngineWithCompression {
 
   @Override
-  protected IOEngine getEngine(CarrotConfig conf) {
+  protected IOEngine getEngine(CacheConfig conf) {
     conf.setDataWriter(cacheName, CompressedBlockDataWriter.class.getName());
     conf.setMemoryDataReader(cacheName, CompressedBlockMemoryDataReader.class.getName());
     conf.setFileDataReader(cacheName, CompressedBlockFileDataReader.class.getName());

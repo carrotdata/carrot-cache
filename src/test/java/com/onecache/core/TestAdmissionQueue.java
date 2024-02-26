@@ -36,7 +36,7 @@ import org.junit.Test;
 import com.onecache.core.util.TestUtils;
 import com.onecache.core.controllers.AdmissionQueue;
 import com.onecache.core.index.MemoryIndex;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
@@ -45,7 +45,7 @@ public class TestAdmissionQueue {
   private static final Logger LOG = LogManager.getLogger(TestAdmissionQueue.class);
   AdmissionQueue queue;
   MemoryIndex memoryIndex;
-  CarrotConfig conf;
+  CacheConfig conf;
   
   int numRecords = 10;
   byte[][] keys = new byte[numRecords][];

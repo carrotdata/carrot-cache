@@ -40,7 +40,7 @@ import com.onecache.core.index.MemoryIndex.ResultWithRankAndExpire;
 import com.onecache.core.io.IOEngine;
 import com.onecache.core.io.Segment;
 import com.onecache.core.io.SegmentScanner;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.Persistent;
 import com.onecache.core.util.Utils;
 
@@ -114,7 +114,7 @@ public class Scavenger implements Runnable {
     
     Stats(String cacheName) {
       this.cacheName = cacheName;
-      CarrotConfig conf = CarrotConfig.getInstance();
+      CacheConfig conf = CacheConfig.getInstance();
       dumpBelowRatio = conf.getScavengerDumpEntryBelowMax(cacheName);
       dumpBelowRatioMin = dumpBelowRatio;
       dumpBelowRatioMax = conf.getScavengerDumpEntryBelowMin(cacheName);
@@ -308,7 +308,7 @@ public class Scavenger implements Runnable {
     if (poolMap.contains(cacheName)) {
       return;
     }
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     int numThreads = config.getScavengerNumberOfThreads(cacheName);
     ExecutorService service = Executors.newFixedThreadPool(numThreads, new ThreadFactory() {
 
@@ -360,7 +360,7 @@ public class Scavenger implements Runnable {
   
   private final Cache cache;
   
-  private final CarrotConfig config;
+  private final CacheConfig config;
 
   private volatile long runStartTime = System.currentTimeMillis();
 
@@ -388,7 +388,7 @@ public class Scavenger implements Runnable {
   public Scavenger(Cache cache) {
     //super(NAME + rollingId.getAndIncrement());
     this.cache = cache;
-    this.config = CarrotConfig.getInstance();
+    this.config = CacheConfig.getInstance();
     String cacheName = this.cache.getName();
     maxInstances = config.getScavengerNumberOfThreads(cacheName);
     // Update stats

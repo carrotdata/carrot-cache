@@ -23,7 +23,7 @@ import java.io.OutputStream;
 import java.util.Random;
 
 import com.onecache.core.Cache;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.Utils;
 
 public class RandomAdmissionController extends BaseAdmissionController {
@@ -45,7 +45,7 @@ public class RandomAdmissionController extends BaseAdmissionController {
   @Override
   public void setCache(Cache cache) throws IOException {
     super.setCache(cache);
-    CarrotConfig conf = CarrotConfig.getInstance();
+    CacheConfig conf = CacheConfig.getInstance();
     // init thresholds
     this.startThreshold = conf.getRandomAdmissionControllerStartRatio(cache.getName());
     this.stopThreshold = conf.getRandomAdmissionControllerStopRatio(cache.getName());

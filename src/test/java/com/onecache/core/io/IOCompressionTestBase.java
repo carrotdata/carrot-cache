@@ -37,7 +37,7 @@ import com.onecache.core.compression.CompressionCodec;
 import com.onecache.core.compression.zstd.ZstdCompressionCodec;
 import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.index.MemoryIndex.Type;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
@@ -70,7 +70,7 @@ public class IOCompressionTestBase extends IOTestBase {
   
   protected void initTestForEngine(boolean randomData, boolean dictionaryEnabled) throws URISyntaxException, IOException {
     initTest(randomData, dictionaryEnabled);
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     config.setCacheSegmentSize(cacheName, this.segmentSize);
     config.setCacheMaximumSize(cacheName, this.cacheSize);
   }
@@ -86,7 +86,7 @@ public class IOCompressionTestBase extends IOTestBase {
     File rootDir = dataDir.toFile();
     rootDir.deleteOnExit();
     
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     config.setCacheRootDir(cacheName, rootDir.getAbsolutePath());
     config.setCacheCompressionDictionaryEnabled(cacheName, dictionaryEnabled);
     config.setCacheCompressionEnabled(cacheName, true);

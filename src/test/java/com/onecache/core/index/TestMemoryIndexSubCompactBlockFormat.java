@@ -18,7 +18,7 @@ import java.util.Random;
 
 import com.onecache.core.eviction.EvictionPolicy;
 import com.onecache.core.eviction.SLRUEvictionPolicy;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 
 public class TestMemoryIndexSubCompactBlockFormat extends TestMemoryIndexFormatBase {
 
@@ -38,7 +38,7 @@ public class TestMemoryIndexSubCompactBlockFormat extends TestMemoryIndexFormatB
   @Override
   int nextOffset(Random r, int max) {
     if (this.blockSize == 0) {
-      CarrotConfig config = CarrotConfig.getInstance();
+      CacheConfig config = CacheConfig.getInstance();
       this.blockSize = config.getBlockWriterBlockSize("default");
     }
     int n = max / this.blockSize;

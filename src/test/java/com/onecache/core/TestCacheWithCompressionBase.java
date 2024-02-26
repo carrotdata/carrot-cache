@@ -30,7 +30,7 @@ import com.onecache.core.index.CompactBaseWithExpireIndexFormat;
 import com.onecache.core.io.CompressedBlockDataWriter;
 import com.onecache.core.io.CompressedBlockFileDataReader;
 import com.onecache.core.io.CompressedBlockMemoryDataReader;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 
 public class TestCacheWithCompressionBase extends TestCacheBase {
   
@@ -101,7 +101,7 @@ public class TestCacheWithCompressionBase extends TestCacheBase {
     this.dataWriter = CompressedBlockDataWriter.class.getName();
     this.dataReaderMemory = CompressedBlockMemoryDataReader.class.getName();
     this.dataReaderFile = CompressedBlockFileDataReader.class.getName(); 
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     config.setCacheCompressionDictionaryEnabled(cacheName, dictionaryEnabled);
     config.setCacheCompressionEnabled(cacheName, true);
     config.setCacheTLSSupported(cacheName, true);
@@ -127,7 +127,7 @@ public class TestCacheWithCompressionBase extends TestCacheBase {
   
   protected void cleanDictionaries(String cacheName) {
     // Clean up dictionaries
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     String dictDir = config.getCacheDictionaryDir(cacheName);
     File dir = new File(dictDir);
     if (dir.exists()) {

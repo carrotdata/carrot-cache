@@ -42,7 +42,7 @@ import java.util.stream.Stream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.UnsafeAccess;
 
 public class FileIOEngine extends IOEngine {
@@ -78,7 +78,7 @@ public class FileIOEngine extends IOEngine {
    *
    * @param conf test configuration
    */
-  public FileIOEngine(CarrotConfig conf) {
+  public FileIOEngine(CacheConfig conf) {
     super(conf);
     initEngine();
   }

@@ -18,7 +18,7 @@ import static com.onecache.core.io.BlockReaderWriterSupport.META_SIZE;
 import static com.onecache.core.io.BlockReaderWriterSupport.SIZE_OFFSET;
 import static com.onecache.core.io.BlockReaderWriterSupport.getFullDataSize;
 
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
@@ -198,7 +198,7 @@ public class BlockDataWriter implements DataWriter {
   
   @Override
   public void init(String cacheName) {
-    this.blockSize = CarrotConfig.getInstance().getBlockWriterBlockSize(cacheName);
+    this.blockSize = CacheConfig.getInstance().getBlockWriterBlockSize(cacheName);
   }
   
   /**

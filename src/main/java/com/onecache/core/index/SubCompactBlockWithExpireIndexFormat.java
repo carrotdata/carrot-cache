@@ -18,7 +18,7 @@
 package com.onecache.core.index;
 
 import com.onecache.core.expire.ExpireSupport;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 
 /**
  * Format of an index entry (8 bytes):
@@ -72,7 +72,7 @@ public class SubCompactBlockWithExpireIndexFormat extends SubCompactBlockIndexFo
   public void setCacheName(String cacheName) {
     super.setCacheName(cacheName);
     try {
-      this.expireSupport = CarrotConfig.getInstance().getExpireSupport(cacheName);
+      this.expireSupport = CacheConfig.getInstance().getExpireSupport(cacheName);
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
       // TODO Auto-generated catch block
       throw new RuntimeException(e);

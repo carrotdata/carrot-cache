@@ -24,7 +24,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.onecache.core.Cache;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.Utils;
 
 public class AQBasedExpirationAwareAdmissionController extends ExpirationAwareAdmissionController
@@ -54,7 +54,7 @@ public class AQBasedExpirationAwareAdmissionController extends ExpirationAwareAd
     super.setCache(cache);
     initAdmissionQueue(cache);
     /* Admission Queue */
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     String cacheName = cache.getName();
     this.aqMinRatio = config.getAdmissionQueueMinSizeRatio(cacheName);
     this.aqMaxRatio = config.getAdmissionQueueMaxSizeRatio(cacheName);

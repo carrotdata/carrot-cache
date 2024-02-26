@@ -26,7 +26,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.onecache.core.Cache;
 import com.onecache.core.index.MemoryIndex;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.Persistent;
 import com.onecache.core.util.Utils;
 
@@ -87,7 +87,7 @@ public class AdmissionQueue implements Persistent {
    */
   public AdmissionQueue(Cache cache) {
     this.cache = cache;
-    CarrotConfig conf = this.cache.getCacheConfig();
+    CacheConfig conf = this.cache.getCacheConfig();
     this.cacheName = this.cache.getName();
     this.currentMaxSizeRatio = conf.getAdmissionQueueStartSizeRatio(this.cacheName);
     this.globalMaxSizeRatio = conf.getAdmissionQueueMaxSizeRatio(this.cacheName);
@@ -101,7 +101,7 @@ public class AdmissionQueue implements Persistent {
    */
   public AdmissionQueue() {
     this.cacheName = "default";
-    CarrotConfig conf = CarrotConfig.getInstance();
+    CacheConfig conf = CacheConfig.getInstance();
     this.currentMaxSizeRatio = conf.getAdmissionQueueStartSizeRatio(this.cacheName);
     this.globalMaxSizeRatio = conf.getAdmissionQueueMaxSizeRatio(this.cacheName);
     this.globalMinSizeRatio = conf.getAdmissionQueueMinSizeRatio(this.cacheName);
@@ -114,7 +114,7 @@ public class AdmissionQueue implements Persistent {
    * Constructor for testing
    * @param conf cache configuration
    */
-  public AdmissionQueue(CarrotConfig conf) {
+  public AdmissionQueue(CacheConfig conf) {
     this.cacheName = "default";
     this.currentMaxSizeRatio = conf.getAdmissionQueueStartSizeRatio(this.cacheName);
     this.globalMaxSizeRatio = conf.getAdmissionQueueMaxSizeRatio(this.cacheName);

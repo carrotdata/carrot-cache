@@ -20,7 +20,7 @@ import com.onecache.core.compression.CompressionCodec;
 import com.onecache.core.io.FileIOEngine;
 import com.onecache.core.io.IOEngine;
 import com.onecache.core.io.OffheapIOEngine;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 
 public class Builder {
   
@@ -28,7 +28,7 @@ public class Builder {
   String cacheName;
   
   /* Cache configuration */
-  CarrotConfig conf; 
+  CacheConfig conf; 
   
   /** Cache IOEngine */
   IOEngine engine;
@@ -39,7 +39,7 @@ public class Builder {
    */
   public Builder(String cacheName) {
     this.cacheName = cacheName;
-    this.conf = CarrotConfig.getInstance();
+    this.conf = CacheConfig.getInstance();
   }
   
   /**

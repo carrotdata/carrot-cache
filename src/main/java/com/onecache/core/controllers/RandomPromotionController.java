@@ -22,7 +22,7 @@ import java.io.OutputStream;
 import java.util.concurrent.ThreadLocalRandom;
 
 import com.onecache.core.Cache;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.Utils;
 
 /**
@@ -62,7 +62,7 @@ public class RandomPromotionController extends BasePromotionController {
   public void setCache(Cache cache) throws IOException {
     super.setCache(cache);
     String cacheName = cache.getName();
-    CarrotConfig conf = CarrotConfig.getInstance();
+    CacheConfig conf = CacheConfig.getInstance();
     probability = conf.getPromotionProbability(cacheName);
   }
   

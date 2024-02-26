@@ -31,7 +31,7 @@ import com.esotericsoftware.kryo.kryo5.io.Input;
 import com.esotericsoftware.kryo.kryo5.io.Output;
 import com.onecache.core.Cache.Type;
 import com.onecache.core.io.ObjectPool;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 
 public class ObjectCache {
   
@@ -115,7 +115,7 @@ public class ObjectCache {
   }
   
   private void initIOPools() {
-    CarrotConfig config = cache.getCacheConfig();
+    CacheConfig config = cache.getCacheConfig();
     int poolSize = config.getIOStoragePoolSize(cache.getName());
     this.initialOutBufferSize = config.getObjectCacheInitialOutputBufferSize(cache.getName());
     this.maxOutBufferSize = config.getObjectCacheMaxOutputBufferSize(cache.getName());
@@ -656,7 +656,7 @@ public class ObjectCache {
    * Get cache configuration
    * @return cache configuration
    */
-  public CarrotConfig getCacheConfig() {
+  public CacheConfig getCacheConfig() {
     return this.cache.getCacheConfig();
   }
 }

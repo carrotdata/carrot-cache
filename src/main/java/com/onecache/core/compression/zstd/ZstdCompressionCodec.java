@@ -19,7 +19,7 @@ import com.github.luben.zstd.ZstdDictCompress;
 import com.github.luben.zstd.ZstdDictDecompress;
 import com.github.luben.zstd.ZstdDictTrainer;
 import com.onecache.core.compression.CompressionCodec;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 /**
@@ -36,7 +36,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
   
   static {
     
-    INIT_BUFFER_SIZE = CarrotConfig.getInstance().getCacheTLSInitialBufferSize(null);
+    INIT_BUFFER_SIZE = CacheConfig.getInstance().getCacheTLSInitialBufferSize(null);
     
   }
   
@@ -312,7 +312,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
   
   @Override
   public void init(String cacheName) throws IOException {
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     this.cacheName = cacheName;
     this.dictSize = config.getCacheCompressionDictionarySize(cacheName);
     this.compLevel = config.getCacheCompressionLevel(cacheName);
@@ -367,7 +367,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
   }
 
   private void saveDictionary(int id, byte[] data) throws IOException {
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     String dictDir = config.getCacheDictionaryDir(cacheName);
     File dir = new File(dictDir);
     String name = makeDictFileName(id);

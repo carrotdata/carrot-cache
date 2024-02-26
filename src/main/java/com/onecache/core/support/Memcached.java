@@ -20,7 +20,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.onecache.core.Cache;
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.LockSupport;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
@@ -108,7 +108,7 @@ public class Memcached {
   private Cache cache;
   
   public Memcached(Cache cache) {
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     if(!config.isCacheTLSSupported(cache.getName())) {
       throw new RuntimeException("thread-local storage support must be enabled");
     }

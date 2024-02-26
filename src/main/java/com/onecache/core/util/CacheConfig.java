@@ -42,9 +42,9 @@ import com.onecache.core.io.DataReader;
 import com.onecache.core.io.DataWriter;
 
 @SuppressWarnings("deprecation")
-public class CarrotConfig {
+public class CacheConfig {
   
-  private static final Logger LOG = LogManager.getLogger(CarrotConfig.class);
+  private static final Logger LOG = LogManager.getLogger(CacheConfig.class);
 
 
   /** List of all caches logical names, comma-separated*/
@@ -589,30 +589,30 @@ public class CarrotConfig {
   public final static boolean DEFAULT_CACHE_SAVE_ON_SHUTDOWN = false;
   
   // Statics
-  static CarrotConfig instance;
+  static CacheConfig instance;
 
-  public static CarrotConfig getInstance() {
+  public static CacheConfig getInstance() {
     if (instance != null) {
       return instance;
     }
-    synchronized (CarrotConfig.class) {
+    synchronized (CacheConfig.class) {
       if (instance != null) {
         return instance;
       }
-      instance = new CarrotConfig();
+      instance = new CacheConfig();
     }
     return instance;
   }
 
-  public static CarrotConfig getInstance(String file) throws IOException {
+  public static CacheConfig getInstance(String file) throws IOException {
     if (instance != null) {
       return instance;
     }
-    synchronized (CarrotConfig.class) {
+    synchronized (CacheConfig.class) {
       if (instance != null) {
         return instance;
       }
-      instance = new CarrotConfig(file);
+      instance = new CacheConfig(file);
     }
     return instance;
   }
@@ -620,7 +620,7 @@ public class CarrotConfig {
   /**
    * Used for testing only
    */
-  public static void setInstance(CarrotConfig config) {
+  public static void setInstance(CacheConfig config) {
     instance = config;
   }
   /**
@@ -628,7 +628,7 @@ public class CarrotConfig {
    * @param props properties
    */
   public static synchronized void merge(Properties props) {
-    CarrotConfig mainConfig = getInstance();
+    CacheConfig mainConfig = getInstance();
     for (Map.Entry<Object, Object> entry : props.entrySet()) {
       String key = (String) entry.getKey();
       String value = (String) entry.getValue();
@@ -641,10 +641,10 @@ public class CarrotConfig {
    * @return cache configuration object
    * @throws IOException
    */
-  public static CarrotConfig load(InputStream is) throws IOException {
+  public static CacheConfig load(InputStream is) throws IOException {
     Properties props = new Properties();
     props.load(is);
-    return new CarrotConfig(props);
+    return new CacheConfig(props);
   }
   
   /**
@@ -660,7 +660,7 @@ public class CarrotConfig {
   Properties props = new Properties();
 
   /** Default constructor */
-  private CarrotConfig() {
+  private CacheConfig() {
   }
 
   /**
@@ -676,7 +676,7 @@ public class CarrotConfig {
    * @param file configuration file
    * @throws IOException
    */
-  private CarrotConfig(String file) throws IOException {
+  private CacheConfig(String file) throws IOException {
     this();
     if (file != null) {
       FileInputStream fis = new FileInputStream(file);
@@ -690,7 +690,7 @@ public class CarrotConfig {
    *
    * @param props
    */
-  CarrotConfig(Properties props) {
+  CacheConfig(Properties props) {
     this.props = props;
   }
 

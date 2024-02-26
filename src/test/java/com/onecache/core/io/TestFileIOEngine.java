@@ -28,7 +28,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.TestUtils;
 
 public class TestFileIOEngine extends IOTestBase{
@@ -143,14 +143,14 @@ public class TestFileIOEngine extends IOTestBase{
   private void createEngine(long segmentSize, long cacheSize) throws IOException {
     this.segmentSize = (int) segmentSize;
     this.cacheSize = cacheSize;
-    CarrotConfig conf = TestUtils.mockConfigForTests(this.segmentSize, this.cacheSize);
+    CacheConfig conf = TestUtils.mockConfigForTests(this.segmentSize, this.cacheSize);
     this.engine = new FileIOEngine(conf);
   }
   
   private void createEngine(long segmentSize, long cacheSize, String dataDir) throws IOException {
     this.segmentSize = (int) segmentSize;
     this.cacheSize = cacheSize;
-    CarrotConfig conf = TestUtils.mockConfigForTests(this.segmentSize, this.cacheSize, dataDir);
+    CacheConfig conf = TestUtils.mockConfigForTests(this.segmentSize, this.cacheSize, dataDir);
     this.engine = new FileIOEngine(conf);
   }
 }

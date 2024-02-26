@@ -17,7 +17,7 @@
  */
 package com.onecache.core.index;
 
-import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
@@ -35,7 +35,7 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
    * @param cacheName
    */
   public void setCacheName(String cacheName) {
-    CarrotConfig config = CarrotConfig.getInstance();
+    CacheConfig config = CacheConfig.getInstance();
     this.L = config.getStartIndexNumberOfSlotsPower(cacheName);
   }
   /*
