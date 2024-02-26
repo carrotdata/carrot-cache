@@ -48,10 +48,10 @@ import com.onecache.core.io.CacheInputStream;
 import com.onecache.core.io.CacheOutputStream;
 import com.onecache.core.io.FileIOEngine;
 import com.onecache.core.io.IOEngine;
+import com.onecache.core.io.IOEngine.IOEngineEvent;
 import com.onecache.core.io.OffheapIOEngine;
 import com.onecache.core.io.Segment;
 import com.onecache.core.io.SegmentScanner;
-import com.onecache.core.io.IOEngine.IOEngineEvent;
 import com.onecache.core.jmx.CacheJMXSink;
 import com.onecache.core.util.CarrotConfig;
 import com.onecache.core.util.Epoch;
@@ -2208,6 +2208,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return true;
   }
 
+  @SuppressWarnings("unused")
   private void processEviction(long ptr, long $ptr) {
     if (this.victimCache == null) {
      return;

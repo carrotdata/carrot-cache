@@ -15,14 +15,10 @@
 package com.onecache.core.io;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import com.onecache.core.compression.CodecFactory;
 import com.onecache.core.compression.CompressionCodec;
 import com.onecache.core.compression.zstd.ZstdCompressionCodec;
-import com.onecache.core.io.CompressedBlockMemorySegmentScanner;
-import com.onecache.core.io.Segment;
 import com.onecache.core.util.Utils;
 
 public class SegmentValidator {
@@ -37,11 +33,9 @@ public class SegmentValidator {
     
     CompressedBlockMemorySegmentScanner scanner = new CompressedBlockMemorySegmentScanner(s, codec);
     int count = 0;
-    int uncompressedSize = 0;
     while (scanner.hasNext()) {
       long keyPtr = scanner.keyAddress();
       int keySize = scanner.keyLength();
-      long valPtr = scanner.valueAddress();
       int valSize = scanner.valueLength();
       
       String key = new String(Utils.toBytes(keyPtr, keySize));
@@ -50,7 +44,7 @@ public class SegmentValidator {
       count++;
       scanner.next();
     }
-    
+    scanner.close();
     System.out.printf("seg num items=%d count=%d", s.getTotalItems(), count);
     
     

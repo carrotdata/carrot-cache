@@ -29,14 +29,12 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.onecache.core.util.TestUtils;
-import com.onecache.core.Builder;
-import com.onecache.core.Cache;
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
 import com.onecache.core.index.CompactBlockWithExpireIndexFormat;
 import com.onecache.core.io.BlockDataWriter;
 import com.onecache.core.io.BlockFileDataReader;
 import com.onecache.core.io.BlockMemoryDataReader;
+import com.onecache.core.util.TestUtils;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 

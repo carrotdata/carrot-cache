@@ -18,9 +18,6 @@ import static com.onecache.core.io.BlockReaderWriterSupport.META_SIZE;
 import static com.onecache.core.io.BlockReaderWriterSupport.SIZE_OFFSET;
 import static com.onecache.core.io.BlockReaderWriterSupport.getFullDataSize;
 
-import com.onecache.core.io.DataWriter;
-import com.onecache.core.io.IOEngine;
-import com.onecache.core.io.Segment;
 import com.onecache.core.util.CarrotConfig;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;

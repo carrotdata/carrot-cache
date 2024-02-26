@@ -14,9 +14,6 @@
  */
 package com.onecache.core.index;
 
-import com.onecache.core.index.IndexFormat;
-import com.onecache.core.index.SubCompactBaseNoSizeIndexFormat;
-
 /**
  * Main Queue index format tests
  *

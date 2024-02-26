@@ -16,8 +16,6 @@ package com.onecache.core.index;
 
 import java.util.Random;
 
-import com.onecache.core.index.IndexFormat;
-import com.onecache.core.index.SubCompactBlockWithExpireIndexFormat;
 import com.onecache.core.util.CarrotConfig;
 
 public class TestSubCompactBlockIndexFormatWithExpire extends TestIndexFormatBase {

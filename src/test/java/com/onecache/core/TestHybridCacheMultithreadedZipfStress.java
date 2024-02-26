@@ -20,12 +20,8 @@ import java.nio.file.Path;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 
-import com.onecache.core.util.TestUtils;
-import com.onecache.core.Builder;
-import com.onecache.core.Cache;
 import com.onecache.core.controllers.AQBasedAdmissionController;
 import com.onecache.core.controllers.AdmissionController;
 import com.onecache.core.controllers.BaseAdmissionController;
@@ -34,9 +30,9 @@ import com.onecache.core.controllers.MinAliveRecyclingSelector;
 import com.onecache.core.controllers.RecyclingSelector;
 import com.onecache.core.eviction.EvictionPolicy;
 import com.onecache.core.eviction.FIFOEvictionPolicy;
-import com.onecache.core.eviction.LRUEvictionPolicy;
 import com.onecache.core.eviction.SLRUEvictionPolicy;
 import com.onecache.core.util.Epoch;
+import com.onecache.core.util.TestUtils;
 
 public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithreadedZipfBase {
 

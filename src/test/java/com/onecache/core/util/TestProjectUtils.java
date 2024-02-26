@@ -30,8 +30,6 @@ import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.junit.Test;
 
 import com.onecache.core.expire.ExpireSupport;
-import com.onecache.core.util.UnsafeAccess;
-import com.onecache.core.util.Utils;
 
 public class TestProjectUtils {
 

@@ -28,10 +28,6 @@ import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.junit.After;
 
 import com.onecache.core.util.TestUtils;
-import com.onecache.core.Builder;
-import com.onecache.core.Cache;
-import com.onecache.core.Scavenger;
-import com.onecache.core.controllers.AQBasedPromotionController;
 import com.onecache.core.controllers.AdmissionController;
 import com.onecache.core.controllers.BaseAdmissionController;
 import com.onecache.core.controllers.BasePromotionController;

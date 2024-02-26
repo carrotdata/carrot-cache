@@ -22,9 +22,8 @@ import java.util.concurrent.CountDownLatch;
 
 import org.junit.BeforeClass;
 
-import com.onecache.core.util.TestUtils;
-import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.index.MemoryIndex.MutationResult;
+import com.onecache.core.util.TestUtils;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 

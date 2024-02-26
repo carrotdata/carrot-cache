@@ -27,10 +27,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.onecache.core.compression.zstd.ZstdCompressionCodec;
-import com.onecache.core.io.CompressedBlockDataWriter;
-import com.onecache.core.io.CompressedBlockMemoryDataReader;
-import com.onecache.core.io.IOEngine;
-import com.onecache.core.io.OffheapIOEngine;
 import com.onecache.core.util.CarrotConfig;
 
 public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{
@@ -266,7 +262,6 @@ public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{
     this.engine.save(dos);
     // Get current config, we will reuse it later because it keeps location of a dictionary folder
     CarrotConfig config = CarrotConfig.getInstance();
-    String rootDir = config.getCacheRootDir(cacheName);
     // Dispose engine
     engine.dispose();
     // Re-create new one (creates new root directory for cache)

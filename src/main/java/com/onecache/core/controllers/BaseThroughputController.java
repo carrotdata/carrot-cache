@@ -21,8 +21,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicLong;
 
-import com.onecache.core.controllers.AdmissionController;
-import com.onecache.core.controllers.ThroughputController;
 import com.onecache.core.Cache;
 import com.onecache.core.Scavenger;
 import com.onecache.core.util.CarrotConfig;

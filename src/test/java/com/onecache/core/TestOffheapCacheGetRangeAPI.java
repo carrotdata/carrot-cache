@@ -29,10 +29,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.onecache.core.util.TestUtils;
-import com.onecache.core.Builder;
-import com.onecache.core.Cache;
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
+import com.onecache.core.util.TestUtils;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 

@@ -17,7 +17,6 @@ package com.onecache.core.io;
 import java.io.IOException;
 import java.io.OutputStream;
 
-import com.onecache.core.io.ObjectPool;
 import com.onecache.core.Cache;
 import com.onecache.core.util.Utils;
 

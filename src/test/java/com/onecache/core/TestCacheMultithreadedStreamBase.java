@@ -29,9 +29,6 @@ import org.junit.After;
 import org.junit.Test;
 
 import com.onecache.core.util.TestUtils;
-import com.onecache.core.Builder;
-import com.onecache.core.Cache;
-import com.onecache.core.Scavenger;
 import com.onecache.core.controllers.LRCRecyclingSelector;
 import com.onecache.core.eviction.LRUEvictionPolicy;
 import com.onecache.core.util.Percentile;

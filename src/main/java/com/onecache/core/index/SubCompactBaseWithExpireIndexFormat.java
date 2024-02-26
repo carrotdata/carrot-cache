@@ -17,7 +17,6 @@
  */
 package com.onecache.core.index;
 
-import com.onecache.core.index.SubCompactBaseIndexFormat;
 import com.onecache.core.expire.ExpireSupport;
 import com.onecache.core.util.CarrotConfig;
 

@@ -21,10 +21,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 
-import com.onecache.core.io.PrefetchBuffer;
-import com.onecache.core.io.Segment;
-import com.onecache.core.io.SegmentScanner;
-
 public final class BaseFileSegmentScanner implements SegmentScanner {
 
    // RandomAccessFile file;

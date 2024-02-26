@@ -25,16 +25,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.onecache.core.util.TestUtils;
 import com.onecache.core.Cache;
 import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.index.MemoryIndex.Type;
-import com.onecache.core.io.BlockDataWriter;
-import com.onecache.core.io.BlockFileDataReader;
-import com.onecache.core.io.DataReader;
-import com.onecache.core.io.FileIOEngine;
-import com.onecache.core.io.Segment;
-import com.onecache.core.io.SegmentScanner;
+import com.onecache.core.util.TestUtils;
 import com.onecache.core.util.UnsafeAccess;
 
 public class TestSegmentBlockDataWriterReaderFile extends IOTestBase{

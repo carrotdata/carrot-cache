@@ -18,9 +18,6 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Test;
 
-import com.onecache.core.eviction.EvictionPolicy;
-import com.onecache.core.eviction.FIFOEvictionPolicy;
-
 public class TestFIFOEvictionPolicy {
   
   @Test

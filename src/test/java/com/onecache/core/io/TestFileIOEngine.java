@@ -28,9 +28,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.onecache.core.util.TestUtils;
-import com.onecache.core.io.FileIOEngine;
 import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.TestUtils;
 
 public class TestFileIOEngine extends IOTestBase{
   

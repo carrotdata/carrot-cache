@@ -19,8 +19,6 @@ import static com.onecache.core.compression.CompressionCodec.COMP_SIZE_OFFSET;
 import static com.onecache.core.compression.CompressionCodec.DICT_VER_OFFSET;
 import static com.onecache.core.compression.CompressionCodec.SIZE_OFFSET;
 
-import com.onecache.core.io.DataWriter;
-import com.onecache.core.io.Segment;
 import com.onecache.core.compression.CodecFactory;
 import com.onecache.core.compression.CompressionCodec;
 import com.onecache.core.util.CarrotConfig;

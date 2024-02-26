@@ -23,10 +23,8 @@ import java.nio.file.Path;
 
 import org.junit.After;
 
-import com.onecache.core.io.TestIOMultithreadedBase;
-import com.onecache.core.Builder;
-import com.onecache.core.Cache;
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
+import com.onecache.core.io.TestIOMultithreadedBase;
 
 public abstract class TestCacheMultithreadedBase extends TestIOMultithreadedBase {
 

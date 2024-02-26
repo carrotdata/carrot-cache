@@ -23,10 +23,6 @@ import java.io.OutputStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.onecache.core.controllers.AQBasedExpirationAwareAdmissionController;
-import com.onecache.core.controllers.AdmissionQueue;
-import com.onecache.core.controllers.AdmissionQueueBased;
-import com.onecache.core.controllers.ExpirationAwareAdmissionController;
 import com.onecache.core.Cache;
 import com.onecache.core.util.CarrotConfig;
 import com.onecache.core.util.Utils;

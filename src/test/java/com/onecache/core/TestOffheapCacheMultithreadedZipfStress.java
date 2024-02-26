@@ -19,7 +19,6 @@ import java.io.IOException;
 import org.junit.Test;
 
 import com.onecache.core.controllers.AQBasedAdmissionController;
-import com.onecache.core.controllers.PopularityBasedRecyclingSelector;
 import com.onecache.core.eviction.SLRUEvictionPolicy;
 
 public class TestOffheapCacheMultithreadedZipfStress extends TestOffheapCacheMultithreadedZipf {

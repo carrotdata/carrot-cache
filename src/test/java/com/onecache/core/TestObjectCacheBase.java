@@ -29,15 +29,12 @@ import java.util.Random;
 import org.junit.After;
 import org.junit.Test;
 
-import com.onecache.core.util.TestUtils;
-import com.onecache.core.Builder;
-import com.onecache.core.ObjectCache;
-import com.onecache.core.Scavenger;
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
 import com.onecache.core.index.CompactBaseWithExpireIndexFormat;
 import com.onecache.core.io.BaseDataWriter;
 import com.onecache.core.io.BaseFileDataReader;
 import com.onecache.core.io.BaseMemoryDataReader;
+import com.onecache.core.util.TestUtils;
 import com.onecache.core.util.Utils;
 
 public abstract class TestObjectCacheBase  {

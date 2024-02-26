@@ -36,8 +36,6 @@ import com.onecache.core.Builder;
 import com.onecache.core.Cache;
 import com.onecache.core.index.CompactBaseWithExpireIndexFormat;
 import com.onecache.core.io.Segment;
-import com.onecache.core.util.CarrotConfig;
-import com.onecache.core.util.UnsafeAccess;
 
 /**
  * Utility methods for unit tests

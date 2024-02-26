@@ -30,10 +30,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.onecache.core.util.TestUtils;
-import com.onecache.core.io.BaseDataWriter;
-import com.onecache.core.io.BlockDataWriter;
-import com.onecache.core.io.PrefetchBuffer;
-import com.onecache.core.io.Segment;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 

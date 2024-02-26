@@ -22,7 +22,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Random;
 
-import com.onecache.core.controllers.BaseAdmissionController;
 import com.onecache.core.Cache;
 import com.onecache.core.util.CarrotConfig;
 import com.onecache.core.util.Utils;

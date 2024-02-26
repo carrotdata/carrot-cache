@@ -23,8 +23,6 @@ import java.util.Arrays;
 import org.junit.After;
 import org.junit.Before;
 
-import com.onecache.core.Builder;
-import com.onecache.core.Cache;
 import com.onecache.core.compression.CodecFactory;
 import com.onecache.core.compression.CompressionCodec;
 import com.onecache.core.compression.zstd.ZstdCompressionCodec;

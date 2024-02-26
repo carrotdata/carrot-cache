@@ -23,10 +23,6 @@ import java.nio.ByteBuffer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.onecache.core.io.IOEngine;
-import com.onecache.core.io.OffheapIOEngine;
-import com.onecache.core.io.Segment;
-import com.onecache.core.io.SegmentScanner;
 import com.onecache.core.util.CarrotConfig;
 
 public class OffheapIOEngine extends IOEngine {

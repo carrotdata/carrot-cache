@@ -27,8 +27,6 @@ import java.io.IOException;
 
 import org.junit.Test;
 
-import com.onecache.core.util.RollingWindowCounter;
-
 public class TestRollingWindowCounter {
 
   @Test

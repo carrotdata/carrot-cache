@@ -15,9 +15,8 @@
 package com.onecache.core;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
-
+import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,16 +29,13 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.onecache.core.io.IOTestBase;
-import com.onecache.core.util.TestUtils;
-import com.onecache.core.Builder;
-import com.onecache.core.Cache;
-import com.onecache.core.Scavenger;
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
 import com.onecache.core.index.CompactBlockWithExpireIndexFormat;
 import com.onecache.core.io.BlockDataWriter;
 import com.onecache.core.io.BlockFileDataReader;
 import com.onecache.core.io.BlockMemoryDataReader;
+import com.onecache.core.io.IOTestBase;
+import com.onecache.core.util.TestUtils;
 
 public abstract class TestCacheBase extends IOTestBase {
   

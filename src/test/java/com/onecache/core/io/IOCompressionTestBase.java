@@ -37,8 +37,6 @@ import com.onecache.core.compression.CompressionCodec;
 import com.onecache.core.compression.zstd.ZstdCompressionCodec;
 import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.index.MemoryIndex.Type;
-import com.onecache.core.io.CompressedBlockDataWriter;
-import com.onecache.core.io.Segment;
 import com.onecache.core.util.CarrotConfig;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;

@@ -25,12 +25,6 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import com.onecache.core.io.BlockFileSegmentScanner;
-import com.onecache.core.io.DataReader;
-import com.onecache.core.io.FileIOEngine;
-import com.onecache.core.io.IOEngine;
-import com.onecache.core.io.Segment;
-import com.onecache.core.io.SegmentScanner;
 import com.onecache.core.util.CarrotConfig;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;

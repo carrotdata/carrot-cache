@@ -21,8 +21,6 @@ import java.nio.ByteBuffer;
 import org.junit.After;
 import org.junit.Before;
 
-import com.onecache.core.io.IOEngine;
-
 public abstract class TestIOEngineMultithreadedBase extends TestIOMultithreadedBase{
 
   protected IOEngine engine;

@@ -1,6 +1,8 @@
 package com.onecache.core.support;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.Random;
@@ -9,10 +11,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.onecache.core.util.TestUtils;
-import com.onecache.core.support.Memcached;
 import com.onecache.core.support.Memcached.OpResult;
 import com.onecache.core.support.Memcached.Record;
+import com.onecache.core.util.TestUtils;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 

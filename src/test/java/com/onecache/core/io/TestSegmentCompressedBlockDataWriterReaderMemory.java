@@ -26,14 +26,6 @@ import java.net.URISyntaxException;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.onecache.core.io.CompressedBlockDataWriter;
-import com.onecache.core.io.CompressedBlockMemoryDataReader;
-import com.onecache.core.io.DataReader;
-import com.onecache.core.io.DataWriter;
-import com.onecache.core.io.IOEngine;
-import com.onecache.core.io.Segment;
-import com.onecache.core.io.SegmentScanner;
-
 /**
  * 
  * Test dictionary off/ on, compressible/non-compressible data

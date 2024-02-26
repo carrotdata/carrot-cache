@@ -19,8 +19,6 @@ import java.util.Random;
 import com.onecache.core.eviction.EvictionPolicy;
 import com.onecache.core.eviction.SLRUEvictionPolicy;
 import com.onecache.core.expire.ExpireSupportSecondsMinutes;
-import com.onecache.core.index.CompactBlockWithExpireIndexFormat;
-import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.util.CarrotConfig;
 
 public class TestMemoryIndexCompactBlockFormatWithExpireSM extends TestMemoryIndexFormatBase {

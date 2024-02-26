@@ -17,7 +17,6 @@
  */
 package com.onecache.core.index;
 
-import com.onecache.core.index.IndexFormat;
 import com.onecache.core.util.CarrotConfig;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;

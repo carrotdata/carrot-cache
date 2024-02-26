@@ -23,8 +23,6 @@ import static com.onecache.core.io.BlockReaderWriterSupport.getBlockDataSize;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import com.onecache.core.io.Segment;
-import com.onecache.core.io.SegmentScanner;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 

@@ -14,8 +14,6 @@
  */
 package com.onecache.core.io;
 
-import com.onecache.core.io.Segment;
-
 /**
  * Segment data appender (writer). 
  * Implementation MUST be stateless hence - thread - safe

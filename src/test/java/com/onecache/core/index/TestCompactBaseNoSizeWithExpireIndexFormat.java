@@ -14,9 +14,6 @@
  */
 package com.onecache.core.index;
 
-import com.onecache.core.index.CompactBaseNoSizeWithExpireIndexFormat;
-import com.onecache.core.index.IndexFormat;
-
 public class TestCompactBaseNoSizeWithExpireIndexFormat extends TestIndexFormatBase { 
   @Override
   protected IndexFormat getIndexFormat() {

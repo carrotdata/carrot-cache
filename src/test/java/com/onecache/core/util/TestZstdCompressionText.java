@@ -14,13 +14,13 @@ import com.github.luben.zstd.ZstdDecompressCtx;
 import com.github.luben.zstd.ZstdDictCompress;
 import com.github.luben.zstd.ZstdDictDecompress;
 import com.github.luben.zstd.ZstdDictTrainer;
-import com.onecache.core.util.UnsafeAccess;
 
 public class TestZstdCompressionText {
 
   private static int DICT_SIZE = 1 << 20; // 16KB
   private static int COMP_LEVEL = 3;
   
+  @SuppressWarnings("unused")
   public static void main(String[] args) throws IOException {
     String file = "/Users/vrodionov/Downloads/silesia/dickens";
     
@@ -185,7 +185,7 @@ public class TestZstdCompressionText {
    long totalSize = 0;
    long compSize = 0;
    long dst = UnsafeAccess.malloc(100000);
-   byte[] src = new byte[100000];
+   //byte[] src = new byte[100000];
    long start = System.nanoTime();
 
    for(byte[] b: source) {
@@ -228,7 +228,6 @@ public class TestZstdCompressionText {
   
   private static List<byte[]> decompressNativeNative(ZstdDecompressCtx context, List<byte[]> compressed, List<Integer> sizes){
     ArrayList<byte[]> result = new ArrayList<byte[]>(compressed.size());
-    int i = 0;
     long decompSize = 0;
     long src = UnsafeAccess.malloc(100000);
     long dst = UnsafeAccess.malloc(100000);
@@ -257,7 +256,6 @@ public class TestZstdCompressionText {
   
   private static List<byte[]> decompressNativeByteArray(ZstdDecompressCtx context, List<byte[]> compressed, List<Integer> sizes){
     ArrayList<byte[]> result = new ArrayList<byte[]>(compressed.size());
-    int i = 0;
     long decompSize = 0;
     long src = UnsafeAccess.malloc(100000);
     byte[] dst = new byte[100000];
@@ -283,7 +281,6 @@ public class TestZstdCompressionText {
   
   private static List<byte[]> decompressByteArrayNative(ZstdDecompressCtx context, List<byte[]> compressed, List<Integer> sizes){
     ArrayList<byte[]> result = new ArrayList<byte[]>(compressed.size());
-    int i = 0;
     long decompSize = 0;
     long src = UnsafeAccess.malloc(100000);
     long dst = UnsafeAccess.malloc(100000);

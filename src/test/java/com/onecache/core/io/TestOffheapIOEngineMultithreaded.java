@@ -17,10 +17,8 @@ package com.onecache.core.io;
 
 import java.io.IOException;
 
-import com.onecache.core.util.TestUtils;
-import com.onecache.core.io.IOEngine;
-import com.onecache.core.io.OffheapIOEngine;
 import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.TestUtils;
 
 public class TestOffheapIOEngineMultithreaded extends TestIOEngineMultithreadedBase {
 

@@ -57,7 +57,8 @@ public class TestZStdCompression {
      ZstdDictDecompress dictDecompress = new ZstdDictDecompress(dictData);
      ZstdDecompressCtx decompContext = new ZstdDecompressCtx();
      decompContext.loadDict(dictDecompress);
-     List<byte[]> decompressed = decompress(decompContext, compresed, sizes);
+     @SuppressWarnings("unused")
+    List<byte[]> decompressed = decompress(decompContext, compresed, sizes);
      
      byte[] buf = new byte[ 1<< 16];
      decompress(decompContext, compresed, sizes, buf);

@@ -599,6 +599,7 @@ public class Scavenger implements Runnable {
     return buffer;
   }
     
+  @SuppressWarnings("unused")
   private boolean cleanSegmentInternal(Segment s) throws IOException {
     IOEngine engine = this.cache.getEngine();
     MemoryIndex index = engine.getMemoryIndex();

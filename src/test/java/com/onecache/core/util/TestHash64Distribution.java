@@ -18,8 +18,6 @@ import java.util.Random;
 
 import org.junit.Test;
 
-import com.onecache.core.util.Utils;
-
 public class TestHash64Distribution {
   int[] sizes = new int[] {100000, 200000, 1000000, 2000000, 300000, 4000000, 5000000, 6000000, 7000000, 8000000, 9000000, 10000000};
   int[] slots = new int[] {1024, 2048, 4096, 8192, 16384, 32768, 65536}; 

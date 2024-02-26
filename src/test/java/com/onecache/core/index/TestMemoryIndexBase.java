@@ -23,8 +23,6 @@ import org.junit.After;
 import org.junit.BeforeClass;
 
 import com.onecache.core.util.TestUtils;
-import com.onecache.core.index.IndexFormat;
-import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 

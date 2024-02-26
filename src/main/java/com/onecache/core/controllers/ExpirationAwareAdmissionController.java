@@ -19,8 +19,6 @@ import java.io.IOException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.onecache.core.controllers.AdmissionController;
-import com.onecache.core.controllers.ExpirationAwareAdmissionController;
 import com.onecache.core.Cache;
 import com.onecache.core.util.CarrotConfig;
 

@@ -22,12 +22,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 
-import com.onecache.core.io.BaseFileSegmentScanner;
-import com.onecache.core.io.DataReader;
-import com.onecache.core.io.FileIOEngine;
-import com.onecache.core.io.IOEngine;
-import com.onecache.core.io.Segment;
-import com.onecache.core.io.SegmentScanner;
 import com.onecache.core.util.Utils;
 
 public class BaseFileDataReader implements DataReader {

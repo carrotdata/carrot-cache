@@ -14,7 +14,6 @@
  */
 package com.onecache.core.controllers;
 
-import com.onecache.core.controllers.AdmissionQueue;
 import com.onecache.core.Cache;
 import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.util.CarrotConfig;

@@ -28,17 +28,14 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 
-import com.onecache.core.io.IOTestBase;
-import com.onecache.core.util.TestUtils;
-import com.onecache.core.Builder;
-import com.onecache.core.Cache;
-import com.onecache.core.Scavenger;
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
 import com.onecache.core.index.CompactBlockWithExpireIndexFormat;
 import com.onecache.core.io.BlockDataWriter;
 import com.onecache.core.io.BlockFileDataReader;
 import com.onecache.core.io.BlockMemoryDataReader;
+import com.onecache.core.io.IOTestBase;
 import com.onecache.core.io.Segment;
+import com.onecache.core.util.TestUtils;
 import com.onecache.core.util.UnsafeAccess;
 
 public abstract class TestScavengerBase extends IOTestBase {

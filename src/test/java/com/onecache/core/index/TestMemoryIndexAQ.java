@@ -27,7 +27,6 @@ import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.index.MemoryIndex.MutationResult;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;

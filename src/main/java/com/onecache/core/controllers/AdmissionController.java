@@ -16,7 +16,6 @@ package com.onecache.core.controllers;
 
 import java.io.IOException;
 
-import com.onecache.core.controllers.ThroughputControllable;
 import com.onecache.core.Cache;
 import com.onecache.core.util.Persistent;
 

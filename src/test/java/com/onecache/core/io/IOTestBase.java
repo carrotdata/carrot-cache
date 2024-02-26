@@ -32,14 +32,10 @@ import java.util.Random;
 import org.junit.After;
 import org.junit.BeforeClass;
 
-import com.onecache.core.util.TestUtils;
 import com.onecache.core.Cache;
 import com.onecache.core.index.IndexFormat;
 import com.onecache.core.index.MemoryIndex;
-import com.onecache.core.io.DataReader;
-import com.onecache.core.io.IOEngine;
-import com.onecache.core.io.Segment;
-import com.onecache.core.io.SegmentScanner;
+import com.onecache.core.util.TestUtils;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
@@ -515,7 +511,6 @@ public abstract class IOTestBase {
   protected void verifyScanner(SegmentScanner scanner, int num) throws IOException {
     int n = 0;
     while(scanner.hasNext()) {
-      long t0 = System.nanoTime();
       byte[] key = keys[n];
       byte[] value = values[n];
       long keyPtr = scanner.keyAddress();
@@ -594,6 +589,7 @@ public abstract class IOTestBase {
       
       long expSize = Utils.kvSize(keySize, valueSize);
       long size = engine.get(keyPtr, keySize, false, buffer);
+      assertEquals(expSize, size);
       int kSize = Utils.readUVInt(buffer);
       assertEquals(keySize, kSize);
       int kSizeSize = Utils.sizeUVInt(kSize);

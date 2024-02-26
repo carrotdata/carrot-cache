@@ -28,7 +28,6 @@ import com.onecache.core.controllers.MRCRecyclingSelector;
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
 import com.onecache.core.eviction.LRUEvictionPolicy;
 import com.onecache.core.eviction.SLRUEvictionPolicy;
-import com.onecache.core.util.UnsafeAccess;
 
 public class TestOffheapCompressedCacheMultithreadedZipf extends TestCompressedCacheMultithreadedZipfBase {
   

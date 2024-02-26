@@ -30,12 +30,6 @@ import org.mockito.Mockito;
 
 import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.index.MemoryIndex.Type;
-import com.onecache.core.io.BaseDataWriter;
-import com.onecache.core.io.BaseMemoryDataReader;
-import com.onecache.core.io.DataReader;
-import com.onecache.core.io.IOEngine;
-import com.onecache.core.io.Segment;
-import com.onecache.core.io.SegmentScanner;
 
 public class TestSegmentBaseDataWriterReaderMemory extends IOTestBase{
   

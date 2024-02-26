@@ -14,27 +14,25 @@
  */
 package com.onecache.core;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.onecache.core.util.TestUtils;
-import com.onecache.core.Builder;
-import com.onecache.core.ObjectCache;
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
 import com.onecache.core.index.CompactBaseWithExpireIndexFormat;
 import com.onecache.core.io.BaseDataWriter;
 import com.onecache.core.io.BaseFileDataReader;
 import com.onecache.core.io.BaseMemoryDataReader;
+import com.onecache.core.util.TestUtils;
 
 public class TestLoadingObjectCache {
 

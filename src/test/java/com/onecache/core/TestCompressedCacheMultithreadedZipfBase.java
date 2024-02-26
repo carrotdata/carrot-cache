@@ -13,8 +13,6 @@ import java.util.List;
 import org.junit.After;
 import org.junit.Before;
 
-import com.onecache.core.util.TestUtils;
-import com.onecache.core.Builder;
 import com.onecache.core.compression.CodecFactory;
 import com.onecache.core.compression.CompressionCodec;
 import com.onecache.core.compression.zstd.ZstdCompressionCodec;
@@ -23,6 +21,7 @@ import com.onecache.core.io.CompressedBlockDataWriter;
 import com.onecache.core.io.CompressedBlockFileDataReader;
 import com.onecache.core.io.CompressedBlockMemoryDataReader;
 import com.onecache.core.util.CarrotConfig;
+import com.onecache.core.util.TestUtils;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 

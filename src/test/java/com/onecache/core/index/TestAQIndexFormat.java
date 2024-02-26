@@ -19,8 +19,6 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 import com.onecache.core.util.TestUtils;
-import com.onecache.core.index.AQIndexFormat;
-import com.onecache.core.index.IndexFormat;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 

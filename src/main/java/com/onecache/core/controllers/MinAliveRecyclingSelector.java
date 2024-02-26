@@ -14,7 +14,6 @@
  */
 package com.onecache.core.controllers;
 
-import com.onecache.core.controllers.RecyclingSelector;
 import com.onecache.core.io.Segment;
 
 /**

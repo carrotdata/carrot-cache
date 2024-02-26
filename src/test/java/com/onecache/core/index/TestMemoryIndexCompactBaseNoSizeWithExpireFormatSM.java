@@ -17,8 +17,6 @@ package com.onecache.core.index;
 import com.onecache.core.eviction.EvictionPolicy;
 import com.onecache.core.eviction.SLRUEvictionPolicy;
 import com.onecache.core.expire.ExpireSupportSecondsMinutes;
-import com.onecache.core.index.CompactBaseNoSizeWithExpireIndexFormat;
-import com.onecache.core.index.MemoryIndex;
 
 public class TestMemoryIndexCompactBaseNoSizeWithExpireFormatSM extends TestMemoryIndexFormatBase {
 

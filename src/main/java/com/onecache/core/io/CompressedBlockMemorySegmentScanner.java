@@ -25,8 +25,6 @@ import static com.onecache.core.compression.CompressionCodec.SIZE_OFFSET;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import com.onecache.core.io.Segment;
-import com.onecache.core.io.SegmentScanner;
 import com.onecache.core.compression.CompressionCodec;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
@@ -110,6 +108,7 @@ import com.onecache.core.util.Utils;
       this.bufPtr = UnsafeAccess.malloc(this.bufferSize);
     }
     
+    @SuppressWarnings("unused")
     private void nextBlock() {
       if (this.currentIndex >= segment.getTotalItems()) {
         return;
@@ -119,14 +118,11 @@ import com.onecache.core.util.Utils;
       this.blockSize = UnsafeAccess.toInt(ptr + this.offset + SIZE_OFFSET);
       int dictId = UnsafeAccess.toInt(ptr + this.offset + DICT_VER_OFFSET);
       int compSize = UnsafeAccess.toInt(ptr + this.offset + COMP_SIZE_OFFSET);
-      ///*DEBUG*/ System.out.printf("data size=%d comp data size=%d dict_id=%d", blockSize, compSize, dictId);
       checkBuffer(this.blockSize);
       if (dictId >= 0) {
         int decompSize = this.codec.decompress(ptr + this.offset + COMP_META_SIZE, compSize, this.bufPtr, this.bufferSize, dictId);
-        //System.out.printf(" decomp size=%d\n", decompSize);
       } else if (dictId == -1){
         UnsafeAccess.copy(ptr + this.offset + COMP_META_SIZE, this.bufPtr, this.blockSize);
-        //System.out.println();
       } else {
         System.err.printf("Segment size=%d offset=%d uncompressed=%d compressed=%d dictId=%d index=%d total items=%d\n", 
           segment.getSegmentDataSize(), offset, this.blockSize, compSize, dictId, currentIndex, segment.getTotalItems());

@@ -14,17 +14,13 @@
  */
 package com.onecache.core.io;
 
-import static com.onecache.core.io.BlockReaderWriterSupport.*;
+import static com.onecache.core.io.BlockReaderWriterSupport.findInBlock;
+import static com.onecache.core.io.BlockReaderWriterSupport.getFullDataSize;
 import static com.onecache.core.util.Utils.getItemSize;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import com.onecache.core.io.BlockMemorySegmentScanner;
-import com.onecache.core.io.DataReader;
-import com.onecache.core.io.IOEngine;
-import com.onecache.core.io.Segment;
-import com.onecache.core.io.SegmentScanner;
 import com.onecache.core.util.CarrotConfig;
 import com.onecache.core.util.UnsafeAccess;
 

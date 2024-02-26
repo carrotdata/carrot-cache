@@ -18,9 +18,6 @@ import java.util.Random;
 
 import com.onecache.core.eviction.EvictionPolicy;
 import com.onecache.core.eviction.SLRUEvictionPolicy;
-import com.onecache.core.index.CompactBlockIndexFormat;
-import com.onecache.core.index.IndexFormat;
-import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.util.CarrotConfig;
 
 public class TestMemoryIndexCompactBlockFormat extends TestMemoryIndexFormatBase {

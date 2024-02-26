@@ -20,11 +20,6 @@ import static com.onecache.core.util.Utils.getKeyOffset;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import com.onecache.core.io.BaseMemorySegmentScanner;
-import com.onecache.core.io.DataReader;
-import com.onecache.core.io.IOEngine;
-import com.onecache.core.io.Segment;
-import com.onecache.core.io.SegmentScanner;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 

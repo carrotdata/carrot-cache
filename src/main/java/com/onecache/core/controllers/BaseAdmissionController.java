@@ -16,7 +16,6 @@ package com.onecache.core.controllers;
 
 import java.io.IOException;
 
-import com.onecache.core.controllers.AdmissionController;
 import com.onecache.core.Cache;
 
 /**

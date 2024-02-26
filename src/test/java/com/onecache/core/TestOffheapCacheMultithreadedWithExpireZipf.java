@@ -20,7 +20,6 @@ import java.util.Random;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.onecache.core.Builder;
 import com.onecache.core.controllers.AQBasedExpirationAwareAdmissionController;
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
 import com.onecache.core.eviction.LRUEvictionPolicy;

@@ -21,9 +21,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.onecache.core.expire.ExpireSupport;
-import com.onecache.core.expire.ExpireSupportSecondsMinutes;
-import com.onecache.core.expire.ExpireSupportSecondsMinutesHours;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 

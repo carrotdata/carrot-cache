@@ -23,12 +23,8 @@ import java.net.URISyntaxException;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.onecache.core.util.TestUtils;
 import com.onecache.core.Cache;
-import com.onecache.core.io.CompressedBlockFileDataReader;
-import com.onecache.core.io.DataReader;
-import com.onecache.core.io.FileIOEngine;
-import com.onecache.core.io.SegmentScanner;
+import com.onecache.core.util.TestUtils;
 
 public class TestSegmentCompressedBlockDataWriterReaderFile extends IOCompressionTestBase{
   

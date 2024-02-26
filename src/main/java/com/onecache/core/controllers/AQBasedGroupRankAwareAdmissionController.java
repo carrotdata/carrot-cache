@@ -14,8 +14,6 @@
  */
 package com.onecache.core.controllers;
 
-import com.onecache.core.controllers.AQBasedAdmissionController;
-
 /**
  * This admission controller uses group rank to determine 
  * rank of an item and extends AQ based admission controller

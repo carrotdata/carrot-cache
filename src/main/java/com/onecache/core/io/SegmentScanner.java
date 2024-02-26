@@ -21,8 +21,6 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import com.onecache.core.io.Segment;
-
 public interface SegmentScanner extends Closeable {
   
   /**

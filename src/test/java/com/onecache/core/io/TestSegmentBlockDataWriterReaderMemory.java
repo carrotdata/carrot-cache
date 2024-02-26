@@ -31,12 +31,6 @@ import org.mockito.Mockito;
 import com.onecache.core.Cache;
 import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.index.MemoryIndex.Type;
-import com.onecache.core.io.BlockDataWriter;
-import com.onecache.core.io.BlockMemoryDataReader;
-import com.onecache.core.io.DataReader;
-import com.onecache.core.io.IOEngine;
-import com.onecache.core.io.Segment;
-import com.onecache.core.io.SegmentScanner;
 import com.onecache.core.io.Segment.Info;
 import com.onecache.core.util.UnsafeAccess;
 

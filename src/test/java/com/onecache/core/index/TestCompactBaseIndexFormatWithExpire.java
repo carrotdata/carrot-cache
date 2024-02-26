@@ -14,9 +14,6 @@
  */
 package com.onecache.core.index;
 
-import com.onecache.core.index.CompactBaseWithExpireIndexFormat;
-import com.onecache.core.index.IndexFormat;
-
 public class TestCompactBaseIndexFormatWithExpire extends TestIndexFormatBase {
   int blockSize;
   

@@ -18,7 +18,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.index.MemoryIndex.Type;
 
 public class StressTestMemoryIndexMQ extends TestMemoryIndexFormatBase{

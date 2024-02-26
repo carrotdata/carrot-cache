@@ -20,8 +20,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import com.onecache.core.controllers.AdmissionQueue;
-import com.onecache.core.controllers.AdmissionQueueBased;
 import com.onecache.core.Cache;
 import com.onecache.core.util.CarrotConfig;
 import com.onecache.core.util.Utils;

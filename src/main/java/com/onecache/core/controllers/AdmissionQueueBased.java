@@ -14,8 +14,6 @@
  */
 package com.onecache.core.controllers;
 
-import com.onecache.core.controllers.AdmissionQueue;
-
 /**
  * Admission queue - based admission controller
  *

@@ -17,11 +17,6 @@ package com.onecache.core.io;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
-import com.onecache.core.io.CompressedBlockDataWriter;
-import com.onecache.core.io.CompressedBlockFileDataReader;
-import com.onecache.core.io.CompressedBlockMemoryDataReader;
-import com.onecache.core.io.FileIOEngine;
-import com.onecache.core.io.IOEngine;
 import com.onecache.core.util.CarrotConfig;
 
 public class TestFileIOEngineWithCompression extends TestOffheapIOEngineWithCompression {

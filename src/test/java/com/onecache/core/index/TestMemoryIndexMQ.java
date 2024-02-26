@@ -14,7 +14,6 @@
  */
 package com.onecache.core.index;
 
-import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.index.MemoryIndex.Type;
 
 public class TestMemoryIndexMQ extends TestMemoryIndexFormatBase {
