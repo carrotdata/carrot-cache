@@ -21,6 +21,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.onecache.core.controllers.AQBasedExpirationAwareAdmissionController;
+import com.onecache.core.controllers.LRCRecyclingSelector;
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
 import com.onecache.core.eviction.LRUEvictionPolicy;
 import com.onecache.core.eviction.SLRUEvictionPolicy;
@@ -86,6 +87,26 @@ public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultit
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = SLRUEvictionPolicy.class;
     this.rsClz = MinAliveRecyclingSelector.class;
+    super.testContinuosLoadBytesRun();
+  }
+  
+  @Test
+  public void testLRUEvictionAndLRCSelectorBytesAPI() throws IOException {
+    System.out.println("Bytes API: eviction=LRU, selector=LRC");
+    this.evictionDisabled = false;
+    this.scavengerInterval = 2; // scavenger interval in sec
+    this.epClz = LRUEvictionPolicy.class;
+    this.rsClz = LRCRecyclingSelector.class;
+    super.testContinuosLoadBytesRun();
+  }
+  
+  @Test
+  public void testSLRUEvictionAndLRCSelectorBytesAPI() throws IOException {
+    System.out.println("Bytes API: eviction=SLRU, selector=LRC");
+    this.evictionDisabled = false;
+    this.scavengerInterval = 2; // scavenger interval in sec
+    this.epClz = SLRUEvictionPolicy.class;
+    this.rsClz = LRCRecyclingSelector.class;
     super.testContinuosLoadBytesRun();
   }
 }

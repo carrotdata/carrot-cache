@@ -950,6 +950,8 @@ public class Segment implements Persistent {
         setFull(true);
         return -1;
       }
+      // Increment uncompressewd data size
+      this.info.incrementDataSizeUncompressed(Utils.kvSize(keySize, itemSize));
       processExpire(expire);
       incrNumEntries(1);
       if (expire > 0) {
@@ -1019,6 +1021,7 @@ public class Segment implements Persistent {
         setFull(true);
         return -1;
       }
+      this.info.incrementDataSizeUncompressed(Utils.kvSize(keySize, itemSize));
       processExpire(expire);
       // data writer MUST set dataSize in a segment
       incrNumEntries(1);

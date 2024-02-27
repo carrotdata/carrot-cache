@@ -14,6 +14,7 @@
  */
 package com.onecache.core.util;
 
+import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -267,10 +268,10 @@ public class CacheConfig {
   /**Eviction disabled mode */
   public static final String CACHE_EVICTION_DISABLED_MODE_KEY = "eviction.disabled-mode";
   
-  /**Rolling Window Counter number of bins*/
+  /** Rolling Window Counter number of bins - NOT USED YET */
   public static final String CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY = "rwc-bins";
   
-  /**Rolling Window Counter window duration in seconds */
+  /** Rolling Window Counter window duration in seconds - NOT USED YET*/
   public static final String CACHE_ROLLING_WINDOW_COUNTER_DURATION_KEY = "rwc-window";
   
   /**Hybrid cache mode of operation */
@@ -285,17 +286,19 @@ public class CacheConfig {
   /**JMX metrics domain name */
   public static final String CACHE_JMX_METRICS_DOMAIN_NAME_KEY = "jmx.metrics-domain-name";
   
+  /* Do not expose */
   public static final String CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY = "cache.streaming-buffer-size";
   
+  /* Maximum wait time on put operation in ms*/
   public static final String CACHE_MAX_WAIT_ON_PUT_MS_KEY = "cache.max-wait-on-put-ms";
   
   /* Maximum Key Value size to cache */
   public static final String CACHE_MAX_KEY_VALUE_SIZE_KEY = "cache.max-key-value-size";
   
-  /* Object Cache initial output buffer size */
+  /* Object Cache initial output buffer size - not relevant for server*/
   public final static String OBJECT_CACHE_INITIAL_BUFFER_SIZE_KEY = "objectcache.initial-buffer-size";
   
-  /* Object Cache maximum output buffer size */
+  /* Object Cache maximum output buffer size - not relevant for server*/
   public final static String OBJECT_CACHE_MAX_BUFFER_SIZE_KEY = "objectcache.max-buffer-size";
   
   /* Is Thread-Local-Storage supported */
@@ -358,12 +361,8 @@ public class CacheConfig {
   /**
    * Default number of Scavenger (Garbage collector) threads
    */
-  public static final int DEFAULT_SCAVENGER_NUMBER_THREADS = 2;
+  public static final int DEFAULT_SCAVENGER_NUMBER_THREADS = 1;
 
-  /**
-   * Default value for 'SCAVENGER_START_RATIO_FOR_FULL_DUMP_MODE_KEY'
-   */
-  public static final double DEFAULT_SCAVENGER_START_RATIO_FOR_DUMP_BELOW_MAX = 0.2; // When 20% of segments scanned
   /**
    * Limits write speed during scavenger run to 0.9 of scavenger cleaning memory rate Suppose
    * Scavenger frees memory with a rate of 900MB/sec. Incoming cache write requests will be limited
@@ -414,9 +413,6 @@ public class CacheConfig {
   /**Default size as a power indicator of 2 for index N = 2**10 - start */ 
   public static final int DEFAULT_START_INDEX_NUMBER_OF_SLOTS_POWER = 10;
   
-  /**Default incremental index rehashing */
-  public static final boolean DEFAULT_INCREMENTRAL_INDEX_REHASHING = false;
-
   /**Default throughput check interval - 1 hour*/
   public static final long DEFAULT_THROUGHPUT_CHECK_INTERVAL_SEC = 3600;// 1h
   
@@ -440,22 +436,22 @@ public class CacheConfig {
   
   /** Default implementation class for recycling selector */
   public final static String DEFAULT_CACHE_RECYCLING_SELECTOR_IMPL = 
-      "com.carrot.cache.controllers.MinAliveRecyclingSelector";
+      "com.onecache.core.controllers.MinAliveRecyclingSelector";
   /** Default */
   public final static String DEFAULT_CACHE_DATA_WRITER_IMPL = 
-      "com.carrot.cache.io.BaseDataWriter";
+      "com.onecache.core.io.BaseDataWriter";
   
   /** Default reader for RAM segments */
   public final static String DEFAULT_CACHE_MEMORY_DATA_READER_IMPL = 
-      "com.carrot.cache.io.BaseMemoryDataReader";
+      "com.onecache.core.io.BaseMemoryDataReader";
   
   /** Default reader for file segments */
   public final static String DEFAULT_CACHE_FILE_DATA_READER_IMPL = 
-      "com.carrot.cache.io.BaseFileDataReader";
+      "com.onecache.core.io.BaseFileDataReader";
   
   /** Default expire support implementation */
   public final static String DEFAULT_CACHE_EXPIRE_SUPPORT_IMPL = 
-      "com.carrot.cache.expire.ExpireSupportSecondsMinutes";
+      "com.onecache.core.expire.ExpireSupportSecondsMinutes";
   
   /** Default block writer block size */
   public final static int DEFAULT_CACHE_BLOCK_WRITER_BLOCK_SIZE = 4096;
@@ -479,7 +475,7 @@ public class CacheConfig {
   public final static double DEFAULT_CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO = 0.0;
   
   /** Default IO pool size */
-  public final static int DEFAULT_CACHE_IO_STORAGE_POOL_SIZE = 32;
+  public final static int DEFAULT_CACHE_IO_STORAGE_POOL_SIZE = 4;
   
   /** Default cache disabled mode */
   public final static boolean DEFAULT_CACHE_EVICTION_DISABLED_MODE = false;
@@ -503,7 +499,7 @@ public class CacheConfig {
   public final static long DEFAULT_CACHE_SPIN_WAIT_TIME_NS = 10000;// 10000 nanoseconds
   
   /** Default domain name for JMX metrics */
-  public final static String DEFAULT_CACHE_JMX_METRICS_DOMAIN_NAME = "com.carrot.cache";
+  public final static String DEFAULT_CACHE_JMX_METRICS_DOMAIN_NAME = "com.onecache.core";
   
   /** Default streaming support buffer size */
   public final static int DEFAULT_CACHE_STREAMING_SUPPORT_BUFFER_SIZE = 1 << 22;
@@ -527,7 +523,7 @@ public class CacheConfig {
   public final static int DEFAULT_CACHE_TLS_INITIAL_BUFFER_SIZE = 1 << 16; // 64KB
   
   /** Default initial size for TLS buffer */
-  public final static int DEFAULT_CACHE_TLS_MAXIMUM_BUFFER_SIZE = Integer.MAX_VALUE; // 2GB 
+  public final static int DEFAULT_CACHE_TLS_MAXIMUM_BUFFER_SIZE = 268435456; // 256MB 
   
   /** Is cache compression enabled */
   public final static boolean DEFAULT_CACHE_COMPRESSION_ENABLED = false;
@@ -539,7 +535,7 @@ public class CacheConfig {
   public final static boolean DEFAULT_CACHE_COMPRESSION_KEYS_ENABLED = true;
   
   /** Compression block size */
-  public final static int DEFAULT_CACHE_COMPRESSION_BLOCK_SIZE = 8 * 1024;
+  public final static int DEFAULT_CACHE_COMPRESSION_BLOCK_SIZE = 4 * 1024;
   
   /** Compression dictionary size */
   public final static int DEFAULT_CACHE_COMPRESSION_DICTIONARY_SIZE = 64 * 1024;
@@ -551,7 +547,7 @@ public class CacheConfig {
   public final static String DEFAULT_CACHE_COMPRESSION_CODEC = "ZSTD";
   
   /** Compression dictionary training async */
-  public final static boolean DEFAULT_CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC = true;
+  public final static boolean DEFAULT_CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC = false;
   
   /** Default probability for random promotion controller */
   public final static double DEFAULT_PROMOTION_PROBABILITY = 0.1d;
@@ -583,7 +579,8 @@ public class CacheConfig {
       if (instance != null) {
         return instance;
       }
-      instance = new CacheConfig(file);
+      
+      instance = load(file);
     }
     return instance;
   }
@@ -612,9 +609,24 @@ public class CacheConfig {
    * @return cache configuration object
    * @throws IOException
    */
-  public static CacheConfig load(InputStream is) throws IOException {
+  public static CacheConfig load(String file) throws IOException {
+    FileInputStream is = new FileInputStream(file);
     Properties props = new Properties();
-    props.load(is);
+    DataInputStream dis = new DataInputStream(is);
+    String line = null;
+    while ((line = dis.readLine()) != null) {
+      if (line.startsWith("#")) {
+        continue;
+      }
+      String[] kv = line.split("=");
+      if (kv.length != 2) {
+        continue;
+      }
+      String key = kv[0].trim();
+      String value = kv[1].trim();
+      props.setProperty(key, value);
+    }
+    dis.close();
     return new CacheConfig(props);
   }
   

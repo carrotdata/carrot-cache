@@ -578,6 +578,9 @@ public class Scavenger implements Runnable {
     if (allExpired || empty) {
       // We can dump it completely w/o asking memory index
       long dataSize = info.getSegmentDataSize();
+      long uncompressedDataSize = info.getSegmentDataSizeUncompressed();
+      this.cache.getEngine().reportRawDataSize(-uncompressedDataSize);
+      this.cache.getEngine().reportStorageUsed(-dataSize);
       // Update stats
       stats.totalBytesFreed.addAndGet(dataSize);
       stats.totalBytesScanned.addAndGet(dataSize);
