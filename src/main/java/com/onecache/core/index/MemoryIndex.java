@@ -122,8 +122,7 @@ public final class MemoryIndex implements Persistent {
   
   /*Data size offset */
   private static final int DATA_SIZE_OFFSET = 2 * Utils.SIZEOF_SHORT;
-  
-  
+
   /*
    * TODO: make this configurable
    * TODO: Optimal block ratios (jemalloc default arena sizes)
@@ -135,7 +134,8 @@ public final class MemoryIndex implements Persistent {
         4 /*256*/, 5 /*320*/, 6 /*384*/, 7 /*448*/, 8 /*512*/, 10 /*640*/, 12 /*768*/, 14 /*896*/, 16 /*1024*/, 
         20 /*1280*/, 24 /*1536*/, 28 /*1792*/, 32 /*2048*/, 
         40 /*2560*/, 48 /*3072*/, 56 /*3584*/, 64 /*4096*/, 
-        80 /*5K*/, 96 /*6K*/, 112 /*7K*/, 128 /*8K*/
+        80 /*5K*/, 96 /*6K*/, 112 /*7K*/, 128 /*8K*/,
+        160 /*10K*/, 192 /*12K*/, 224 /*14K*/, 256 /*16K*/ 
       };
 
   /**
