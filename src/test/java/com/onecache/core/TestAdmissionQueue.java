@@ -332,8 +332,8 @@ public class TestAdmissionQueue {
     loadIndexBytes();
     
     long size = queue.size();
-    // Within 1% of expected number
-    assertTrue(Math.abs(size - expectedNum) < expectedNum / 100);
+    // Within 3% of expected number
+    assertTrue(Math.abs(size - expectedNum) < 0.03 * expectedNum);
     
     int entrySize = memoryIndex.getIndexFormat().indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);

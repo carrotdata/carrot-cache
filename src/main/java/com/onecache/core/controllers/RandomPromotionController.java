@@ -63,7 +63,7 @@ public class RandomPromotionController extends BasePromotionController {
     super.setCache(cache);
     String cacheName = cache.getName();
     CacheConfig conf = CacheConfig.getInstance();
-    probability = conf.getPromotionProbability(cacheName);
+    probability = conf.getRandomPromotionProbability(cacheName);
   }
   
   

@@ -209,6 +209,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public Cache(String name) throws IOException {
     this.cacheName = name;
     this.conf = CacheConfig.getInstance();
+    this.conf.sanityCheck(cacheName);
     this.engine = IOEngine.getEngineForCache(this);
     // set engine listener
     this.engine.setListener(this);
@@ -219,6 +220,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public Cache(String name, CacheConfig conf) throws IOException {
     this.cacheName = name;
     this.conf = conf;
+    this.conf.sanityCheck(cacheName);
     this.engine = IOEngine.getEngineForCache(this);
     // set engine listener
     this.engine.setListener(this);
@@ -239,6 +241,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   private void initFromConfiguration() {
+    
     this.indexEmdeddingSupported = 
         this.conf.isIndexDataEmbeddedSupported(this.cacheName);
     this.indexEmbeddedSize = this.conf.getIndexDataEmbeddedSize(this.cacheName);

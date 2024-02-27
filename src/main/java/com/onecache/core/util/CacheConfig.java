@@ -18,7 +18,6 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -164,7 +163,7 @@ public class CacheConfig {
   public static final String PROMOTION_QUEUE_MAX_SIZE_RATIO_KEY = "promotion.queue-max-size-ratio";
   
   /* Random configuration parameter for random promotion controller*/
-  public static final String PROMOTION_PROBABILITY_KEY = "promotion.probability";
+  public static final String CACHE_RANDOM_PROMOTION_PROBABILITY_KEY = "promotion.probability";
   
   /**Cumulative average write rate limit  (bytes/sec) */
   public static final String CACHE_WRITE_RATE_LIMIT_KEY = "write.avg-rate-limit";
@@ -329,6 +328,8 @@ public class CacheConfig {
   public final static String CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC_KEY = "cache.compression-dictionary-training-async";
   
   public final static String CACHE_SAVE_ON_SHUTDOWN_KEY = "cache.save-on-shutdown";
+  
+  public final static String CACHE_ESTIMATED_AVG_KV_SIZE_KEY = "cache.estimated-avg-kv-size";
   
   /** Defaults section */
   
@@ -550,10 +551,13 @@ public class CacheConfig {
   public final static boolean DEFAULT_CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC = false;
   
   /** Default probability for random promotion controller */
-  public final static double DEFAULT_PROMOTION_PROBABILITY = 0.1d;
+  public final static double DEFAULT_CACHE_RANDOM_PROMOTION_PROBABILITY = 0.1d;
   
   /* Default save on shutdown */
   public final static boolean DEFAULT_CACHE_SAVE_ON_SHUTDOWN = false;
+  
+  /* Default average K-V size */
+  public final static int DEFAULT_ESTIMATED_AVG_KV_SIZE = 10 * 1024;
   
   // Statics
   static CacheConfig instance;
@@ -651,21 +655,6 @@ public class CacheConfig {
    */
   public void init() {
     this.props = new Properties();
-  }
-  
-  /**
-   * Constructor from file
-   *
-   * @param file configuration file
-   * @throws IOException
-   */
-  private CacheConfig(String file) throws IOException {
-    this();
-    if (file != null) {
-      FileInputStream fis = new FileInputStream(file);
-      props.load(fis);
-      fis.close();
-    }
   }
 
   /**
@@ -1286,12 +1275,12 @@ public class CacheConfig {
    * @param cacheName cache name
    * @return probability
    */
-  public double getPromotionProbability(String cacheName) {
-    String value = props.getProperty(cacheName + "."+ PROMOTION_PROBABILITY_KEY);
+  public double getRandomPromotionProbability(String cacheName) {
+    String value = props.getProperty(cacheName + "."+ CACHE_RANDOM_PROMOTION_PROBABILITY_KEY);
     if (value != null) {
       return Double.parseDouble(value);
     }
-    return getDoubleProperty(PROMOTION_PROBABILITY_KEY, DEFAULT_PROMOTION_PROBABILITY);
+    return getDoubleProperty(CACHE_RANDOM_PROMOTION_PROBABILITY_KEY, DEFAULT_CACHE_RANDOM_PROMOTION_PROBABILITY);
   }
   
   /**
@@ -1299,7 +1288,7 @@ public class CacheConfig {
    * @param cacheName cache name
    * @param probability 
    */ 
-  public void setPromotionProbability(String cacheName, double probability) {
+  public void setRandomPromotionProbability(String cacheName, double probability) {
     props.setProperty(cacheName + "."+ PROMOTION_QUEUE_MAX_SIZE_RATIO_KEY, Double.toString(probability));
   }
   
@@ -2621,6 +2610,57 @@ public class CacheConfig {
    */
   public void setSaveOnShutdown (String cacheName, boolean v) {
     props.setProperty(cacheName + "." + CACHE_SAVE_ON_SHUTDOWN_KEY, Boolean.toString(v));
+  }
+  
+  /**
+   * Gets estimated avg key value size
+   * @param cacheName cache name
+   * @return size
+   */
+  public int getEstimatedAvgKeyValueSize(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_ESTIMATED_AVG_KV_SIZE_KEY);
+    if (value != null) {
+      return Integer.parseInt(value);
+    }
+    return (int) getLongProperty(CACHE_ESTIMATED_AVG_KV_SIZE_KEY, DEFAULT_ESTIMATED_AVG_KV_SIZE);
+  }
+  
+  /**
+   * Sets estimated avg key value size
+   * @param cacheName cache name
+   * @param size size
+   */
+  public void setEstimatedAvgKeyValueSize(String cacheName, int size) {
+    props.setProperty(cacheName + "." + CACHE_ESTIMATED_AVG_KV_SIZE_KEY, Integer.toString(size));
+  }
+  
+  
+  public void sanityCheck(String cacheName) {
+    long maxSize = getCacheMaximumSize(cacheName);
+    if (maxSize > 0 && maxSize < 100 * 1024 * 1024) {
+      maxSize = 100 * 1024 * 1024;
+    }
+    
+    long segmentSize = getCacheSegmentSize(cacheName);
+    // Minimum number of segments is 100
+    if (segmentSize < 1024 * 1024) {
+      segmentSize = 1024 * 1024;
+      setCacheSegmentSize(cacheName, segmentSize);
+    }
+    int num = (int) (maxSize / segmentSize);
+    if (num < 100) {
+      segmentSize = maxSize / (100 * (1024 * 1024)) * 1024 * 1024;
+    }
+    
+    int avgKVSize = getEstimatedAvgKeyValueSize(cacheName);
+    int maxItems = (int) (maxSize / avgKVSize);
+    int l = getStartIndexNumberOfSlotsPower(cacheName);
+    int val = (int) Math.pow(2,l) * 100;
+    if (val > maxItems) {
+      l = (int) Math.floor(Math.log(maxItems / 100) / Math.log(2));
+      setStartIndexNumberOfSlotsPower(cacheName, l);
+    }
+    
   }
 }
 

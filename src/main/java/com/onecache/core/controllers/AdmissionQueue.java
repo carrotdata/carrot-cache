@@ -160,7 +160,9 @@ public class AdmissionQueue implements Persistent {
     this.currentMaxSizeRatio = max;
     double avgItemSize = (double) this.totalSize.get() / this.totalPuts.get();
     long maxItems = (long) (this.maxCacheSize * this.currentMaxSizeRatio / avgItemSize);
-    this.index.setMaximumSize(maxItems);
+    if (maxItems > 0) {
+      this.index.setMaximumSize(maxItems);
+    }
   }
   
   

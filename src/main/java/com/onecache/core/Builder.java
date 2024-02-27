@@ -48,6 +48,7 @@ public class Builder {
    * @throws IOException
    */
   public Cache buildMemoryCache() throws IOException {
+    this.conf.sanityCheck(cacheName);
     this.engine = new OffheapIOEngine(this.cacheName);
     return build();
   }
@@ -58,6 +59,7 @@ public class Builder {
    * @throws IOException
    */
   public Cache buildDiskCache() throws IOException {
+    this.conf.sanityCheck(cacheName);
     this.engine = new FileIOEngine(this.cacheName);
     return build();
   }
@@ -68,6 +70,7 @@ public class Builder {
    * @throws IOException
    */
   public ObjectCache buildObjectMemoryCache() throws IOException {
+    this.conf.sanityCheck(cacheName);
     this.engine = new OffheapIOEngine(this.cacheName);
     Cache c = build();
     return new ObjectCache(c);
@@ -79,6 +82,7 @@ public class Builder {
    * @throws IOException
    */
   public ObjectCache buildObjectDiskCache() throws IOException {
+    this.conf.sanityCheck(cacheName);
     this.engine = new FileIOEngine(this.cacheName);
     Cache c = build();
     return new ObjectCache(c);
@@ -792,6 +796,26 @@ public class Builder {
    */
   public Builder withCacheCompressionDictionaryTrainingAsync(boolean b) {
     conf.setCacheCompressionDictionaryTrainingAsync(cacheName, b);
+    return this;
+  }
+  
+  /**
+   * With random promotion probability
+   * @param v probability
+   * @return builder instance
+   */
+  public Builder withRandomPromotionProbability(double v) {
+    conf.setRandomPromotionProbability(cacheName, v);
+    return this;
+  }
+  
+  /**
+   * With estimated average key-value size
+   * @param size size
+   * @return builder instance
+   */
+  public Builder withEstimatedAvgKeyValueSize(int size) {
+    conf.setEstimatedAvgKeyValueSize(cacheName, size);
     return this;
   }
   
