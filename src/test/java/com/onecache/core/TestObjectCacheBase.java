@@ -194,7 +194,6 @@ public abstract class TestObjectCacheBase  {
     System.out.printf("%d:verified %d in %d ms\n", tn, count, (t2 - t1));
   }
 
-  //@Ignore
   @Test
   public void testLoadAndVerify() throws IOException {
     System.out.println("Test load and verify");
@@ -289,7 +288,6 @@ public abstract class TestObjectCacheBase  {
     }
   }
   
-  //@Ignore
   @Test
   public void testSaveLoad() throws IOException {
     System.out.println("Test save load");

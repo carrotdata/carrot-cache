@@ -50,7 +50,6 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompress
     testWritesBytes();
   }
   
-  //@Ignore
   @Test
   public void testWritesBytesDictionaryNotRandom() throws IOException, URISyntaxException {
     initTestForSegment(false, true);

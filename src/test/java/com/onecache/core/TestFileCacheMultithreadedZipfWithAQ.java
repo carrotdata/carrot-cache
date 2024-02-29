@@ -43,7 +43,6 @@ public class TestFileCacheMultithreadedZipfWithAQ extends TestCacheMultithreaded
      return b;
   }
   
-  //@Ignore
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPIWithAQ() throws IOException {
     System.out.println("Bytes API: eviction=LRU, selector=MinAlive - AQ");
@@ -55,7 +54,6 @@ public class TestFileCacheMultithreadedZipfWithAQ extends TestCacheMultithreaded
     super.testContinuosLoadBytesRun();
   }
   
-  //@Ignore
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=LRU, selector=MinAlive");

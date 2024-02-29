@@ -61,7 +61,6 @@ public class TestFileCacheMultithreadedBigValues extends TestCacheMultithreadedZ
     super.testContinuosLoadBytesRun();
   }
   
-  //@Ignore
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
     System.out.println("Bytes API: eviction=LRU, selector=MinAlive");

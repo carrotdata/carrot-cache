@@ -110,7 +110,6 @@ public abstract class TestScavengerBase extends IOTestBase {
     return System.currentTimeMillis() + expireTime;
   }
   
-  //@Ignore
   @Test
   public void testAllExpired() throws IOException {
     System.out.println("Test all expired");
@@ -169,7 +168,6 @@ public abstract class TestScavengerBase extends IOTestBase {
     assertEquals(0, activeSize);
   }
   
-  //@Ignore
   @Test
   public void testAllExpiredNoScan() throws IOException {
     System.out.println("\n\nTest all expired - no scan");
@@ -224,7 +222,6 @@ public abstract class TestScavengerBase extends IOTestBase {
     assertEquals(size, activeSize);
   }
   
- // @Ignore
   @Test
   public void testNoExpiredRegularRun() throws IOException {
     System.out.println("\n\nTest no expired - regular run");
@@ -283,7 +280,6 @@ public abstract class TestScavengerBase extends IOTestBase {
     
   }
   
-  @Ignore
   @Test
   public void testNoExpiredWithDeletesRegularRun() throws IOException {
     System.out.println("\n\nTest no expired with deletes - regular run");
@@ -349,7 +345,6 @@ public abstract class TestScavengerBase extends IOTestBase {
 
   }
   
-  //@Ignore
   @Test
   public void testNoExpiredWithDeletesRegularRunMinActive() throws IOException {
     System.out.println("\n\nTest no expired with deletes - regular run (min active)");
