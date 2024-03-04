@@ -46,7 +46,7 @@ public abstract class IOTestBase {
   int blockSize = 4096;
   protected int numRecords = 10;
   int maxKeySize = 32;
-  int maxValueSize = 5000;
+  int maxValueSize = 10000;
   public Random r;
   
   byte[][] keys;
@@ -131,13 +131,31 @@ public abstract class IOTestBase {
     List<String> dataList = loadGithubData();
     String[] sdata = new String[dataList.size()];
     dataList.toArray(sdata);
+    Random r = new Random();
     for (int i = 0; i < numRecords; i++) {
       keys[i] = (key + i).getBytes();
-      values[i] = sdata[ i % sdata.length].getBytes();
+      int off = i % sdata.length;
+      int howMany =1 + r.nextInt(10);
+      values[i] = combineBytes(sdata, off, howMany);//sdata[ i % sdata.length].getBytes();
       mKeys[i] = TestUtils.copyToMemory(keys[i]);
       mValues[i] = TestUtils.copyToMemory(values[i]);
       expires[i] = getExpire(i); // To make sure that we have distinct expiration values
     }
+  }
+  
+  private byte[] combineBytes(String[] sarr, int off, int howMany) {
+    howMany = Math.min(howMany, sarr.length - off);
+    int size = 0;
+    for(int i = off; i < off + howMany; i++) {
+      size += sarr[i].length();
+    }
+    byte[] result = new byte[size];
+    int offset =0;
+    for(int i = off; i < off + howMany; i++) {
+      byte[] arr = sarr[i].getBytes();
+      System.arraycopy(arr, 0, result, offset, arr.length);
+    }
+    return result;
   }
   
   protected long getExpire(int n) {

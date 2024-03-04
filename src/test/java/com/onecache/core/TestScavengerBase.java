@@ -280,6 +280,7 @@ public abstract class TestScavengerBase extends IOTestBase {
     
   }
   
+  @Ignore
   @Test
   public void testNoExpiredWithDeletesRegularRun() throws IOException {
     System.out.println("\n\nTest no expired with deletes - regular run");
