@@ -647,7 +647,7 @@ public class CacheConfig {
   Properties props = new Properties();
 
   /** Default constructor */
-  private CacheConfig() {
+  protected CacheConfig() {
   }
 
   /**

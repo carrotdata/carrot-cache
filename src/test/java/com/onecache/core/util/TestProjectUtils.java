@@ -270,7 +270,7 @@ public class TestProjectUtils {
   }
   
   @Test
-  public void testStrNumberConversions() {
+  public void testStrNumberConversionsPositive() {
     Random r = new Random();
     
     byte[] buf = new byte[20];
@@ -289,6 +289,59 @@ public class TestProjectUtils {
     }
   }
   
+  @Test
+  public void testStrNumberConversionsNegative() {
+    Random r = new Random();
+    
+    byte[] buf = new byte[21];
+    for (int i = 0; i < 1000; i++) {
+      long v = r.nextLong();
+      v = -Math.abs(v);
+      String s = Long.toString(v);
+      byte[] b = s.getBytes();
+      long vv = Utils.strToLong(b, 0, b.length);
+      assertEquals(v, vv);
+      int numDigits = Utils.longToStr(buf, 0, v);
+      assertEquals(b.length, numDigits + 1);
+      String ss = new String(buf, 0, numDigits + 1);
+      long vvv = Long.parseLong(ss);
+      assertEquals(v, vvv);
+    }
+  }
+  
+  @Test
+  public void testStrNumberConversionsPositiveDirect() {
+    Random r = new Random();
+    
+    long buf = UnsafeAccess.mallocZeroed(20);
+    for (int i = 0; i < 1000; i++) {
+      long v = r.nextLong();
+      v = Math.abs(v);
+      String s = Long.toString(v);
+      int len = s.length();
+      int numDigits = Utils.longToStrDirect(buf, 20, v);
+      assertEquals(len, numDigits);
+      long vv = Utils.strToLongDirect(buf, len);
+      assertEquals(v, vv);
+    }
+  }
+  
+  @Test
+  public void testStrNumberConversionsNegativeDirect() {
+   Random r = new Random();
+    
+    long buf = UnsafeAccess.mallocZeroed(21);
+    for (int i = 0; i < 1000; i++) {
+      long v = r.nextLong();
+      v = -Math.abs(v);
+      String s = Long.toString(v);
+      int len = s.length();
+      int numDigits = Utils.longToStrDirect(buf, 21, v);
+      assertEquals(len, numDigits + 1);
+      long vv = Utils.strToLongDirect(buf, len);
+      assertEquals(v, vv);
+    }
+  }
   /**
    * Utility methods
    */
