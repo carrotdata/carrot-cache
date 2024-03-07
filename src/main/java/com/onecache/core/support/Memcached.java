@@ -1031,6 +1031,38 @@ public class Memcached {
     }
   }
   
+  /**
+   * Expire operation
+   * @param keyPtr key buffer
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @return operation result
+   */
+  public boolean expire(byte[] key, int keyOffset, int keySize) {
+    try {
+      boolean result = cache.expire(key, keyOffset, keySize);
+      return result; 
+    } catch (IOException e) {
+      LOG.error(e);
+      return false;
+    }
+  }
+  
+  /**
+   * Expire operation
+   * @param keyPtr key address
+   * @param keySize key size
+   * @return operation result
+   */
+  public boolean expire(long keyPtr, int keySize) {
+    try {
+      boolean result = cache.expire(keyPtr, keySize);
+      return result; 
+    } catch (IOException e) {
+      LOG.error(e);
+      return false;
+    }
+  }
   
   /*************************** Utility methods ************************/
   
@@ -1038,7 +1070,6 @@ public class Memcached {
     return Utils.hash64(value, valueOffset, valueSize);
   }
   
-  @SuppressWarnings("unused")
   long computeCAS(long valuePtr, int valueSize) {
     return Utils.hash64(valuePtr, valueSize);
   }
