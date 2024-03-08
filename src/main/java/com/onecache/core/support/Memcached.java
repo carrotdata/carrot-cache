@@ -27,7 +27,7 @@ public class Memcached {
     boolean error;
   }
   
-  static enum OpResult {
+  public static enum OpResult {
     STORED, NOT_STORED, EXISTS, NOT_FOUND, DELETED, ERROR;
   }
   
