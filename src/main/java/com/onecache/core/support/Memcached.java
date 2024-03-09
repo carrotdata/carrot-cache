@@ -17,7 +17,7 @@ import com.onecache.core.util.Utils;
 public class Memcached {
   /** Logger */
   private static final Logger LOG = LogManager.getLogger(Memcached.class);
-  static class Record {
+  public static class Record {
     byte[] value;
     int offset;
     int size;
