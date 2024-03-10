@@ -1308,4 +1308,15 @@ public class Utils {
     }
     return numDigits;
   }
+  
+  // TODO tests
+  public static int sizeAsStr(long value) {
+    int numDigits = 0;
+    int sign = Long.signum(value);
+    long v = sign * value;
+    do { numDigits++; v /= 10; } while (v > 0);
+    if (sign < 0) numDigits++;
+    return numDigits;
+  }
+  
 }

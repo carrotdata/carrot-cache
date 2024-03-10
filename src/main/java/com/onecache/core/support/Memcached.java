@@ -18,13 +18,70 @@ public class Memcached {
   /** Logger */
   private static final Logger LOG = LogManager.getLogger(Memcached.class);
   public static class Record {
-    public byte[] value;
-    public int offset;
-    public int size;
-    public long cas;
-    public long expire;
-    public int flags;
+    private final static byte[] VALUE = "VALUE".getBytes();
+    public byte[] value = null;
+    public int offset = 0;
+    public int size = 0;
+    public long cas = 0;
+    public long expire = 0;
+    public int flags = 0;
     public boolean error;
+    
+    /**
+     * Write record to the buffer (serialize)
+     *TODO test
+     * @param keyPtr key address
+     * @param keySize key size
+     * @param bufferPtr buffer address
+     * @param bufferSize buffer size
+     * @return serialized size (can be larger that bufferSize)
+     */
+    public int write(long keyPtr, int keySize, long bufferPtr, int bufferSize, boolean withCAS) {
+      //VALUE <key> <flags> <bytes> [<cas unique>]\r\n
+      //<data block>\r\n
+      int sersize = serializedSize(keySize, withCAS);
+      if (sersize > bufferSize - 5 /*END\r\n*/) return sersize;
+      int off = 0;
+      // VALUE
+      UnsafeAccess.copy(VALUE, 0, bufferSize, 5);
+      off += 5;
+      UnsafeAccess.putByte(bufferPtr + off, (byte) ' ');
+      off += 1;
+      // key
+      UnsafeAccess.copy(keyPtr, bufferPtr + off, keySize);
+      off += keySize;
+      UnsafeAccess.putByte(bufferPtr + off, (byte) ' ');
+      off += 1;
+      int l = Utils.longToStrDirect(bufferPtr + off, bufferSize - off, this.flags);
+      off += l;
+      if (withCAS) {
+        UnsafeAccess.putByte(bufferPtr + off, (byte) ' ');
+        off += 1;
+        l = Utils.longToStrDirect(bufferPtr + off, bufferSize - off, this.cas);
+        off += l;
+      }
+      UnsafeAccess.putByte(bufferPtr + off,  (byte) '\r');
+      off += 1;
+      UnsafeAccess.putByte(bufferPtr + off,  (byte) '\n');
+      off += 1;
+      // value
+      UnsafeAccess.copy(this.value, this.offset, bufferPtr + off, this.size);
+      off += this.size;
+      UnsafeAccess.putByte(bufferPtr + off,  (byte) '\r');
+      off += 1;
+      UnsafeAccess.putByte(bufferPtr + off,  (byte) '\n');
+      off += 1;
+      return off;
+    }
+    private int serializedSize(int keySize, boolean withCAS) {
+      
+      int sersize = 5 /* VALUE */ +  3 /* spaces*/ + 4 /* 2 CRLF*/ +
+          keySize + size + Utils.sizeAsStr(size) + Utils.sizeAsStr(flags);
+      if (withCAS) {
+        sersize  += 1 + Utils.sizeAsStr(cas);
+      }
+      return sersize;
+    }
   }
   
   public static enum OpResult {
