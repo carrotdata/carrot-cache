@@ -18,13 +18,13 @@ public class Memcached {
   /** Logger */
   private static final Logger LOG = LogManager.getLogger(Memcached.class);
   public static class Record {
-    byte[] value;
-    int offset;
-    int size;
-    long cas;
-    long expire;
-    int flags;
-    boolean error;
+    public byte[] value;
+    public int offset;
+    public int size;
+    public long cas;
+    public long expire;
+    public int flags;
+    public boolean error;
   }
   
   public static enum OpResult {
