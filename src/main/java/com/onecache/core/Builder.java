@@ -820,6 +820,15 @@ public class Builder {
   }
   
   /**
+   * With save data on shutdown
+   * @param save
+   * @return builder instance
+   */
+  public Builder withCacheSaveOnShutdown(boolean save) {
+    conf.setSaveOnShutdown(cacheName, save);
+    return this;
+  }
+  /**
    * Build cache
    * @return
    * @throws IOException

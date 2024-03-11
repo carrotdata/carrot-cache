@@ -79,7 +79,8 @@ public abstract class TestObjectCacheBase  {
       .withCacheRootDir(rootDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
       .withCacheStreamingSupportBufferSize(1 << 19)
-      .withEvictionDisabledMode(true);
+      .withEvictionDisabledMode(true)
+      .withCacheSaveOnShutdown(true);
     
     if (offheap) {
       return builder.buildObjectMemoryCache();

@@ -183,6 +183,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /* Save cache on shutdown */
   boolean saveOnShutdown;
+  
+  /* Scavengers are disabled for safe SAVE operation*/
+  volatile boolean scavDisabled = false;
+  
+  /* Save operation is in progress */
+  volatile boolean saveInProgress = false;
+  
+  volatile boolean cacheDisabled = false;
+  
   /**
    *  Constructor to use 
    *  when loading cache from a storage
@@ -355,6 +364,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       }
     }
     Scavenger.safeShutdown(this.cacheName);
+  }
+  
+  void waitForScavengers() {
+    while(Scavenger.getActiveThreadsCount(this.cacheName) > 0) {
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+      }
+    }
   }
   
   void finishScavenger(Scavenger s) {
@@ -715,7 +733,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       int groupRank)
       throws IOException {
 
-    if(shutdownInProgress) {
+    if(cacheDisabled) {
       return false;
     }
     int rank = getDefaultRankToInsert();
@@ -745,7 +763,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       int groupRank, boolean force, boolean scavenger)
       throws IOException {
 
-    if(shutdownInProgress) {
+    if(cacheDisabled) {
       return false;
     }
     if (this.victimCache != null && this.hybridCacheInverseMode) {
@@ -758,7 +776,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   private boolean putDirectly(long keyPtr, int keySize, long valPtr, int valSize, long expire,
       int rank, int groupRank, boolean force, boolean scavenger) throws IOException {
     
-    if(shutdownInProgress || isGreaterThanMaxSize(keySize, valSize)) {
+    if(cacheDisabled || isGreaterThanMaxSize(keySize, valSize)) {
       return false;
     }
     if (evictionDisabledMode && storageIsFull(keySize, valSize)) {
@@ -934,7 +952,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       boolean scavenger)
       throws IOException {
     
-    if(shutdownInProgress) {
+    if(cacheDisabled) {
       return false;
     }
     
@@ -978,7 +996,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       boolean scavenger)
       throws IOException {
 
-    if(shutdownInProgress || isGreaterThanMaxSize(keySize, valSize)) {
+    if(cacheDisabled || isGreaterThanMaxSize(keySize, valSize)) {
       return false;
     }
     if (evictionDisabledMode && storageIsFull(keySize, valSize)) {
@@ -1100,6 +1118,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException 
    */
   public long getKeyValue(long keyPtr, int keySize, boolean hit, byte[] buffer, int bufOffset) throws IOException {
+    if (this.cacheDisabled) {
+      return -1;
+    }
     long result = -1;
     
     try {
@@ -1163,6 +1184,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException 
    */
   public long get(long keyPtr, int keySize, boolean hit, byte[] buffer, int bufOffset) throws IOException {
+    if (this.cacheDisabled) {
+      return -1;
+    }
     int rem = buffer.length - bufOffset;
     long result = getKeyValue(keyPtr, keySize, hit, buffer, bufOffset);
     if (result > 0 && result <= rem) {
@@ -1187,6 +1211,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public long getRange(long keyPtr, int keySize, int rangeStart, int rangeSize, boolean hit, 
       byte[] buffer, int bufOffset) throws IOException {
+    if (this.cacheDisabled) {
+      return -1;
+    }
     long result = -1;
     try {
       result = engine.getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
@@ -1247,6 +1274,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public long getKeyValue(byte[] key, int keyOffset, int keySize, boolean hit, byte[] buffer,
       int bufOffset) throws IOException {
 
+    if (this.cacheDisabled) {
+      return -1;
+    }
     long result = -1;
     try {
       result = engine.get(key, keyOffset, keySize, hit, buffer, bufOffset);
@@ -1369,6 +1399,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public byte[] get(byte[] key, int keyOffset, int keySize, boolean hit) throws IOException {
 
+    if (this.cacheDisabled) {
+      return null;
+    }
     byte[] buffer = this.tlsEnabled ? this.tlsBuffer.get() : new byte[0];
     long result = getKeyValue(key, keyOffset, keySize, hit, buffer, 0);
     if (result < 0) {
@@ -1437,6 +1470,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public byte[] getKeyValue(byte[] key, int keyOffset, int keySize, boolean hit)
       throws IOException {
 
+    if (this.cacheDisabled) {
+      return null;
+    }
     byte[] buffer = this.tlsEnabled ? this.tlsBuffer.get() : new byte[0];
     long result = getKeyValue(key, keyOffset, keySize, hit, buffer, 0);
     if (result < 0) {
@@ -1496,6 +1532,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public byte[] get(long keyPtr, int keySize, boolean hit) throws IOException {
 
+    if (this.cacheDisabled) {
+      return null;
+    }
     byte[] buffer = this.tlsEnabled ? this.tlsBuffer.get() : new byte[0];
     long result = getKeyValue(keyPtr, keySize, hit, buffer, 0);
     if (result < 0) {
@@ -1551,6 +1590,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public byte[] getKeyValue(long keyPtr, int keySize, boolean hit) throws IOException {
 
+    if (this.cacheDisabled) {
+      return null;
+    }
     byte[] buffer = this.tlsEnabled ? this.tlsBuffer.get() : new byte[0];
     long result = getKeyValue(keyPtr, keySize, hit, buffer, 0);
     if (result < 0) {
@@ -1616,6 +1658,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public long get(byte[] key, int keyOffset, int keySize, boolean hit, byte[] buffer, int bufOffset) 
       throws IOException {
+    if (this.cacheDisabled) {
+      return -1;
+    }
     //TODO: compare other method (get into temp buffer, then copy to destination)
     int rem = buffer.length - bufOffset;
     long result = getKeyValue(key, keyOffset, keySize, hit, buffer, bufOffset);
@@ -1644,6 +1689,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       int rangeStart, int rangeSize, boolean hit, byte[] buffer, int bufOffset) 
       throws IOException {
     
+    if (this.cacheDisabled) {
+      return -1;
+    }
     long result = -1;
     try {
       result = engine.getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
@@ -1702,6 +1750,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public long getKeyValue(byte[] key, int keyOff, int keySize, boolean hit, ByteBuffer buffer)
       throws IOException {
+    if (this.cacheDisabled) {
+      return -1;
+    }
     int rem = buffer.remaining();
     long result = -1;
     try {
@@ -1764,6 +1815,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public long get(byte[] key, int keyOff, int keySize, boolean hit, ByteBuffer buffer) 
       throws IOException {
+    if (this.cacheDisabled) {
+      return -1;
+    }
     int rem = buffer.remaining();
     long result = getKeyValue(key, keyOff, keySize, hit, buffer);
     if (result > 0 && result <= rem) {
@@ -1788,6 +1842,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public long getRange(byte[] key, int keyOffset, int keySize, int rangeStart, int rangeSize, boolean hit, ByteBuffer buffer) 
       throws IOException {
+    if (this.cacheDisabled) {
+      return -1;
+    }
     long result = -1;
     int rem = buffer.remaining();
     try {
@@ -1845,6 +1902,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public long getKeyValue(long keyPtr, int keySize, boolean hit, ByteBuffer buffer) 
       throws IOException {
+    if (this.cacheDisabled) {
+      return -1;
+    }
     int rem = buffer.remaining();
     
     long result = -1;
@@ -1909,6 +1969,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public long get(long keyPtr, int keySize, boolean hit, ByteBuffer buffer) 
       throws IOException {
+    if (this.cacheDisabled) {
+      return -1;
+    }
     int rem = buffer.remaining();
     
     long result = getKeyValue(keyPtr, keySize, hit, buffer);
@@ -1934,6 +1997,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public long getRange(long keyPtr, int keySize, int rangeStart, int rangeSize, boolean hit, ByteBuffer buffer) 
       throws IOException {
+    if (this.cacheDisabled) {
+      return -1;
+    }
     long result = -1;
     int rem = buffer.remaining();
     try {
@@ -1974,6 +2040,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException 
    */
   public boolean delete(long keyPtr, int keySize) throws IOException {
+    if (this.cacheDisabled) {
+      return false;
+    }
     boolean result = engine.delete(keyPtr, keySize);
     if (!result && this.victimCache != null) {
       return this.victimCache.delete(keyPtr, keySize);
@@ -1991,6 +2060,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException 
    */
   public boolean delete(byte[] key, int keyOffset, int keySize) throws IOException {
+    if (this.cacheDisabled) {
+      return false;
+    }
     boolean result = engine.delete(key, keyOffset, keySize);
     if (!result && this.victimCache != null) {
       return this.victimCache.delete(key, keyOffset, keySize);
@@ -2053,6 +2125,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @return time, 0 - no expire, -1 - does not exists or not supported
    */
   public long getExpire(byte[] key, int off, int size) {
+    if (this.cacheDisabled) {
+      return -1;
+    }
     long expire = this.engine.getMemoryIndex().getExpire(key, off, size);
     return expire;
   }
@@ -2064,6 +2139,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @return time in ms since you know when, -1 not supported or does not exists
    */
   public long getExpire(long keyPtr, int keySize) {
+    if (this.cacheDisabled) {
+      return -1;
+    }
     return this.engine.getMemoryIndex().getExpire(keyPtr, keySize);
   }
   
@@ -2075,6 +2153,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @return time, 0 - no expire, -1 - does not exists or not supported
    */
   public long getAndSetExpire(byte[] key, int off, int size, long expire) {
+    if (this.cacheDisabled) {
+      return -1;
+    }
     return this.engine.getMemoryIndex().getAndSetExpire(key, off, size, expire);
   }
   
@@ -2085,6 +2166,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @return time in ms since you know when, -1 not supported or does not exists
    */
   public long getAndSetExpire(long keyPtr, int keySize, long expire) {
+    if (this.cacheDisabled) {
+      return -1;
+    }
     return this.engine.getMemoryIndex().getAndSetExpire(keyPtr, keySize, expire);
   }
   /**
@@ -2104,6 +2188,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @return true or false
    */
   public boolean exists(byte[] key, int off, int size) {
+    if (this.cacheDisabled) {
+      return false;
+    }
     return this.engine.getMemoryIndex().exists(key, off, size);
   }
   
@@ -2116,6 +2203,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException
    */
   public boolean existsExact(byte[] key, int off, int size) throws IOException {
+    if (this.cacheDisabled) {
+      return false;
+    }
     byte[] buf = new byte[1];
     long result = get(key, off, size, false, buf, 0);
     return result >= 0;
@@ -2130,6 +2220,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @throws IOException
    */
   public boolean existsExact(long keyPtr, int size) throws IOException {
+    if (this.cacheDisabled) {
+      return false;
+    }
     byte[] buf = new byte[1];
     long result = get(keyPtr, size, false, buf, 0);
     return result >= 0;
@@ -2563,6 +2656,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     LOG.info("Cache saved in {}ms", endTime - startTime);
   }
   
+  public void disableScavengers() {
+    this.scavDisabled = true;
+    
+  }
+  
   /**
    * Load cache data and meta-data from a file system
    * @throws IOException
@@ -2671,21 +2769,51 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
   }
   
+  String shutdownStatusMsg ;
+  
+  public String shutdownStatusMsg() {
+    return this.shutdownStatusMsg;
+  }
+  
   public long shutdown() throws IOException {
+    
+    synchronized(this) {
+      if (this.shutdownInProgress) {
+        throw new IOException("Shutdown is in progress");
+      }
+      this.shutdownInProgress = true;
+    }
+    boolean systemShutdown = false;
+    
+    try {
+    // Remove shutdown hook
+      Runtime.getRuntime().removeShutdownHook(shutDownHook);
+    } catch (IllegalStateException e) {
+      systemShutdown = true;
+    }
     // Disable writes/reads
-    System.out.printf("Shutting down cache {}\n", cacheName);
+    shutdownStatusMsg = String.format("Shutting down cache %s save data=%s\n", cacheName, saveOnShutdown);
+    System.out.printf(shutdownStatusMsg);
     long size = getStorageUsedActual();
-    this.shutdownInProgress = true;
+    size += this.engine.getMemoryIndex().getAllocatedMemory();
     long start = System.currentTimeMillis();
     stopScavengers();
+    // Disable cache
+    this.cacheDisabled = true;
+    
     // stop IOEngine
     this.engine.shutdown();
-    save();
+    if (this.saveOnShutdown) {
+      save();
+    }
     if (this.victimCache != null) {
       size += this.victimCache.shutdown();
     }
     long end = System.currentTimeMillis();
-    System.out.printf("Cache {} saved {} bytes in {} ms", cacheName, size, (end - start));
+    if (saveOnShutdown) {
+      shutdownStatusMsg += String.format("Cache %s saved %d bytes in %d ms\n", cacheName, size, (end - start));
+      System.out.printf("Cache %s saved %d bytes in {} ms\n", cacheName, size, (end - start));
+    }
     return size;
   }
   
@@ -2698,6 +2826,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   public SegmentScanner getSegmentScanner(Segment s) throws IOException {
+    if (this.cacheDisabled) {
+      throw new IOException("Shutdown is in progress");
+    }
     return this.engine.getScanner(s);
   }
   

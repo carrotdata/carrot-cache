@@ -491,8 +491,8 @@ public class FileIOEngine extends IOEngine {
   
   @Override
   public void shutdown() {
-    // TODO: Should we save on shutdown?
     waitForIoStoragePool();
+    // should we close files? They are read only
   }
   
   @Override
