@@ -101,10 +101,7 @@ public final class MemoryIndex implements Persistent {
      */
     MQ  /* Main Queue */
     /*
-     * MQ Index item is 20 bytes:
-     * 8 bytes - hashed key value
-     * 4 bytes - total item size (key + value)
-     * 8 bytes - location in the storage - information 
+     * MQ Index item is 6 - 20 bytes (depends on implementation):
      */
   }
   
@@ -204,6 +201,8 @@ public final class MemoryIndex implements Persistent {
   
   /* Total number of index entries */
   private AtomicLong numEntries = new AtomicLong(0);
+  
+  private AtomicLong allocatedMemory = new AtomicLong(0);
   
   /* Maximum number of entries - for AQ*/
   private volatile long maxEntries = 0; // 0 - means no max
@@ -491,6 +490,14 @@ public final class MemoryIndex implements Persistent {
   }
 
   /**
+   * Get memory allocated for this index
+   * @return
+   */
+  public long getAllocatedMemory() {
+    return this.allocatedMemory.get() + Utils.SIZEOF_LONG + ref_index_base.get().length;
+  }
+  
+  /**
    * Set type of an index - either AdmissionQueue index or Main Queue
    *
    * @param type
@@ -537,6 +544,7 @@ public final class MemoryIndex implements Persistent {
       UnsafeAccess.putShort(index_base[i], (short) (size));
       // Number of entries and data size are 0
     }
+    this.allocatedMemory.addAndGet(size * index_base.length);
     ref_index_base.set(index_base);
     initLocks();
   }
@@ -570,6 +578,7 @@ public final class MemoryIndex implements Persistent {
     // Update block size
     setBlockSize(ptr, newSize);
     UnsafeAccess.free(indexBlockPtr);
+    this.allocatedMemory.addAndGet(newSize - blockSize);
     return ptr;
   }
 
@@ -594,6 +603,8 @@ public final class MemoryIndex implements Persistent {
     // Update block size
     setBlockSize(ptr, newSize);
     UnsafeAccess.free(indexBlockPtr);
+    this.allocatedMemory.addAndGet(newSize - blockSize);
+
     return ptr;
   }
 
@@ -2358,6 +2369,9 @@ public final class MemoryIndex implements Persistent {
     setBlockSize(ptr0, blockSize);
 
     long ptr1 = UnsafeAccess.mallocZeroed(blockSize);
+    
+    this.allocatedMemory.addAndGet(2 * blockSize);
+    
     UnsafeAccess.copy(ptr, ptr1, this.indexBlockHeaderSize);
     setBlockSize(ptr1, blockSize);
 
@@ -2406,7 +2420,8 @@ public final class MemoryIndex implements Persistent {
     rehash_index[slot1] = shrink(ptr1);
     // Free previous index block
     // It is safe, because this index block is under write lock
-    
+    int oldBlockSize = blockSize(ptr);
+    this.allocatedMemory.addAndGet(-oldBlockSize);
     UnsafeAccess.free(ptr);
     ref_index_base.get()[slot] = 0;
     // Update index format meta sections
@@ -2549,7 +2564,8 @@ public final class MemoryIndex implements Persistent {
     dos.writeInt(this.numRanks);
     /* Expired - evicted balance */
     dos.writeLong(this.expiredEvictedBalance.get());
-    
+    /* Total allocated memory */
+    dos.writeLong(this.allocatedMemory.get());
     long[] table = this.ref_index_base.get();
     byte[] buffer = new byte[getMaximumBlockSize()];
     for (int i = 0; i < table.length; i++) {
@@ -2602,6 +2618,8 @@ public final class MemoryIndex implements Persistent {
     this.numRanks = dis.readInt();
     // Expired - evicted balance
     this.expiredEvictedBalance = new AtomicLong(dis.readLong());
+    // Total allocated memory
+    this.allocatedMemory = new AtomicLong(dis.readLong());
     
     byte[] buffer = new byte[getMaximumBlockSize()];
     for (int i = 0; i < tableSize; i++) {
