@@ -943,7 +943,7 @@ public class Memcached {
    * @return -1 - error or new value after increment
    * @throws NumberFormatException
    */
-  public long incr(byte[] key, int keyOffset, int keySize, long v) {
+  public long incr(byte[] key, int keyOffset, int keySize, long v) throws NumberFormatException {
     if (v < 0) {
       throw new IllegalArgumentException("increment value must be positive");
     }
@@ -955,6 +955,7 @@ public class Memcached {
         int off = r.offset;
         int size = r.size;
         long val = Utils.strToLong(b, off, size);
+        // we ignore buffer overflow - its >>  than 20 (maximum number of digits and sign)
         int numDigits = Utils.longToStr(b, off, val + v);
         long expire = cache.getExpire(key, keyOffset, keySize);
         set(key, keyOffset, keySize, b, off, numDigits, r.flags, expire);
@@ -975,7 +976,7 @@ public class Memcached {
    * @return -1 - error or new value after increment
    * @throws NumberFormatException
    */
-  public long incr(long keyPtr, int keySize, long v) {
+  public long incr(long keyPtr, int keySize, long v) throws NumberFormatException {
     if (v < 0) {
       throw new IllegalArgumentException("increment value must be positive");
     }
@@ -1007,7 +1008,7 @@ public class Memcached {
    * @return -1 - error or new value after increment
    * @throws NumberFormatException
    */
-  public long decr(byte[] key, int keyOffset, int keySize, long v) {
+  public long decr(byte[] key, int keyOffset, int keySize, long v) throws NumberFormatException {
     if (v < 0) {
       throw new IllegalArgumentException("decrement value must be positive");
     }
@@ -1043,7 +1044,7 @@ public class Memcached {
    * @return -1 - error or new value after increment
    * @throws NumberFormatException
    */
-  public long decr(long keyPtr, int keySize, long v) {
+  public long decr(long keyPtr, int keySize, long v) throws NumberFormatException {
     if (v < 0) {
       throw new IllegalArgumentException("decrement value must be positive");
     }
