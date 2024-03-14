@@ -54,6 +54,10 @@ public class Memcached {
       off += 1;
       int l = Utils.longToStrDirect(bufferPtr + off, bufferSize - off, this.flags);
       off += l;
+      UnsafeAccess.putByte(bufferPtr + off, (byte) ' ');
+      off += 1;
+      l = Utils.longToStrDirect(bufferPtr + off, bufferSize - off, this.size);
+      off += l;
       if (withCAS) {
         UnsafeAccess.putByte(bufferPtr + off, (byte) ' ');
         off += 1;
@@ -73,6 +77,7 @@ public class Memcached {
       off += 1;
       return off;
     }
+    
     private int serializedSize(int keySize, boolean withCAS) {
       
       int sersize = 5 /* VALUE */ +  3 /* spaces*/ + 4 /* 2 CRLF*/ +
