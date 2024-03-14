@@ -85,7 +85,7 @@ public class Memcached {
   }
   
   public static enum OpResult {
-    STORED, NOT_STORED, EXISTS, NOT_FOUND, DELETED, ERROR;
+    STORED, NOT_STORED, EXISTS, NOT_FOUND, DELETED, TOUCHED, ERROR;
   }
   
   private static int INIT_SIZE = 1 << 16;
