@@ -43,7 +43,7 @@ public class Memcached {
       if (sersize > bufferSize - 5 /*END\r\n*/) return sersize;
       int off = 0;
       // VALUE
-      UnsafeAccess.copy(VALUE, 0, bufferSize, 5);
+      UnsafeAccess.copy(VALUE, 0, bufferPtr, 5);
       off += 5;
       UnsafeAccess.putByte(bufferPtr + off, (byte) ' ');
       off += 1;
