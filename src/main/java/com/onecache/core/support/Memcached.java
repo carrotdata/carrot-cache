@@ -186,9 +186,8 @@ public class Memcached {
       Cache c = new Cache(name);
       if (cache != null) {
         cache.setVictimCache(c);
-      } else {
-        cache = c;
-      }
+      } 
+      cache = c;
     }
     return cache;
   }
