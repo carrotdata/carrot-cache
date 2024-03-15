@@ -978,7 +978,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   private boolean isGreaterThanMaxSize(int keySize, int valueSize) {
     long size = Utils.kvSizeL(keySize, valueSize);
     boolean res = size > this.maximumKeyValueSize; 
-    LOG.warn("Unable to cache. Serialized size {} of key-value exceeds the limit of {}.", size, maximumKeyValueSize);
+    if (res) {
+      LOG.warn("Unable to cache. Serialized size {} of key-value exceeds the limit of {}.", size, maximumKeyValueSize);
+    }
     return res;
   }
   
