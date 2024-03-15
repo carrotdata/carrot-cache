@@ -302,8 +302,8 @@ public class TestProjectUtils {
       long vv = Utils.strToLong(b, 0, b.length);
       assertEquals(v, vv);
       int numDigits = Utils.longToStr(buf, 0, v);
-      assertEquals(b.length, numDigits + 1);
-      String ss = new String(buf, 0, numDigits + 1);
+      assertEquals(b.length, numDigits);
+      String ss = new String(buf, 0, numDigits);
       long vvv = Long.parseLong(ss);
       assertEquals(v, vvv);
     }
@@ -337,7 +337,7 @@ public class TestProjectUtils {
       String s = Long.toString(v);
       int len = s.length();
       int numDigits = Utils.longToStrDirect(buf, 21, v);
-      assertEquals(len, numDigits + 1);
+      assertEquals(len, numDigits);
       long vv = Utils.strToLongDirect(buf, len);
       assertEquals(v, vv);
     }

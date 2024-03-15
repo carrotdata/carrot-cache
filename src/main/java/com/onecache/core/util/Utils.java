@@ -1254,7 +1254,7 @@ public class Utils {
     int sign = Long.signum(value);
     long v = sign * value;
     do { numDigits++; v /= 10; } while (v > 0);
-    if (buf.length - off < numDigits - sign) {
+    if (buf.length - off < numDigits + (sign < 0? 1: 0)) {
       throw new ArrayIndexOutOfBoundsException(numDigits);
     }
     
@@ -1267,7 +1267,7 @@ public class Utils {
       buf[off + numDigits - 1 - i] = (byte)(d + '0');
       value /= 10;
     }
-    return numDigits;
+    return numDigits + (sign < 0? 1: 0);
   }
   
   public static long strToLongDirect(long ptr, int len) {
@@ -1293,7 +1293,7 @@ public class Utils {
     int sign = Long.signum(value);
     long v = sign * value;
     do { numDigits++; v /= 10; } while (v > 0);
-    if (avail < numDigits - sign) {
+    if (avail < numDigits + + (sign < 0? 1: 0)) {
       throw new ArrayIndexOutOfBoundsException(numDigits);
     }
     
@@ -1306,7 +1306,7 @@ public class Utils {
       UnsafeAccess.putByte(ptr + numDigits - 1 - i, (byte)(d + '0'));
       value /= 10;
     }
-    return numDigits;
+    return numDigits + (sign < 0? 1: 0);
   }
   
   // TODO tests
