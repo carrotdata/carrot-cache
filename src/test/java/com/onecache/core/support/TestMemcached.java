@@ -39,7 +39,7 @@ public class TestMemcached {
       byte[] key = TestUtils.randomBytes(30);
       byte[] value = TestUtils.randomBytes(200);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
       OpResult res = mc.set(key, 0, key.length, value, 0, value.length, flags, expire);
       assertTrue(res == OpResult.STORED);
       Record rec = mc.get(key, 0, key.length);
@@ -63,7 +63,7 @@ public class TestMemcached {
       long key = TestUtils.randomMemory(keySize);
       long value = TestUtils.randomMemory(200);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
       OpResult res = mc.set(key, keySize, value, valueSize, flags, expire);
       assertTrue(res == OpResult.STORED);
       Record rec = mc.get(key, keySize);
@@ -87,7 +87,7 @@ public class TestMemcached {
       byte[] key = TestUtils.randomBytes(30);
       byte[] value = TestUtils.randomBytes(200);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
       OpResult res = mc.set(key, 0, key.length, value, 0, value.length, flags, expire);
       assertTrue(res == OpResult.STORED);
       int newFlags = r.nextInt();
@@ -119,7 +119,7 @@ public class TestMemcached {
       long key = TestUtils.randomMemory(keySize);
       long value = TestUtils.randomMemory(200);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
       OpResult res = mc.set(key, keySize, value, valueSize, flags, expire);
       assertTrue(res == OpResult.STORED);
 
@@ -153,7 +153,7 @@ public class TestMemcached {
       byte[] key = TestUtils.randomBytes(30);
       byte[] value = TestUtils.randomBytes(200);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
 
       OpResult res = mc.replace(key, 0, key.length, value, 0, value.length, flags, expire);
       assertTrue(res == OpResult.NOT_STORED);
@@ -185,7 +185,7 @@ public class TestMemcached {
       long key = TestUtils.randomMemory(keySize);
       long value = TestUtils.randomMemory(200);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
 
       OpResult res = mc.replace(key, keySize, value, valueSize, flags, expire);
       assertTrue(res == OpResult.NOT_STORED);
@@ -223,7 +223,7 @@ public class TestMemcached {
       System.arraycopy(value1, 0, combined, value.length, value1.length);
 
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
 
       OpResult res = mc.append(key, 0, key.length, value1, 0, value1.length, flags, expire);
       assertTrue(res == OpResult.NOT_STORED);
@@ -261,7 +261,7 @@ public class TestMemcached {
       UnsafeAccess.copy(value1, combined + valueSize, value1Size);
 
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
 
       OpResult res = mc.append(key, keySize, value1, value1Size, flags, expire);
       assertTrue(res == OpResult.NOT_STORED);
@@ -297,7 +297,7 @@ public class TestMemcached {
       System.arraycopy(value1, 0, combined, 0, value1.length);
       System.arraycopy(value, 0, combined, value1.length, value.length);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
 
       OpResult res = mc.prepend(key, 0, key.length, value1, 0, value1.length, flags, expire);
       assertTrue(res == OpResult.NOT_STORED);
@@ -333,7 +333,7 @@ public class TestMemcached {
       UnsafeAccess.copy(value, combined + value1Size, valueSize);
 
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
 
       OpResult res = mc.prepend(key, keySize, value1, value1Size, flags, expire);
       assertTrue(res == OpResult.NOT_STORED);
@@ -365,7 +365,7 @@ public class TestMemcached {
       byte[] value = TestUtils.randomBytes(200);
       byte[] value1 = TestUtils.randomBytes(100);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
 
       OpResult res = mc.cas(key, 0, key.length, value1, 0, value1.length, flags, expire, 0);
       assertTrue(res == OpResult.NOT_FOUND);
@@ -407,7 +407,7 @@ public class TestMemcached {
       long value1 = TestUtils.randomMemory(value1Size);
 
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
 
       OpResult res = mc.cas(key, keySize, value1, value1Size, flags, expire, 0);
       assertTrue(res == OpResult.NOT_FOUND);
@@ -454,7 +454,7 @@ public class TestMemcached {
       
       long value1 = TestUtils.randomMemory(value1Size);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 1000000)/ 1000;
 
       long v = mc.incr(key, keySize, 10);
       assertTrue(v == -1);
@@ -508,7 +508,7 @@ public class TestMemcached {
       byte[] value = Long.toString(v0).getBytes();
       byte[] value1 = TestUtils.randomBytes(100);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
 
       long v = mc.incr(key, 0, key.length, 10);
       assertTrue(v == -1);
@@ -564,7 +564,7 @@ public class TestMemcached {
       
       long value1 = TestUtils.randomMemory(value1Size);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
 
       long v = mc.decr(key, keySize, 10);
       assertTrue(v == -1);
@@ -621,7 +621,7 @@ public class TestMemcached {
       byte[] value = Long.toString(v0).getBytes();
       byte[] value1 = TestUtils.randomBytes(100);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
 
       long v = mc.decr(key, 0, key.length, 10);
       assertTrue(v == -1);
@@ -670,7 +670,7 @@ public class TestMemcached {
       byte[] key = TestUtils.randomBytes(30);
       byte[] value = TestUtils.randomBytes(200);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
       Record rec = mc.gets(key, 0, key.length);
       assertTrue(rec.value == null);
       
@@ -702,7 +702,7 @@ public class TestMemcached {
       long key = TestUtils.randomMemory(keySize);
       long value = TestUtils.randomMemory(200);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
       
       Record rec = mc.gets(key, keySize);
       assertTrue(rec.value == null);
@@ -736,8 +736,8 @@ public class TestMemcached {
       byte[] key = TestUtils.randomBytes(30);
       byte[] value = TestUtils.randomBytes(200);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
-      long newExpire = expire + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
+      long newExpire = expire + 10;
       
       Record rec = mc.gats(key, 0, key.length, newExpire);
       assertTrue(rec.value == null);
@@ -774,8 +774,8 @@ public class TestMemcached {
       long key = TestUtils.randomMemory(keySize);
       long value = TestUtils.randomMemory(200);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
-      long newExpire = expire + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
+      long newExpire = expire + 10;
       
       Record rec = mc.gats(key, keySize, newExpire);
       assertTrue(rec.value == null);
@@ -813,8 +813,8 @@ public class TestMemcached {
       byte[] key = TestUtils.randomBytes(30);
       byte[] value = TestUtils.randomBytes(200);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
-      long newExpire = expire + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
+      long newExpire = expire + 10;
       OpResult res = mc.set(key, 0, key.length, value, 0, value.length, flags, expire);
       assertTrue(res == OpResult.STORED);
       
@@ -844,8 +844,8 @@ public class TestMemcached {
       long key = TestUtils.randomMemory(keySize);
       long value = TestUtils.randomMemory(200);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
-      long newExpire = expire + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
+      long newExpire = expire + 10;
       
       Record rec = mc.gat(key, keySize, newExpire);
       assertTrue(rec.value == null);
@@ -880,8 +880,8 @@ public class TestMemcached {
       byte[] key = TestUtils.randomBytes(30);
       byte[] value = TestUtils.randomBytes(200);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
-      long newExpire = expire + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
+      long newExpire = expire + 10;
       
       long result = mc.touch(key, 0, key.length, newExpire);
       assertTrue(result == -1);
@@ -913,8 +913,8 @@ public class TestMemcached {
       long key = TestUtils.randomMemory(keySize);
       long value = TestUtils.randomMemory(200);
       int flags = r.nextInt();
-      long expire = System.currentTimeMillis() + 10000;
-      long newExpire = expire + 10000;
+      long expire = (System.currentTimeMillis() + 10000)/ 1000;
+      long newExpire = expire + 10;
       
       long result = mc.touch(key, keySize, newExpire);
       assertTrue(result == -1);
@@ -936,6 +936,6 @@ public class TestMemcached {
   }
   
   protected boolean sameExpire (long exp, long value) {
-    return Math.abs(exp - value) <= 1000;
+    return Math.abs(exp - value) <= 1;
   }
 }

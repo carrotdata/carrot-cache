@@ -208,6 +208,17 @@ public class Memcached {
    */
   public OpResult set(byte[] key, int keyOffset, int keySize, byte[] value, int valueOffset, 
         int valueSize, int flags, long expTime) {
+    if (expTime < 0) {
+      try {
+        boolean result = cache.expire(key, keyOffset, keySize);
+        return result? OpResult.STORED: OpResult.NOT_STORED;
+      } catch (IOException e) {
+        LOG.error(e);
+        return OpResult.ERROR;
+      }
+    }
+    expTime = adjustExpire(expTime);
+    
     allocBuffer(valueSize + Utils.SIZEOF_INT);
     byte[] b = buffer.get();
     // Copy value
@@ -236,6 +247,17 @@ public class Memcached {
    */
   public OpResult set(long keyPtr, int keySize, long valuePtr, int valueSize, int flags,
       long expTime) {
+    if (expTime < 0) {
+      try {
+        boolean result = cache.expire(keyPtr, keySize);
+        return result? OpResult.STORED: OpResult.NOT_STORED;
+      } catch (IOException e) {
+        LOG.error(e);
+        return OpResult.ERROR;
+      }
+    }
+    expTime = adjustExpire(expTime);
+
     allocMemory(valueSize + Utils.SIZEOF_INT);
     long ptr = memory.get();
     UnsafeAccess.copy(valuePtr, ptr, valueSize);
@@ -263,6 +285,17 @@ public class Memcached {
    */
   public OpResult set(long keyPtr, int keySize, byte[] value, int valueOffset, int valueSize, int flags,
       long expTime) {
+    if (expTime < 0) {
+      try {
+        boolean result = cache.expire(keyPtr, keySize);
+        return result? OpResult.STORED: OpResult.NOT_STORED;
+      } catch (IOException e) {
+        LOG.error(e);
+        return OpResult.ERROR;
+      }
+    }
+    expTime = adjustExpire(expTime);
+
     allocMemory(valueSize + Utils.SIZEOF_INT);
     long ptr = memory.get();
     UnsafeAccess.copy(value, valueOffset, ptr, valueSize);
@@ -294,6 +327,12 @@ public class Memcached {
       int valueSize, int flags, long expTime) {
     // This operation is atomic
     try {
+      if (expTime < 0) {
+        boolean result = cache.expire(key, keyOffset, keySize);
+        return result? OpResult.STORED: OpResult.NOT_STORED;
+      }
+      expTime = adjustExpire(expTime);
+
       allocBuffer(valueSize + Utils.SIZEOF_INT);
       byte[] b = buffer.get();
       // Copy value
@@ -330,6 +369,12 @@ public class Memcached {
       int valueSize, int flags, long expTime) {
     // This operation is atomic
     try {
+      if (expTime < 0) {
+        boolean result = cache.expire(keyPtr, keySize);
+        return result? OpResult.STORED: OpResult.NOT_STORED;
+      }
+      expTime = adjustExpire(expTime);
+
       allocMemory(valueSize + Utils.SIZEOF_INT);
       long ptr = memory.get();
       UnsafeAccess.copy(valuePtr, ptr, valueSize);
@@ -366,6 +411,12 @@ public class Memcached {
       int valueSize, int flags, long expTime) {
     // This operation is atomic
     try {
+      if (expTime < 0) {
+        boolean result = cache.expire(key, keyOffset, keySize);
+        return result? OpResult.STORED: OpResult.NOT_STORED;
+      }
+      expTime = adjustExpire(expTime);
+
       allocBuffer(valueSize + Utils.SIZEOF_INT);
       byte[] b = buffer.get();
       // Copy value
@@ -402,6 +453,12 @@ public class Memcached {
       int valueSize, int flags, long expTime) {
     // This operation is atomic
     try {
+      if (expTime < 0) {
+        boolean result = cache.expire(keyPtr, keySize);
+        return result? OpResult.STORED: OpResult.NOT_STORED;
+      }
+      expTime = adjustExpire(expTime);
+
       allocMemory(valueSize + Utils.SIZEOF_INT);
       long ptr = memory.get();
       UnsafeAccess.copy(valuePtr, ptr, valueSize);
@@ -439,6 +496,12 @@ public class Memcached {
       int valueSize, int flags, long expTime) {
     // This operation is atomic
     try {
+      if (expTime < 0) {
+        boolean result = cache.expire(key, keyOffset, keySize);
+        return result? OpResult.STORED: OpResult.NOT_STORED;
+      }
+      expTime = adjustExpire(expTime);
+
       LockSupport.lock(key, keyOffset, keySize);
       Record r = get(key, keyOffset, keySize);
       if (r.value == null) {
@@ -478,6 +541,12 @@ public class Memcached {
       int valueSize, int flags, long expTime) {
     // This operation is atomic
     try {
+      if (expTime < 0) {
+        boolean result = cache.expire(keyPtr, keySize);
+        return result? OpResult.STORED: OpResult.NOT_STORED;
+      }
+      expTime = adjustExpire(expTime);
+
       LockSupport.lock(keyPtr, keySize);
       Record r = get(keyPtr, keySize);
       if (r.value == null) {
@@ -519,6 +588,12 @@ public class Memcached {
       int valueSize, int flags, long expTime) {
     // This operation is atomic
     try {
+      if (expTime < 0) {
+        boolean result = cache.expire(key, keyOffset, keySize);
+        return result? OpResult.STORED: OpResult.NOT_STORED;
+      }
+      expTime = adjustExpire(expTime);
+
       LockSupport.lock(key, keyOffset, keySize);
       Record r = get(key, keyOffset, keySize);
       if (r.value == null) {
@@ -560,6 +635,12 @@ public class Memcached {
       int valueSize, int flags, long expTime) {
     // This operation is atomic
     try {
+      if (expTime < 0) {
+        boolean result = cache.expire(keyPtr, keySize);
+        return result? OpResult.STORED: OpResult.NOT_STORED;
+      }
+      expTime = adjustExpire(expTime);
+
       LockSupport.lock(keyPtr, keySize);
       Record r = get(keyPtr, keySize);
       if (r.value == null) {
@@ -604,6 +685,7 @@ public class Memcached {
       int valueSize, int flags, long expTime, long cas) {
     // This operation is atomic
     try {
+      
       LockSupport.lock(key, keyOffset, keySize);
       Record r = get(key, keyOffset, keySize);
       if (r.value == null) {
@@ -613,6 +695,12 @@ public class Memcached {
       if(cas != $cas) {
         return OpResult.EXISTS;
       }
+      if (expTime < 0) {
+        boolean result = cache.expire(key, keyOffset, keySize);
+        return result? OpResult.STORED: OpResult.NOT_FOUND;
+      }
+      expTime = adjustExpire(expTime);
+
       int requiredSize = valueSize + Utils.SIZEOF_INT;
       allocBuffer(requiredSize);
       byte[] b = buffer.get();
@@ -655,6 +743,12 @@ public class Memcached {
       if(cas != $cas) {
         return OpResult.EXISTS;
       }
+      if (expTime < 0) {
+        boolean result = cache.expire(keyPtr, keySize);
+        return result? OpResult.STORED: OpResult.NOT_FOUND;
+      }
+      expTime = adjustExpire(expTime);
+
       int requiredSize = valueSize + Utils.SIZEOF_INT;
       allocMemory(requiredSize);
       long ptr = memory.get();
@@ -752,6 +846,7 @@ public class Memcached {
    */
   public Record gat(byte[] key, int keyOffset, int keySize, long newExpire) {
     try {
+   
       LockSupport.lock(key, keyOffset, keySize);
       Record r = get(key, keyOffset, keySize);
       if (r.value != null) {
@@ -906,7 +1001,19 @@ public class Memcached {
    * @return previous expiration time or -1 (if key did exist)
    */
   public long touch(byte[] key, int keyOffset, int keySize, long expTime) {
-    return cache.getAndSetExpire(key, keyOffset, keySize, expTime);
+    try {
+      if (expTime < 0) {
+        boolean r = cache.expire(key, keyOffset, keySize);
+        return r? 0: -1;
+      }
+      expTime = adjustExpire(expTime);
+      long v = cache.getAndSetExpire(key, keyOffset, keySize, expTime);
+      if (v == -1) return -1;
+      return v / 1000;
+    } catch (IOException e) {
+      LOG.error(e);
+      return 0;
+    }
   }
   
   /**
@@ -918,7 +1025,19 @@ public class Memcached {
    * @return previous expiration time or -1 (if key did exist)
    */
   public long touch(long keyPtr, int keySize, long expTime) {
-    return cache.getAndSetExpire(keyPtr, keySize, expTime);
+    try {
+      if (expTime < 0) {
+        boolean r = cache.expire(keyPtr, keySize);
+        return r? 0: -1;
+      }
+      expTime = adjustExpire(expTime);
+      long v = cache.getAndSetExpire(keyPtr, keySize, expTime) ;
+      if (v == -1) return -1;
+      return v / 1000;
+    } catch (IOException e) {
+      LOG.error(e);
+      return 0;
+    }    
   }
   
   /**
@@ -962,7 +1081,7 @@ public class Memcached {
         // we ignore buffer overflow - its >>  than 20 (maximum number of digits and sign)
         int numDigits = Utils.longToStr(b, off, val + v);
         long expire = cache.getExpire(key, keyOffset, keySize);
-        set(key, keyOffset, keySize, b, off, numDigits, r.flags, expire);
+        set(key, keyOffset, keySize, b, off, numDigits, r.flags, expire / 1000);
         return val + v;
       }
       return -1;// NOT_FOUND
@@ -994,7 +1113,7 @@ public class Memcached {
         long val = Utils.strToLong(b, off, size);
         int numDigits = Utils.longToStr(b, off, val + v);
         long expire = cache.getExpire(keyPtr, keySize);
-        set(keyPtr, keySize, b, off, numDigits, r.flags, expire);
+        set(keyPtr, keySize, b, off, numDigits, r.flags, expire / 1000);
         return val + v;
       }
       return -1;// NOT_FOUND
@@ -1030,7 +1149,7 @@ public class Memcached {
         }
         int numDigits = Utils.longToStr(b, off, newValue);
         long expire = cache.getExpire(key, keyOffset, keySize);
-        set(key, keyOffset, keySize, b, off, numDigits, r.flags, expire);
+        set(key, keyOffset, keySize, b, off, numDigits, r.flags, expire / 1000);
         return newValue;
       }
       return -1;// NOT_FOUND
@@ -1066,7 +1185,7 @@ public class Memcached {
         }
         int numDigits = Utils.longToStr(b, off, newValue);
         long expire = cache.getExpire(keyPtr, keySize);
-        set(keyPtr, keySize, b, off, numDigits, r.flags, expire);
+        set(keyPtr, keySize, b, off, numDigits, r.flags, expire / 1000);
         return newValue;
       }
       return -1;// NOT_FOUND
@@ -1134,6 +1253,16 @@ public class Memcached {
   
   long computeCAS(long valuePtr, int valueSize) {
     return Utils.hash64(valuePtr, valueSize);
+  }
+  
+  long adjustExpire(long expire) {
+    if (expire == 0) return 0;
+    if (expire <= 60 * 60 * 24 * 30) {
+      expire = System.currentTimeMillis() + expire * 1000L;
+    } else {
+      expire = expire * 1000;
+    }
+    return expire;
   }
   
   public void dispose() {
