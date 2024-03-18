@@ -143,6 +143,14 @@ public class Memcached {
     }
   }
   
+  private static void reallocBufferNoCopy(int sizeRequired) {
+    byte[] b = buffer.get();
+    if (b.length < sizeRequired) {
+      byte[] bb = new byte[sizeRequired];
+      buffer.set(bb);
+    }
+  }
+  
   private static void reallocMemory(int sizeRequired) {
     long ptr = memory.get();
     long size = memorySize.get();
@@ -153,6 +161,18 @@ public class Memcached {
     long $ptr = UnsafeAccess.mallocZeroed(sizeRequired);
     UnsafeAccess.copy(ptr, $ptr, size);
     UnsafeAccess.free(memory.get());
+    memory.set($ptr);
+  }
+  
+  private static void reallocMemoryNoCopy(int sizeRequired) {
+    long ptr = memory.get();
+    long size = memorySize.get();
+    if (size >= sizeRequired) {
+      return;
+    }
+    memorySize.set((long) sizeRequired);
+    long $ptr = UnsafeAccess.mallocZeroed(sizeRequired);
+    UnsafeAccess.free(ptr);
     memory.set($ptr);
   }
   
@@ -557,6 +577,8 @@ public class Memcached {
       int requiredSize = size + valueSize + Utils.SIZEOF_INT;
       reallocMemory(requiredSize);
       long ptr = memory.get();
+      // Copy existing
+      UnsafeAccess.copy(r.value, r.offset, ptr, size);
       // Copy value
       UnsafeAccess.copy(valuePtr, ptr + size, valueSize);
       // Add flags
@@ -602,10 +624,10 @@ public class Memcached {
       int size = r.size;
       // r.offset = 0
       int requiredSize = size + valueSize + Utils.SIZEOF_INT;
-      reallocBuffer(requiredSize);
+      reallocBufferNoCopy(requiredSize);
       byte[] b = buffer.get();
-      // Move existing value by valueSize
-      System.arraycopy(b,  0,  b, valueSize, size);
+      // Copy existing
+      System.arraycopy(r.value, r.offset, b, valueSize, size);
       // Copy value
       System.arraycopy(value, valueOffset, b, 0, valueSize);
       // Add flags
@@ -649,10 +671,10 @@ public class Memcached {
       int size = r.size;
       // r.offset = 0
       int requiredSize = size + valueSize + Utils.SIZEOF_INT;
-      reallocMemory(requiredSize);
+      reallocMemoryNoCopy(requiredSize);
       long ptr = memory.get();
-      // Move existing value by valueSize
-      UnsafeAccess.copy(ptr, ptr + valueSize, size);
+      // Copy existing
+      UnsafeAccess.copy(r.value, r.offset, ptr + valueSize, size);
       // Copy value
       UnsafeAccess.copy(valuePtr, ptr, valueSize);
       // Add flags
