@@ -1270,11 +1270,11 @@ public class Memcached {
   /*************************** Utility methods ************************/
   
   long computeCAS(byte[] value, int valueOffset, int valueSize) {
-    return Utils.hash64(value, valueOffset, valueSize);
+    return Math.abs(Utils.hash64(value, valueOffset, valueSize));
   }
   
   long computeCAS(long valuePtr, int valueSize) {
-    return Utils.hash64(valuePtr, valueSize);
+    return Math.abs(Utils.hash64(valuePtr, valueSize));
   }
   
   long adjustExpire(long expire) {
