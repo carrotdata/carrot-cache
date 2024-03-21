@@ -32,7 +32,7 @@ import com.onecache.core.io.CompressedBlockFileDataReader;
 import com.onecache.core.io.CompressedBlockMemoryDataReader;
 import com.onecache.core.util.CacheConfig;
 
-public class TestScavengerWithCompressionBase extends TestScavengerBase {
+public abstract class TestScavengerWithCompressionBase extends TestScavengerBase {
   
   boolean dictionaryEnabled = true;   
   boolean asyncTrainingMode = false;

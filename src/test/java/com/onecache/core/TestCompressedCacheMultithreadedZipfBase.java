@@ -26,7 +26,7 @@ import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
 
-public class TestCompressedCacheMultithreadedZipfBase extends TestCacheMultithreadedZipfBase {
+public abstract class TestCompressedCacheMultithreadedZipfBase extends TestCacheMultithreadedZipfBase {
 
   protected boolean dictionaryEnabled = true;
   protected boolean asyncTrainingMode = false;
