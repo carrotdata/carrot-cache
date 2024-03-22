@@ -33,7 +33,7 @@ public class TestMemoryIndexMQMultithreadedStress extends TestMemoryIndexMultith
     UnsafeAccess.debug = false;
     UnsafeAccess.mallocStats.clear();
     memoryIndex = new MemoryIndex("default", MemoryIndex.Type.MQ);
-    numThreads = 4;
+    numThreads = 8;
   }
   
   private int loadIndexBytes() {

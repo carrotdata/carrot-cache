@@ -135,6 +135,8 @@ public final class MemoryIndex implements Persistent {
         160 /*10K*/, 192 /*12K*/, 224 /*14K*/, 256 /*16K*/ 
       };
 
+  private static ThreadLocal<Long> membuffer = new ThreadLocal<Long>();
+      
   /**
    * Get maximum index block size
    * @return maximum index block size
@@ -228,6 +230,12 @@ public final class MemoryIndex implements Persistent {
   /* Counter for total expired - evicted balance */
   private AtomicLong expiredEvictedBalance = new AtomicLong();
   
+  /* Thread Local Memory buffer size*/
+  private int memBufferSize ;
+  
+  /* Thread local storage enabled */
+  private boolean tlsEnabled = true;
+  
   public MemoryIndex() {
     this.cacheConfig = CacheConfig.getInstance();
     initLocks();
@@ -293,6 +301,39 @@ public final class MemoryIndex implements Persistent {
     this.cacheConfig = CacheConfig.getInstance();
     this.cacheName = cacheName;
     init();
+  }
+  
+  
+  private long getMemoryBuffer(int size) {
+    if (!this.tlsEnabled) {
+      return UnsafeAccess.mallocZeroed(size);
+    }
+    Long addr = membuffer.get();
+    if (addr == null) {
+      if (this.engine != null) {
+        String cacheName = this.engine.getCacheName();
+        CacheConfig conf = CacheConfig.getInstance();
+        if (conf.isIndexDataEmbeddedSupported(cacheName)) {
+          this.memBufferSize = conf.getIndexDataEmbeddedSize(cacheName) + 4;
+        } else {
+          this.memBufferSize = this.indexFormat.indexEntrySize();
+        }
+      } else {
+        this.memBufferSize = 256; // for testing
+      }
+      long ptr = UnsafeAccess.malloc(this.memBufferSize);
+      membuffer.set(ptr);
+      addr = membuffer.get();
+    }
+    long ptr = addr.longValue();
+    UnsafeAccess.setMemory(ptr, this.memBufferSize, (byte) 0);
+    return addr.longValue();
+  }
+  
+  private void freeMemoryBuffer(long ptr) {
+    if (!this.tlsEnabled) {
+      UnsafeAccess.free(ptr);
+    }
   }
   
   /**
@@ -547,6 +588,7 @@ public final class MemoryIndex implements Persistent {
     this.allocatedMemory.addAndGet(size * index_base.length);
     ref_index_base.set(index_base);
     initLocks();
+    this.tlsEnabled = this.cacheConfig.isCacheTLSSupported(this.cacheName);
   }
   
   private void initLocks() {
@@ -901,7 +943,7 @@ public final class MemoryIndex implements Persistent {
   public boolean exists(byte[] key, int off, int size) {
     //TODO: does it work for variable sizes?
     int bufSize = this.indexFormat.indexEntrySize();
-    long buf = UnsafeAccess.mallocZeroed(bufSize);
+    long buf = getMemoryBuffer(bufSize);
     try {
       long result = find(key, off, size, false, buf, bufSize);
       if (result != bufSize) {
@@ -909,7 +951,7 @@ public final class MemoryIndex implements Persistent {
       }
       return true;
     } finally {
-      UnsafeAccess.free(buf);
+      freeMemoryBuffer(buf);;
     }
   }
   
@@ -923,7 +965,7 @@ public final class MemoryIndex implements Persistent {
   public boolean touch(byte[] key, int off, int size) {
     //TODO: does it work for variable sizes?
     int bufSize = this.indexFormat.indexEntrySize();
-    long buf = UnsafeAccess.mallocZeroed(bufSize);
+    long buf = getMemoryBuffer(bufSize);
     try {
       long result = find(key, off, size, true, buf, bufSize);
       if (result != bufSize) {
@@ -931,7 +973,7 @@ public final class MemoryIndex implements Persistent {
       }
       return true;
     } finally {
-      UnsafeAccess.free(buf);
+      freeMemoryBuffer(buf);
     }
   }
   
@@ -945,7 +987,7 @@ public final class MemoryIndex implements Persistent {
   public int getItemSize(byte[] key, int off, int size) {
     //TODO: does it work for variable sizes?
     int bufSize = this.indexFormat.indexEntrySize();
-    long buf = UnsafeAccess.mallocZeroed(bufSize);
+    long buf = getMemoryBuffer(bufSize);
     try {
       long result = find(key, off, size, false, buf, bufSize);
       if (result != bufSize) {
@@ -954,7 +996,7 @@ public final class MemoryIndex implements Persistent {
       int itemSize = this.indexFormat.getKeyValueSize(buf);
       return itemSize;
     } finally {
-      UnsafeAccess.free(buf);
+      freeMemoryBuffer(buf);;
     }
   }
   
@@ -966,9 +1008,8 @@ public final class MemoryIndex implements Persistent {
    */
   public int getItemSize(long keyPtr, int keySize) {
     //TODO: embedded item case, and format w/o size ?
-    //TODO: OPTIMIZE, no memory allocation
     int bufSize = this.indexFormat.indexEntrySize();
-    long buf = UnsafeAccess.mallocZeroed(bufSize);
+    long buf = getMemoryBuffer(bufSize);
     try {
       long result = find(keyPtr, keySize, false, buf, bufSize);
       if (result != bufSize) {
@@ -977,7 +1018,7 @@ public final class MemoryIndex implements Persistent {
       int itemSize = this.indexFormat.getKeyValueSize(buf);
       return itemSize;
     } finally {
-      UnsafeAccess.free(buf);
+      freeMemoryBuffer(buf);
     }
   }
 
@@ -990,7 +1031,7 @@ public final class MemoryIndex implements Persistent {
     //TODO: OPTIMIZE, no memory allocation
 
     int bufSize = this.indexFormat.indexEntrySize();
-    long buf = UnsafeAccess.mallocZeroed(bufSize);
+    long buf = getMemoryBuffer(bufSize);
     try {
       long result = find(hash, false, buf, bufSize);
       if (result != bufSize) {
@@ -1000,7 +1041,7 @@ public final class MemoryIndex implements Persistent {
       int count = this.indexFormat.getHitCount(buf);
       return count;
     } finally {
-      UnsafeAccess.free(buf);
+      freeMemoryBuffer(buf);
     }
   }
   
@@ -1015,7 +1056,7 @@ public final class MemoryIndex implements Persistent {
   public int getHitCount(byte[] key, int off, int size) {
     //TODO: OPTIMIZE, no memory allocation
     int bufSize = this.indexFormat.indexEntrySize();
-    long buf = UnsafeAccess.mallocZeroed(bufSize);
+    long buf = getMemoryBuffer(bufSize);
     try {
       long result = find(key, off, size, false, buf, bufSize);
       if (result != bufSize) {
@@ -1025,7 +1066,7 @@ public final class MemoryIndex implements Persistent {
       int count = this.indexFormat.getHitCount(buf);
       return count;
     } finally {
-      UnsafeAccess.free(buf);
+      freeMemoryBuffer(buf);
     }
   }
 
@@ -1040,7 +1081,7 @@ public final class MemoryIndex implements Persistent {
     //TODO: OPTIMIZE, no memory allocation
 
     int bufSize = this.indexFormat.indexEntrySize();
-    long buf = UnsafeAccess.mallocZeroed(bufSize);
+    long buf = getMemoryBuffer(bufSize);
     try {
       
       long result = find(keyPtr, keySize, false, buf, bufSize);
@@ -1050,7 +1091,7 @@ public final class MemoryIndex implements Persistent {
       int count = this.indexFormat.getHitCount(buf);
       return count;
     } finally {
-      UnsafeAccess.free(buf);
+      freeMemoryBuffer(buf);
     }
   }
 
@@ -1905,7 +1946,7 @@ public final class MemoryIndex implements Persistent {
     
     IndexFormat format = this.indexFormat;
     int indexSize = format.fullEntrySize(keyLength, valueLength);
-    long indexPtr = UnsafeAccess.mallocZeroed(indexSize); 
+    long indexPtr = getMemoryBuffer(indexSize); 
 
     try {
       slot = lock(key, keyOffset, keyLength);
@@ -1920,7 +1961,7 @@ public final class MemoryIndex implements Persistent {
       return result;
     } finally {
       unlock(slot);
-      UnsafeAccess.free(indexPtr);
+      freeMemoryBuffer(indexPtr);
     }
   }
 
@@ -1996,7 +2037,7 @@ public final class MemoryIndex implements Persistent {
     
     IndexFormat format = this.indexFormat;
     int indexSize = format.fullEntrySize(keyLength, valueLength);
-    long indexPtr = UnsafeAccess.mallocZeroed(indexSize); 
+    long indexPtr = getMemoryBuffer(indexSize);
 
     try {
       slot = lock(keyPtr, keyLength);
@@ -2011,7 +2052,7 @@ public final class MemoryIndex implements Persistent {
       return result;
     } finally {
       unlock(slot);
-      UnsafeAccess.free(indexPtr);
+      freeMemoryBuffer(indexPtr);
     }
   }
   
