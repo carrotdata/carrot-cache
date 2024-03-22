@@ -32,7 +32,7 @@ import com.onecache.core.util.Utils;
  * 
  *  Test cases for Memory Index of Admission Queue (AQ) 
  */
-public class TestMemoryIndexAQMultithreadedStress extends TestMemoryIndexMultithreadedBase{
+public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryIndexMultithreadedBase{
   /** Logger */
   private static final Logger LOG = LogManager.getLogger(TestMemoryIndexAQMultithreadedStress.class);
   

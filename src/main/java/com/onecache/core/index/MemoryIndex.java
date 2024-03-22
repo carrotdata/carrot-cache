@@ -2391,7 +2391,7 @@ public final class MemoryIndex implements Persistent {
     
     int numEntries = numEntries(ptr);
     // TODO: again variable sized indexes
-    int blockSize = getMaximumBlockSize();
+    int blockSize = blockSize(ptr);//getMaximumBlockSize();
     int indexSize = ref_index_base.get().length;
     long[] rehash_index = ref_index_base_rehash.get();
     if (rehash_index == null || rehash_index.length == indexSize) {
@@ -2457,8 +2457,8 @@ public final class MemoryIndex implements Persistent {
     setDataSize(ptr1, dataSize1);
 
     // Now we can shrink
-    rehash_index[slot0] = shrink(ptr0);
-    rehash_index[slot1] = shrink(ptr1);
+    rehash_index[slot0] = ptr0;//shrink(ptr0);
+    rehash_index[slot1] = ptr1;//shrink(ptr1);
     // Free previous index block
     // It is safe, because this index block is under write lock
     int oldBlockSize = blockSize(ptr);

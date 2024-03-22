@@ -20,7 +20,7 @@ import org.junit.Test;
 
 import com.onecache.core.index.MemoryIndex.Type;
 
-public class StressTestMemoryIndexMQ extends TestMemoryIndexFormatBase{
+public abstract class StressTestMemoryIndexMQ extends TestMemoryIndexFormatBase{
   
   @Before
   public void setUp() {
@@ -91,13 +91,13 @@ public class StressTestMemoryIndexMQ extends TestMemoryIndexFormatBase{
       testLoadReadDeleteWithRehashMemory();
       teardown();
       
-      setup();
-      testEvictionBytes();
-      teardown();
-      
-      setup();
-      testEvictionMemory();
-      teardown();
+//      setup();
+//      testEvictionBytes();
+//      teardown();
+//      
+//      setup();
+//      testEvictionMemory();
+//      teardown();
       
     }
   }

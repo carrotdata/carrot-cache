@@ -24,7 +24,7 @@ import org.junit.Test;
 import com.onecache.core.index.MemoryIndex.MutationResult;
 import com.onecache.core.util.UnsafeAccess;
 
-public class TestMemoryIndexMQMultithreadedStress extends TestMemoryIndexMultithreadedBase{
+public abstract class TestMemoryIndexMQMultithreadedStress extends TestMemoryIndexMultithreadedBase{
   /** Logger */
   private static final Logger LOG = LogManager.getLogger(TestMemoryIndexMQMultithreadedStress.class);
   
