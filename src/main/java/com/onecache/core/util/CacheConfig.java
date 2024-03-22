@@ -518,7 +518,7 @@ public class CacheConfig {
   public final static int DEFAULT_OBJECT_CACHE_MAX_BUFFER_SIZE = -1; // Unlimited; TODO change to 2GB?
   
   /** Default Thread-Local-Storage supported*/
-  public final static boolean DEFAULT_CACHE_TLS_SUPPORTED = false;
+  public final static boolean DEFAULT_CACHE_TLS_SUPPORTED = true;
   
   /** Default initial size for TLS buffer */
   public final static int DEFAULT_CACHE_TLS_INITIAL_BUFFER_SIZE = 1 << 16; // 64KB
