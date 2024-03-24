@@ -1247,7 +1247,7 @@ public final class MemoryIndex implements Persistent {
    * @return found index size or -1
    */
   // TODO: check return value
-  private int findAndPromote(long ptr, long hash, boolean hit, long buf, int bufSize) {
+  private int findAndPromote(final long ptr, final long hash, final boolean hit, final long buf, final int bufSize) {
     int numEntries = numEntries(ptr);
 
     //TODO: this works ONLY when index size = item size (no embedded data)
@@ -1266,6 +1266,7 @@ public final class MemoryIndex implements Persistent {
     final int indexMetaSize = this.indexFormat.superIndexBlockHeaderSize;
     final int expireOffset = this.indexFormat.expireOffset;
     final int indexBlockHeaderSize = this.indexBlockHeaderSize;
+    ThreadLocalRandom r = ThreadLocalRandom.current();
     try {
       while (count < numEntries) {
         // Check if expired - pro-active expiration check
@@ -1311,8 +1312,11 @@ public final class MemoryIndex implements Persistent {
           }
           // 1. if expireSupported == false - break;
           // 2. if expire supported == true, we do not have to scan the whole block
-          //   till the end every time - must be something probabilistic, say 1 in 10
-          break;
+          //   till the end every time - must be something probabilistic, say 1 in 4
+          //   should be made configurable?
+          if (!expireSupported || r.nextDouble() < 0.75) {
+            break;
+          }
         }
         count++;
         $ptr += indexEntrySize;//this.indexFormat.fullEntrySize($ptr);
