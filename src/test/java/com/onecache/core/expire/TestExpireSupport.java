@@ -45,7 +45,7 @@ public class TestExpireSupport {
   
   @Test
   public void testExpireSupportBase() {
-    ExpireSupport support = new ExpireSupportSecondsMinutes();
+    AbstractExpireSupport support = new ExpireSupportSecondsMinutes();
     // high1 tests
     short v = -1;
     short exp = 1;

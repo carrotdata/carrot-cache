@@ -26,18 +26,19 @@ import com.onecache.core.util.Utils;
  * It does not support expiration
  * 
  */
-public class CompactBaseNoSizeIndexFormat implements IndexFormat {
+public class CompactBaseNoSizeIndexFormat extends AbstractIndexFormat {
   /*
    * MQ Index item is 12 bytes:
    * 6 bytes - hashed key value (high 6 bytes of an 8 byte hash)
    * 6 bytes - location in the storage - ( 2 - segment id, 4 offset in the segment) 
    */
-  public CompactBaseNoSizeIndexFormat() {
-  }
   
+  public CompactBaseNoSizeIndexFormat() {
+    super();
+  }
   @Override
-  public boolean equals(long ptr, long hash) {
-    int off = hashOffset();
+  public final boolean equals(long ptr, long hash) {
+    int off = this.hashOffset;
     int v = (int) (UnsafeAccess.toInt(ptr + off) & 0xffffffffL);
     v &= 0x7fffffff;
     off += Utils.SIZEOF_INT;
@@ -54,30 +55,28 @@ public class CompactBaseNoSizeIndexFormat implements IndexFormat {
   }
 
   @Override
-  public int fullEntrySize(long ptr) {
-    return indexEntrySize();
+  public final int fullEntrySize(long ptr) {
+    return this.indexEntrySize;
   }
   
   @Override
-  public long advance(long current) {
-    return current + fullEntrySize(current);
+  public final long advance(long current) {
+    return current + indexEntrySize;
   }
 
   @Override
-  public int getKeyValueSize(long buffer) {
+  public final int getKeyValueSize(long buffer) {
     return -1;
   }
 
   @Override
-  public int getSegmentId(long buffer) {
-    int off = sidOffset();
-    return UnsafeAccess.toShort(buffer + off) & 0xffff;
+  public final int getSegmentId(long buffer) {
+    return UnsafeAccess.toShort(buffer + this.sidOffset) & 0xffff;
   }
 
   @Override
-  public long getOffset(long buffer) {
-    int off = dataOffsetOffset();
-    return UnsafeAccess.toInt(buffer + off) & 0xffffffff;
+  public final long getOffset(long buffer) {
+    return UnsafeAccess.toInt(buffer + this.dataOffsetOffset) & 0xffffffff;
   }
 
   @Override
@@ -98,28 +97,26 @@ public class CompactBaseNoSizeIndexFormat implements IndexFormat {
   }
 
   @Override
-  public int getHitCount(long ptr) {
-    int off = hashOffset();
-    int ref = UnsafeAccess.toInt(ptr + off);
+  public final int getHitCount(long ptr) {
+    int ref = UnsafeAccess.toInt(ptr + this.hashOffset);
     return  ref >>> 31;   
   }
 
   @Override
-  public void hit(long ptr) {
-    int off = hashOffset();    
-    int v = UnsafeAccess.toInt(ptr + off);
+  public final void hit(long ptr) {
+    int v = UnsafeAccess.toInt(ptr + this.hashOffset);
     v |= 0x80000000;
-    UnsafeAccess.putInt(ptr + off, v);
+    UnsafeAccess.putInt(ptr + this.hashOffset, v);
   }
 
   @Override
-  public int fullEntrySize(int keySize, int valueSize) {
-    return indexEntrySize();
+  public final int fullEntrySize(int keySize, int valueSize) {
+    return this.indexEntrySize;
   }
 
   @Override
-  public int getHashBit(long ptr, int n) {
-    ptr += hashOffset();
+  public final int getHashBit(long ptr, int n) {
+    ptr += this.hashOffset;
     return (int)(UnsafeAccess.toLong(ptr) >>> 64 - n) & 1;
   }
   
@@ -141,7 +138,7 @@ public class CompactBaseNoSizeIndexFormat implements IndexFormat {
     long hash = Utils.hash64(key, keyOffset, keySize);
     int v = (int)(hash >>> 32);
     v &= 0x7fffffff;
-    ptr += hashOffset();
+    ptr += this.hashOffset;
     UnsafeAccess.putInt(ptr, v); 
     ptr += Utils.SIZEOF_INT; 
     short s = (short)(hash >>> 16);
@@ -168,7 +165,7 @@ public class CompactBaseNoSizeIndexFormat implements IndexFormat {
     long hash = Utils.hash64(keyPtr, keySize);
     int v = (int)(hash >>> 32);
     v &= 0x7fffffff;
-    ptr += hashOffset();
+    ptr += this.hashOffset;
     UnsafeAccess.putInt(ptr, v); 
     ptr += Utils.SIZEOF_INT; 
     UnsafeAccess.putShort(ptr, (short)(hash >>> 16)); 

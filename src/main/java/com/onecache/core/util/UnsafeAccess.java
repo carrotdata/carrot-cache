@@ -238,8 +238,7 @@ public final class UnsafeAccess {
       if (!allocMap.inside(address, size)) {
         System.out.println(Thread.currentThread().getName() + ": Memory corruption: address=" + address + " size=" + size);
         Thread.dumpStack();
-        //System.exit(-1);
-        throw new RuntimeException();
+        System.exit(-1);
       }
     }
 
@@ -491,7 +490,9 @@ public final class UnsafeAccess {
    * @return short value
    */
   public static short toShort(long addr) {
-    mallocStats.checkAllocation(addr, 2);
+    if (UnsafeAccess.debug) {
+      mallocStats.checkAllocation(addr, 2);
+    }
     if (littleEndian) {
       return Short.reverseBytes(theUnsafe.getShort(addr));
     } else {
@@ -678,7 +679,9 @@ public final class UnsafeAccess {
    * @param val short to write out
    */
   public static void putShort(long addr, short val) {
-    mallocStats.checkAllocation(addr, 2);
+    if (UnsafeAccess.debug) {
+      mallocStats.checkAllocation(addr, 2);
+    }
 
     if (littleEndian) {
       val = Short.reverseBytes(val);
@@ -706,7 +709,9 @@ public final class UnsafeAccess {
    * @param val byte value
    */
   public static void putByte(long addr, byte val) {
-    mallocStats.checkAllocation(addr, 1);
+    if(UnsafeAccess.debug) {
+      mallocStats.checkAllocation(addr, 1);
+    }
     theUnsafe.putByte(addr, val);
   }
 
@@ -733,7 +738,9 @@ public final class UnsafeAccess {
    * @param val integer value
    */
   public static void putInt(long addr, int val) {
-    mallocStats.checkAllocation(addr, 4);
+    if (UnsafeAccess.debug) {
+      mallocStats.checkAllocation(addr, 4);
+    }
 
     if (littleEndian) {
       val = Integer.reverseBytes(val);
@@ -763,7 +770,9 @@ public final class UnsafeAccess {
    * @param val byte value
    */
   public static void putLong(long addr, long val) {
-    mallocStats.checkAllocation(addr, 8);
+    if (UnsafeAccess.debug) {
+      mallocStats.checkAllocation(addr, 8);
+    }
 
     if (littleEndian) {
       val = Long.reverseBytes(val);
@@ -807,7 +816,9 @@ public final class UnsafeAccess {
    * @return integer value
    */
   public static int toInt(long addr) {
-    mallocStats.checkAllocation(addr, 4);
+    if (UnsafeAccess.debug) {
+      mallocStats.checkAllocation(addr, 4);
+    }
 
     if (littleEndian) {
       return Integer.reverseBytes(theUnsafe.getInt(addr));
@@ -838,7 +849,9 @@ public final class UnsafeAccess {
    * @return long value
    */
   public static long toLong(long addr) {
-    mallocStats.checkAllocation(addr, Utils.SIZEOF_LONG);
+    if (UnsafeAccess.debug) {
+      mallocStats.checkAllocation(addr, Utils.SIZEOF_LONG);
+    }
 
     if (littleEndian) {
       return Long.reverseBytes(theUnsafe.getLong(addr));
@@ -928,7 +941,9 @@ public final class UnsafeAccess {
    * @param length number of bytes to copy
    */
   public static void copy(byte[] src, int srcOffset, long address, int length) {
-    mallocStats.checkAllocation(address, length);
+    if (UnsafeAccess.debug) {
+      mallocStats.checkAllocation(address, length);
+    }
 
     Object destBase = null;
     long srcAddress = srcOffset + BYTE_ARRAY_BASE_OFFSET;
@@ -959,7 +974,9 @@ public final class UnsafeAccess {
    * @param length number of bytes to copy
    */
   public static void copy(long src, byte[] dest, int off, int length) {
-    mallocStats.checkAllocation(src, length);
+    if (UnsafeAccess.debug) {
+      mallocStats.checkAllocation(src, length);
+    }
 
     Object srcBase = null;
     long dstOffset = off + BYTE_ARRAY_BASE_OFFSET;
@@ -974,8 +991,10 @@ public final class UnsafeAccess {
    * @param len number of bytes to copy
    */
   public static void copy(long src, long dst, long len) {
-    mallocStats.checkAllocation(src, (int) len);
-    mallocStats.checkAllocation(dst, (int) len);
+    if(UnsafeAccess.debug) {
+      mallocStats.checkAllocation(src, (int) len);
+      mallocStats.checkAllocation(dst, (int) len);
+    }
 
     while (len > 0) {
       long size = (len > UNSAFE_COPY_THRESHOLD) ? UNSAFE_COPY_THRESHOLD : len;
@@ -994,7 +1013,9 @@ public final class UnsafeAccess {
    * @param len number of bytes to copy
    */
   public static void copy_no_src_check(long src, long dst, long len) {
-    mallocStats.checkAllocation(dst, (int) len);
+    if (UnsafeAccess.debug) {
+      mallocStats.checkAllocation(dst, (int) len);
+    }
 
     while (len > 0) {
       long size = (len > UNSAFE_COPY_THRESHOLD) ? UNSAFE_COPY_THRESHOLD : len;
@@ -1013,8 +1034,9 @@ public final class UnsafeAccess {
    * @param len number of bytes to copy
    */
   public static void copy_no_dst_check(long src, long dst, long len) {
-    mallocStats.checkAllocation(src, (int) len);
-
+    if (UnsafeAccess.debug) {
+      mallocStats.checkAllocation(src, (int) len);
+    }
     while (len > 0) {
       long size = (len > UNSAFE_COPY_THRESHOLD) ? UNSAFE_COPY_THRESHOLD : len;
       theUnsafe.copyMemory(src, dst, size);
@@ -1182,7 +1204,9 @@ public final class UnsafeAccess {
    * @return the byte at the given offset
    */
   public static byte toByte(long addr) {
-    mallocStats.checkAllocation(addr, 1);
+    if (UnsafeAccess.debug) {
+      mallocStats.checkAllocation(addr, 1);
+    }
 
     return theUnsafe.getByte(addr);
   }

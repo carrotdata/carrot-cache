@@ -18,7 +18,6 @@
 package com.onecache.core.index;
 
 import com.onecache.core.util.Persistent;
-import com.onecache.core.util.UnsafeAccess;
 
 public interface IndexFormat extends Persistent {
     
@@ -27,17 +26,13 @@ public interface IndexFormat extends Persistent {
    * Are all entries of the same size?
    * @return true - yes, false - otherwise
    */
-  public default boolean isFixedSize() {
-    return true;
-  }
+  public boolean isFixedSize();
   
   /**
    * Cache name for this index format
    * @param cacheName
    */
-  public default void setCacheName(String cacheName) {
-    
-  }
+  public void setCacheName(String cacheName) ;
   /**
    * Compares current index item with a given hash
    * @param ptr current index item address
@@ -104,26 +99,21 @@ public interface IndexFormat extends Persistent {
    * For embedded into index key-value returns offset where data starts 
    * @return embedded data offset
    */
-  public default int getEmbeddedOffset() {
-    return 0;
-  }
+  public int getEmbeddedOffset();
   
   /**
    * Is expiration supported by this index format
    * @return true/ false
    */
-  public default boolean isExpirationSupported() {
-    return false;
-  }
+  public boolean isExpirationSupported();
+
   /**
    * Get expiration time
    * @param ibPtr index block address
    * @param buffer buffer contains entry data
    * @return expiration time (0 - no expire, -1 - not supported)
    */
-  public default long getExpire(long ibPtr, long buffer) {
-    return -1;
-  }
+  public long getExpire(long ibPtr, long buffer);
   
   /**
    * Get current expiration time and set new one
@@ -131,19 +121,14 @@ public interface IndexFormat extends Persistent {
    * @param expPtr pointer to expiration field
    * @return old expiration time in ms
    */
-  public default long getAndSetExpire(long ibPtr, long expPtr, long expire) {
-    return -1;
-  }
+  public long getAndSetExpire(long ibPtr, long expPtr, long expire);
   /**
    * Get hash bit value value for a given index entry address
    * @param ptr address
    * @param n bit number
    * @return n-th bit of a hash value
    */
-  public default int getHashBit(long ptr, int n) {
-    return (int)(UnsafeAccess.toLong(ptr) >>> 64 - n) & 1;
-  }
-  
+  public int getHashBit(long ptr, int n);
   /**
    * Gets index block header size
    * @return size
@@ -206,18 +191,13 @@ public interface IndexFormat extends Persistent {
    * @return true if full index block scan requested, false - otherwise
    *   when force = true, always returns true
    */
-  public default boolean begin(long ibPtr, boolean force) {
-    return false;
-  }
-  
+  public boolean begin(long ibPtr, boolean force);
   /**
    * Begins index block access operation
    * @param ibPtr index block address
    * @return true if scan is requested, false - otherwise
    */
-  public default boolean begin(long ibPtr) {
-    return begin(ibPtr, false);
-  }
+  public boolean begin(long ibPtr);
   
   /**
    * End index block access
@@ -229,35 +209,21 @@ public interface IndexFormat extends Persistent {
    * Update meta section after index block split (if needed)
    * @param ibPtr new index block pointer
    */
-  public default void updateMetaSection(long ibPtr) {
-    // do nothing by default
-  }
+  public void updateMetaSection(long ibPtr);
   
   /**
    * Does this format keeps K-V size?
    * @return true or false
    */
-  public default boolean isSizeSupported() {
-    return true;
-  }
+  public boolean isSizeSupported();
   
-  public default int hashOffset() {
-    return 0;
-  }
+  public int hashOffset();
 
-  public default int sidOffset() {
-    return 0;
-  }
+  public int sidOffset();
 
-  public default int dataOffsetOffset() {
-    return 0;
-  }
+  public int dataOffsetOffset();
 
-  public default int expireOffset() {
-    return -1;
-  }
+  public int expireOffset();
   
-  public default int sizeOffset() {
-    return 0;
-  }
+  public int sizeOffset();
 }

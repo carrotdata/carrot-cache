@@ -30,6 +30,7 @@ import org.apache.logging.log4j.Logger;
 
 import com.onecache.core.eviction.EvictionPolicy;
 import com.onecache.core.eviction.FIFOEvictionPolicy;
+import com.onecache.core.expire.AbstractExpireSupport;
 import com.onecache.core.io.IOEngine;
 import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.Persistent;
@@ -216,7 +217,7 @@ public final class MemoryIndex implements Persistent {
   private String cacheName;
   
   /* Index format */
-  private IndexFormat indexFormat;
+  private AbstractIndexFormat indexFormat;
   
   /* Is rehashing in progress */
   private volatile boolean rehashInProgress;
@@ -376,7 +377,7 @@ public final class MemoryIndex implements Persistent {
    * @param format index format
    */
   public void setIndexFormat (IndexFormat format) {
-    this.indexFormat = format;
+    this.indexFormat = (AbstractIndexFormat) format;
     this.indexSize = this.indexFormat.indexEntrySize();
     this.indexBlockHeaderSize = this.indexFormat.getIndexBlockHeaderSize();
   }
@@ -1255,18 +1256,26 @@ public final class MemoryIndex implements Persistent {
     long $ptr = ptr + this.indexBlockHeaderSize;
     int count = 0;
     int indexSize = NOT_FOUND; // not found
-
     this.indexFormat.begin(ptr, true); // force scan
     boolean found = false;
+    long current = System.currentTimeMillis();
+    AbstractExpireSupport support = this.indexFormat.expireSupport;
+    final boolean expireSupported = support != null;
+    //TODO: variable size support? Do we need it?
+    final int indexEntrySize = this.indexFormat.indexEntrySize;
+    final int indexMetaSize = this.indexFormat.superIndexBlockHeaderSize;
+    final int expireOffset = this.indexFormat.expireOffset;
+    final int indexBlockHeaderSize = this.indexBlockHeaderSize;
     try {
       while (count < numEntries) {
         // Check if expired - pro-active expiration check
         //TODO: this is expensive - make it configurable
         // We check ALL expired items for every find/get operation
-        long expire = this.indexFormat.getExpire(ptr, $ptr);
+        long expire = -1;
+        if (expireSupported) {
+          expire = support.getExpire(ptr + indexMetaSize, $ptr + expireOffset);
+        }
         if (expire > 0) {
-          long current = System.currentTimeMillis();
-
           if (current > expire) {
             int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
             deleteAt(ptr, $ptr, rank, expire);
@@ -1277,7 +1286,7 @@ public final class MemoryIndex implements Persistent {
           }
         }
         if (!found && this.indexFormat.equals($ptr, hash)) {
-          indexSize = this.indexFormat.fullEntrySize($ptr);
+          indexSize = indexEntrySize; //this.indexFormat.fullEntrySize($ptr);
           found = true;
           if (indexSize > bufSize) {
             return indexSize;
@@ -1292,17 +1301,21 @@ public final class MemoryIndex implements Persistent {
           if (hit && count > 0) {
             // ask parent where to move
             int idx = this.evictionPolicy.getPromotionIndex(ptr, count, numEntries);
-            int off = offsetFor(ptr, idx);
-            int offc = offsetFor(ptr, count);
+            int off = indexBlockHeaderSize + idx * indexEntrySize; //offsetFor(ptr, idx);
+            int offc = indexBlockHeaderSize + count * indexEntrySize;//offsetFor(ptr, count);
             int toMove = offc - off;
             // Move data between 'idx' (inclusive) and 'count' (exclusive)(count > idx must be)
             UnsafeAccess.copy(ptr + off, ptr + off + indexSize, toMove);
             // insert index into new place
             UnsafeAccess.copy(buf, ptr + off, indexSize);
           }
+          // 1. if expireSupported == false - break;
+          // 2. if expire supported == true, we do not have to scan the whole block
+          //   till the end every time - must be something probabilistic, say 1 in 10
+          break;
         }
         count++;
-        $ptr += this.indexFormat.fullEntrySize($ptr);
+        $ptr += indexEntrySize;//this.indexFormat.fullEntrySize($ptr);
       }
     } finally {
       // Report end of a scan operation
@@ -1379,9 +1392,8 @@ public final class MemoryIndex implements Persistent {
     int numEntries = numEntries(ptr);
     long $ptr = ptr + this.indexBlockHeaderSize;
     int count = 0;
-    int indexSize; // not found
+    final int indexSize = this.indexFormat.indexEntrySize; // not found
     while (count < numEntries) {
-      indexSize = this.indexFormat.fullEntrySize($ptr);
       if (this.indexFormat.equals($ptr, hash)) {
         return this.indexFormat.getSegmentId($ptr);
       }

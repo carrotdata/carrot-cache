@@ -342,6 +342,15 @@ public class TestProjectUtils {
       assertEquals(v, vv);
     }
   }
+  
+  @Test
+  public void testUnsignedInt() {
+    long v = 0xffffffffL;
+    int vv = (int) v;
+    long vvv = Integer.toUnsignedLong(vv);
+    assertEquals(v, vvv);
+  }
+  
   /**
    * Utility methods
    */

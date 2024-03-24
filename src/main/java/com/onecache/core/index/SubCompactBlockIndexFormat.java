@@ -39,24 +39,28 @@ import com.onecache.core.util.Utils;
  * Total maximum cache size supported is 32K * 256MB = 8TB. 
  * 
  */
-public class SubCompactBlockIndexFormat implements IndexFormat {
+public class SubCompactBlockIndexFormat extends AbstractIndexFormat {
   
   int blockSize;
   int  L; // index.slots.power from configuration
   
+  public SubCompactBlockIndexFormat() {
+    super();
+  }
   /**
    * Cache name for this index format
    * @param cacheName
    */
   public void setCacheName(String cacheName) {
+    super.setCacheName(cacheName);
     CacheConfig config = CacheConfig.getInstance();
     this.blockSize = config.getBlockWriterBlockSize(cacheName);
     this.L = config.getStartIndexNumberOfSlotsPower(cacheName);
   }
   
   @Override
-  public boolean equals(long ptr, long hash) {
-    int off = hashOffset();
+  public final boolean equals(long ptr, long hash) {
+    int off = this.hashOffset;
     int v = UnsafeAccess.toShort(ptr + off) & 0xffff;
     hash = ((hash >>> (64 - L - 16)) & 0xffff);
     return v == hash;
@@ -68,18 +72,18 @@ public class SubCompactBlockIndexFormat implements IndexFormat {
   }
 
   @Override
-  public int fullEntrySize(long ptr) {
-    return indexEntrySize();
+  public final int fullEntrySize(long ptr) {
+    return this.indexEntrySize;
   }
 
   @Override
-  public int fullEntrySize(int keySize, int valueSize) {
-    return indexEntrySize();
+  public final int fullEntrySize(int keySize, int valueSize) {
+    return this.indexEntrySize;
   }
 
   @Override
-  public long advance(long current) {
-    return current + indexEntrySize();
+  public final long advance(long current) {
+    return current + this.indexEntrySize;
   }
 
 
@@ -90,14 +94,14 @@ public class SubCompactBlockIndexFormat implements IndexFormat {
   }
 
   @Override
-  public int getSegmentId(long buffer) {
-    int off = sidOffset();
+  public final int getSegmentId(long buffer) {
+    int off = this.sidOffset;
     return UnsafeAccess.toShort(buffer + off) & 0x7fff;
   }
 
   @Override
-  public long getOffset(long buffer) {
-    int off = dataOffsetOffset();
+  public final long getOffset(long buffer) {
+    int off = this.dataOffsetOffset;
     int blockNumber = UnsafeAccess.toShort(buffer + off) & 0xffff;
     return blockNumber * this.blockSize;
   }
@@ -107,14 +111,14 @@ public class SubCompactBlockIndexFormat implements IndexFormat {
     return 3 * Utils.SIZEOF_SHORT;
   }
 
-  public int getHitCount(long buffer) {
-    int off = sidOffset();
+  public final int getHitCount(long buffer) {
+    int off = this.sidOffset;
     return (UnsafeAccess.toShort(buffer + off) & 0x8000) >>> 15;
   }
 
   @Override
-  public void hit(long ptr) {
-    int off = sidOffset();
+  public final void hit(long ptr) {
+    int off = this.sidOffset;
     int v = UnsafeAccess.toShort(ptr + off) & 0xffff;
     v |= 0x8000;
     UnsafeAccess.putShort(ptr + off, (short) v);
@@ -126,8 +130,8 @@ public class SubCompactBlockIndexFormat implements IndexFormat {
   }
 
   @Override
-  public int getHashBit(long ptr, int n) {
-    int off = hashOffset();
+  public final int getHashBit(long ptr, int n) {
+    int off = this.hashOffset;
     // TODO:test
     return ((UnsafeAccess.toShort(ptr + off) & 0xffff) >>> (16 - n + L)) & 1;
   }
@@ -203,7 +207,13 @@ public class SubCompactBlockIndexFormat implements IndexFormat {
   }
   
   @Override
-  public boolean isSizeSupported() {
+  public final boolean isSizeSupported() {
     return false;
+  }
+
+  @Override
+  public int sizeOffset() {
+    // TODO Auto-generated method stub
+    return 0;
   }
 }

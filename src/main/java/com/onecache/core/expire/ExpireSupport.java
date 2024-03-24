@@ -17,11 +17,10 @@
  */
 package com.onecache.core.expire;
 
-import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
 public interface ExpireSupport {
-  /*Expiration field size - 2 bytes*/
+  /*Expiration field size - 2 bytes, by default*/
   public final static int FIELD_SIZE = Utils.SIZEOF_SHORT;
   
   /* One epoch duration for seconds type SM in ms */
@@ -59,9 +58,7 @@ public interface ExpireSupport {
    * 2 bytes - epoch minutes counter
    * 2 bytes - epoch hours counter (optional) 
    **/
-  public default int getExpireMetaSectionSize () {
-    return Utils.SIZEOF_LONG;// to keep current scan start time 
-  }
+  public int getExpireMetaSectionSize ();
   
   /**
    * Get expiration time in ms 
@@ -86,66 +83,6 @@ public interface ExpireSupport {
   public void updateMeta (long ibesPtr);
   
   /**
-   * Get seconds epoch counter value
-   * @param ibesPtr index block expiration section address
-   * @return seconds epoch counter value
-   */
-  public default int getSecondsEpochCounterValue (long ibesPtr) {
-    final int off = Utils.SIZEOF_LONG;
-    return UnsafeAccess.toShort(ibesPtr + off) & 0xffff;
-  }
-  
-  /**
-   * Get minutes epoch counter value
-   * @param ibesPtr index block expiration section address
-   * @return minutes epoch counter value
-   */
-  public default int getMinutesEpochCounterValue (long ibesPtr) {
-    final int off = Utils.SIZEOF_LONG + Utils.SIZEOF_SHORT;
-    return UnsafeAccess.toShort(ibesPtr + off) & 0xffff;
-  }
-  
-  /**
-   * Get hours epoch counter value
-   * @param ibesPtr index block expiration section address
-   * @return minutes epoch counter value
-   */
-  public default int getHoursEpochCounterValue (long ibesPtr) {
-    final int off = Utils.SIZEOF_LONG + 2 * Utils.SIZEOF_SHORT;
-    return UnsafeAccess.toShort(ibesPtr + off) & 0xffff;
-  }
-  
-  /**
-   * Set seconds epoch counter value
-   * @param ibesPtr index block expiration section address
-   * @param v value
-   */
-  public default void setSecondsEpochCounterValue (long ibesPtr, int v) {
-    final int off = Utils.SIZEOF_LONG;
-    UnsafeAccess.putShort(ibesPtr + off, (short) v);
-  }
-  
-  /**
-   * Set minutes epoch counter value
-   * @param ibesPtr index block expiration section address
-   * @param v value
-   */
-  public default void setMinutesEpochCounterValue (long ibesPtr, int v ) {
-    final int off = Utils.SIZEOF_LONG + Utils.SIZEOF_SHORT;
-    UnsafeAccess.putShort(ibesPtr + off, (short) v);
-  }
-  
-  /**
-   * Set hours epoch counter value
-   * @param ibesPtr index block expiration section address
-   * @param v value
-   */
-  public default void setHoursEpochCounterValue (long ibesPtr, int v) {
-    final int off = Utils.SIZEOF_LONG + 2 * Utils.SIZEOF_SHORT;
-    UnsafeAccess.putShort(ibesPtr + off, (short) v);
-  }
-  
-  /**
    * Begin index block
    * @param ibesPtr index block expire section address
    * @param force forces scan block scan
@@ -153,113 +90,33 @@ public interface ExpireSupport {
    */
   public boolean begin(long ibesPtr, boolean force);
   
+  
+  /**
+   * Get expire field size in bytes
+   * @return field size
+   */
+  public default int getFieldSize() {
+    return FIELD_SIZE;
+  }
+  
   /**
    * End index block
    * @param ibesPtr index block expire section address
    */
-  public default void end(long ibesPtr) {
-    updateMeta(ibesPtr);
-    setAccessStartTime(ibesPtr, 0);
-  }
+  public void end(long ibesPtr);
   
   /**
    * Return current scan time
    * @param ibesPtr index block expire section address
    * @return scan start time if in progress or 0
    */
-  public default long getAccessStartTime(long ibesPtr) {
-    return UnsafeAccess.toLong(ibesPtr);
-  }
+  public long getAccessStartTime(long ibesPtr);
   
   /**
    * Sets scan time start
    * @param ibesPtr index block expire section address
    * @param time
    */
-  public default void setAccessStartTime(long ibesPtr, long time) {
-    UnsafeAccess.putLong(ibesPtr, time);
-  }
+  public void setAccessStartTime(long ibesPtr, long time);
   
-  /**
-   * Utility conversion methods
-   * TODO: redo the code
-   */
-  
-  
-  /**
-   * Get value of a lowest 15 bits
-   * @param v value
-   * @return lowest 15 bits value
-   */
-  public default short low15 (short v) {
-    return (short)(v & 0x7fff);
-  }
-
-  /**
-   * Get value of a lowest 14 bits
-   * @param v value
-   * @return lowest 14 bits value
-   */
-  public default short low14 (short v) {
-    return (short)(v & 0x3fff);
-  }
-
-  /*
-   * First bit value
-   * @param v value
-   * return highest 1 bit value (0 or 1)
-   */
-  public default short high1(short v) {
-    return (short)((v >> 15) & 1);
-  }
-  
-  /**
-   * First 2-bits value
-   * @param v value
-   * @return highest 2 bits value (0 - 3)
-   */
-  public default short high2(short v) {
-    return (short)((v >> 14) & 3);
-  }
-  
-  /**
-   * Sets highest bit to 0 (for seconds)
-   * @param v original value
-   * @return with highest bit set to 0
-   */
-  public default short sec1(short v) {
-    return v;
-  }
-  /**
-   * Sets highest 2 bits to 0 (for seconds)
-   * @param v original value
-   * @return with highest 2 bits set to 00
-   */
-  public default short sec2(short v) {
-    return v;
-  }
-  /**
-   * Sets highest bit to 1 (for minutes)
-   * @param v original value
-   * @return with highest bit set to 1
-   */
-  public default short min1(short v) {
-    return (short) (v | 0x8000);
-  }
-  /**
-   * Sets highest 2 bits to 01 (for minutes)
-   * @param v original value
-   * @return with highest 2 bits set to 01
-   */
-  public default short min2 (short v) {
-    return (short) (v | 0x4000);
-  }
-  /**
-   * Sets highest 2 bit to 11 (for hours)
-   * @param v original value
-   * @return with highest bit set to 11
-   */
-  public default short hours2(short v) {
-    return (short) (v | 0xc000);
-  }
 }

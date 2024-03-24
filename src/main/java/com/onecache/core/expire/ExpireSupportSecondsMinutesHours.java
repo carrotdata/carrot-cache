@@ -27,7 +27,7 @@ import com.onecache.core.util.Utils;
  * a the Meta section of each index block
  *
  */
-public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
+public class ExpireSupportSecondsMinutesHours extends AbstractExpireSupport {
   /* Time when 0 epoch started in ms since 01-01-1970*/
   private long epochStartTime;
   
@@ -36,6 +36,7 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
    */
   public ExpireSupportSecondsMinutesHours() {
     this.epochStartTime = Epoch.getEpochStartTime();
+    this.metaSectionSize = super.metaSectionSize + 3 * Utils.SIZEOF_SHORT;
   }
 
   /**
@@ -44,26 +45,6 @@ public class ExpireSupportSecondsMinutesHours implements ExpireSupport {
    */
   public void setEpochStartTime(long time) {
     this.epochStartTime = time;
-  }
-  
-  /**
-   * Get expiration meta section size for index data block. Expire adds additional 
-   * meta section to each index block meta.
-   * 
-   * Format meta<br>
-   * 
-   * Type.SM<br>
-   * 
-   * 2 bytes - seconds epoch counter<br>
-   * 2 bytes - minutes <br>
-   * 
-   * Type.SMH <br>
-   * 2 bytes - seconds epoch counter<br>
-   * 2 bytes - minutes <br>
-   * 2 bytes  - hours
-   */
-  public int getExpireMetaSectionSize () {
-    return ExpireSupport.super.getExpireMetaSectionSize() +  3 * Utils.SIZEOF_SHORT;
   }
   
   /**

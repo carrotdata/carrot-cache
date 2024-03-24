@@ -30,6 +30,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
+import com.onecache.core.expire.ExpireSupportUnixTime;
+import com.onecache.core.index.CompactBlockIndexFormat;
 import com.onecache.core.index.CompactBlockWithExpireIndexFormat;
 import com.onecache.core.io.BlockDataWriter;
 import com.onecache.core.io.BlockFileDataReader;
@@ -54,8 +56,8 @@ public class TestOffheapCacheGetAPI {
   
   boolean offheap = true;
   Cache cache;
-  int segmentSize = 4 * 1024 * 1024;
-  long maxCacheSize = 100L * segmentSize;
+  int segmentSize = 8 * 1024 * 1024;
+  long maxCacheSize = 1000L * segmentSize;
   int scavengerInterval = 10000; // seconds - disable for test
   long expireTime;
   double scavDumpBelowRatio = 0.5;
@@ -67,7 +69,7 @@ public class TestOffheapCacheGetAPI {
   @Before
   public void setUp() throws IOException {
     this.offheap = true;
-    this.numRecords = 100000;
+    this.numRecords = 1000000;
     this.r = new Random();
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
@@ -106,7 +108,9 @@ public class TestOffheapCacheGetAPI {
       .withMinimumActiveDatasetRatio(minActiveRatio)
       .withEvictionDisabledMode(true)
       .withTLSSupported(tlsEnabled)
-      .withCacheTLSInitialBufferSize(tlsInitialBufferSize);
+      .withCacheTLSInitialBufferSize(tlsInitialBufferSize)
+      .withStartIndexNumberOfSlotsPower(16)
+      .withExpireSupport(ExpireSupportUnixTime.class.getName());
     
     if (offheap) {
       return builder.buildMemoryCache();
@@ -140,6 +144,7 @@ public class TestOffheapCacheGetAPI {
   }
   
   protected int loadBytes() throws IOException {
+    long t1 = System.currentTimeMillis();
     int count = 0;
     while(count < this.numRecords) {
       long expire = expires[count];
@@ -151,12 +156,15 @@ public class TestOffheapCacheGetAPI {
         break;
       }
       count++;
-    }    
+    }  
+    long t2 = System.currentTimeMillis();
+    System.out.printf("Time to load (bytes) %d keys is %dms\n", this.numRecords, (t2-t1));
     return count;
   }
   
   protected int loadMemory() throws IOException {
     int count = 0;
+    long t1 = System.currentTimeMillis();
     while(count < this.numRecords) {
       long expire = expires[count];
       long keyPtr = mKeys[count];
@@ -168,60 +176,84 @@ public class TestOffheapCacheGetAPI {
         break;
       }
       count++;
-    }    
+    }   
+    long t2 = System.currentTimeMillis();
+    System.out.printf("Time to load (memory) %d keys is %dms\n", this.numRecords, (t2-t1));
+
     return count;
   }
   
   protected void verifyMemoryCacheBuffer(int num) throws IOException {
     int bufferSize = safeBufferSize();
     ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
-    
+    long getTime = 0;
+    int failed = 0;
     for (int i = 0; i < num; i++) {
       int keySize = keys[i].length;
       int valueSize = values[i].length;
       long keyPtr = mKeys[i];
       long valuePtr = mValues[i];
       long expSize = valueSize;
-      long size = cache.get(keyPtr, keySize, false, buffer);
+      long t1 = System.nanoTime();
+      long size = cache.get(keyPtr, keySize, true, buffer);
+      getTime += System.nanoTime() - t1;
+      if (size < 0) {
+        failed++; continue;
+      }
       assertEquals(expSize, size);
       assertTrue( Utils.compareTo(buffer, valueSize, valuePtr, valueSize) == 0);
       buffer.clear();
-    }    
+    }
+    System.out.printf("Time to get (memory, cache buffer, hit) %d keys is %dms failed=%s\n", num, getTime / 1_000_000, failed);
+
   }
   
   protected void verifyBytesCache(int num) throws IOException {
     int bufferSize = safeBufferSize();
     byte[] buffer = new byte[bufferSize];
+    long getTime = 0;
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = value.length;
+      long t1 = System.nanoTime();
       long size = cache.get(key, 0, key.length, false, buffer, 0);
+      getTime += System.nanoTime() - t1;
       assertEquals(expSize, size);
       assertTrue( Utils.compareTo(buffer, 0, value.length, value, 0, value.length) == 0);
     }
+    System.out.printf("Time to get (bytes, cache, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+
   }
   
   protected void verifyBytesCacheAllocated(int num) throws IOException {
+    long getTime = 0;
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
       byte[] value = values[i];
+      long t1 = System.nanoTime();
       byte[] read = cache.get(key, 0, key.length, false);
+      getTime += System.nanoTime() - t1;
       assertTrue(read != null);
       assertTrue(Utils.compareTo(read, 0, read.length, value, 0, value.length) == 0);
     }
+    System.out.printf("Time to get (bytes, no cache, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+
   }
   
   protected void verifyKeyValueBytesCache(int num) throws IOException {
     int bufferSize = safeBufferSize();
     byte[] buffer = new byte[bufferSize];
+    long getTime = 0;
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
       byte[] value = values[i];
       int keySize = key.length;
       int valueSize = value.length;
       long expSize = Utils.kvSize(keySize, valueSize);
+      long t1 = System.nanoTime();
       long size = cache.getKeyValue(key, 0, key.length, false, buffer, 0);
+      getTime += System.nanoTime() - t1;
       assertEquals(expSize, size);
       int kSize = Utils.getKeySize(buffer, 0);
       int kSizeSize = Utils.sizeUVInt(kSize);
@@ -235,15 +267,19 @@ public class TestOffheapCacheGetAPI {
       off += kSize;
       assertTrue( Utils.compareTo(buffer, off, vSize, value, 0, value.length) == 0);
     }
+    System.out.printf("Time to get-kv (bytes, cache, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+
   }
   
   protected void verifyKeyValueBytesCacheAllocated(int num) throws IOException {
-    
+    long getTime = 0;
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);
+      long t1 = System.nanoTime();
       byte[] buffer = cache.getKeyValue(key, 0, key.length, false);
+      getTime += System.nanoTime() - t1;
       assertEquals(expSize, buffer.length);
       int kSize = Utils.getKeySize(buffer, 0);
       int kSizeSize = Utils.sizeUVInt(kSize);
@@ -258,29 +294,35 @@ public class TestOffheapCacheGetAPI {
       assertTrue( Utils.compareTo(buffer, off, vSize, value, 0, value.length) == 0);
 
     }
+    System.out.printf("Time to get-kv (bytes, no cache, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+
   }
   
   protected void verifyBytesCacheBuffer(int num) throws IOException {
     int bufferSize = safeBufferSize();
     ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
-    
+    long getTime = 0;
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
       byte[] value = values[i];
       int keySize = keys[i].length;
       int valueSize = values[i].length;
-
       long expSize = valueSize;
+      long t1 = System.nanoTime();
       long size = cache.get(key, 0, keySize, false, buffer);
+      getTime += System.nanoTime() - t1;
       assertEquals(expSize, size);
       assertTrue(Utils.compareTo(buffer, valueSize, value, 0, valueSize) == 0);
       buffer.clear();
     }    
+    System.out.printf("Time to get (bytes, cache buffer, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+
   }
   
   protected void verifyMemoryCache(int num) throws IOException {
     int bufferSize = safeBufferSize();
     byte[] buffer = new byte[bufferSize];
+    long getTime = 0;
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
       byte[] value = values[i];
@@ -288,15 +330,19 @@ public class TestOffheapCacheGetAPI {
       int keySize = key.length;
       long keyPtr = mKeys[i];
       long valuePtr = mValues[i];
+      long t1 = System.nanoTime();
       long size = cache.get(keyPtr, keySize, false, buffer, 0);
+      getTime += System.nanoTime() - t1;
       assertEquals(expSize, size);
       assertTrue( Utils.compareTo(buffer, 0, value.length, valuePtr, expSize) == 0);
     }
+    System.out.printf("Time to get (memory, cache, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
   }
   
   protected void verifyKeyValueMemoryCache(int num) throws IOException {
     int bufferSize = safeBufferSize();
     byte[] buffer = new byte[bufferSize];
+    long getTime = 0;
     for (int i = 0; i < num; i++) {
      
       long keyPtr = mKeys[i];
@@ -304,7 +350,9 @@ public class TestOffheapCacheGetAPI {
       int keySize = keys[i].length;
       int valueSize = values[i].length;
       long expSize = Utils.kvSize(keySize, valueSize);
+      long t1 = System.nanoTime();
       long size = cache.getKeyValue(keyPtr, keySize, false, buffer, 0);
+      getTime += System.nanoTime() - t1;
       assertEquals(expSize, size);
       int kSize = Utils.getKeySize(buffer, 0);
       int kSizeSize = Utils.sizeUVInt(kSize);
@@ -316,13 +364,15 @@ public class TestOffheapCacheGetAPI {
       assertEquals(valueSize, vSize);
       assertTrue(Utils.compareTo(buffer, off, kSize, keyPtr, keySize) == 0);
       off += kSize;
-      assertTrue( Utils.compareTo(buffer, off, vSize, valuePtr, valueSize) == 0);
+      assertTrue(Utils.compareTo(buffer, off, vSize, valuePtr, valueSize) == 0);
     }
+    System.out.printf("Time to get-kv (memory, cache, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+
   }
   
   
   protected void verifyMemoryCacheAllocated(int num) throws IOException {
-    
+    long getTime = 0;
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
       byte[] value = values[i];
@@ -330,14 +380,18 @@ public class TestOffheapCacheGetAPI {
       int keySize = key.length;
       long keyPtr = mKeys[i];
       long valuePtr = mValues[i];
+      long t1 = System.nanoTime();
       byte[] buffer = cache.get(keyPtr, keySize, false);
+      getTime += System.nanoTime() - t1;
       assertEquals(expSize, buffer.length);
       assertTrue(Utils.compareTo(buffer, 0, value.length, valuePtr, expSize) == 0);
     }
+    System.out.printf("Time to get (memory, no cache, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+
   }
   
   protected void verifyKeyValueMemoryCacheAllocated(int num) throws IOException {
-    
+    long getTime =0;
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
       byte[] value = values[i];
@@ -345,7 +399,9 @@ public class TestOffheapCacheGetAPI {
       long valuePtr = mValues[i];
       int keySize = key.length;
       int valueSize = value.length;
+      long t1 = System.nanoTime();
       byte[] buffer = cache.getKeyValue(keyPtr, keySize, false);
+      getTime += System.nanoTime() - t1;
       assertTrue(buffer != null);
       int kSize = Utils.getKeySize(buffer, 0);
       int kSizeSize = Utils.sizeUVInt(kSize);
@@ -361,6 +417,8 @@ public class TestOffheapCacheGetAPI {
       assertTrue( Utils.compareTo(buffer, off, vSize, valuePtr, valueSize) == 0);
 
     }
+    System.out.printf("Time to get-kv (memory, no cache, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+
   }
   
   protected long getExpire(int n) {

@@ -20,11 +20,13 @@ package com.onecache.core.index;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
-public class AQIndexFormat implements IndexFormat {
+public final class AQIndexFormat extends AbstractIndexFormat {
   /*
    * AQ Index item is 8 bytes hashed key value
    */
-  public AQIndexFormat() {}
+  public AQIndexFormat() {
+    super();
+  }
   
   @Override
   public boolean equals(long ptr, long hash) {
@@ -32,18 +34,18 @@ public class AQIndexFormat implements IndexFormat {
   }
 
   @Override
-  public final int indexEntrySize() {
+  public int indexEntrySize() {
     return Utils.SIZEOF_LONG;
   }
 
   @Override
-  public final int fullEntrySize(long ptr) {
-    return indexEntrySize();
+  public int fullEntrySize(long ptr) {
+    return Utils.SIZEOF_LONG;
   }
 
   @Override
   public long advance(long current) {
-    return current + fullEntrySize(current);
+    return current + Utils.SIZEOF_LONG;
   }
 
   @Override
@@ -88,7 +90,7 @@ public class AQIndexFormat implements IndexFormat {
 
   @Override
   public int fullEntrySize(int keySize, int valueSize) {
-    return indexEntrySize();
+    return Utils.SIZEOF_LONG;
   }
 
   @Override
@@ -130,6 +132,31 @@ public class AQIndexFormat implements IndexFormat {
   @Override
   public boolean isSizeSupported() {
     return false;
+  }
+
+  @Override
+  public int hashOffset() {
+    return 0;
+  }
+
+  @Override
+  public int sidOffset() {
+    return 0;
+  }
+
+  @Override
+  public int dataOffsetOffset() {
+    return 0;
+  }
+
+  @Override
+  public int expireOffset() {
+    return 0;
+  }
+
+  @Override
+  public int sizeOffset() {
+    return 0;
   }
   
 }

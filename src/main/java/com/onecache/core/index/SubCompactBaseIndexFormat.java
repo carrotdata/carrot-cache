@@ -27,17 +27,9 @@ import com.onecache.core.util.Utils;
  * It does not support expiration
  * 
  */
-public class SubCompactBaseIndexFormat implements IndexFormat {
+public class SubCompactBaseIndexFormat extends AbstractIndexFormat {
   int  L; // index.slots.power from configuration
   
-  /**
-   * Cache name for this index format
-   * @param cacheName
-   */
-  public void setCacheName(String cacheName) {
-    CacheConfig config = CacheConfig.getInstance();
-    this.L = config.getStartIndexNumberOfSlotsPower(cacheName);
-  }
   /*
    * MQ Index item is 14 bytes:
    * 4 bytes - hashed key value (high 6 bytes of an 8 byte hash)
@@ -45,11 +37,22 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
    * 6 bytes - location in the storage - ( 2 - segment id, 4 offset in the segment) 
    */
   public SubCompactBaseIndexFormat() {
+    super();
+  }
+  
+  /**
+   * Cache name for this index format
+   * @param cacheName
+   */
+  public void setCacheName(String cacheName) {
+    super.setCacheName(cacheName);
+    CacheConfig config = CacheConfig.getInstance();
+    this.L = config.getStartIndexNumberOfSlotsPower(cacheName);
   }
   
   @Override
-  public boolean equals(long ptr, long hash) {
-    int off = hashOffset();
+  public final boolean equals(long ptr, long hash) {
+    int off = this.hashOffset;
     int v = UnsafeAccess.toInt(ptr + off);
     hash = (int) (hash >>> (32 - L));
     return v == hash;
@@ -61,36 +64,35 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
   }
 
   @Override
-  public int fullEntrySize(long ptr) {
-    return indexEntrySize();
+  public final int fullEntrySize(long ptr) {
+    return this.indexEntrySize;
   }
   
   @Override
-  public long advance(long current) {
-    return current + fullEntrySize(current);
+  public final long advance(long current) {
+    return current + this.indexEntrySize;
   }
 
   @Override
   public int getKeyValueSize(long buffer) {
-    int off = sizeOffset();
+    int off = this.sizeOffset;
     return UnsafeAccess.toInt(buffer + off) & 0x7fffffff;
   }
 
   @Override
-  public int getSegmentId(long buffer) {
-    int off = sidOffset();
+  public final int getSegmentId(long buffer) {
+    int off = this.sidOffset;
     return UnsafeAccess.toShort(buffer + off) & 0xffff;
   }
 
   @Override
-  public long getOffset(long buffer) {
-    int off = dataOffsetOffset();
+  public final long getOffset(long buffer) {
+    int off = this.dataOffsetOffset;
     return UnsafeAccess.toInt(buffer + off) & 0xffffffff;
   }
 
   @Override
   public int getEmbeddedOffset() {
-    //TODO
     return 0; 
   }
   
@@ -106,15 +108,15 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
   }
 
   @Override
-  public int getHitCount(long buffer) {
-    int off = sizeOffset();
+  public final int getHitCount(long buffer) {
+    int off = this.sizeOffset;
     int ref = UnsafeAccess.toInt(buffer + off);
     return  ref >>> 31;   
   }
 
   @Override
-  public void hit(long ptr) {
-    ptr += sizeOffset();
+  public final void hit(long ptr) {
+    ptr += this.sizeOffset;
     int v = UnsafeAccess.toInt(ptr);
     v |= 0x80000000;
     UnsafeAccess.putInt(ptr, v);
@@ -122,12 +124,12 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
 
   @Override
   public int fullEntrySize(int keySize, int valueSize) {
-    return indexEntrySize();
+    return this.indexEntrySize;
   }
 
   @Override
-  public int getHashBit(long ptr, int n) {
-    int off = hashOffset();
+  public final int getHashBit(long ptr, int n) {
+    int off = this.hashOffset;
     // TODO:test
     return (UnsafeAccess.toInt(ptr + off) >>> 32 - n + L) & 1;
   }
@@ -150,7 +152,7 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
     long hash = Utils.hash64(key, keyOffset, keySize);
     int $hash = (int)(hash >>> 32 - L);
 
-    ptr += hashOffset();
+    ptr += this.hashOffset;
     UnsafeAccess.putInt(ptr, $hash);
     ptr += Utils.SIZEOF_INT; 
     UnsafeAccess.putInt(ptr, dataSize);
@@ -176,7 +178,7 @@ public class SubCompactBaseIndexFormat implements IndexFormat {
     long hash = Utils.hash64(keyPtr, keySize);
     int $hash = (int)(hash >>> 32 - L);
 
-    ptr += hashOffset();
+    ptr += this.hashOffset;
     UnsafeAccess.putInt(ptr, $hash);
     ptr += Utils.SIZEOF_INT; 
     UnsafeAccess.putInt(ptr, dataSize);

@@ -26,18 +26,20 @@ import com.onecache.core.util.Utils;
  * It does not support expiration
  * 
  */
-public class BaseIndexFormat implements IndexFormat {
+public class BaseIndexFormat extends AbstractIndexFormat {
   /*
    * MQ Index item is 20 bytes:
    * 8 bytes - hashed key value
    * 4 bytes - total item size (key + value)
    * 8 bytes - location in the storage - information 
    */
+
   public BaseIndexFormat() {
+    super();
   }
   
   @Override
-  public boolean equals(long ptr, long hash) {
+  public final boolean equals(long ptr, long hash) {
     return UnsafeAccess.toLong(ptr) == hash;
   }
 
@@ -48,57 +50,57 @@ public class BaseIndexFormat implements IndexFormat {
 
   @Override
   public final int fullEntrySize(long ptr) {
-    return indexEntrySize();
+    return Utils.SIZEOF_LONG + 3 * Utils.SIZEOF_INT;
   }
   
   @Override
-  public long advance(long current) {
-    return current + fullEntrySize(current);
+  public final long advance(long current) {
+    return current + Utils.SIZEOF_LONG + 3 * Utils.SIZEOF_INT;
   }
 
   @Override
-  public int getKeyValueSize(long buffer) {
+  public final int getKeyValueSize(long buffer) {
     return UnsafeAccess.toInt(buffer + Utils.SIZEOF_LONG);
   }
 
   @Override
-  public int getSegmentId(long buffer) {
+  public final int getSegmentId(long buffer) {
     int ref = UnsafeAccess.toInt(buffer + Utils.SIZEOF_INT + Utils.SIZEOF_LONG);
     // Segment id (low 2 bytes of a first 4 bytes )
     return  ref  & 0xffff;    
   }
 
   @Override
-  public long getOffset(long buffer) {
+  public final long getOffset(long buffer) {
     long ref = UnsafeAccess.toInt(buffer + 2 * Utils.SIZEOF_INT + Utils.SIZEOF_LONG);
     return ref & 0xffffffff;
   }
 
   @Override
-  public int getEmbeddedOffset() {
+  public final int getEmbeddedOffset() {
     return Utils.SIZEOF_LONG + Utils.SIZEOF_INT; 
   }
   
   @Override
-  public long getExpire(long ibPtr, long buffer) {
+  public final long getExpire(long ibPtr, long buffer) {
     // Does not support expiration
     return -1;
   }
 
   @Override
-  public int getIndexBlockHeaderSize() {
+  public final int getIndexBlockHeaderSize() {
     return 3 * Utils.SIZEOF_SHORT;
   }
 
   @Override
-  public int getHitCount(long buffer) {
+  public final int getHitCount(long buffer) {
     int ref = UnsafeAccess.toInt(buffer + Utils.SIZEOF_INT + Utils.SIZEOF_LONG);
     // Segment id (low 2 bytes of a first 4 bytes )
     return  ref >>> 31;   
   }
 
   @Override
-  public void hit(long ptr) {
+  public final void hit(long ptr) {
     ptr += Utils.SIZEOF_INT + Utils.SIZEOF_LONG;
     int v = UnsafeAccess.toInt(ptr);
     v |= 0x80000000;
@@ -107,7 +109,7 @@ public class BaseIndexFormat implements IndexFormat {
 
   @Override
   public int fullEntrySize(int keySize, int valueSize) {
-    return indexEntrySize();
+    return Utils.SIZEOF_LONG + 3 * Utils.SIZEOF_INT;
   }
 
   @Override
@@ -156,5 +158,30 @@ public class BaseIndexFormat implements IndexFormat {
     UnsafeAccess.putInt(ptr, sid);
     ptr += Utils.SIZEOF_INT; // Yes, 4 bytes
     UnsafeAccess.putInt(ptr, dataOffset);
+  }
+
+  @Override
+  public int hashOffset() {
+    return 0;
+  }
+
+  @Override
+  public int sidOffset() {
+    return Utils.SIZEOF_LONG + Utils.SIZEOF_INT;
+  }
+
+  @Override
+  public int dataOffsetOffset() {
+    return 2 * Utils.SIZEOF_LONG ;
+  }
+
+  @Override
+  public int expireOffset() {
+    return -1;
+  }
+
+  @Override
+  public int sizeOffset() {
+    return Utils.SIZEOF_LONG;
   }
 }

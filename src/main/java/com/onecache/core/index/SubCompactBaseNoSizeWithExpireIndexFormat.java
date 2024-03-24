@@ -17,9 +17,6 @@
  */
 package com.onecache.core.index;
 
-import com.onecache.core.expire.ExpireSupport;
-import com.onecache.core.util.CacheConfig;
-
 /**
  * Format of an index entry (12 bytes):
  * expire - 2 bytes
@@ -29,12 +26,12 @@ import com.onecache.core.util.CacheConfig;
  * 
  *
  */
-public class SubCompactBaseNoSizeWithExpireIndexFormat extends SubCompactBaseNoSizeIndexFormat {
+public final class SubCompactBaseNoSizeWithExpireIndexFormat extends SubCompactBaseNoSizeIndexFormat {
   
-  ExpireSupport expireSupport;
   
   public SubCompactBaseNoSizeWithExpireIndexFormat() {
-    
+    super();
+    this.superIndexBlockHeaderSize = super.getIndexBlockHeaderSize();
   }
 
   @Override
@@ -42,56 +39,38 @@ public class SubCompactBaseNoSizeWithExpireIndexFormat extends SubCompactBaseNoS
     return true;
   }
 
-  /**
-   * For testing
-   */
-  public void setExpireSupport(ExpireSupport support) {
-    this.expireSupport = support;
-  }
-  
   @Override
   public long getExpire(long ibPtr, long ptr) {
-    ibPtr += super.getIndexBlockHeaderSize();
-    ptr += expireOffset();
+    ibPtr += this.superIndexBlockHeaderSize;
+    ptr += this.expireOffset;
     return this.expireSupport.getExpire(ibPtr, ptr);
   }
 
   @Override
   public boolean begin(long ibPtr, boolean force) {
-    ibPtr += super.getIndexBlockHeaderSize();
+    ibPtr += this.superIndexBlockHeaderSize;
     return this.expireSupport.begin(ibPtr, force);
   }
 
   @Override
   public void end(long ibPtr) {
-    ibPtr += super.getIndexBlockHeaderSize();
+    ibPtr += this.superIndexBlockHeaderSize;
     this.expireSupport.end(ibPtr);
   }
 
   @Override
-  public void setCacheName(String cacheName) {
-    super.setCacheName(cacheName);
-    try {
-      this.expireSupport = CacheConfig.getInstance().getExpireSupport(cacheName);
-    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-      // TODO Auto-generated catch block
-      throw new RuntimeException(e);
-    }
-  }
-
-  @Override
   public int getIndexBlockHeaderSize() {
-    return super.getIndexBlockHeaderSize() + this.expireSupport.getExpireMetaSectionSize();
+    return super.getIndexBlockHeaderSize() + (this.expireSupport != null? this.expireSupport.metaSectionSize : 0);
   }
 
   @Override
   public int getEmbeddedOffset() {
-    return super.getEmbeddedOffset() + ExpireSupport.FIELD_SIZE;
+    return super.getEmbeddedOffset() + (this.expireSupport != null? this.expireSupport.fieldSize : 0);
   }
 
   @Override
   public int indexEntrySize() {
-    return super.indexEntrySize() + ExpireSupport.FIELD_SIZE;
+    return super.indexEntrySize() + (this.expireSupport != null? this.expireSupport.fieldSize : 0);
   }
   
   @Override
@@ -110,7 +89,7 @@ public class SubCompactBaseNoSizeWithExpireIndexFormat extends SubCompactBaseNoS
       long expire) {
     super.writeIndex(ibPtr, ptr, key, keyOffset, keySize, value, valueOffset,
       valueSize,sid,dataOffset,dataSize,expire);
-    ibPtr += super.getIndexBlockHeaderSize();
+    ibPtr += this.superIndexBlockHeaderSize;
     this.expireSupport.setExpire(ibPtr, ptr + expireOffset(), expire);
     
   }
@@ -129,24 +108,23 @@ public class SubCompactBaseNoSizeWithExpireIndexFormat extends SubCompactBaseNoS
       long expire) {
     super.writeIndex(ibPtr, ptr, keyPtr, keySize, valuePtr, 
       valueSize, sid, dataOffset, dataSize, expire);
-    ibPtr += super.getIndexBlockHeaderSize();
+    ibPtr += this.superIndexBlockHeaderSize;
     this.expireSupport.setExpire(ibPtr, ptr + expireOffset(), expire);
-
   }
 
   @Override
   public int hashOffset() {
-    return super.hashOffset() + ExpireSupport.FIELD_SIZE;
+    return super.hashOffset() + (this.expireSupport != null? this.expireSupport.fieldSize : 0);
   }
 
   @Override
   public int sidOffset() {
-    return super.sidOffset() + ExpireSupport.FIELD_SIZE;
+    return super.sidOffset() + (this.expireSupport != null? this.expireSupport.fieldSize : 0);
   }
 
   @Override
   public int dataOffsetOffset() {
-    return super.dataOffsetOffset() + ExpireSupport.FIELD_SIZE;
+    return super.dataOffsetOffset() + (this.expireSupport != null? this.expireSupport.fieldSize : 0);
   }
 
   @Override
@@ -157,8 +135,8 @@ public class SubCompactBaseNoSizeWithExpireIndexFormat extends SubCompactBaseNoS
   @Override
   public long getAndSetExpire(long ibPtr, long expPtr, long expire) {
     long oldExpire = getExpire(ibPtr, expPtr);
-    ibPtr += super.getIndexBlockHeaderSize();
-    expPtr += expireOffset();
+    ibPtr += this.superIndexBlockHeaderSize;
+    expPtr += this.expireOffset;
     expireSupport.setExpire(ibPtr, expPtr, expire);
     return oldExpire;
   }

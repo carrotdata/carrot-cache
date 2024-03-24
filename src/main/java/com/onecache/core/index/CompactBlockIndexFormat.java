@@ -39,24 +39,28 @@ import com.onecache.core.util.Utils;
  * We can address maximum 64K * 4K = 256MB size segments. 
  * 
  */
-public class CompactBlockIndexFormat implements IndexFormat {
+public class CompactBlockIndexFormat extends AbstractIndexFormat {
   
   int blockSize;
   int  L; // index.slots.power from configuration
   
+  public CompactBlockIndexFormat() {
+    super();
+  }
   /**
    * Cache name for this index format
    * @param cacheName
    */
   public void setCacheName(String cacheName) {
+    super.setCacheName(cacheName);
     CacheConfig config = CacheConfig.getInstance();
     this.blockSize = config.getBlockWriterBlockSize(cacheName);
     this.L = config.getStartIndexNumberOfSlotsPower(cacheName);
   }
   
   @Override
-  public boolean equals(long ptr, long hash) {
-    int off = hashOffset();
+  public final boolean equals(long ptr, long hash) {
+    int off = this.hashOffset;
     int v = UnsafeAccess.toInt(ptr + off);
     v &= 0x7fffffff;
     hash = hash >>> (32 - L + 1);
@@ -70,36 +74,36 @@ public class CompactBlockIndexFormat implements IndexFormat {
   }
 
   @Override
-  public int fullEntrySize(long ptr) {
-    return indexEntrySize();
+  public final int fullEntrySize(long ptr) {
+    return this.indexEntrySize;
   }
 
   @Override
-  public int fullEntrySize(int keySize, int valueSize) {
-    return indexEntrySize();
+  public final int fullEntrySize(int keySize, int valueSize) {
+    return this.indexEntrySize;
   }
 
   @Override
-  public long advance(long current) {
-    return current + indexEntrySize();
+  public final long advance(long current) {
+    return current + this.indexEntrySize;
   }
 
 
   @Override
-  public int getKeyValueSize(long buffer) {
+  public final int getKeyValueSize(long buffer) {
     // this index format does not store k-v size
     return -1;
   }
 
   @Override
-  public int getSegmentId(long buffer) {
-    int off = sidOffset();
+  public final int getSegmentId(long buffer) {
+    int off = this.sidOffset;
     return UnsafeAccess.toShort(buffer + off) & 0xffff;
   }
 
   @Override
-  public long getOffset(long buffer) {
-    int off = dataOffsetOffset();
+  public final long getOffset(long buffer) {
+    int off = this.dataOffsetOffset;
     int blockNumber = UnsafeAccess.toShort(buffer + off) & 0xffff;
     return blockNumber * this.blockSize;
   }
@@ -109,15 +113,15 @@ public class CompactBlockIndexFormat implements IndexFormat {
     return 3 * Utils.SIZEOF_SHORT;
   }
 
-  public int getHitCount(long ptr) {
-    int off = hashOffset();
+  public final int getHitCount(long ptr) {
+    int off = this.hashOffset;
     int ref = UnsafeAccess.toInt(ptr + off);
     return  ref >>> 31;   
   }
 
   @Override
-  public void hit(long ptr) {
-    int off = hashOffset();    
+  public final void hit(long ptr) {
+    int off = this.hashOffset;    
     int v = UnsafeAccess.toInt(ptr + off);
     v |= 0x80000000;
     UnsafeAccess.putInt(ptr + off, v);
@@ -129,8 +133,8 @@ public class CompactBlockIndexFormat implements IndexFormat {
   }
 
   @Override
-  public int getHashBit(long ptr, int n) {
-    int off = hashOffset();
+  public final int getHashBit(long ptr, int n) {
+    int off = this.hashOffset;
     // TODO:test
     return (UnsafeAccess.toInt(ptr + off) >>> 32 - n + L - 1) & 1;
   }
@@ -151,9 +155,9 @@ public class CompactBlockIndexFormat implements IndexFormat {
       long expire) {
     long hash = Utils.hash64(key, keyOffset, keySize);
     int $hash = (int)(hash >>> 32 - L + 1) & 0x7fffffff;
-    UnsafeAccess.putInt(ptr + hashOffset(), $hash);
-    UnsafeAccess.putShort(ptr + sidOffset(), (short) (sid & 0xffff));
-    UnsafeAccess.putShort(ptr + dataOffsetOffset(),(short) ((dataOffset / this.blockSize) & 0xffff));    
+    UnsafeAccess.putInt(ptr + this.hashOffset, $hash);
+    UnsafeAccess.putShort(ptr + this.sidOffset, (short) (sid & 0xffff));
+    UnsafeAccess.putShort(ptr + this.dataOffsetOffset,(short) ((dataOffset / this.blockSize) & 0xffff));    
   }
 
   @Override
@@ -170,9 +174,9 @@ public class CompactBlockIndexFormat implements IndexFormat {
       long expire) {
     long hash = Utils.hash64(keyPtr, keySize);
     int $hash = (int)(hash >>> 32 - L + 1) & 0x7fffffff;
-    UnsafeAccess.putInt(ptr + hashOffset(), $hash);
-    UnsafeAccess.putShort(ptr + sidOffset(), (short) (sid & 0xffff));
-    UnsafeAccess.putShort(ptr + dataOffsetOffset(), (short) ((dataOffset / this.blockSize) & 0xffff));        
+    UnsafeAccess.putInt(ptr + this.hashOffset, $hash);
+    UnsafeAccess.putShort(ptr + this.sidOffset, (short) (sid & 0xffff));
+    UnsafeAccess.putShort(ptr + this.dataOffsetOffset, (short) ((dataOffset / this.blockSize) & 0xffff));        
   }
   
   /**
@@ -206,8 +210,13 @@ public class CompactBlockIndexFormat implements IndexFormat {
   }
 
   @Override
-  public boolean isSizeSupported() {
+  public final boolean isSizeSupported() {
     return false;
+  }
+
+  @Override
+  public int sizeOffset() {
+    return 0;
   }
   
 }

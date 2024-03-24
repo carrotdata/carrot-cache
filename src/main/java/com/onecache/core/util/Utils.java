@@ -208,7 +208,9 @@ public class Utils {
    */
   public static int compareTo(byte[] buffer1, int offset1, int length1, long address, int length2) {
 
-    UnsafeAccess.mallocStats.checkAllocation(address, length2);
+    if (UnsafeAccess.debug) {
+      UnsafeAccess.mallocStats.checkAllocation(address, length2);
+    }
     Unsafe theUnsafe = UnsafeAccess.theUnsafe;
 
     final int minLength = Math.min(length1, length2);
@@ -268,8 +270,10 @@ public class Utils {
    * @return 0 if equal,&lt; 0 if left is less than right, etc.
    */
   public static int compareTo(long address1, int length1, long address2, int length2) {
-    UnsafeAccess.mallocStats.checkAllocation(address1, length1);
-    UnsafeAccess.mallocStats.checkAllocation(address2, length2);
+    if(UnsafeAccess.debug) {
+      UnsafeAccess.mallocStats.checkAllocation(address1, length1);
+      UnsafeAccess.mallocStats.checkAllocation(address2, length2);
+    }
 
     Unsafe theUnsafe = UnsafeAccess.theUnsafe;
 
