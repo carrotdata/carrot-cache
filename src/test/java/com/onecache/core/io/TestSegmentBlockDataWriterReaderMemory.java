@@ -52,7 +52,7 @@ public class TestSegmentBlockDataWriterReaderMemory extends IOTestBase{
     prepareRandomData(this.numRecords);
     BlockDataWriter bdw = new BlockDataWriter();
     bdw.setBlockSize(blockSize);
-    segment.setDataWriter(bdw);
+    segment.setDataWriterAndEngine(bdw, null);
   }
   
   @After
@@ -133,7 +133,7 @@ public class TestSegmentBlockDataWriterReaderMemory extends IOTestBase{
     Segment seg = new Segment();
     seg.load(dis);
     seg.setInfo(info);
-    seg.setDataWriter(new BlockDataWriter());
+    seg.setDataWriterAndEngine(new BlockDataWriter(), null);
     segment.dispose();
     segment = seg;
     verifyBytesBlock(count, blockSize);

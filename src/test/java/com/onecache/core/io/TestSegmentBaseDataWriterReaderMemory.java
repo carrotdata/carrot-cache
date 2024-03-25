@@ -42,7 +42,7 @@ public class TestSegmentBaseDataWriterReaderMemory extends IOTestBase{
     segment = Segment.newSegment(this.segmentSize, 1, 1);
     segment.init("default");
     prepareRandomData(this.numRecords);
-    segment.setDataWriter(new BaseDataWriter());
+    segment.setDataWriterAndEngine(new BaseDataWriter(), null);
   }
   
   @After
@@ -108,7 +108,7 @@ public class TestSegmentBaseDataWriterReaderMemory extends IOTestBase{
     DataInputStream dis = new DataInputStream(bais);
     Segment seg = new Segment();
     seg.load(dis);
-    seg.setDataWriter(new BaseDataWriter());
+    seg.setDataWriterAndEngine(new BaseDataWriter(), null);
     segment.dispose();
     segment = seg;
     verifyBytes(count);

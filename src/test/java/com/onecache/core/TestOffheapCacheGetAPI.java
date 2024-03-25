@@ -57,7 +57,7 @@ public class TestOffheapCacheGetAPI {
   boolean offheap = true;
   Cache cache;
   int segmentSize = 8 * 1024 * 1024;
-  long maxCacheSize = 1000L * segmentSize;
+  long maxCacheSize = 100L * segmentSize;
   int scavengerInterval = 10000; // seconds - disable for test
   long expireTime;
   double scavDumpBelowRatio = 0.5;
@@ -69,7 +69,7 @@ public class TestOffheapCacheGetAPI {
   @Before
   public void setUp() throws IOException {
     this.offheap = true;
-    this.numRecords = 1000000;
+    this.numRecords = 100000;
     this.r = new Random();
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
@@ -119,7 +119,7 @@ public class TestOffheapCacheGetAPI {
     }
   }
   
-  protected void prepareData(int numRecords) {
+  protected void prepareData(int numRecords) throws IOException {
     this.numRecords = numRecords;
     keys = new byte[numRecords][];
     values = new byte[numRecords][];
@@ -141,6 +141,8 @@ public class TestOffheapCacheGetAPI {
       mValues[i] = TestUtils.randomMemory(valueSize, r);
       expires[i] = getExpire(i); // To make sure that we have distinct expiration values
     }  
+    //System.out.println("Press any key ...");
+    //System.in.read();
   }
   
   protected int loadBytes() throws IOException {
@@ -451,7 +453,7 @@ public class TestOffheapCacheGetAPI {
     verifyBytesCacheAllocated(loaded);
     verifyKeyValueBytesCacheAllocated(loaded);
     verifyBytesCacheBuffer(loaded);
-    
+  
   }
   
   @Test

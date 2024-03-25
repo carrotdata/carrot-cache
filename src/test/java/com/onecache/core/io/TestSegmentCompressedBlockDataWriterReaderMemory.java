@@ -158,7 +158,7 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompress
     seg.load(dis);
     DataWriter writer = new CompressedBlockDataWriter();
     writer.init(cacheName);
-    seg.setDataWriter(writer);
+    seg.setDataWriterAndEngine(writer, null);
     segment.dispose();
     segment = seg;
     verifyBytes(count);
@@ -205,7 +205,7 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompress
     seg.load(dis);
     DataWriter writer = new CompressedBlockDataWriter();
     writer.init(cacheName);
-    seg.setDataWriter(writer);
+    seg.setDataWriterAndEngine(writer, null);
     segment.dispose();
     segment = seg;
     verifyBytes(count);

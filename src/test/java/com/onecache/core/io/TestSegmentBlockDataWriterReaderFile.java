@@ -49,7 +49,7 @@ public class TestSegmentBlockDataWriterReaderFile extends IOTestBase{
     prepareRandomData(this.numRecords);
     BlockDataWriter bdw = new BlockDataWriter();
     bdw.setBlockSize(blockSize);
-    segment.setDataWriter(bdw);
+    segment.setDataWriterAndEngine(bdw, null);
   }
   
   @After

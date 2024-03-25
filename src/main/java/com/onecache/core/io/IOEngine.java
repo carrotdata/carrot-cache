@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -282,16 +283,19 @@ public abstract class IOEngine implements Persistent {
    * @return actual storage usage
    */
   public final long getStorageUsed() {
-    long used = 0;
-    for(int i = 0; i < dataSegments.length; i++) {
-      Segment s = dataSegments[i];
-      if (s == null || !s.isValid()) {
-        continue;
-      }
-      used += s.getSegmentDataSize();
-    }
-    return used;
-//    return this.storageUsedActual.get();
+//    long used = 0;
+//    for(int i = 0; i < dataSegments.length; i++) {
+//      Segment s = dataSegments[i];
+//      if (s == null || !s.isValid()) {
+//        continue;
+//      }
+//      used += s.getSegmentDataSize();
+//    }
+//    /*DEBUG*/ if (ThreadLocalRandom.current().nextDouble() < 0.001) {
+//      System.out.println("used=" + this.storageUsed.get() + " calc=" + used);
+//    }
+//    return used;
+    return this.storageUsed.get();
   }
   
   /**
@@ -2357,8 +2361,7 @@ public abstract class IOEngine implements Persistent {
     }
     // Offset must less 32bit
     long offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength, expire);
-    //if(offset < 3000)
-    //*DEBUG*/ System.out.println(offset);
+
     if (offset < 0) {
       if(!s.isSealed()) {
         //FIXME: is it sync call
@@ -2372,9 +2375,9 @@ public abstract class IOEngine implements Persistent {
       }
       offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength, expire);
     }
-
-    reportRawDataSize(Utils.kvSize(keyLength, valueLength));
-
+    int kvSize = Utils.kvSize(keyLength, valueLength);
+    reportRawDataSize(kvSize);
+    //reportStorageUsed(kvSize);
     MutationResult result = this.index.insertWithRank(
         key,
         keyOff,
@@ -2466,8 +2469,10 @@ public abstract class IOEngine implements Persistent {
       offset = s.append(keyPtr, keyLength, valuePtr, valueLength, expire);
     }
 
-    reportRawDataSize(Utils.kvSize(keyLength, valueLength));
-
+    int kvSize = Utils.kvSize(keyLength, valueLength);
+    reportRawDataSize(kvSize);
+    //reportStorageUsed(kvSize);
+    
     MutationResult result = this.index.insertWithRank(
         keyPtr, keyLength, valuePtr, valueLength, (short) s.getId(), (int) offset, rank, expire);
     if (result == MutationResult.INSERTED) {
@@ -2498,7 +2503,7 @@ public abstract class IOEngine implements Persistent {
           s.init(this.cacheName);
           reportAllocation(this.segmentSize);
           // Set data appender
-          s.setDataWriter(this.dataWriter);
+          s.setDataWriterAndEngine(this.dataWriter, this);
           this.dataSegments[id] = s;
 
         } else {
@@ -2566,7 +2571,7 @@ public abstract class IOEngine implements Persistent {
     for (int i = 0; i < num; i++) {
       Segment s = new Segment();
       s.load(dis);
-      s.setDataWriter(this.dataWriter);
+      s.setDataWriterAndEngine(this.dataWriter, this);
       this.dataSegments[s.getId()] = s;
     }
     this.index.load(dis);

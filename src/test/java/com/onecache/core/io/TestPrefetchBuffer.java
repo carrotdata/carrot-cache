@@ -56,7 +56,7 @@ public class TestPrefetchBuffer extends IOTestBase {
     
   @Test
   public void testPrefetchBufferWithBaseWriter() throws IOException {
-    segment.setDataWriter(new BaseDataWriter());
+    segment.setDataWriterAndEngine(new BaseDataWriter(), null);
     int n = loadBytes();
     RandomAccessFile raf = TestUtils.saveToFile(segment);
     PrefetchBuffer pbuf = new PrefetchBuffer(raf, 256 * 1024);
@@ -89,7 +89,7 @@ public class TestPrefetchBuffer extends IOTestBase {
     BlockDataWriter writer = new BlockDataWriter();
     int blockSize = 4096;
     writer.setBlockSize(blockSize);    
-    segment.setDataWriter(writer);
+    segment.setDataWriterAndEngine(writer, null);
     int n = loadBytes();
     verifyBytesBlock(n, blockSize);
     RandomAccessFile raf = TestUtils.saveToFile(segment);

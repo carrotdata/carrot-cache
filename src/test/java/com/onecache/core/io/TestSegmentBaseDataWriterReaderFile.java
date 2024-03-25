@@ -43,7 +43,7 @@ public class TestSegmentBaseDataWriterReaderFile extends IOTestBase{
     segment = Segment.newSegment(this.segmentSize, 1, 1);
     segment.init("default");
     prepareRandomData(this.numRecords);
-    segment.setDataWriter(new BaseDataWriter());
+    segment.setDataWriterAndEngine(new BaseDataWriter(), null);
   }
   
   @After

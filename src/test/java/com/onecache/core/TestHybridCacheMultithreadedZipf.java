@@ -61,8 +61,8 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
     this.minActiveRatio = 0.9;
     this.maxCacheSize = 10L * this.segmentSize;
     // victim cache
-    this.victim_segmentSize = 4 * 1024 * 1024;
-    this.victim_maxCacheSize = 1000L * this.victim_segmentSize;
+    //this.victim_segmentSize = 4 * 1024 * 1024;
+    //this.victim_maxCacheSize = 1000L * this.victim_segmentSize;
     this.victim_minActiveRatio = 0.5;
     this.victim_scavDumpBelowRatio = 0.5;
     this.victim_scavengerInterval = 10;

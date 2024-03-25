@@ -458,24 +458,23 @@ public class Scavenger implements Runnable {
   public void run() {
     long runStart = System.currentTimeMillis();
     IOEngine engine = this.cache.getEngine();
-   // DateFormat format = DateFormat.getDateTimeInstance();
-
+    // DateFormat format = DateFormat.getDateTimeInstance();
     Segment s = null;
     try {
       AtomicInteger numInstances = numInstancesMap.get(cache.getName());
       if (numInstances.incrementAndGet() > maxInstances) {
         // Number of instances exceeded the maximum value
-       numInstances.decrementAndGet();
+        //numInstances.decrementAndGet();
         return;
       }
-//      LOG.debug(
-//          "scavenger [{}] started at {} allocated storage={} maximum storage={}", cache.getName(),
-//          format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
+      // LOG.debug(
+      // "scavenger [{}] started at {} allocated storage={} maximum storage={}", cache.getName(),
+      // format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
 
       boolean finished = false;
-      
+
       int segmentsProcessed = 0;
-      
+
       while (!finished) {
         if (Thread.interrupted()) {
           break;
@@ -488,13 +487,14 @@ public class Scavenger implements Runnable {
           s.setRecycling(false);
           break;
         }
-        //TODO: make it more smarter, calculate maxSegmentsBeforeStallDetected using maximum number of segments
+        // TODO: make it more smarter, calculate maxSegmentsBeforeStallDetected using maximum number
+        // of segments
         // and other current cache configuration values
         if (segmentsProcessed >= maxSegmentsBeforeStallDetected) {
           // This should never happen if eviction is disabled
           dumpBelowRatio = dumpBelowRatioMax;// improve scavenger's performance - dump everything
           beforeStallDetected = false;
-        }      
+        }
         engine.startRecycling(s);
         long maxExpire = s.getInfo().getMaxExpireAt();
         if (s.getInfo().getTotalActiveItems() == 0
@@ -514,9 +514,9 @@ public class Scavenger implements Runnable {
           engine.disposeDataSegment(s);
 
         } catch (IOException e) {
-          LOG.error("Cache : %s segment id=%d offheap =%s sealed=%s", cache.getName(), 
-            s == null? -1: s.getId(), s==null? null: Boolean.toString(s.isOffheap()), 
-                s == null? null: Boolean.toString(s.isSealed()));
+          LOG.error("Cache : %s segment id=%d offheap =%s sealed=%s", cache.getName(),
+            s == null ? -1 : s.getId(), s == null ? null : Boolean.toString(s.isOffheap()),
+            s == null ? null : Boolean.toString(s.isSealed()));
           LOG.error(e);
           e.printStackTrace();
           return;
@@ -526,7 +526,7 @@ public class Scavenger implements Runnable {
         segmentsProcessed++;
       }
     } catch (Exception e) {
-      /*DEBUG*/e.printStackTrace();
+      /* DEBUG */e.printStackTrace();
     } finally {
       AtomicInteger numInstances = numInstancesMap.get(cache.getName());
       numInstances.decrementAndGet();
@@ -535,9 +535,9 @@ public class Scavenger implements Runnable {
     long runEnd = System.currentTimeMillis();
     // Update stats
     stats.totalRunTimes.addAndGet(runEnd - runStart);
-//    LOG.debug(
-//        "scavenger [{}] finished at {} allocated storage={} maximum storage=%{}", cache.getName(),
-//        format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
+    // LOG.debug(
+    // "scavenger [{}] finished at {} allocated storage={} maximum storage=%{}", cache.getName(),
+    // format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
 
   }
 
@@ -575,21 +575,23 @@ public class Scavenger implements Runnable {
     long maxExpire = info.getMaxExpireAt();
     boolean allExpired = maxExpire > 0 && maxExpire <= currentTime;
     boolean empty = !allExpired && info.getTotalActiveItems() == 0;
+    boolean result = false;
+    long dataSize = info.getSegmentDataSize();
+    long uncompressedDataSize = info.getSegmentDataSizeUncompressed();
     if (allExpired || empty) {
       // We can dump it completely w/o asking memory index
-      long dataSize = info.getSegmentDataSize();
-      long uncompressedDataSize = info.getSegmentDataSizeUncompressed();
-      this.cache.getEngine().reportRawDataSize(-uncompressedDataSize);
-      this.cache.getEngine().reportStorageUsed(-dataSize);
       // Update stats
       stats.totalBytesFreed.addAndGet(dataSize);
       stats.totalBytesScanned.addAndGet(dataSize);
       stats.totalItemsFreed.addAndGet(s.getTotalItems());
       stats.totalItemsScanned.addAndGet(s.getTotalItems());
-      return false; // not finished yet
+      result = false; // not finished yet
     } else {
-      return cleanSegmentInternal(s);
+      result = cleanSegmentInternal(s);
     }
+    this.cache.getEngine().reportRawDataSize(-uncompressedDataSize);
+    this.cache.getEngine().reportStorageUsed(-dataSize);
+    return result;
   }
 
   private byte[] checkBuffer(byte[] buffer, int requiredSize, boolean isDirect) {
@@ -682,7 +684,6 @@ public class Scavenger implements Runnable {
         }
         // Update storage usage (uncompressed)
         int kvSize = Utils.kvSize(keySize, valSize);
-        this.cache.getEngine().reportRawDataSize(-kvSize);
         sc.next();
       }
     } finally {

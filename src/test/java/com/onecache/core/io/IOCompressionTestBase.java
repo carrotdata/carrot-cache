@@ -65,7 +65,7 @@ public class IOCompressionTestBase extends IOTestBase {
     initTest(randomData, dictionaryEnabled);
     CompressedBlockDataWriter writer = new CompressedBlockDataWriter();
     writer.init(cacheName);
-    this.segment.setDataWriter(writer);
+    this.segment.setDataWriterAndEngine(writer, null);
   }
   
   protected void initTestForEngine(boolean randomData, boolean dictionaryEnabled) throws URISyntaxException, IOException {

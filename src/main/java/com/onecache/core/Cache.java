@@ -192,6 +192,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   
   volatile boolean cacheDisabled = false;
   
+  int scavengerNoThreads;
+  
   /**
    *  Constructor to use 
    *  when loading cache from a storage
@@ -261,6 +263,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.waitOnPutTimeMs = this.conf.getCacheMaximumWaitTimeOnPut(cacheName);
     this.maximumCacheSize = this.conf.getCacheMaximumSize(cacheName);
     this.maximumKeyValueSize = this.conf.getKeyValueMaximumSize(cacheName);
+    this.scavengerNoThreads = this.conf.getScavengerNumberOfThreads(cacheName);
+    
     long segmentSize = this.conf.getCacheSegmentSize(cacheName);
     // check if it is larger than 2GB
     if (segmentSize > (2L * 1024 * 1024 * 1024)) {
@@ -345,10 +349,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   void startScavengers() {
-    if (Scavenger.getActiveThreadsCount(this.cacheName) < this.conf.getScavengerNumberOfThreads(cacheName)){
+    if (Scavenger.getActiveThreadsCount(this.cacheName) < this.scavengerNoThreads){
       synchronized(this) {
         // Check again
-        while (Scavenger.getActiveThreadsCount(this.cacheName) < this.conf.getScavengerNumberOfThreads(cacheName)){
+        while (Scavenger.getActiveThreadsCount(this.cacheName) < this.scavengerNoThreads){
           Scavenger scavenger = new Scavenger(this);
           scavenger.start();
         }
@@ -784,9 +788,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     if (!scavenger) {
       long start = System.currentTimeMillis();
+      boolean scavStarted = false;
       while(storageIsFull(keySize, valSize) && 
           (System.currentTimeMillis() - start) < this.waitOnPutTimeMs) {
-        startScavengers();
+        // Start scavengers if not running 
+        //FIXME: Bad, very bad, can stuck  
+        if (!scavStarted) {
+          startScavengers(); 
+          scavStarted = true;
+        }
         Utils.onSpinWait(this.spinWaitTimeNs);
       }
       if (storageIsFull(keySize, valSize)) { 
@@ -969,10 +979,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     // OK, eviction is disabled
     // check used and maximum storage size
     //FIXME: calculating of storageusedActual can be costly
-    long used = getStorageUsedActual();
-    long max = getMaximumCacheSize();
+    long used = this.engine.getStorageUsed();//getStorageUsedActual();
+    //*DEBUG*/ System.out.printf("USED=%d\n", used);
     int size = Utils.kvSize(keySize, valueSize);
-    return used + size > max;
+    return used + size > this.maximumCacheSize;
   }
   
   private boolean isGreaterThanMaxSize(int keySize, int valueSize) {
@@ -1007,11 +1017,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     
     if (!scavenger ) {
       long start = System.currentTimeMillis();
+      boolean scavStarted = false;
       while(storageIsFull(keySize, valSize) && 
           (System.currentTimeMillis() - start) < this.waitOnPutTimeMs) {
         // Start scavengers if not running 
         //FIXME: Bad, very bad, can stuck  
-        startScavengers(); 
+        if (!scavStarted) {
+          startScavengers(); 
+          scavStarted = true;
+        }
         Utils.onSpinWait(this.spinWaitTimeNs);
       }
       // If still storage is full return false: operation failed

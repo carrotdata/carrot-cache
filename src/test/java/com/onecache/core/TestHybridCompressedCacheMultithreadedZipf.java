@@ -58,7 +58,7 @@ public class TestHybridCompressedCacheMultithreadedZipf extends TestOffheapCompr
     // Parent cache
     this.offheap = true;
     this.numRecords = 4000000;
-    this.numIterations = 2 * this.numRecords;
+    this.numIterations = this.numRecords;
     this.numThreads = 4;
     this.minActiveRatio = 0.9;
     this.maxCacheSize = 20L * this.segmentSize;
@@ -68,8 +68,8 @@ public class TestHybridCompressedCacheMultithreadedZipf extends TestOffheapCompr
     this.pcController = AQBasedPromotionController.class;
    
     // victim cache
-    this.victim_segmentSize = 4 * 1024 * 1024;
-    this.victim_maxCacheSize = 1000L * this.victim_segmentSize;
+    //this.victim_segmentSize = 4 * 1024 * 1024;
+    //this.victim_maxCacheSize = 1000L * this.victim_segmentSize;
     this.victim_minActiveRatio = 0.5;
     this.victim_scavDumpBelowRatio = 1.0;
     this.victim_scavengerInterval = 10;

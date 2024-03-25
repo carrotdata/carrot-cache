@@ -277,7 +277,7 @@ public class Segment implements Persistent {
      * @param size segment data size
      */
     public void setSegmentBlockDataSize(long size) {
-      this.dataSize.set(size);
+      this.blockDataSize.set(size);
     }
     
     /**
@@ -536,6 +536,8 @@ public class Segment implements Persistent {
   /* Segment is in recycling */
   private volatile boolean inRecycling;
   
+  /** We need this instance for data used reporting */
+  IOEngine engine;
   /**
    * 
    * Default constructor
@@ -570,8 +572,10 @@ public class Segment implements Persistent {
    * Sets data appender implementation
    * @param da data appender
    */
-  public void setDataWriter(DataWriter da) {
+  public void setDataWriterAndEngine(DataWriter da, IOEngine engine) {
     this.dataWriter = da;
+    // can be null in tests
+    this.engine = engine;
   }
   
   /**
@@ -654,6 +658,9 @@ public class Segment implements Persistent {
    * @return new data size
    */
   public long incrDataSize(int incr) {
+    if (this.engine != null) {
+      this.engine.reportStorageUsed(incr);
+    }
     return this.info.incrementDataSize(incr);
   }
    
@@ -808,10 +815,14 @@ public class Segment implements Persistent {
   }
   
   /**
-   * Sets new segment data size (used if blokc compression is enabled)
+   * Sets new segment data size (used if block compression is enabled)
    * @param newSize new segment data size
    */
   public void setSegmentDataSize(long newSize) {
+    if (this.engine != null) {
+      int incr = (int)(newSize - this.info.getSegmentDataSize());
+      this.engine.reportStorageUsed(incr);
+    }
     this.info.setSegmentDataSize(newSize);
   }
   
