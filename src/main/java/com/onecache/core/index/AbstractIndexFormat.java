@@ -245,5 +245,5 @@ public abstract class AbstractIndexFormat implements IndexFormat {
   public abstract int expireOffset() ;
   
   public abstract int sizeOffset();
-
+  
 }

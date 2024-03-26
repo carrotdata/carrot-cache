@@ -338,4 +338,41 @@ public class TestMemoryIndexMultithreadedBase {
     }
     return MutationResult.INSERTED;
   }
+  
+  /**
+   * Force update - wait until full rehashing is complete
+   * @param key
+   * @param offset
+   * @param size
+   * @param sid
+   * @param dataOffset
+   */
+  protected MutationResult forceUpdate(byte[] key, int offset, int size, short sid, int dataOffset) {
+    MutationResult result = MutationResult.FAILED;
+    while(result != MutationResult.UPDATED) {
+      result = memoryIndex.update(key, offset, size, sid, dataOffset);
+      if (result != MutationResult.UPDATED) {
+//        Thread.onSpinWait();
+       // Utils.onSpinWait(1000);
+      }
+    }
+    return MutationResult.UPDATED;
+  }
+  
+  /**
+   * Force update - wait until full rehashing is complete
+   * @param key
+   * @param size
+   */
+  protected MutationResult forceUpdate(long key, int size,short sid, int dataOffset) {
+    MutationResult result = MutationResult.FAILED;
+    while(result != MutationResult.UPDATED) {
+      result = memoryIndex.update(key, size, sid, dataOffset);
+      if (result != MutationResult.INSERTED) {
+//        Thread.onSpinWait();
+        Utils.onSpinWait(1000);
+      }
+    }
+    return MutationResult.UPDATED;
+  }
 }

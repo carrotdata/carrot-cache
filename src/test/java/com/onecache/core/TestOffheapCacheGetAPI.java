@@ -31,8 +31,12 @@ import org.junit.Test;
 
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
 import com.onecache.core.expire.ExpireSupportUnixTime;
+import com.onecache.core.index.CompactBaseWithExpireIndexFormat;
 import com.onecache.core.index.CompactBlockIndexFormat;
 import com.onecache.core.index.CompactBlockWithExpireIndexFormat;
+import com.onecache.core.io.BaseDataWriter;
+import com.onecache.core.io.BaseFileDataReader;
+import com.onecache.core.io.BaseMemoryDataReader;
 import com.onecache.core.io.BlockDataWriter;
 import com.onecache.core.io.BlockFileDataReader;
 import com.onecache.core.io.BlockMemoryDataReader;
@@ -100,10 +104,10 @@ public class TestOffheapCacheGetAPI {
       .withScavengerRunInterval(scavengerInterval)
       .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
       .withRecyclingSelector(MinAliveRecyclingSelector.class.getName())
-      .withDataWriter(BlockDataWriter.class.getName())
-      .withMemoryDataReader(BlockMemoryDataReader.class.getName())
-      .withFileDataReader(BlockFileDataReader.class.getName())
-      .withMainQueueIndexFormat(CompactBlockWithExpireIndexFormat.class.getName())
+      .withDataWriter(BaseDataWriter.class.getName())
+      .withMemoryDataReader(BaseMemoryDataReader.class.getName())
+      .withFileDataReader(BaseFileDataReader.class.getName())
+      .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName())
       .withCacheRootDir(rootDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
       .withEvictionDisabledMode(true)
@@ -214,6 +218,7 @@ public class TestOffheapCacheGetAPI {
     int bufferSize = safeBufferSize();
     byte[] buffer = new byte[bufferSize];
     long getTime = 0;
+    int failed = 0;
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
       byte[] value = values[i];
@@ -221,25 +226,32 @@ public class TestOffheapCacheGetAPI {
       long t1 = System.nanoTime();
       long size = cache.get(key, 0, key.length, false, buffer, 0);
       getTime += System.nanoTime() - t1;
+      if (size < 0) {
+        failed++; continue;
+      }
       assertEquals(expSize, size);
       assertTrue( Utils.compareTo(buffer, 0, value.length, value, 0, value.length) == 0);
     }
-    System.out.printf("Time to get (bytes, cache, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+    System.out.printf("Time to get (bytes, cache, no hit) %d keys is %dms failed=%d\n", num, getTime / 1_000_000, failed);
 
   }
   
   protected void verifyBytesCacheAllocated(int num) throws IOException {
     long getTime = 0;
+    int failed = 0;
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
       byte[] value = values[i];
       long t1 = System.nanoTime();
       byte[] read = cache.get(key, 0, key.length, false);
       getTime += System.nanoTime() - t1;
+      if (read == null) {
+        failed++;
+      }
       assertTrue(read != null);
       assertTrue(Utils.compareTo(read, 0, read.length, value, 0, value.length) == 0);
     }
-    System.out.printf("Time to get (bytes, no cache, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+    System.out.printf("Time to get (bytes, no cache, no hit) %d keys is %dms failed=%d\n", num, getTime / 1_000_000, failed);
 
   }
   

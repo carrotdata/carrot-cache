@@ -226,4 +226,13 @@ public class SubCompactBaseIndexFormat extends AbstractIndexFormat {
     // Not supported
     return -1;
   }
+
+  @Override
+  public final void updateIndex(long ptr, int sid, int dataOffset) {
+    ptr += this.hashOffset + 2 * Utils.SIZEOF_INT;
+    UnsafeAccess.putShort(ptr, (short) (sid & 0xffff));
+    ptr += Utils.SIZEOF_SHORT; 
+    UnsafeAccess.putInt(ptr, dataOffset);    
+  }
+
 }

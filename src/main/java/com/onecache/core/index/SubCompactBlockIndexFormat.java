@@ -216,4 +216,10 @@ public class SubCompactBlockIndexFormat extends AbstractIndexFormat {
     // TODO Auto-generated method stub
     return 0;
   }
+  
+  @Override
+  public final void updateIndex(long ptr, int sid, int dataOffset) {
+    UnsafeAccess.putShort(ptr + sidOffset(), (short) (sid & 0xffff));
+    UnsafeAccess.putShort(ptr + dataOffsetOffset(), (short) (dataOffset / this.blockSize));        
+  }
 }

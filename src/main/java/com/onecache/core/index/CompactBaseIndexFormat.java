@@ -219,4 +219,13 @@ public class CompactBaseIndexFormat extends AbstractIndexFormat {
     // Not supported
     return -1;
   }
+
+  @Override
+  public final void updateIndex(long ptr, int sid, int dataOffset) {
+    ptr += hashOffset();
+    ptr += 2 * Utils.SIZEOF_INT + Utils.SIZEOF_SHORT; 
+    UnsafeAccess.putShort(ptr, (short)sid);
+    ptr += Utils.SIZEOF_SHORT; 
+    UnsafeAccess.putInt(ptr, dataOffset);    
+  }
 }

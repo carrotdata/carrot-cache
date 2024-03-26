@@ -219,4 +219,9 @@ public class CompactBlockIndexFormat extends AbstractIndexFormat {
     return 0;
   }
   
+  @Override
+  public final void updateIndex(long ptr, int sid, int dataOffset) {
+    UnsafeAccess.putShort(ptr + this.sidOffset, (short) (sid & 0xffff));
+    UnsafeAccess.putShort(ptr + this.dataOffsetOffset, (short) ((dataOffset / this.blockSize) & 0xffff));      
+  }
 }

@@ -21,6 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Random;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -57,6 +58,28 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
       }
     }
     return loaded;
+  }
+  
+  protected int updateIndexBytes() {
+    int updated = 0;
+    long seed = System.currentTimeMillis();
+    Random r = new Random();
+    r.setSeed(seed);
+    System.out.println("update seed=" + seed);
+    for(int i = 0; i < numRecords; i++) {
+      sids[i] = (short) r.nextInt(32000);
+      offsets[i] = nextOffset(r, 100000000);
+    }
+    long t1 = System.currentTimeMillis();
+    for(int i = 0; i < numRecords; i++) {
+      MutationResult res = memoryIndex.update(keys[i], 0, keySize, sids[i], offsets[i]);
+      if (res == MutationResult.UPDATED) {
+        updated++;
+      }
+    }
+    long t2 = System.currentTimeMillis();
+    System.out.printf("Time to update %d indexes=%dms\n", numRecords, t2 - t1);
+    return updated;
   }
   
   protected int loadIndexBytesWithEviction(int evictionStartFrom) {
@@ -100,6 +123,42 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
       if (sids[i] != sid) {
         continue;
       }
+      if(offsets[i] != offset) {
+        continue;
+      }
+      if (sizes[i] != size) {
+        continue;
+      }
+      long expire = memoryIndex.getExpire(keys[i], 0, keySize);
+      if (!sameExpire(expires[i], expire)) {
+        continue;
+      }
+      verified ++;
+    }
+    UnsafeAccess.free(buf);
+    assertEquals(expected, verified);
+  }
+  
+  protected void verifyUpdatedIndexBytes(int expected) {
+    
+    IndexFormat format = memoryIndex.getIndexFormat();
+    int entrySize = format.indexEntrySize();
+    long buf = UnsafeAccess.mallocZeroed(entrySize);
+    int verified = 0;
+    for (int i = 0; i < numRecords; i++) {
+      int result = (int) memoryIndex.find(keys[i], 0, keySize, false, buf, entrySize);
+      if (result > 0) {
+        assertEquals(entrySize, result);
+      } else {
+        continue;
+      }
+      short sid = (short) format.getSegmentId(buf);
+      int offset = (int) format.getOffset(buf);
+      int size = (int) format.getKeyValueSize(buf);
+      if (sids[i] != sid) {
+        continue;
+      }
+      int off = offsets[i];
       if(offsets[i] != offset) {
         continue;
       }
@@ -184,6 +243,28 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
     return loaded;
   }
   
+  protected int updateIndexMemory() {
+    int updated = 0;
+    long seed = System.currentTimeMillis();
+    Random r = new Random();
+    r.setSeed(seed);
+    System.out.println("update seed=" + seed);
+    for(int i = 0; i < numRecords; i++) {
+      sids[i] = (short) r.nextInt(32000);
+      offsets[i] = nextOffset(r, 100000000);
+    }
+    long t1 = System.currentTimeMillis();
+    for(int i = 0; i < numRecords; i++) {
+      MutationResult res = memoryIndex.update(mKeys[i], keySize, sids[i], offsets[i]);
+      if (res == MutationResult.UPDATED) {
+        updated++;
+      }
+    }
+    long t2 = System.currentTimeMillis();
+    System.out.printf("Time to update %d indexes=%dms\n", numRecords, t2 - t1);
+    return updated;
+  }
+  
   protected int loadIndexMemoryWithEviction(int evictionStartFrom) {
     int loaded = 0;
     for(int i = 0; i < numRecords; i++) {
@@ -239,6 +320,40 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
     assertEquals(expected, verified);
   }
   
+  protected void verifyUpdatedIndexMemory(int expected) {
+    IndexFormat format = memoryIndex.getIndexFormat();
+    int entrySize = format.indexEntrySize();
+    long buf = UnsafeAccess.mallocZeroed(entrySize);
+    int verified = 0;
+    for (int i = 0; i < numRecords; i++) {
+      int result = (int) memoryIndex.find(mKeys[i], keySize, false, buf, entrySize);
+      if (result > 0) {
+        assertEquals(entrySize, result);
+      } else {
+        continue;
+      }
+      short sid = (short)format.getSegmentId(buf);
+      int offset = (int) format.getOffset(buf);
+      int size = (int) format.getKeyValueSize(buf);
+      if (sids[i] !=  sid) {
+        continue;
+      }
+      if (offsets[i] != offset) {
+        continue;
+      }
+      if (sizes[i] != size) {
+        continue;
+      }
+      long expire = memoryIndex.getExpire(mKeys[i], keySize);
+      if (!sameExpire(expires[i], expire)) {
+        continue;
+      }
+      verified++;
+    }
+    UnsafeAccess.free(buf);
+    assertEquals(expected, verified);
+  }
+  
   @Test
   public void testLoadReadNoRehashBytes() {
     System.out.println("Test load and read no rehash bytes");
@@ -249,6 +364,18 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
   public void testLoadReadNoRehashMemory() {
     System.out.println("Test load and read no rehash memory");
     loadReadMemory(100000);
+  }
+  
+  @Test
+  public void testLoadUpdateReadNoRehashBytes() {
+    System.out.println("Test load update and read no rehash bytes");
+    loadUpdateReadBytes(100000);
+  }
+  
+  @Test
+  public void testLoadUpdateReadNoRehashMemory() {
+    System.out.println("Test load update and read no rehash memory");
+    loadUpdateReadMemory(100000);
   }
   
   @Test
@@ -290,6 +417,18 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
   public void testLoadReadWithRehashMemory() {
     System.out.println("Test load and read with rehash memory");
     loadReadMemory(1000000);
+  }
+  
+  @Test
+  public void testLoadUpdateReadWithRehashBytes() {
+    System.out.println("Test load update and read with rehash bytes");
+    loadUpdateReadBytes(1000000);
+  }
+  
+  @Test
+  public void testLoadUpdateReadWithRehashMemory() {
+    System.out.println("Test load update and read with rehash memory");
+    loadUpdateReadMemory(1000000);
   }
   
   @Test
@@ -478,6 +617,21 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
     return loaded;
   }
   
+  protected int loadUpdateReadBytes(int num) {
+    prepareData(num);
+    System.out.println("prepare done");
+    int loaded = loadIndexBytes();
+    System.out.println("load done: "+ loaded);
+    long size = memoryIndex.size();
+    assertEquals(loaded, (int) size);
+    int updated = updateIndexBytes();
+    System.out.println("update done: "+ updated);
+    // updated == num always but can be larger than loaded due to hash collisions
+    // therefore we verify against loaded
+    verifyUpdatedIndexBytes(loaded);
+    return loaded;
+  }
+  
   
   protected int loadVerifyGetSetExpireBytes(int num) {
     prepareData(num);
@@ -496,6 +650,20 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
     long size = memoryIndex.size();
     assertEquals(loaded, (int) size);
     verifyIndexMemory(loaded);
+    return loaded;
+  }
+  
+  protected int loadUpdateReadMemory(int num) {
+    prepareData(num);
+    int loaded = loadIndexMemory();
+    System.out.println("load done: " + loaded);
+
+    long size = memoryIndex.size();
+    assertEquals(loaded, (int) size);
+    int updated = updateIndexMemory();
+    // We will always have updated == num
+    System.out.println("update done: "+ updated);
+    verifyUpdatedIndexMemory(loaded);
     return loaded;
   }
   

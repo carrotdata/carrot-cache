@@ -113,7 +113,7 @@ public class BaseIndexFormat extends AbstractIndexFormat {
   }
 
   @Override
-  public void writeIndex(
+  public final void writeIndex(
       long ibPtr,
       long ptr,
       byte[] key,
@@ -128,17 +128,14 @@ public class BaseIndexFormat extends AbstractIndexFormat {
       long expire /* not supported here*/) 
   {
     long hash = Utils.hash64(key, keyOffset, keySize);
-    UnsafeAccess.putLong(ptr, hash);
-    ptr += Utils.SIZEOF_LONG;
-    UnsafeAccess.putInt(ptr, dataSize);
-    ptr += Utils.SIZEOF_INT;
-    UnsafeAccess.putInt(ptr, sid);
-    ptr += Utils.SIZEOF_INT; // Yes, 4 bytes
-    UnsafeAccess.putInt(ptr, dataOffset);
+    UnsafeAccess.putLong(ptr + this.hashOffset, hash);
+    UnsafeAccess.putInt(ptr + this.sizeOffset, dataSize);
+    UnsafeAccess.putInt(ptr + this.sidOffset, sid);
+    UnsafeAccess.putInt(ptr + this.dataOffsetOffset, dataOffset);
   }
 
   @Override
-  public void writeIndex(
+  public final void writeIndex(
       long ibPtr,
       long ptr,
       long keyPtr,
@@ -151,13 +148,10 @@ public class BaseIndexFormat extends AbstractIndexFormat {
       long expire) 
   {
     long hash = Utils.hash64(keyPtr, keySize);
-    UnsafeAccess.putLong(ptr, hash);
-    ptr += Utils.SIZEOF_LONG;
-    UnsafeAccess.putInt(ptr, dataSize);
-    ptr += Utils.SIZEOF_INT;
-    UnsafeAccess.putInt(ptr, sid);
-    ptr += Utils.SIZEOF_INT; // Yes, 4 bytes
-    UnsafeAccess.putInt(ptr, dataOffset);
+    UnsafeAccess.putLong(ptr + this.hashOffset, hash);
+    UnsafeAccess.putInt(ptr + this.sizeOffset, dataSize);
+    UnsafeAccess.putInt(ptr + this.sidOffset, sid);
+    UnsafeAccess.putInt(ptr + this.dataOffsetOffset, dataOffset);
   }
 
   @Override
@@ -183,5 +177,11 @@ public class BaseIndexFormat extends AbstractIndexFormat {
   @Override
   public int sizeOffset() {
     return Utils.SIZEOF_LONG;
+  }
+
+  @Override
+  public final void updateIndex(long ptr, int sid, int dataOffset) {
+    UnsafeAccess.putInt(ptr + this.sidOffset, sid);
+    UnsafeAccess.putInt(ptr + this.dataOffsetOffset, dataOffset);    
   }
 }

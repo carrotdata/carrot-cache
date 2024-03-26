@@ -228,4 +228,12 @@ public class SubCompactBaseNoSizeIndexFormat extends AbstractIndexFormat {
   public final boolean isSizeSupported() {
     return false;
   }
+
+  @Override
+  public final void updateIndex(long ptr, int sid, int dataOffset) {
+    ptr += this.hashOffset + Utils.SIZEOF_INT;
+    UnsafeAccess.putShort(ptr, (short)sid);
+    ptr += Utils.SIZEOF_SHORT; 
+    UnsafeAccess.putInt(ptr, dataOffset);    
+  }
 }

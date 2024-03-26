@@ -158,5 +158,10 @@ public final class AQIndexFormat extends AbstractIndexFormat {
   public int sizeOffset() {
     return 0;
   }
+
+  @Override
+  public void updateIndex(long ptr, int sid, int dataOffset) {
+    // Do nothing
+  }
   
 }

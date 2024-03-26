@@ -1982,6 +1982,30 @@ public final class MemoryIndex implements Persistent {
   }
 
   /**
+   * Update index entry - change sid and offset
+   *
+   * @param key item key
+   * @param keyOffset item's key offset
+   * @param keyLength item key size
+   * @param sid data segment id
+   * @param offset offset in the data segment
+   * @return UPDATED or FAILED
+   */
+  
+  public MutationResult update(byte[] key, int keyOffset, int keyLength,  
+      short sid, int offset) {
+    int slot = 0;
+    try {
+      slot = lock(key, keyOffset, keyLength);
+      long hash = Utils.hash64(key, keyOffset, keyLength);
+      MutationResult result = updateInternal(hash, sid, offset);
+      return result;
+    } finally {
+      unlock(slot);
+    }
+  }
+  
+  /**
    * Insert new index entry
    *
    * @param key item key
@@ -2069,6 +2093,28 @@ public final class MemoryIndex implements Persistent {
     } finally {
       unlock(slot);
       freeMemoryBuffer(indexPtr);
+    }
+  }
+  
+  /**
+   * Update index entry - change sid and offset
+   *
+   * @param keyPtr key address
+   * @param keyLength key size
+   * @param sid segment id
+   * @param offset offset in the data segment
+   * @return MutationResult.UPDATED or MutationResult.FAILED
+   */
+  public MutationResult update(long keyPtr, int keyLength, 
+      short sid, int offset) {
+    int slot = 0;
+    try {
+      slot = lock(keyPtr, keyLength);
+      long hash = Utils.hash64(keyPtr, keyLength);
+      MutationResult result = updateInternal(hash, sid, offset);
+      return result;
+    } finally {
+      unlock(slot);
     }
   }
   
@@ -2167,6 +2213,50 @@ public final class MemoryIndex implements Persistent {
   
 
   /**
+   * Insert hash - value into index
+   *
+   * @param hash hash
+   * @param indexPtr value
+   * @param indexSize index size
+   * @param rank item's rank
+   * @return MutationResult.INSERTED or FAILED
+   */
+  private MutationResult updateInternal(long hash, short sid, int offset) {
+    // Get slot number    
+    long[] index = getIndexForHash(hash);
+    int $slot = getSlotNumber(hash, index.length);
+    long ptr = index[$slot];
+    boolean res = update0(ptr, hash, sid, offset);
+    return res? MutationResult.UPDATED: MutationResult.FAILED;
+  }
+  /**
+   * Insert hash - value into a given index block with a rank
+   *
+   * @param ptr index block address
+   * @param hash hash of a key
+   * @param indexPtr index data pointer (not used for AQ, 12 bytes for MQ)
+   * @param indexSize index size
+   * @param rank item's rank
+   * @return new index block pointer
+   */
+  private boolean update0(long ptr, long hash, short sid, int offset) {
+    final int numEntries = numEntries(ptr);
+    long $ptr = ptr + indexBlockHeaderSize;
+    int count = 0;
+    final int indexSize = this.indexSize;
+    while (count < numEntries) {
+      if (this.indexFormat.equals($ptr, hash)) {
+        //TODO: inline call
+        this.indexFormat.updateIndex($ptr, sid, offset);
+        return true;
+      }
+      count++;
+      $ptr += indexSize;
+    }
+    return false;
+  }
+  
+  /**
    * Insert hash - value into a given index block
    *
    * @param ptr index block address
@@ -2198,6 +2288,7 @@ public final class MemoryIndex implements Persistent {
       // TODO: WHAT IS THAT?
       // It looks like this is pro-active eviction during insert
       if (this.expiredEvictedBalance.get() <= 0) {
+        // We do evictions of expired data in findAndPromote
         doEviction(ptr); // TODO: take into account size of a new item
       } else {
         // Decrement balance

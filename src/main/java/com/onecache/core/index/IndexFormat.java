@@ -183,6 +183,15 @@ public interface IndexFormat extends Persistent {
    */
   public void writeIndex(long ibPtr, long ptr, long keyPtr, int keySize, long valuePtr, 
       int valueSize, int sid, int dataOffset, int dataSize, long expire);
+ 
+  /**
+   * Update index in place ( segment ID and offset
+   * 
+   * @param ptr address to write
+   * @param sid segment id
+   * @param dataOffset offset in a block segment
+   */
+  public void updateIndex(long ptr, int sid, int dataOffset);
   
   /**
    * Begin index block access
