@@ -331,6 +331,8 @@ public class CacheConfig {
   
   public final static String CACHE_ESTIMATED_AVG_KV_SIZE_KEY = "cache.estimated-avg-kv-size";
   
+  public final static String CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY = "cache.memory-buffer-pool-max-size";
+  
   /** Defaults section */
   
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
@@ -559,7 +561,10 @@ public class CacheConfig {
   /* Default average K-V size */
   public final static int DEFAULT_ESTIMATED_AVG_KV_SIZE = 10 * 1024;
   
-  // Statics
+  /* Default maximum size of memory buffer pool*/
+  
+  public final static int DEFAULT_CACHE_MEMORY_BUFFER_POOL_MAX_SIZE = DEFAULT_CACHE_POPULARITY_NUMBER_RANKS;
+  
   static CacheConfig instance;
 
   public static CacheConfig getInstance() {
@@ -2634,10 +2639,32 @@ public class CacheConfig {
     props.setProperty(cacheName + "." + CACHE_ESTIMATED_AVG_KV_SIZE_KEY, Integer.toString(size));
   }
   
+  /**
+   * Gets memory buffer pool maximum size for cache
+   * @param cacheName cache name
+   * @return size maximum size
+   */
+  public int getCacheMemoryBufferPoolMaximumSize(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY);
+    if (value != null) {
+      return Integer.parseInt(value);
+    }
+    return (int) getLongProperty(CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY, DEFAULT_CACHE_MEMORY_BUFFER_POOL_MAX_SIZE);
+  }
+  
+  /**
+   * Sets maximum size of memory buffer pool for cache
+   * @param cacheName cache name
+   * @param size maximum size
+   */
+  public void setCacheMemoryBufferPoolMaximumSize(String cacheName, int size) {
+    props.setProperty(cacheName + "." + CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY, Integer.toString(size));
+  }
   
   public void sanityCheck(String cacheName) {
     long maxSize = getCacheMaximumSize(cacheName);
     if (maxSize > 0 && maxSize < 100 * 1024 * 1024) {
+      // Minimum 100MB
       maxSize = 100 * 1024 * 1024;
     }
     

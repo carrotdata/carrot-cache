@@ -596,8 +596,10 @@ public class Segment implements Persistent {
     }
     if (!this.valid) return;
     if (isOffheap()) {
-      UnsafeAccess.free(this.address);
-      this.address = 0;
+      if (this.address != 0) {
+        UnsafeAccess.free(this.address);
+        this.address = 0;
+      }
     }
     this.valid = false;
   }
@@ -611,19 +613,7 @@ public class Segment implements Persistent {
   public void reuse(int id, int rank, long creationTime) {
     this.info = new Info(id, rank, creationTime);
   }
-  
-  /**
-   * Create new segment
-   * @param size requested size
-   * @param id segment id
-   * @param rank segment's rank
-   * @return new segment
-   */
-  public static Segment newSegment(int size, int id, int rank) {
-    long ptr = UnsafeAccess.mallocZeroed(size);
-    return new Segment(ptr, size, id, rank);
-  }
-  
+    
   /**
    * Create new segment
    * @param ptr segment memory address
@@ -1157,6 +1147,8 @@ public class Segment implements Persistent {
     
     if (isOffheap()) {
       long size = dis.readLong();
+      // We here do not have IOEngine reference yet
+      // therefore we allocate memory directly
       long ptr = UnsafeAccess.mallocZeroed(size());
       int bufSize = (int) Math.min(1024 * 1024, size);
       byte[] buffer = new byte[bufSize];

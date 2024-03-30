@@ -44,7 +44,8 @@ public class TestSegmentBlockDataWriterReaderFile extends IOTestBase{
     r.setSeed(seed);
     
     System.out.println("r.seed="+ seed);
-    segment = Segment.newSegment(this.segmentSize, 1, 1);
+    long ptr = UnsafeAccess.mallocZeroed(this.segmentSize);
+    segment = Segment.newSegment(ptr, this.segmentSize, 1, 1);
     segment.init("default");
     prepareRandomData(this.numRecords);
     BlockDataWriter bdw = new BlockDataWriter();

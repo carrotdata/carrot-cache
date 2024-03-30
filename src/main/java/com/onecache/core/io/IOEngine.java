@@ -42,6 +42,7 @@ import com.onecache.core.index.IndexFormat;
 import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.index.MemoryIndex.MutationResult;
 import com.onecache.core.util.CacheConfig;
+import com.onecache.core.util.MemoryBufferPool;
 import com.onecache.core.util.Persistent;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
@@ -133,6 +134,9 @@ public abstract class IOEngine implements Persistent {
   /* Memory index */
   protected MemoryIndex index;
 
+  /* Memory buffer pool*/
+  protected MemoryBufferPool memoryBufferPool;
+  
   /* Cached data directory name */
   protected String dataDir;
 
@@ -212,7 +216,8 @@ public abstract class IOEngine implements Persistent {
     this.defaultRank = this.index.getEvictionPolicy().getDefaultRankForInsert();
     this.dataEmbedded = this.config.isIndexDataEmbeddedSupported(this.cacheName);
     this.maxEmbeddedSize = this.config.getIndexDataEmbeddedSize(this.cacheName);
-
+    int maxPoolSize = this.config.getCacheMemoryBufferPoolMaximumSize(cacheName);
+    this.memoryBufferPool = new MemoryBufferPool((int) this.segmentSize, maxPoolSize);
     try {
       this.dataWriter = this.config.getDataWriter(this.cacheName);
       this.memoryDataReader = this.config.getMemoryDataReader(this.cacheName);
@@ -230,30 +235,7 @@ public abstract class IOEngine implements Persistent {
    * @param conf cache configuration
    */
   public IOEngine(CacheConfig conf) {
-    this.cacheName = "default";
-    this.config = conf;
-    this.segmentSize = this.config.getCacheSegmentSize(this.cacheName);
-    this.maxStorageSize = this.config.getCacheMaximumSize(this.cacheName);
-    int num = this.config.getNumberOfPopularityRanks(this.cacheName);
-    this.numSegments = (int) (this.maxStorageSize / this.segmentSize) + 1 + num;
-
-    this.ramBuffers = new Segment[num];
-    this.dataSegments = new Segment[this.numSegments];
-    this.index = new MemoryIndex(this, MemoryIndex.Type.MQ);
-    this.dataDir = this.config.getDataDir(this.cacheName);
-    this.defaultRank = this.index.getEvictionPolicy().getDefaultRankForInsert();
-    this.dataEmbedded = this.config.isIndexDataEmbeddedSupported(this.cacheName);
-    this.maxEmbeddedSize = this.config.getIndexDataEmbeddedSize(this.cacheName);
-
-    try {
-      this.dataWriter = this.config.getDataWriter(this.cacheName);
-      this.memoryDataReader = this.config.getMemoryDataReader(this.cacheName);
-      this.recyclingSelector = this.config.getRecyclingSelector(cacheName);
-
-    } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-      LOG.fatal(e);
-      throw new RuntimeException(e);
-    }
+    this("default");
   }
 
   public void addScavengerListener(Scavenger.Listener l) {
@@ -2137,6 +2119,12 @@ public abstract class IOEngine implements Persistent {
     //long dataSize = seg.getInfo().getSegmentDataSize();
     try {
       seg.writeLock();
+      if (seg.isOffheap()) {
+        boolean res = this.memoryBufferPool.offer(seg.getAddress());
+        if(res) {
+          seg.setAddress(0);
+        }
+      }
       seg.dispose();
       dataSegments[seg.getId()] = null;
       reportAllocation(-this.segmentSize);
@@ -2485,6 +2473,11 @@ public abstract class IOEngine implements Persistent {
 
   protected ReentrantLock ramBufferLock = new ReentrantLock();
   
+  /**
+   * FIXME: the source of thread contention
+   * @param rank
+   * @return
+   */
   protected Segment getRAMSegmentByRank(int rank) {
     Segment s = this.ramBuffers[rank];
     if (s == null) {
@@ -2499,7 +2492,8 @@ public abstract class IOEngine implements Persistent {
           return null;
         }
         if (this.dataSegments[id] == null) {
-          s = Segment.newSegment((int) this.segmentSize, id, rank);
+          long ptr = this.memoryBufferPool.poll();
+          s = Segment.newSegment(ptr, (int) this.segmentSize, id, rank);
           s.init(this.cacheName);
           reportAllocation(this.segmentSize);
           // Set data appender
@@ -2611,6 +2605,8 @@ public abstract class IOEngine implements Persistent {
     }
     // 2. dispose memory index
     this.index.dispose();
+    // 3. Dispose memory buffer pool
+    this.memoryBufferPool.dispose();
   }
 
   /**
@@ -2712,6 +2708,7 @@ public abstract class IOEngine implements Persistent {
   
   public void shutdown() {
     // do nothing, delegate to subclass
+    this.memoryBufferPool.shutdown();
   }
   
   public Segment[] getDataSegmentsSorted() {

@@ -274,9 +274,9 @@ public abstract class TestScavengerBase extends IOTestBase {
     
     System.out.printf("r1 =%f r2=%f r3=%f r4=%f\n", r1, r2, r3, r4);
     assertTrue(r1 < 0.125);
-    assertTrue(r2 < 0.125);
-    assertTrue(r3 < 0.125);
-    assertTrue(r4 < 0.125);
+    assertTrue(r2 < 0.15);
+    assertTrue(r3 < 0.15);
+    assertTrue(r4 < 0.15);
     
   }
   

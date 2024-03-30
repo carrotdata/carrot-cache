@@ -965,6 +965,11 @@ public final class UnsafeAccess {
     unsafeCopy(src, srcAddress, dst, dstAddress, length);
   }
 
+  public static void copyFast(byte[] src, int srcOffset, byte[] dst, int dstOffset, int length) {
+    long srcAddress = srcOffset + BYTE_ARRAY_BASE_OFFSET;
+    long dstAddress = dstOffset + BYTE_ARRAY_BASE_OFFSET;
+    theUnsafe.copyMemory(src, srcAddress, dst, dstAddress, length);
+  }
   /**
    * Copy data from a memory to a byte array
    *

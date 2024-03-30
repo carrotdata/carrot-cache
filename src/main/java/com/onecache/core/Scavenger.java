@@ -314,7 +314,7 @@ public class Scavenger implements Runnable {
 
       @Override
       public Thread newThread(Runnable r) {
-        String name = NAME + cacheName + "-" + rollingId.getAndIncrement();
+        String name = NAME + "-" + cacheName + "-" + rollingId.getAndIncrement();
         Thread t = new Thread(r);
         t.setName(name);
         return t;
@@ -354,7 +354,7 @@ public class Scavenger implements Runnable {
     }
   }
   
-  public final static String NAME = "c2 scavenger-";
+  public final static String NAME = "occ-scavenger";
   
   private Stats stats;
   

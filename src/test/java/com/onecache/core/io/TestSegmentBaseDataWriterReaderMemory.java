@@ -30,6 +30,7 @@ import org.mockito.Mockito;
 
 import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.index.MemoryIndex.Type;
+import com.onecache.core.util.UnsafeAccess;
 
 public class TestSegmentBaseDataWriterReaderMemory extends IOTestBase{
   
@@ -39,7 +40,8 @@ public class TestSegmentBaseDataWriterReaderMemory extends IOTestBase{
     this.segmentSize = 4 * 1024 * 1024;
     this.numRecords = 10000;
     this.r = new Random();
-    segment = Segment.newSegment(this.segmentSize, 1, 1);
+    long ptr = UnsafeAccess.mallocZeroed(this.segmentSize);
+    segment = Segment.newSegment(ptr, this.segmentSize, 1, 1);
     segment.init("default");
     prepareRandomData(this.numRecords);
     segment.setDataWriterAndEngine(new BaseDataWriter(), null);

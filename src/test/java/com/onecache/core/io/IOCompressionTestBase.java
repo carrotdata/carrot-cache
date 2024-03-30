@@ -48,7 +48,8 @@ public class IOCompressionTestBase extends IOTestBase {
     this.segmentSize = 8 * 1024 * 1024;
     this.numRecords = 20000;
     this.r = new Random();
-    this.segment = Segment.newSegment(this.segmentSize, 1, 1);
+    long ptr = UnsafeAccess.mallocZeroed(this.segmentSize);
+    this.segment = Segment.newSegment(ptr, this.segmentSize, 1, 1);
     this.segment.init(cacheName);
   }
 

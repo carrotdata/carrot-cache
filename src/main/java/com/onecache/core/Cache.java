@@ -361,13 +361,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   void stopScavengers() {
+    Scavenger.safeShutdown(this.cacheName);
     while(Scavenger.getActiveThreadsCount(this.cacheName) > 0) {
       try {
         Thread.sleep(100);
       } catch (InterruptedException e) {
       }
     }
-    Scavenger.safeShutdown(this.cacheName);
   }
   
   void waitForScavengers() {

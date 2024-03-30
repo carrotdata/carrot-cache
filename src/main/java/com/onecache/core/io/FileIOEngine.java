@@ -491,6 +491,7 @@ public class FileIOEngine extends IOEngine {
   
   @Override
   public void shutdown() {
+    super.shutdown();
     waitForIoStoragePool();
     // should we close files? They are read only
   }

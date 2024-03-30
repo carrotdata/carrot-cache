@@ -17,6 +17,7 @@ package com.onecache.core.io;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -37,16 +38,18 @@ public abstract class TestIOMultithreadedBase {
   protected static ThreadLocal<long[]> mKeysTL = new ThreadLocal<long[]>();
   protected static ThreadLocal<long[]> mValuesTL = new ThreadLocal<long[]>();
   protected static ThreadLocal<long[]> mExpiresTL = new ThreadLocal<long[]>();
+  protected static ThreadLocal<int[]> mKeySizesTL = new ThreadLocal<int[]>();
+  protected static ThreadLocal<int[]> mValueSizesTL = new ThreadLocal<int[]>();
   
   protected static int maxKeySize = 32;
   protected static int maxValueSize = 5000;
     
   protected int numRecords = 10;
-  protected int numThreads = 2;
+  protected int numThreads = 4;
   protected int blockSize = 4096;
   
   @BeforeClass
-  public static void enableMallocDebug() {
+  public static void beforeClass() throws IOException {
     //UnsafeAccess.setMallocDebugEnabled(true);
   }
   
@@ -68,11 +71,10 @@ public abstract class TestIOMultithreadedBase {
     return workers;
   }
   
-  protected void prepareData() {
+  
+  protected void prepareDataBytes() throws IOException {
     byte[][] keys = new byte[numRecords][];
     byte[][] values = new byte[numRecords][];
-    long[] mKeys = new long[numRecords];
-    long[] mValues = new long[numRecords];
     long[] expires = new long[numRecords];
 
     long seed = Thread.currentThread().getId() * 100000 + System.currentTimeMillis();
@@ -84,15 +86,40 @@ public abstract class TestIOMultithreadedBase {
       int valueSize = nextValueSize(r);
       keys[i] = TestUtils.randomBytes(keySize, r);
       values[i] = TestUtils.randomBytes(valueSize, r);
-      mKeys[i] = TestUtils.randomMemory(keySize, r);
-      mValues[i] = TestUtils.randomMemory(valueSize, r);
       expires[i] = getExpire(i); // To make sure that we have distinct expiration values
     }
     keysTL.set(keys);
     valuesTL.set(values);
+    mExpiresTL.set(expires);
+    System.out.println("Prepare done ...");
+  }
+  
+  protected void prepareDataMemory() throws IOException {
+    long[] mKeys = new long[numRecords];
+    long[] mValues = new long[numRecords];
+    long[] expires = new long[numRecords];
+    int[] mKeySizes = new int[numRecords];
+    int[] mValueSizes = new int[numRecords];
+
+    long seed = Thread.currentThread().getId() * 100000 + System.currentTimeMillis();
+    Random r = new Random(seed);
+    System.out.println("seed=" + seed);
+
+    for (int i = 0; i < numRecords; i++) {
+      int keySize = nextKeySize(r);
+      int valueSize = nextValueSize(r);
+      mKeySizes[i] = keySize;
+      mValueSizes[i] = valueSize;
+      mKeys[i] = TestUtils.randomMemory(keySize, r);
+      mValues[i] = TestUtils.randomMemory(valueSize, r);
+      expires[i] = getExpire(i); // To make sure that we have distinct expiration values
+    }
     mKeysTL.set(mKeys);
     mValuesTL.set(mValues);
     mExpiresTL.set(expires);
+    mKeySizesTL.set(mKeySizes);
+    mValueSizesTL.set(mValueSizes);
+    System.out.println("Prepare done ...");
   }
   
   protected long getExpireStream(long startTime, int n) {
@@ -116,8 +143,15 @@ public abstract class TestIOMultithreadedBase {
   protected void clearData() {
     long[] mKeys = mKeysTL.get();
     long[] mValues = mValuesTL.get();
-    Arrays.stream(mKeys).forEach(x -> UnsafeAccess.free(x));
-    Arrays.stream(mValues).forEach(x -> UnsafeAccess.free(x));
+    if (mKeys != null && mValues != null) {
+      Arrays.stream(mKeys).forEach(x -> UnsafeAccess.free(x));
+      Arrays.stream(mValues).forEach(x -> UnsafeAccess.free(x));
+    }
+    mKeysTL.set(null);
+    mValuesTL.set(null);
+    mExpiresTL.set(null);
+    keysTL.set(null);
+    valuesTL.set(null);
   }
   
   /**
@@ -183,7 +217,7 @@ public abstract class TestIOMultithreadedBase {
     byte[][] keys = keysTL.get();
     byte[][] values = valuesTL.get();
     long[] expires = mExpiresTL.get();
-    
+    long t1 = System.currentTimeMillis();
     while(count < this.numRecords) {
       long expire = expires[count];
       byte[] key = keys[count];
@@ -193,12 +227,16 @@ public abstract class TestIOMultithreadedBase {
         break;
       }
       count++;
-    }    
+    }
+    long t2 = System.currentTimeMillis();
+    System.out.printf("Loaded bytes %d in %dms. RPS=%d\n", count, (t2 - t1), count * 1000L/(t2 - t1));
+
     return count;
   }
   
   protected int deleteBytes(int num) throws IOException {
     int count = 0;
+    long t1 = System.currentTimeMillis();
     byte[][] keys = keysTL.get();
     while(count < num) {
       byte[] key = keys[count];
@@ -211,40 +249,45 @@ public abstract class TestIOMultithreadedBase {
       assertTrue(result);
       count++;
     }    
+    long t2 = System.currentTimeMillis();
+    System.out.printf("Deleted bytes %d in %dms. RPS=%d\n", count, (t2 - t1), count * 1000L/(t2 - t1));
+
     return count;
   }
 
 
-
   protected int loadMemory() throws IOException {
     int count = 0;
-    byte[][] keys = keysTL.get();
-    byte[][] values = valuesTL.get();
+    int[] keySizes = mKeySizesTL.get();
+    int[] valueSizes = mValueSizesTL.get();
     long[] expires = mExpiresTL.get();
     long[] mKeys = mKeysTL.get();
     long[] mValues = mValuesTL.get();
+    long t1 = System.currentTimeMillis();
     while(count < this.numRecords) {
       long expire = expires[count];
       long keyPtr = mKeys[count];
-      int keySize = keys[count].length;
+      int keySize = keySizes[count];
       long valuePtr = mValues[count];
-      int valueSize = values[count].length;
+      int valueSize = valueSizes[count];
       boolean result = put(keyPtr, keySize, valuePtr, valueSize, expire);
       if (!result) {
         break;
       }
       count++;
     }    
+    long t2 = System.currentTimeMillis();
+    System.out.printf("Loaded memory %d in %dms. RPS=%d\n", count, (t2 - t1), count * 1000L/(t2 - t1));
     return count;
   }
   
   protected int deleteMemory(int num) throws IOException {
     int count = 0;
-    byte[][] keys = keysTL.get();
+    int[] keySizes = mKeySizesTL.get();
     long[] mKeys = mKeysTL.get();
-
+    long t1 = System.currentTimeMillis();
     while(count < num) {
-      int keySize = keys[count].length;
+      int keySize = keySizes[count];
       long keyPtr = mKeys[count];
       boolean result = delete(keyPtr, keySize);
       if (result == false) {
@@ -255,6 +298,9 @@ public abstract class TestIOMultithreadedBase {
       assertTrue(result);
       count++;
     }    
+    long t2 = System.currentTimeMillis();
+    System.out.printf("Deleted memory %d in %dms. RPS=%d\n", count, (t2 - t1), count * 1000L/(t2 - t1));
+
     return count;
   }
   
@@ -263,12 +309,15 @@ public abstract class TestIOMultithreadedBase {
     byte[] buffer = new byte[kvSize];
     byte[][] keys = keysTL.get();
     byte[][] values = valuesTL.get();
-    
+    long sum = 0;
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);
+      long t1 = System.nanoTime();
       long size = get(key, 0, key.length, buffer, 0);
+      long t2 = System.nanoTime();
+      sum += t2 - t1;
       if (size != expSize) {
         System.out.println(Thread.currentThread().getName() + " i=" + i + " num=" + num);
         continue;
@@ -285,6 +334,8 @@ public abstract class TestIOMultithreadedBase {
       off += kSize;
       assertTrue( Utils.compareTo(buffer, off, vSize, value, 0, value.length) == 0);
     }
+    System.out.printf("Get bytes %d in %dms. RPS=%d\n", num, sum / 1000000, num * 1_000_000_000L /(sum));
+
   }
   
   protected void verifyBytesWithDeletes(int num, int deleted) throws IOException {
@@ -319,19 +370,22 @@ public abstract class TestIOMultithreadedBase {
   protected void verifyMemory(int num) throws IOException {
     int kvSize = safeBufferSize();
     ByteBuffer buffer = ByteBuffer.allocate(kvSize);
-    byte[][] keys = keysTL.get();
-    byte[][] values = valuesTL.get();
+    int[] keySizes = mKeySizesTL.get();
+    int[] valueSizes = mValueSizesTL.get();
     long[] mKeys = mKeysTL.get();
     long[] mValues = mValuesTL.get();
-    
+    long sum = 0; 
     for (int i = 0; i < num; i++) {
-      int keySize = keys[i].length;
-      int valueSize = values[i].length;
+      int keySize = keySizes[i];
+      int valueSize = valueSizes[i];
       long keyPtr = mKeys[i];
       long valuePtr = mValues[i];
       
       long expSize = Utils.kvSize(keySize, valueSize);
+      long t1 = System.nanoTime();
       long size = get(keyPtr, keySize, buffer);
+      long t2 = System.nanoTime();
+      sum += t2 - t1;
       if (size != expSize) {
         System.out.println(Thread.currentThread().getName() + " i=" + i + " num=" + num);
         continue;
@@ -353,18 +407,20 @@ public abstract class TestIOMultithreadedBase {
       assertTrue( Utils.compareTo(buffer, vSize, valuePtr, valueSize) == 0);
       buffer.clear();
     }    
+    System.out.printf("Get memory %d in %dms. RPS=%d\n", num, sum / 1000000, num * 1_000_000_000L /(sum));
+
   }
   
   protected void verifyMemoryWithDeletes(int num, int deleted) throws IOException {
     int kvSize = safeBufferSize();
     ByteBuffer buffer = ByteBuffer.allocate(kvSize);
-    byte[][] keys = keysTL.get();
-    byte[][] values = valuesTL.get();
+    int[] keySizes = mKeySizesTL.get();
+    int[] valueSizes = mValueSizesTL.get();
     long[] mKeys = mKeysTL.get();
     long[] mValues = mValuesTL.get();
     for (int i = 0; i < num; i++) {
-      int keySize = keys[i].length;
-      int valueSize = values[i].length;
+      int keySize = keySizes[i];
+      int valueSize = valueSizes[i];
       long keyPtr = mKeys[i];
       long valuePtr = mValues[i];
       
@@ -415,7 +471,7 @@ public abstract class TestIOMultithreadedBase {
   private void testLoadReadBytes() throws IOException {
     /*DEBUG*/ System.out.println(Thread.currentThread().getName() + 
       ": testLoadReadBytes");
-    prepareData();
+    prepareDataBytes();
     int loaded = loadBytes();
     /*DEBUG*/ System.out.println(Thread.currentThread().getName() + ": loaded=" + loaded);
     verifyBytes(loaded);
@@ -440,7 +496,7 @@ public abstract class TestIOMultithreadedBase {
   private void testLoadReadMemory() throws IOException {
     /*DEBUG*/ System.out.println(Thread.currentThread().getName() + 
       ": testLoadReadMemory");
-    prepareData();
+    prepareDataMemory();
     int loaded = loadMemory();
     /*DEBUG*/ System.out.println(Thread.currentThread().getName() + ": loaded=" + loaded);
     verifyMemory(loaded);
@@ -464,7 +520,7 @@ public abstract class TestIOMultithreadedBase {
   private void testLoadReadBytesWithDeletes() throws IOException {
     /*DEBUG*/ System.out.println(Thread.currentThread().getName() + 
       ": testLoadReadBytesWithDeletes");
-    prepareData();
+    prepareDataBytes();
     int loaded = loadBytes();
     /*DEBUG*/ System.out.println(Thread.currentThread().getName() + ": loaded=" + loaded);
     deleteBytes(loaded / 2);
@@ -489,7 +545,7 @@ public abstract class TestIOMultithreadedBase {
   private void testLoadReadMemoryWithDeletes() throws IOException {
     /*DEBUG*/ System.out.println(Thread.currentThread().getName() + 
       ": testLoadReadMemoryWithDeletes");
-    prepareData();
+    prepareDataMemory();
     int loaded = loadMemory();
     /*DEBUG*/ System.out.println(Thread.currentThread().getName() + ": loaded=" + loaded);
     deleteMemory(loaded / 2);
