@@ -351,6 +351,33 @@ public class TestProjectUtils {
     assertEquals(v, vvv);
   }
   
+  @Test
+  public void testNextPowerOf2() {
+    long v = 0;
+    assertEquals(0, Utils.nextPow2(v));
+    Random r = new Random();
+    for (int i = 2; i < 63; i++) {
+      long result = 1L << i;
+      for (int j = 0; j < 100; j++) {
+        v = Math.abs(r.nextLong());
+        v = v % (result - (result >>> 1));
+        if (v == 0) v++;
+        v = (result >>> 1) + v;
+        assertEquals(result, Utils.nextPow2(v));
+      }
+    }
+    
+  }
+  
+  @Test
+  public void testAtomicMemoryAccess() {
+    
+    sun.misc.Unsafe unsafe = UnsafeAccess.theUnsafe;
+    long ptr = unsafe.allocateMemory(8);
+    unsafe.putLongVolatile(null, ptr, 9);
+    long v = unsafe.getLongVolatile(null, ptr);
+    
+  }
   /**
    * Utility methods
    */

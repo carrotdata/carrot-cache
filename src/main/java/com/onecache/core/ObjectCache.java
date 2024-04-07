@@ -30,8 +30,8 @@ import com.esotericsoftware.kryo.kryo5.Kryo;
 import com.esotericsoftware.kryo.kryo5.io.Input;
 import com.esotericsoftware.kryo.kryo5.io.Output;
 import com.onecache.core.Cache.Type;
-import com.onecache.core.io.ObjectPool;
 import com.onecache.core.util.CacheConfig;
+import com.onecache.core.util.ObjectPool;
 
 public class ObjectCache {
   

@@ -1323,4 +1323,132 @@ public class Utils {
     return numDigits;
   }
   
+  /**
+   * Next power of 2 which is greater or equals to x
+   * @param x number
+   * @return power of two, o -f x == 0 , negative if result larger than Long.MAX_VALUE 
+   */
+  public static long nextPow2 (long x) {
+    long v = Long.highestOneBit(x);
+    return v == x? v : v << 1;
+  }
+  
+  /**
+   *  credits: Agrona project
+   * Generate a hash for an int value.
+   *
+   * @param value to be hashed.
+   * @return the hashed value.
+   */
+  public static int hash(final int value)
+  {
+      int x = value;
+
+      x = ((x >>> 16) ^ x) * 0x119de1f3;
+      x = ((x >>> 16) ^ x) * 0x119de1f3;
+      x = (x >>> 16) ^ x;
+
+      return x;
+  }
+
+  /**
+   * credits: Agrona project
+   * Generate a hash for a long value.
+   *
+   * @param value to be hashed.
+   * @return the hashed value.
+   */
+  public static int hash(final long value)
+  {
+      long x = value;
+
+      x = (x ^ (x >>> 30)) * 0xbf58476d1ce4e5b9L;
+      x = (x ^ (x >>> 27)) * 0x94d049bb133111ebL;
+      x = x ^ (x >>> 31);
+
+      return (int)x ^ (int)(x >>> 32);
+  }
+
+  /**
+   * credits: Agrona project
+   * Generate a hash for an int value and apply mask to get remainder.
+   *
+   * @param value to be hashed.
+   * @param mask  mask to be applied that must be a power of 2 - 1.
+   * @return the hash of the value.
+   */
+  public static int hash(final int value, final int mask)
+  {
+      return hash(value) & mask;
+  }
+
+  /**
+   * credits: Agrona project
+   * Generate a hash for an object and apply mask to get a remainder.
+   *
+   * @param value to be hashed.
+   * @param mask  mask to be applied that must be a power of 2 - 1.
+   * @return the hash of the value.
+   */
+  public static int hash(final Object value, final int mask)
+  {
+      return hash(value.hashCode()) & mask;
+  }
+
+  /**
+   * Generate a hash for a long value and apply mask to get a remainder.
+   *
+   * @param value to be hashed.
+   * @param mask  mask to be applied that must be a power of 2 - 1.
+   * @return the hash of the value.
+   */
+  public static int hash(final long value, final int mask)
+  {
+      return hash(value) & mask;
+  }
+
+  /**
+   * credits: Agrona project
+   * Generate an even hash for an int value and apply mask to get a remainder that will be even.
+   *
+   * @param value to be hashed.
+   * @param mask  mask to be applied that must be a power of 2 - 1.
+   * @return the hash of the value which is always even.
+   */
+  public static int evenHash(final int value, final int mask)
+  {
+      final int hash = hash(value);
+      final int evenHash = (hash << 1) - (hash << 8);
+
+      return evenHash & mask;
+  }
+
+  /**
+   * credits: Agrona project
+   * Generate an even hash for a long value and apply mask to get a remainder that will be even.
+   *
+   * @param value to be hashed.
+   * @param mask  mask to be applied that must be a power of 2 - 1.
+   * @return the hash of the value which is always even.
+   */
+  public static int evenHash(final long value, final int mask)
+  {
+      final int hash = hash(value);
+      final int evenHash = (hash << 1) - (hash << 8);
+
+      return evenHash & mask;
+  }
+  
+  public static long squirrel3(long at) {
+    long BIT_NOISE1 = 0x9E3779B185EBCA87L;
+    long BIT_NOISE2 = 0xC2B2AE3D27D4EB4FL;
+    long BIT_NOISE3 = 0x27D4EB2F165667C5L;
+    at *= BIT_NOISE1;
+    at ^= (at >> 8);
+    at += BIT_NOISE2;
+    at ^= (at << 8);
+    at *= BIT_NOISE3;
+    at ^= (at >> 8);
+    return at;
+}
 }

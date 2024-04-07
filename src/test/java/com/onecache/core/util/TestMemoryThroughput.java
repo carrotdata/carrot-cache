@@ -8,12 +8,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 import org.junit.Test;
+import static org.junit.Assert.assertTrue;
 
 public abstract class TestMemoryThroughput {
     
   static class MemoryBuffer {
     long ptr;
-    int size;
+    long size;
     AtomicLong writeOffset = new AtomicLong(0);
     volatile long safeReadLimit;
   }
@@ -27,6 +28,8 @@ public abstract class TestMemoryThroughput {
   final int kvSize = 16 * cacheLine;
   
   final int kvTotal = 1_000_000;
+  
+  final int numIterations = 10_000_000;
   
   final int numThreads = 8;
   
@@ -43,11 +46,11 @@ public abstract class TestMemoryThroughput {
   
   int maxQueueSize = 2;
     
-  int bufferSize = 64 << 20; // 64 MB
+  long bufferSize = 10 << 30; // 6 GB
   
   volatile MemoryBuffer memoryBuffer;
   
-  int maxBuffers = 200;
+  int maxBuffers = 1;
   
   Thread producerThread;
   
@@ -228,7 +231,7 @@ public abstract class TestMemoryThroughput {
     }
     long t2 = System.currentTimeMillis();
     
-    System.out.printf("Copied %d datas in %dms throughput=%d MB/s\n", kvTotal, t2 - t1, (kvTotal * kvSize)/ (1000L * (t2-t1)));
+    System.out.printf("Copied %d datas in %dms throughput=%d MB/s\n", kvTotal, t2 - t1, ((long) numIterations * kvSize)/ (1000L * (t2-t1)));
   }
   
   private void testCopyAndRead() {
@@ -238,15 +241,15 @@ public abstract class TestMemoryThroughput {
     ThreadLocalRandom r = ThreadLocalRandom.current();
     for (;;) {
       int index = currentIndex.getAndIncrement();
-      if (index >= kvTotal) {
+      if (index >= numIterations) {
         break;
       }
-      long ptr = data[index];
-      long off = index * kvSize;
+      long ptr = data[index % kvTotal];
+      long off = (long) index * kvSize;
       UnsafeAccess.copy(ptr, dst + off, kvSize);
       // Flash SOB - notify cache
       // This is probably not necessary
-      UnsafeAccess.storeFence();
+      //UnsafeAccess.storeFence();
       // Advance safe read limit      
       while(safeReadLimit != off);
       safeReadLimit += kvSize;
@@ -256,10 +259,10 @@ public abstract class TestMemoryThroughput {
 //      }
 //      // Get random index in [0. index - 1]
 //      index = r.nextInt(index);
-//      off = kvSize * index;
+//      off = (long) kvSize * index;
 //      // Flush LOB, process all invalidation requests
 //      //UnsafeAccess.loadFence();
-//      ptr = data[index];
+//      ptr = data[index % kvTotal];
 //      assertTrue(Utils.compareTo(ptr, kvSize, dst + off, kvSize) == 0);
     }
     long t2 = System.currentTimeMillis();
@@ -293,7 +296,7 @@ public abstract class TestMemoryThroughput {
   public void testCopyAndReadMultithreaded() throws InterruptedException {
     
     long tt1 = System.nanoTime();
-    memory = UnsafeAccess.mallocZeroed((long) kvTotal * kvSize);
+    memory = UnsafeAccess.mallocZeroed((long) numIterations * kvSize);
     //memory = memory / cacheLine * cacheLine + cacheLine;
     long tt3 = System.nanoTime();
     System.out.println("Malloc pre-touch main buffer time=" + (tt3 - tt1));

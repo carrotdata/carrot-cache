@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import com.onecache.core.Cache;
+import com.onecache.core.util.ObjectPool;
 import com.onecache.core.util.Utils;
 
 public class CacheOutputStream extends OutputStream {

@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package com.onecache.core.io;
+package com.onecache.core.util;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 
