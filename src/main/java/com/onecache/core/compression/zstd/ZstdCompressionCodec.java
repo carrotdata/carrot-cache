@@ -166,6 +166,21 @@ public class ZstdCompressionCodec implements CompressionCodec {
     return compressedSize;
   }
 
+  @Override
+  public int compress(long ptr, int len, int dictId, long buffer, int bufferSize) {
+    // sanity check?
+    ZstdCompressCtx currentCtx = getCompressContext(dictId);    
+    long startTime = System.nanoTime();
+    int compressedSize = currentCtx.compressNativeNative(buffer, bufferSize, ptr, len);
+    long endTime = System.nanoTime();
+    
+    this.stats.getCompressedRaw().addAndGet(len);
+    this.stats.getCompressed().addAndGet(compressedSize);
+    this.stats.getCompressionTime().addAndGet(endTime - startTime);
+    // update statistics
+    return compressedSize;
+  }
+  
   private ZstdCompressCtx getCompressContext(int dictId) {
     // compression context using current dictionary id
     HashMap<Integer, ZstdCompressCtx> ctxMap = compContextMap.get().get(this.cacheName);

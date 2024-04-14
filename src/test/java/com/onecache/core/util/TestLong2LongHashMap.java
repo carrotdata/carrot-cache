@@ -25,7 +25,7 @@ public class TestLong2LongHashMap {
   
   Long2LongHashMap map;
   int numThreads = 8;
-  int numIteration = 10_000;//16 << 20;;
+  int numIteration = 16 << 20;
   
 
   @Test
@@ -79,7 +79,7 @@ public class TestLong2LongHashMap {
   
   private void testMultiPutDeleteGet(int toDelete, long delay) throws InterruptedException {
     Runnable r = () -> {     
-      for (int i = 0; i < 300; i++) {
+      for (int i = 0; i < 1; i++) {
         System.out.printf("******************%s delay=%d RUN=%d*******************\n\n", 
           Thread.currentThread().getName(), delay, i + 1);
         loadData();

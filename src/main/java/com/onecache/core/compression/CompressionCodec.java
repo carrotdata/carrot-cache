@@ -315,6 +315,17 @@ public interface CompressionCodec extends Persistent {
   public int compress(long ptr, int len, int dictId);
   
   /**
+   * Compress to a side buffer
+   * @param ptr address block start (excluding meta)
+   * @param len data size
+   * @param dictId id of dictionary to use
+   * @param buffer memory address to compress to
+   * @param bufferSize buffer size 
+   * @return compressed data size
+   */
+  public int compress(long ptr, int len, int dictId, long buffer, int bufferSize);
+  
+  /**
    * Decompress to a buffer, buffer size is larger or equals to decompressed size
    * @param ptr address of a compressed block in memory (excluding meta)
    * @param size compressed size

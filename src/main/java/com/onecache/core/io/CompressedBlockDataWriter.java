@@ -42,13 +42,13 @@ import com.onecache.core.util.Utils;
  */
 public class CompressedBlockDataWriter implements DataWriter {
   
-  private int blockSize;
+  protected int blockSize;
   
-  private CompressionCodec codec;
+  protected CompressionCodec codec;
   
-  private boolean compressKeys;
+  protected boolean compressKeys;
   
-  private String cacheName;
+  protected String cacheName;
   
   public CompressedBlockDataWriter() {
   }
@@ -135,7 +135,7 @@ public class CompressedBlockDataWriter implements DataWriter {
    * @param size block size (including meta header)
    * @return compressed size (excluding meta header)
    */
-  private int compressBlock(long addr, int size) {
+  protected int compressBlock(long addr, int size) {
     
     int compressedSize = 0;
     int dictVersion = 0;
@@ -253,7 +253,7 @@ public class CompressedBlockDataWriter implements DataWriter {
    * Processes empty segment
    * @param s segment
    */
-  private void processEmptySegment(Segment s) {
+  protected void processEmptySegment(Segment s) {
     if (s.getTotalItems() == 0) {
       newBlock(s);
     }
@@ -292,7 +292,7 @@ public class CompressedBlockDataWriter implements DataWriter {
   }
   
   
-  private void checkCodec() {
+  protected void checkCodec() {
     if (this.codec == null) {
       this.codec = CodecFactory.getInstance().getCompressionCodecForCache(cacheName);
       if (this.codec == null) {

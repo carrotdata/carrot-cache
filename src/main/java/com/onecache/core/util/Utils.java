@@ -141,7 +141,7 @@ public class Utils {
    * @return 0 if equal, &lt; 0 if left is less than right, etc.
    */
   public static int compareTo(
-      byte[] buffer1, int offset1, int length1, byte[] buffer2, int offset2, int length2) {
+      final byte[] buffer1, final int offset1, final int length1, final byte[] buffer2, final int offset2, final int length2) {
 
     Unsafe theUnsafe = UnsafeAccess.theUnsafe;
     // Short circuit equal case
@@ -197,6 +197,29 @@ public class Utils {
   }
 
   /**
+   * Lexicographically compare two arrays on equality
+   *
+   * @param buffer1 left operand
+   * @param buffer2 right operand
+   * @param offset1 Where to start comparing in the left buffer
+   * @param offset2 Where to start comparing in the right buffer
+   * @param length1 How much to compare from the left buffer
+   * @param length2 How much to compare from the right buffer
+   * @return true if equal, false - otherwise
+   */
+  public static boolean equals(
+      final byte[] buffer1, final int offset1, final int length1, final byte[] buffer2, final int offset2, final int length2) {
+    
+    if (length1 != length2) {
+      return false;
+    }
+    if (buffer1[offset1 + length1 - 1] != buffer2[offset2 + length2 - 1]) {
+      return false;
+    }
+    return compareTo(buffer1, offset1, length1, buffer2, offset2, length2) == 0;
+  }
+  
+  /**
    * Lexicographically compare array and native memory.
    *
    * @param buffer1 left operand
@@ -206,7 +229,7 @@ public class Utils {
    * @param length2 How much to compare from the right buffer
    * @return 0 if equal, &lt; 0 if left is less than right, etc.
    */
-  public static int compareTo(byte[] buffer1, int offset1, int length1, long address, int length2) {
+  public static int compareTo(final byte[] buffer1, final int offset1, final int length1, final long address, final int length2) {
 
     if (UnsafeAccess.debug) {
       UnsafeAccess.mallocStats.checkAllocation(address, length2);
@@ -259,7 +282,26 @@ public class Utils {
     }
     return length1 - length2;
   }
-
+  /**
+   * Lexicographically compare array and native memory on equality
+   *
+   * @param buffer1 left operand
+   * @param address right operand - native
+   * @param offset1 Where to start comparing in the left buffer
+   * @param length1 How much to compare from the left buffer
+   * @param length2 How much to compare from the right buffer
+   * @return true if equals, false - otherwise.
+   */
+  public static boolean equals(final byte[] buffer1, final int offset1, final int length1, final long address, final int length2) {
+    if (length1 != length2) {
+      return false;
+    }
+    if (buffer1[offset1 + length1 - 1] != UnsafeAccess.toByte(address + length2 - 1)) {
+      return false;
+    }
+    return compareTo(buffer1, offset1, length1, address, length2) == 0;
+  }
+  
   /**
    * Lexicographically compare two native memory pointers.
    *
@@ -269,7 +311,7 @@ public class Utils {
    * @param length2 length
    * @return 0 if equal,&lt; 0 if left is less than right, etc.
    */
-  public static int compareTo(long address1, int length1, long address2, int length2) {
+  public static int compareTo(final long address1, final int length1, final long address2, final int length2) {
     if(UnsafeAccess.debug) {
       UnsafeAccess.mallocStats.checkAllocation(address1, length1);
       UnsafeAccess.mallocStats.checkAllocation(address2, length2);
@@ -321,6 +363,26 @@ public class Utils {
       }
     }
     return length1 - length2;
+  }
+  
+  /**
+   * Lexicographically compare two native memory pointers
+   * on equality
+   *
+   * @param address1 first pointer
+   * @param length1 length
+   * @param address2 second pointer
+   * @param length2 length
+   * @return true if equals, false otherwise
+   */ 
+  public static boolean equals(final long address1, final int length1, final long address2, final int length2) {
+    if (length1 != length2) {
+      return false;
+    }
+    if (UnsafeAccess.toByte(address1 + length1 - 1) != UnsafeAccess.toByte(address2 + length2 - 1)) {
+      return false;
+    }
+    return compareTo(address1, length1, address2, length2) == 0;
   }
 
   /**
@@ -842,6 +904,33 @@ public class Utils {
    **/
   public static int kvSize(int keySize, int valSize) {
     return keySize + valSize + Utils.sizeUVInt(valSize) + Utils.sizeUVInt(keySize);
+  }
+  
+  /** 
+   * 
+   * The total size of a K-V pair by address
+   * @param ptr address of serialized k-v
+   **/
+  public final static int kvSize(long ptr) {
+    int kSize = readUVInt(ptr);
+    int kSizeSize = sizeUVInt(kSize);
+    ptr += kSizeSize;
+    int vSize = readUVInt(ptr);
+    int vSizeSize = sizeUVInt(vSize);
+    return kSize + vSize + kSizeSize + vSizeSize;
+  }
+  
+  /** 
+   * 
+   * The total size of a K-V pair by address
+   * @param ptr address of serialized k-v
+   **/
+  public final static int valueSize(long ptr) {
+    int kSize = readUVInt(ptr);
+    int kSizeSize = sizeUVInt(kSize);
+    ptr += kSizeSize;
+    int vSize = readUVInt(ptr);
+    return vSize;
   }
   
   /**

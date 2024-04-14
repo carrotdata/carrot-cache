@@ -23,7 +23,7 @@ import java.util.concurrent.atomic.LongAdder;
 /**
  *
  * Concurrent, lock-free hash table with open addressing and liner probing
- *
+ * TODO: timed CAS and wait to avoid potential deadlock in a very small maps  
  */
 public class Long2LongHashMap {
   
@@ -72,7 +72,7 @@ public class Long2LongHashMap {
   /*
    *  4 k-v pairs ( 64 bytes)
    */
-  private int rehashChunkSize = 4;
+  private volatile int rehashChunkSize = 4;
   
   /*
    * Rehash check mask (reverse probability)
@@ -231,7 +231,7 @@ public class Long2LongHashMap {
    * @return previous value for a key or NULL
    */
   private long put(AtomicLongArray data, long key, long value) {
-    
+   
     if (key == NULL || key == DELETED || key == LOCKED) {
       key = RANDOM_LONG - key;
     }
@@ -350,7 +350,7 @@ public class Long2LongHashMap {
    * @return true on success, false otherwise
    */
   private boolean add(AtomicLongArray data, long key, long value) {
-    
+      
     if (key == NULL || key == DELETED || key == LOCKED) {
       key = RANDOM_LONG - key;
     }
@@ -482,7 +482,7 @@ public class Long2LongHashMap {
     final long hash = keysHashed ? key : Utils.squirrel3(key);
     final int mask = (int) (data.length() - 1) & 0xfffffffe;
     int index = (int) (hash & mask);
-    long startIndexKey = NULL;
+    long startIndexKey = data.get(index);
     final int startIndex = index;
     /*
      * Serialize operations for the given key = 'key' Make sure that during search no mutations for
@@ -567,7 +567,7 @@ public class Long2LongHashMap {
         // This is the latest value of key
         if (val != NULL && value != NULL) {
           alive.increment();
-          tombstones.decrement();
+          //tombstones.decrement();
           if (deallocator != null) {
             deallocator.deallocate(value);
           }
@@ -584,7 +584,7 @@ public class Long2LongHashMap {
         long val = delete(dd, key);
         if (val != NULL && value != NULL) {
           alive.increment();
-          tombstones.decrement();
+          //tombstones.decrement();
           if (deallocator != null) {
             deallocator.deallocate(value);
           }
@@ -610,7 +610,17 @@ public class Long2LongHashMap {
    */
   
   private long delete(final AtomicLongArray data, long key) {
-
+    
+    boolean isMainArray = data == dataRef.get();
+    RehashGroup rg = null;
+    long rehashReadOffset = Long.MIN_VALUE;
+    if (isMainArray) {
+      rg = rehashGroup.get();
+      if (rg != null) {
+        rehashReadOffset = rg.rehashReadOffset.get();
+      }
+    }
+    
     if (key == NULL || key == DELETED || key == LOCKED) {
       key = RANDOM_LONG - key;
     }
@@ -640,7 +650,9 @@ public class Long2LongHashMap {
         startIndexKey = DELETED;
         // Update counters
         alive.decrement();
-        tombstones.increment();
+        if (!(isMainArray && rehashReadOffset > index)) {
+          tombstones.increment();
+        }
         return oldValue;
       }
       index = (startIndex + 2) & mask;
@@ -668,7 +680,10 @@ public class Long2LongHashMap {
         while (!data.compareAndSet(index, oldKey, DELETED));
         // Update counters
         alive.decrement();
-        tombstones.increment();
+        if (!(isMainArray && rehashReadOffset > index)) {
+          // Rehashing in progress and this tombstone will be cleared by rehashing later
+          tombstones.increment();
+        }      
       }
       return oldValue;
     } finally {
@@ -679,6 +694,8 @@ public class Long2LongHashMap {
 
   /**
    * Checks probabilistically if we have to start rehashing
+   * TODO: start rehashing in a separate thread
+   * to avoid latency spikes
    */
   private void maybeStartRehashing() {
     if (rehashGroup.get() != null) {
@@ -695,9 +712,16 @@ public class Long2LongHashMap {
     long aliveObj = alive.longValue();
     long deletedObj = tombstones.longValue();
     int len = dataRef.get().length();
-    if (aliveObj + deletedObj < 0.75 * (len / 2)) {
+    // boolean doCleaning = deletedObj > 0.5 * (len / 2);
+    boolean doRehashing = aliveObj + deletedObj > 0.75 * (len / 2) || deletedObj > 0.375 * len / 2;
+    // && aliveObj > 0.5 * (len / 2);
+    // doCleaning = doCleaning || aliveObj + deletedObj > 0.75 * (len / 2)
+    // && aliveObj > 0.5 * (len / 2);
+
+    if (!doRehashing /* && ! doCleaning */) {
       return;
     }
+
     // Try to own exclusive lock
     if (!rehashStarter.compareAndSet(null, Thread.currentThread())) {
       // already owned by other thread - return
@@ -706,22 +730,20 @@ public class Long2LongHashMap {
     RehashGroup rg = new RehashGroup();
     rg.mainData = dataRef.get();
     AtomicLongArray rehashRef;
-    if (aliveObj > 0.5 * (len / 2)) {
-      // Rehashing
-      // This can be expensive for large arrays
-      // TODO: keep array copy for cleaning
-      rehashRef = new AtomicLongArray(2 * len);
-      System.err.printf("%s Rehashing started capacity=%d  ALIVE=%d DELETED=%d\n", 
-        Thread.currentThread().getName(), (2 * len), aliveObj, deletedObj);
-      this.rehashChunkSize = 4;
+    int newLen = len;
+    if (5 * aliveObj / 4 < len / 8) {
+      newLen = len / 2;
+    } else if (5 * aliveObj / 4 < len / 4) {
+      newLen = len;
     } else {
-      // Cleaning delete tombstones
-      // TODO: keep array copy for cleaning
-      rehashRef = new AtomicLongArray(len);
-      System.err.printf("%s Cleaning deletes started size=%d ALIVE=%d DELETED=%d\n", 
-        Thread.currentThread().getName(), len, aliveObj, deletedObj);
-      this.rehashChunkSize = 8;
+      newLen = 2 * len;
     }
+    rehashRef = new AtomicLongArray(newLen);
+    // System.err.printf("%s Rehashing started capacity=%d ALIVE=%d DELETED=%d time=%dms\n",
+    // Thread.currentThread().getName(), newLen, aliveObj, deletedObj, System.currentTimeMillis() -
+    // start);
+    this.rehashChunkSize = 8;
+
     rg.rehashData = rehashRef;
     rehashGroup.set(rg);
   }
@@ -736,8 +758,8 @@ public class Long2LongHashMap {
     updateRehashCheckMask();
     rehashGroup.set(null);
     rehashStarter.set(null);
-    System.err.printf("%s Rehashing finished ALIVE=%d DELETED=%d\n", 
-      Thread.currentThread(), alive.longValue(), tombstones.longValue());
+    //System.err.printf("%s Rehashing finished ALIVE=%d DELETED=%d\n", 
+    //  Thread.currentThread(), alive.longValue(), tombstones.longValue());
   }
   
   /**
@@ -772,10 +794,11 @@ public class Long2LongHashMap {
         while((key = data.get(i)) == LOCKED);
       }
       if (key == NULL || key == DELETED) {
-        // We do not decrement DELETED tombstones 
-        // after unlocking. This index was locked by 
-        // legitimate 'delete' operation and tombstone counter 
-        // has been handled already.
+        // Special attention to DELETED
+        // decrement tombstone
+        if (key == DELETED) {
+          tombstones.decrement();
+        }
         continue;
       }
  
@@ -783,10 +806,7 @@ public class Long2LongHashMap {
       while(!data.compareAndSet(i, key, LOCKED)) {
         long read = data.get(i);
         if (read == DELETED) {
-          // We do not decrement DELETED tombstones 
-          // after unlocking. This index was locked by 
-          // legitimate 'delete' operation and tombstone counter 
-          // has been handled already.
+          tombstones.decrement();
           continue  outer;
         }
       }
@@ -799,6 +819,9 @@ public class Long2LongHashMap {
           deallocator.deallocate(value);
         }
         alive.decrement();
+      } else {
+        // set value to NULL
+        data.set(i + 1,  NULL);
       }
       // Unlock
       data.set(i, key);
@@ -813,5 +836,67 @@ public class Long2LongHashMap {
       // the map rehashing
       finishRehashing();
     }
+  }
+  
+  /**
+   * Used for testing only
+   */
+  public void dispose() {
+    RehashGroup rg = rehashGroup.get();
+    if (rg != null) {
+      dispose(rg.rehashData);
+      dispose(rg.mainData);
+    } else {
+      dispose(dataRef.get());
+    }
+  }
+  
+  private void dispose(AtomicLongArray data) {
+    if (deallocator == null) {
+      return;
+    }
+    for (int i = 0; i < data.length(); i += 2) {
+      long value = data.get(i + 1);
+      deallocator.deallocate(value);
+    }
+  }
+  
+  @SuppressWarnings("unused")
+  private boolean cas(AtomicLongArray array, int index, long expValue, long newValue, long timeout) {
+    long start = System.nanoTime();
+    while (!array.compareAndSet(index, expValue, newValue)) {
+      if (System.nanoTime() - start > timeout) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
+  @SuppressWarnings("unused")
+  private long waitUntil(AtomicLongArray array, int index, long value, long timeout) {
+    long v = 0;
+    long start = System.nanoTime();
+    while ((v = array.get(index)) == value) {
+      if (System.nanoTime() - start > timeout) {
+        break;
+      }
+    }
+    return v;
+  }
+  
+  public long search(long key) {
+    AtomicLongArray data = dataRef.get();
+    int len = data.length();
+    final int mask = (int) (data.length() - 1) & 0xfffffffe;
+    int index = (int) (key & mask);
+    //System.out.printf("At index %d found=%d\n", index, data.get(index));
+    for(int i = index; i < len; i+=2) {
+      long k = data.get(i);
+      if (k == key) {
+        //System.out.printf("start index=%d found=%d key=%d\n", index, i, key);
+        return data.get(i + 1);
+      } 
+    }
+    return -1;
   }
 }

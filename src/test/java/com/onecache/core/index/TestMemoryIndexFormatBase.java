@@ -66,16 +66,17 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
     Random r = new Random();
     r.setSeed(seed);
     System.out.println("update seed=" + seed);
-    for(int i = 0; i < numRecords; i++) {
-      sids[i] = (short) r.nextInt(32000);
-      offsets[i] = nextOffset(r, 100000000);
-    }
     long t1 = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
-      MutationResult res = memoryIndex.update(keys[i], 0, keySize, sids[i], offsets[i]);
+      short expSid = sids[i];
+      int expOffset = offsets[i];
+      sids[i] = (short) r.nextInt(32000);
+      offsets[i] = nextOffset(r, 100000000);
+      MutationResult res = memoryIndex.compareAndUpdate(keys[i], 0, keySize, expSid, expOffset, sids[i], offsets[i]);
       if (res == MutationResult.UPDATED) {
         updated++;
       }
+      
     }
     long t2 = System.currentTimeMillis();
     System.out.printf("Time to update %d indexes=%dms\n", numRecords, t2 - t1);
@@ -249,13 +250,14 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
     Random r = new Random();
     r.setSeed(seed);
     System.out.println("update seed=" + seed);
-    for(int i = 0; i < numRecords; i++) {
-      sids[i] = (short) r.nextInt(32000);
-      offsets[i] = nextOffset(r, 100000000);
-    }
+
     long t1 = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
-      MutationResult res = memoryIndex.update(mKeys[i], keySize, sids[i], offsets[i]);
+      short expSid = sids[i];
+      int expOffset = offsets[i];
+      sids[i] = (short) r.nextInt(32000);
+      offsets[i] = nextOffset(r, 100000000);
+      MutationResult res = memoryIndex.compareAndUpdate(mKeys[i], keySize, expSid, expOffset, sids[i], offsets[i]);
       if (res == MutationResult.UPDATED) {
         updated++;
       }

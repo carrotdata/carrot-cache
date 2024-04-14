@@ -148,8 +148,8 @@ public abstract class TestScavengerBase extends IOTestBase {
     actualUsed = cache.getStorageUsedActual();
     size = cache.size();
     activeSize = cache.activeSize();
-    System.out.println(String.format("After scan: allocated=%d, used=%d, size=%d, actual used=%d, active=%d n=%d u=%d\n", 
-      allocated, used, size, actualUsed, activeSize, Segment.n, Segment.u));
+    System.out.println(String.format("After scan: allocated=%d, used=%d, size=%d, actual used=%d, active=%d\n", 
+      allocated, used, size, actualUsed, activeSize));
     
     Scavenger scavenger = new Scavenger(cache);
     scavenger.run();
@@ -201,8 +201,8 @@ public abstract class TestScavengerBase extends IOTestBase {
     actualUsed = cache.getStorageUsedActual();
     size = cache.size();
     activeSize = cache.activeSize();
-    System.out.println(String.format("After scan: allocated=%d, used=%d, size=%d, actual used=%d, active=%d n=%d u=%d\n", 
-      allocated, used, size, actualUsed, activeSize, Segment.n, Segment.u));
+    System.out.println(String.format("After scan: allocated=%d, used=%d, size=%d, actual used=%d, active=%d\n", 
+      allocated, used, size, actualUsed, activeSize));
     
     Scavenger scavenger = new Scavenger(cache);
     scavenger.run();

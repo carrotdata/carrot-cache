@@ -28,6 +28,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
 import org.mockito.Mockito;
@@ -68,7 +69,7 @@ public class TestUtils {
    */
   public static byte[] randomBytes(int size) {
     byte[] bytes = new byte[size];
-    Random r = new Random();
+    ThreadLocalRandom r = ThreadLocalRandom.current();;
     r.nextBytes(bytes);
     return bytes;
   }

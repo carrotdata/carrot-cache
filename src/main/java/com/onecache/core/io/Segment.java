@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -30,6 +31,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.Persistent;
 import com.onecache.core.util.RollingWindowCounter;
@@ -233,7 +235,7 @@ public class Segment implements Persistent {
     }
     
     /**
-     * Get segment data size
+     * Get segment data size (excluding allocated write batch space)
      * @return segment data size
      */
     public long getSegmentDataSize() {
@@ -505,6 +507,8 @@ public class Segment implements Persistent {
    * Default segment size 
    */
   public final static int DEFAULT_SEGMENT_SIZE = 4 * 1024 * 1024;
+   
+
   /**
    * Segment's address (if in RAM)
    */
@@ -527,6 +531,9 @@ public class Segment implements Persistent {
   /* Data writer */
   DataWriter dataWriter;
   
+  /* Data writer support write batching */
+  boolean writeBatchSupported = false;
+  
   /* Is valid segment */
   private volatile boolean valid = true;
   
@@ -538,6 +545,12 @@ public class Segment implements Persistent {
   
   /** We need this instance for data used reporting */
   IOEngine engine;
+  
+  /**
+   * Local reference to write batches 
+   */
+  WriteBatches writeBatches;
+  
   /**
    * 
    * Default constructor
@@ -576,6 +589,10 @@ public class Segment implements Persistent {
     this.dataWriter = da;
     // can be null in tests
     this.engine = engine;
+    if (this.dataWriter.isWriteBatchSupported()) {
+      this.writeBatchSupported = true;
+      this.writeBatches = engine.getWriteBatches();
+    }
   }
   
   /**
@@ -603,7 +620,7 @@ public class Segment implements Persistent {
     }
     this.valid = false;
   }
-  
+ 
   /**
    * Reuse segment - for off-heap only
    * @param id
@@ -913,15 +930,35 @@ public class Segment implements Persistent {
     }
   }
     
+  private WriteBatch getWriteBatch() {
+    if (this.writeBatches == null) {
+      return null;
+    }
+    // Thread Id is long value, but it starts with 0 and increments by 1 
+    // for every new thread created. We are safe, b/c we have limited number 
+    // of working thread in the system, far less than 32K
+    int tid = makeIdForThread(Thread.currentThread().getId());
+    return writeBatches.getWriteBatch(tid);
+  }
+  
+  private int makeIdForThread(long tid) {
+    // Rank is a low number, default maximum is 7
+    int rank = this.info.getGroupRank();
+    // Id for a thread is a negative which is intentionally less than -1 (used as NOT_FOUND, 
+    // FAILED moniker) This Id is used as the address for the k-v during look up operation
+    // when k-v resides in a write buffer, belonging to some thread
+    return -(rank << 16 | (int) tid + 2);
+    
+  }
   /**
    * Append new cached item to this segment
    * @param key item key
-   * @param item item itself
+   * @param value item itself
    * @param expire item expiration time in ms (absolute)
    * @return cached item address (-1 means segment is sealed)
    */
-  public long append(byte[] key, byte[] item, long expire) {
-    return append(key, 0, key.length, item, 0, item.length, expire);
+  public long append(byte[] key, byte[] value, long expire) {
+    return append(key, 0, key.length, value, 0, value.length, expire);
   }
 
   /**
@@ -929,39 +966,62 @@ public class Segment implements Persistent {
    * @param key item key
    * @param keyOffset key offset
    * @param keySize key size
-   * @param item item itself
-   * @param itemOffset item offset
-   * @param itemSize item size
+   * @param value item itself
+   * @param valueOffset item offset
+   * @param valueSize item size
    * @param expire expiration time
    * @return cached item offset (-1 means segment is sealed)
+   *   negative offset less than -1 means that item was batched.
    */
-  public long append(byte[] key, int keyOffset, int keySize, byte[] item, int itemOffset, 
-      int itemSize, long expire) {
+  public long append(byte[] key, int keyOffset, int keySize, byte[] value, int valueOffset,
+      int valueSize, long expire) {
     if (isSealed() || isFull()) {
-      //TODO: check return value
+      // TODO: check return value
       return -1;
     }
-    try {
-      writeLock();
-      if (isSealed() || isFull()) {
-        return -1;
+    int kvSize = Utils.kvSize(keySize, valueSize);
+    // Write batch is thread local object
+    // Only one thread can write, but many can read
+    WriteBatch wb = getWriteBatch();
+    long offset = 0;
+    if (wb != null && kvSize < wb.batchSize()) {
+      if (!wb.acceptsWrites()) {
+        // data writer MUST acquire write lock (only for copy data operation)
+        // and call setFull(true) while holding write lock
+        // reset write buffer on success
+        offset = this.dataWriter.append(this, wb);
+        if (offset == -1) {
+          return -1;
+        }
       }
-      long offset = this.dataWriter.append(this, key, keyOffset, keySize, item, itemOffset, itemSize);
-      if (offset < 0) {
-        setFull(true);
-        return -1;
+      // Now repeat the call
+      wb.addOrUpdate(key, keyOffset, keySize, value, valueOffset, valueSize);
+      offset = wb.getId();
+    } else {
+      try {
+        writeLock();
+        if (isSealed() || isFull()) {
+          return -1;
+        }
+        offset =
+            this.dataWriter.append(this, key, keyOffset, keySize, value, valueOffset, valueSize);
+        if (offset == -1) {
+          setFull(true);
+          return -1;
+        }
+      } finally {
+        writeUnlock();
       }
-      // Increment uncompressewd data size
-      this.info.incrementDataSizeUncompressed(Utils.kvSize(keySize, itemSize));
-      processExpire(expire);
-      incrNumEntries(1);
-      if (expire > 0) {
-        incrExpectedToExpire(1);
-      }
-      return offset/* offset in a segment*/;
-    } finally {
-      writeUnlock();
     }
+    // This code should be safe outside write lock
+    // Increment uncompressed data size
+    this.info.incrementDataSizeUncompressed(kvSize);
+    processExpire(expire);
+    incrNumEntries(1);
+    if (expire > 0) {
+      incrExpectedToExpire(1);
+    }
+    return offset/* offset in a segment, can be negative to identify write to a write batch */;
   }
   
   /**
@@ -1002,39 +1062,69 @@ public class Segment implements Persistent {
    * Append new cached item to this segment
    * @param keyPtr key address
    * @param keySize key size
-   * @param itemPtr item address
-   * @param itemSize item size
+   * @param valuePtr item address
+   * @param valueSize item size
    * @param expire expiration time
    * @return cached entry offset in a segment or -1
    */
-  public long append(long keyPtr, int keySize, long itemPtr, int itemSize, long expire) {
+  public long append(long keyPtr, int keySize, long valuePtr, int valueSize, long expire) {
     if (isSealed() || isFull()) {
-      //TODO: check return value
+      // TODO: check return value
       return -1;
     }
-    try {
-      writeLock();
-      if (isSealed() || isFull()) {
-        return -1;
+    int kvSize = Utils.kvSize(keySize, valueSize);
+    WriteBatch wb = getWriteBatch();
+    long offset = 0;
+    if (wb != null && kvSize < wb.batchSize()) {
+      if (!wb.acceptsWrites()) {
+        // data writer MUST acquire write lock (only for copy data operation)
+        // and call setFull(true) while holding write lock
+        // reset write buffer on success
+        offset = this.dataWriter.append(this, wb);
+        if (offset == -1) {
+          return -1;
+        }
       }
-      long offset = (int) this.dataWriter.append(this, keyPtr, keySize, itemPtr, itemSize);
-      if (offset < 0) {
-        setFull(true);
-        return -1;
+      // Now repeat the call
+      wb.addOrUpdate(keyPtr, keySize, valuePtr, valueSize);
+      offset = wb.getId();
+    } else {
+      try {
+        writeLock();
+        if (isSealed() || isFull()) {
+          return -1;
+        }
+        offset =
+            this.dataWriter.append(this, keyPtr, keySize, valuePtr, valueSize);
+        if (offset == -1) {
+          setFull(true);
+          return -1;
+        }
+      } finally {
+        writeUnlock();
       }
-      this.info.incrementDataSizeUncompressed(Utils.kvSize(keySize, itemSize));
-      processExpire(expire);
-      // data writer MUST set dataSize in a segment
-      incrNumEntries(1);
-      if (expire > 0) {
-        incrExpectedToExpire(1);
-      }
-      return offset;
-    } finally {
-      writeUnlock();
     }
+    // This code should be safe outside write lock
+    // Increment uncompressed data size
+    this.info.incrementDataSizeUncompressed(kvSize);
+    processExpire(expire);
+    incrNumEntries(1);
+    if (expire > 0) {
+      incrExpectedToExpire(1);
+    }
+    return offset/* offset in a segment, can be negative to identify write to a write batch */;
   }
 
+  /**
+   * This method must be mocked in unit testings
+   * @return memory index or null
+   */
+  MemoryIndex getMemoryIndex() {
+    if (this.engine != null) {
+      return this.engine.getMemoryIndex();
+    }
+    return null;
+  }
   /**
    * Update segment's statistics
    */
@@ -1042,21 +1132,15 @@ public class Segment implements Persistent {
     this.info.updateEvictedDeleted(1);
   }
   
-  public static int n = 0;
-  public static int u = 0;
   /**
    * Update expired counter and total rank
    * @param expire expiration time
    */
   public void updateExpired(long expire) {
-    n++;
     if (this.info.getCreationTime() > expire) {
-      //*DEBUG*/ System.out.println("created=" + this.info.getCreationTime() + " expire=" + expire + 
-      //  " diff=" + (expire - this.info.getCreationTime()));
       return; // do nothing - segment was recycled recently
     }
     this.info.updateExpired();
-    u++;
   }
     
   /**

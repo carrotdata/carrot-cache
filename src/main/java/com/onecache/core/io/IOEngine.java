@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -156,7 +155,13 @@ public abstract class IOEngine implements Persistent {
   int maxEmbeddedSize;
 
   List<Scavenger.Listener> scavengerListeners = new LinkedList<>();
-
+  
+  /**
+   * Write batches for writers which supports batching of write operations
+   * (optimized compressed batch writer)
+   */
+  WriteBatches writeBatches;
+  
   /**
    * Initialize engine for a given cache
    *
@@ -222,6 +227,9 @@ public abstract class IOEngine implements Persistent {
       this.dataWriter = this.config.getDataWriter(this.cacheName);
       this.memoryDataReader = this.config.getMemoryDataReader(this.cacheName);
       this.recyclingSelector = this.config.getRecyclingSelector(cacheName);
+      if (this.dataWriter.isWriteBatchSupported()) {
+        this.writeBatches = new WriteBatches(this.dataWriter);
+      }
 
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
       LOG.fatal(e);
@@ -481,17 +489,39 @@ public abstract class IOEngine implements Persistent {
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     try {
 
-      long result = index.find(keyPtr, keySize, hit, buf, entrySize);
-      
-      if (result < 0) {
-        return NOT_FOUND;
-      } else if (result > entrySize) {
-        UnsafeAccess.free(buf);
-        entrySize = (int) result;
-        buf = UnsafeAccess.mallocZeroed(entrySize);
-        result = index.find(keyPtr, keySize, hit, buf, entrySize);
+      long offset = 0;
+      while (offset < -1) {
+        // We can stuck in the endless loop if memory index contains
+        // 'orphan' index for some write buffer
+        // FIXME ?
+        long result = index.find(keyPtr, keySize, hit, buf, entrySize);
         if (result < 0) {
           return NOT_FOUND;
+        } else if (result > entrySize) {
+          UnsafeAccess.free(buf);
+          entrySize = (int) result;
+          buf = UnsafeAccess.mallocZeroed(entrySize);
+          result = index.find(keyPtr, keySize, hit, buf, entrySize);
+          if (result < 0) {
+            return NOT_FOUND;
+          }
+        }
+        // Cached item offset in a data segment
+        offset = format.getOffset(buf);
+        // Check if it is i a write buffer
+        if (offset < -1) {
+          // Check write buffers
+          if (this.writeBatches == null) {
+            throw new RuntimeException("Corrupted index, returns negative offset, but write batches are disbled: off=" + offset);
+          }
+          WriteBatch wb = this.writeBatches.getWriteBatch((int) offset);
+          if (wb == null) {
+            throw new RuntimeException("Corrupted index, returns negative offset, but write batch was not found: off=" + offset);
+          }
+          int size = wb.get(keyPtr, keySize, buffer, bufOffset);
+          if (size >= 0) {
+            return size;
+          }
         }
       }
       // This call returns TOTAL size: key + value + kSize + vSize
@@ -521,8 +551,6 @@ public abstract class IOEngine implements Persistent {
         UnsafeAccess.copy(buf + off, buffer, bufOffset, keyValueSize);
         return keyValueSize;
       } else {
-        // Cached item offset in a data segment
-        long offset = format.getOffset(buf);
         // Segment id
         int sid = (int) format.getSegmentId(buf);
         // Read the data
@@ -678,17 +706,39 @@ public abstract class IOEngine implements Persistent {
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     int bufferAvail = buffer.length - bufOffset;
     try {
-
-      long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
-      if (result < 0) {
-        return NOT_FOUND;
-      } else if (result > entrySize) {
-        UnsafeAccess.free(buf);
-        entrySize = (int) result;
-        buf = UnsafeAccess.mallocZeroed(entrySize);
-        result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
+      long offset = 0;
+      while (offset < -1) {
+        // We can stuck in the endless loop if memory index contains
+        // 'orphan' index for some write buffer
+        // FIXME ?
+        long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
         if (result < 0) {
           return NOT_FOUND;
+        } else if (result > entrySize) {
+          UnsafeAccess.free(buf);
+          entrySize = (int) result;
+          buf = UnsafeAccess.mallocZeroed(entrySize);
+          result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
+          if (result < 0) {
+            return NOT_FOUND;
+          }
+        }
+        // Cached item offset in a data segment
+        offset = format.getOffset(buf);
+        // Check if it is i a write buffer
+        if (offset < -1) {
+          // Check write buffers
+          if (this.writeBatches == null) {
+            throw new RuntimeException("Corrupted index, returns negative offset, but write batches are disbled: off=" + offset);
+          }
+          WriteBatch wb = this.writeBatches.getWriteBatch((int) offset);
+          if (wb == null) {
+            throw new RuntimeException("Corrupted index, returns negative offset, but write batch was not found: off=" + offset);
+          }
+          int size = wb.get(key, keyOffset, keySize, buffer, bufOffset);
+          if (size >= 0) {
+            return size;
+          }
         }
       }
       // This call returns TOTAL size: key + value + kSize + vSize
@@ -719,8 +769,6 @@ public abstract class IOEngine implements Persistent {
         UnsafeAccess.copy(buf + off, buffer, bufOffset, keyValueSize);
         return keyValueSize;
       } else {
-        // Cached item offset in a data segment
-        long offset = format.getOffset(buf);
         // segment id
         int sid = (int) format.getSegmentId(buf);
         Segment s = this.dataSegments[sid];
@@ -884,32 +932,39 @@ public abstract class IOEngine implements Persistent {
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     //int slot = 0;
     try {
-      // TODO: double locking?
-      // Index locking  that segment will not be recycled
-      //
-      //slot = this.index.lock(keyPtr, keySize);
-      long result = index.find(keyPtr, keySize, true, buf, entrySize);
-      // result can be negative - OK
-      // positive - OK b/c we hold read lock on key and key can't be deleted from index
-      // until we release read lock, hence data segment can't be reused until this operation
-      // finishes
-      // false positive - BAD, in this case there is no guarantee that found segment won' be reused
-      // during this operation.
-      // HOW TO HANDLE FALSE POSITIVES in MemoryIndex.find?
-      // Make sure that Utils.readUInt is stable and does not break on an arbitrary sequence of
-      // bytes
-      // It looks safe to me, therefore in case of a rare situation of a false positive and
-      // segment ID reuse during this operation we will detect this by comparing keys
-
-      if (result < 0) {
-        return NOT_FOUND;
-      } else if (result > entrySize) {
-        UnsafeAccess.free(buf);
-        entrySize = (int) result;
-        buf = UnsafeAccess.mallocZeroed(entrySize);
-        result = index.find(keyPtr, keySize, true, buf, entrySize);
+      long offset = 0;
+      while (offset < -1) {
+        // We can stuck in the endless loop if memory index contains
+        // 'orphan' index for some write buffer
+        // FIXME ?
+        long result = index.find(keyPtr, keySize, hit, buf, entrySize);
         if (result < 0) {
           return NOT_FOUND;
+        } else if (result > entrySize) {
+          UnsafeAccess.free(buf);
+          entrySize = (int) result;
+          buf = UnsafeAccess.mallocZeroed(entrySize);
+          result = index.find(keyPtr, keySize, hit, buf, entrySize);
+          if (result < 0) {
+            return NOT_FOUND;
+          }
+        }
+        // Cached item offset in a data segment
+        offset = format.getOffset(buf);
+        // Check if it is i a write buffer
+        if (offset < -1) {
+          // Check write buffers
+          if (this.writeBatches == null) {
+            throw new RuntimeException("Corrupted index, returns negative offset, but write batches are disbled: off=" + offset);
+          }
+          WriteBatch wb = this.writeBatches.getWriteBatch((int) offset);
+          if (wb == null) {
+            throw new RuntimeException("Corrupted index, returns negative offset, but write batch was not found: off=" + offset);
+          }
+          int size = wb.get(keyPtr, keySize, buffer);
+          if (size >= 0) {
+            return size;
+          }
         }
       }
       // This call returns TOTAL size: key + value + kSize + vSize
@@ -940,8 +995,6 @@ public abstract class IOEngine implements Persistent {
         UnsafeAccess.copy(buf + off, buffer, keyValueSize);
         return keyValueSize;
       } else {
-        // Cached item offset in a data segment
-        long offset = format.getOffset(buf);
         // Segment id
         int sid = (int) format.getSegmentId(buf);
         // Finally, read the cached item
@@ -1099,16 +1152,39 @@ public abstract class IOEngine implements Persistent {
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     try {
-      long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
-      if (result < 0) {
-        return NOT_FOUND;
-      } else if (result > entrySize) {
-        UnsafeAccess.free(buf);
-        entrySize = (int) result;
-        buf = UnsafeAccess.mallocZeroed(entrySize);
-        result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
+      long offset = 0;
+      while (offset < -1) {
+        // We can stuck in the endless loop if memory index contains
+        // 'orphan' index for some write buffer
+        // FIXME ?
+        long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
         if (result < 0) {
           return NOT_FOUND;
+        } else if (result > entrySize) {
+          UnsafeAccess.free(buf);
+          entrySize = (int) result;
+          buf = UnsafeAccess.mallocZeroed(entrySize);
+          result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
+          if (result < 0) {
+            return NOT_FOUND;
+          }
+        }
+        // Cached item offset in a data segment
+        offset = format.getOffset(buf);
+        // Check if it is i a write buffer
+        if (offset < -1) {
+          // Check write buffers
+          if (this.writeBatches == null) {
+            throw new RuntimeException("Corrupted index, returns negative offset, but write batches are disbled: off=" + offset);
+          }
+          WriteBatch wb = this.writeBatches.getWriteBatch((int) offset);
+          if (wb == null) {
+            throw new RuntimeException("Corrupted index, returns negative offset, but write batch was not found: off=" + offset);
+          }
+          int size = wb.get(key, keyOffset, keySize, buffer);
+          if (size >= 0) {
+            return size;
+          }
         }
       }
       // This call returns TOTAL size: key + value + kSize + vSize
@@ -1139,7 +1215,7 @@ public abstract class IOEngine implements Persistent {
         return keyValueSize;
       } else {
         // Cached item offset in a data segment
-        long offset = format.getOffset(buf);
+        //long offset = format.getOffset(buf);
         // segment id
         int sid = (int) format.getSegmentId(buf);
         // Read the data
@@ -2545,6 +2621,9 @@ public abstract class IOEngine implements Persistent {
     dos.writeLong(this.totalFailedReads.get());
     // Codec 
     CodecFactory.getInstance().saveCodecForCache(cacheName, dos);
+    if (this.writeBatches != null) {
+      this.writeBatches.save(dos);
+    }
     dos.close();
   }
 
@@ -2581,6 +2660,9 @@ public abstract class IOEngine implements Persistent {
     this.totalFailedReads.set(dis.readLong());
     // Codec
     CodecFactory.getInstance().initCompressionCodecForCache(cacheName, dis);
+    if (this.writeBatches != null) {
+      this.writeBatches.load(dis);
+    }
     dis.close();
   }
 
@@ -2607,6 +2689,10 @@ public abstract class IOEngine implements Persistent {
     this.index.dispose();
     // 3. Dispose memory buffer pool
     this.memoryBufferPool.dispose();
+    // 4. Dispose write batches
+    if (this.writeBatches != null) {
+      this.writeBatches.dispose();
+    }
   }
 
   /**
@@ -2725,6 +2811,14 @@ public abstract class IOEngine implements Persistent {
     return this.dataSegments;
   }
   
+  /**
+   * Get write batches
+   * @return write batches
+   */
+  WriteBatches getWriteBatches() {
+    return this.writeBatches;
+  }
   
   protected abstract boolean isOffheap() ;
+
 }

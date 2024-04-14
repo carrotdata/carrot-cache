@@ -49,7 +49,7 @@ public class TestZstdCompressionText {
      compContext.loadDict(dictCompress);
      compContext.setLevel(COMP_LEVEL);
 
-     int n = 10;
+     int n = 80;
      System.out.printf("Group of:%d\n", n);
      List<byte[]> group = groupOf(trainingList, n);
      //group = group.subList(group.size()/2, group.size());
@@ -92,9 +92,9 @@ public class TestZstdCompressionText {
     String[] parts = s.split("\\.|\\?|\\!");
     List<String> list = Arrays.stream(parts).filter(x -> x.length() > 0).collect(Collectors.toList());
     list.stream().forEach(x -> x.trim());
-    for (int j = 0; j < 100; j++) {
-      System.out.println(list.get(j));
-    }
+//    for (int j = 0; j < 100; j++) {
+//      System.out.println(list.get(j));
+//    }
     return list.stream().map( x-> x.getBytes()).collect(Collectors.toList());
   }
 

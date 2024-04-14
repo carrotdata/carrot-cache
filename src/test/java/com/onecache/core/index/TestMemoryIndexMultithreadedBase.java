@@ -350,7 +350,7 @@ public class TestMemoryIndexMultithreadedBase {
   protected MutationResult forceUpdate(byte[] key, int offset, int size, short sid, int dataOffset) {
     MutationResult result = MutationResult.FAILED;
     while(result != MutationResult.UPDATED) {
-      result = memoryIndex.update(key, offset, size, sid, dataOffset);
+      result = memoryIndex.compareAndUpdate(key, offset, size, (short) -1, -1, sid, dataOffset);
       if (result != MutationResult.UPDATED) {
 //        Thread.onSpinWait();
        // Utils.onSpinWait(1000);
@@ -367,7 +367,7 @@ public class TestMemoryIndexMultithreadedBase {
   protected MutationResult forceUpdate(long key, int size,short sid, int dataOffset) {
     MutationResult result = MutationResult.FAILED;
     while(result != MutationResult.UPDATED) {
-      result = memoryIndex.update(key, size, sid, dataOffset);
+      result = memoryIndex.compareAndUpdate(key, size, (short) -1, -1, sid, dataOffset);
       if (result != MutationResult.INSERTED) {
 //        Thread.onSpinWait();
         Utils.onSpinWait(1000);

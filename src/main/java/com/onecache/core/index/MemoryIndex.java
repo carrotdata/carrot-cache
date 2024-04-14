@@ -1495,6 +1495,7 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * This method is used exclusively by the Scavenger
+   * @param sid segment id
    * @param key key buffer
    * @param keyOffset key offset
    * @param keySize key size
@@ -1517,8 +1518,11 @@ public final class MemoryIndex implements Persistent {
   
   /**
    * This method is used exclusively by the Scavenger
+   * @param sid segment id
    * @param keyPtr key address
    * @param keySize key size
+   * @param result result
+   * @param dumpBelowRatio
    * @return operation result (OK, NOT_FOUND, EXPIRED, DELETED)
    */
   public ResultWithRankAndExpire checkDeleteKeyForScavenger(int sid, long keyPtr, int keySize, 
@@ -1554,7 +1558,12 @@ public final class MemoryIndex implements Persistent {
         if (this.indexFormat.equals($ptr, hash)) {
           int $sid = this.indexFormat.getSegmentId($ptr);
           if($sid != sid) {
-            // hash collision return NOT_FOUND to delete item 
+            // hash collision or newer version return NOT_FOUND to delete item 
+            return result;
+          }
+          long $offset = this.indexFormat.getOffset($ptr);
+          if ($offset < 0) {
+            // hash collision or newer version in write buffer return NOT_FOUND to delete item 
             return result;
           }
           long expire = this.indexFormat.getExpire(ptr, $ptr);
@@ -1982,23 +1991,27 @@ public final class MemoryIndex implements Persistent {
   }
 
   /**
-   * Update index entry - change sid and offset
+   * Compare and Update index entry - change sid and offset only if current
+   * sid and offset are equals to expected values
    *
    * @param key item key
    * @param keyOffset item's key offset
    * @param keyLength item key size
+   * @param expectedSid expected segment id
+   * @param expectedOffset expected offset  
    * @param sid data segment id
    * @param offset offset in the data segment
    * @return UPDATED or FAILED
    */
   
-  public MutationResult update(byte[] key, int keyOffset, int keyLength,  
-      short sid, int offset) {
+  public MutationResult compareAndUpdate(byte[] key, int keyOffset, int keyLength, 
+      short expectedSid, int expectedOffset, 
+      short newSid, int newOffset) {
     int slot = 0;
     try {
       slot = lock(key, keyOffset, keyLength);
       long hash = Utils.hash64(key, keyOffset, keyLength);
-      MutationResult result = updateInternal(hash, sid, offset);
+      MutationResult result = updateInternal(hash, expectedSid, expectedOffset, newSid, newOffset);
       return result;
     } finally {
       unlock(slot);
@@ -2097,21 +2110,24 @@ public final class MemoryIndex implements Persistent {
   }
   
   /**
-   * Update index entry - change sid and offset
+   * Compare and Update index entry - change sid and offset only if current
+   * sid and offset are equals to expected values
    *
    * @param keyPtr key address
    * @param keyLength key size
-   * @param sid segment id
-   * @param offset offset in the data segment
-   * @return MutationResult.UPDATED or MutationResult.FAILED
+   * @param expectedSid expected segment id
+   * @param expectedOffset expected offset  
+   * @param newSid data segment id
+   * @param mewOffset offset in the data segment
+   * @return UPDATED or FAILED
    */
-  public MutationResult update(long keyPtr, int keyLength, 
-      short sid, int offset) {
+  public MutationResult compareAndUpdate(long keyPtr, int keyLength, short expectedSid, int expectedOffset,
+      short newSid, int mewOffset) {
     int slot = 0;
     try {
       slot = lock(keyPtr, keyLength);
       long hash = Utils.hash64(keyPtr, keyLength);
-      MutationResult result = updateInternal(hash, sid, offset);
+      MutationResult result = updateInternal(hash, expectedSid, expectedOffset, newSid, mewOffset);
       return result;
     } finally {
       unlock(slot);
@@ -2213,33 +2229,37 @@ public final class MemoryIndex implements Persistent {
   
 
   /**
-   * Insert hash - value into index
+   * Conditional update hash - value into index
    *
    * @param hash hash
-   * @param indexPtr value
-   * @param indexSize index size
-   * @param rank item's rank
+   * @param expectedSid expected segment id
+   * @param expectedOffset expected offset
+   * @param newSid new segment id
+   * @param newOffset new offset
    * @return MutationResult.INSERTED or FAILED
    */
-  private MutationResult updateInternal(long hash, short sid, int offset) {
+  private MutationResult updateInternal(long hash, short expectedSid, int expectedOffset, 
+      short newSid, int newOffset) {
     // Get slot number    
     long[] index = getIndexForHash(hash);
     int $slot = getSlotNumber(hash, index.length);
     long ptr = index[$slot];
-    boolean res = update0(ptr, hash, sid, offset);
+    boolean res = update0(ptr, hash, expectedSid, expectedOffset, newSid, newOffset);
     return res? MutationResult.UPDATED: MutationResult.FAILED;
   }
   /**
-   * Insert hash - value into a given index block with a rank
-   *
+   * Conditional update hash - value into index
+   * 
    * @param ptr index block address
    * @param hash hash of a key
-   * @param indexPtr index data pointer (not used for AQ, 12 bytes for MQ)
-   * @param indexSize index size
-   * @param rank item's rank
-   * @return new index block pointer
+   * @param expectedSid expected segment id (-1 - forced update)
+   * @param expectedOffset expected offset (-1 - forced update)
+   * @param newSid new segment id
+   * @param newOffset new offset
+   * @return true on success, false otherwise
    */
-  private boolean update0(long ptr, long hash, short sid, int offset) {
+  private boolean update0(final long ptr, final long hash, final short expectedSid, final int expectedOffset, 
+      short newSid, int newOffset) {
     final int numEntries = numEntries(ptr);
     long $ptr = ptr + indexBlockHeaderSize;
     int count = 0;
@@ -2247,7 +2267,19 @@ public final class MemoryIndex implements Persistent {
     while (count < numEntries) {
       if (this.indexFormat.equals($ptr, hash)) {
         //TODO: inline call
-        this.indexFormat.updateIndex($ptr, sid, offset);
+        if (expectedSid != -1) {
+          int sid = this.indexFormat.getSegmentId($ptr);
+          if (sid != expectedSid) {
+            return false;
+          }
+        }
+        if (expectedOffset != -1) {
+          long off = this.indexFormat.getOffset($ptr);
+          if(off != expectedOffset) {
+            return false;
+          }
+        }
+        this.indexFormat.updateIndex($ptr, newSid, newOffset);
         return true;
       }
       count++;

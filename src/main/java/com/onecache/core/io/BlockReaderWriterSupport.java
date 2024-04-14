@@ -131,6 +131,7 @@ public class BlockReaderWriterSupport {
       if ($ptr + kSize >= ptr + blockDataSize + META_SIZE) {
         break;
       }
+      //FIXME: use Utils.equals()
       if (Utils.compareTo(key, keyOffset, keySize, $ptr, kSize) == 0) {
         $ptr -= kSizeSize + vSizeSize;
         found = $ptr;

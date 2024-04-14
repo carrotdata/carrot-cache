@@ -22,11 +22,49 @@ package com.onecache.core.io;
 public interface DataWriter {
   
   /**
+   * When IOEngine receives with reply code it MUST
+   * skip updating MemoryIndex. This code is used by batching 
+   * compressed block writer
+   */
+  public final static long IGNORE = Long.MIN_VALUE;
+  /**
    * Is block based data writer
    * @return true false
    */
   public default boolean isBlockBased() {
     return false;
+  }
+  
+  /**
+   * Is write batch supported
+   * @return true if supported, false - otherwise
+   */
+  public default boolean isWriteBatchSupported() {
+    return false;
+  }
+  
+  /**
+   * This method must be called after init()
+   * @return
+   */
+  public default WriteBatch newWriteBatch() {
+    if (!isWriteBatchSupported()) {
+      throw new UnsupportedOperationException("append write batch");
+    }
+    return null;
+  }
+  
+  /**
+   * For data writers with batch supports
+   * @param s data segment
+   * @param batch write batch
+   * @return total bytes written
+   */
+  public default long append(Segment s, WriteBatch batch) {
+    if (!isWriteBatchSupported()) {
+      throw new UnsupportedOperationException("append write batch");
+    }
+    return 0;
   }
   
   /**

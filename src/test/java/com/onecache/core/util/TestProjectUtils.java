@@ -378,6 +378,13 @@ public class TestProjectUtils {
     long v = unsafe.getLongVolatile(null, ptr);
     
   }
+  
+  @Test
+  public void testNumericConversion() {
+    long v = -100000L;
+    int vv = (int) v;
+    assertEquals(-100000, vv);
+  }
   /**
    * Utility methods
    */
