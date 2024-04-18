@@ -25,15 +25,17 @@ public class TestOffheapIOEngineMultithreaded extends TestIOEngineMultithreadedB
   @Override
   public void setUp() throws IOException {
     super.setUp();
-    this.numRecords = 100000;
+    this.numRecords = 1000000;
     this.numThreads = 4;
   }
   
   @Override
   protected IOEngine getIOEngine() throws IOException {
-    int segmentSize = 4 * 1024 * 1024;
-    long cacheSize = 100 * segmentSize;
-    CacheConfig conf = TestUtils.mockConfigForTests(segmentSize, cacheSize);
+    int segmentSize = 16 * 1024 * 1024;
+    long cacheSize = 200L * segmentSize;
+    CacheConfig conf = CacheConfig.getInstance();
+    conf.setCacheSegmentSize("default", segmentSize);
+    conf.setCacheMaximumSize("default", cacheSize);
     this.engine = new OffheapIOEngine(conf);
     return this.engine;
   }

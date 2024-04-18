@@ -134,7 +134,9 @@ public class TestOffheapIOEngine extends IOTestBase{
   private void createEngine(long segmentSize, long cacheSize) throws IOException {
     this.segmentSize = (int) segmentSize;
     this.cacheSize = cacheSize;
-    CacheConfig conf = TestUtils.mockConfigForTests(this.segmentSize, this.cacheSize);
+    CacheConfig conf = CacheConfig.getInstance();
+    conf.setCacheSegmentSize("default", segmentSize);
+    conf.setCacheMaximumSize("default", cacheSize);
     this.engine = new OffheapIOEngine(conf);
   }
    

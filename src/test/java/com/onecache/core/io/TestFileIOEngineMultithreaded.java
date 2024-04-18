@@ -33,7 +33,9 @@ public class TestFileIOEngineMultithreaded extends TestIOEngineMultithreadedBase
   protected IOEngine getIOEngine() throws IOException {
     int segmentSize = 4 * 1024 * 1024;
     long cacheSize = 100 * segmentSize;
-    CacheConfig conf = TestUtils.mockConfigForTests(segmentSize, cacheSize);
+    CacheConfig conf = CacheConfig.getInstance();
+    conf.setCacheSegmentSize("default", segmentSize);
+    conf.setCacheMaximumSize("default", cacheSize);
     this.engine = new FileIOEngine(conf);
     return this.engine;
   }

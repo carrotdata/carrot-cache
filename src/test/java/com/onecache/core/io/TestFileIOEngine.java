@@ -143,14 +143,18 @@ public class TestFileIOEngine extends IOTestBase{
   private void createEngine(long segmentSize, long cacheSize) throws IOException {
     this.segmentSize = (int) segmentSize;
     this.cacheSize = cacheSize;
-    CacheConfig conf = TestUtils.mockConfigForTests(this.segmentSize, this.cacheSize);
+    CacheConfig conf = CacheConfig.getInstance();
+    conf.setCacheSegmentSize("default", segmentSize);
+    conf.setCacheMaximumSize("default", cacheSize);
     this.engine = new FileIOEngine(conf);
   }
   
   private void createEngine(long segmentSize, long cacheSize, String dataDir) throws IOException {
     this.segmentSize = (int) segmentSize;
     this.cacheSize = cacheSize;
-    CacheConfig conf = TestUtils.mockConfigForTests(this.segmentSize, this.cacheSize, dataDir);
+    CacheConfig conf = CacheConfig.getInstance();
+    conf.setCacheSegmentSize("default", segmentSize);
+    conf.setCacheMaximumSize("default", cacheSize);
     this.engine = new FileIOEngine(conf);
   }
 }

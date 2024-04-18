@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Random;
 
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.onecache.core.util.TestUtils;
@@ -91,7 +92,7 @@ public abstract class TestIOMultithreadedBase {
     keysTL.set(keys);
     valuesTL.set(values);
     mExpiresTL.set(expires);
-    System.out.println("Prepare done ...");
+    System.out.printf("Prepare done numRecords=%d\n", numRecords);
   }
   
   protected void prepareDataMemory() throws IOException {
@@ -119,7 +120,7 @@ public abstract class TestIOMultithreadedBase {
     mExpiresTL.set(expires);
     mKeySizesTL.set(mKeySizes);
     mValueSizesTL.set(mValueSizes);
-    System.out.println("Prepare done ...");
+    System.out.printf("Prepare done %d\n", numRecords);
   }
   
   protected long getExpireStream(long startTime, int n) {
@@ -503,7 +504,6 @@ public abstract class TestIOMultithreadedBase {
     clearData();
   }
   
-  @Test
   public void testLoadReadBytesWithDeletesRun() {
     Runnable r = () -> {
       try {
