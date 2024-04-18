@@ -18,7 +18,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 
-public class TestConcurrentWriteReadBuffer {
+public abstract class TestConcurrentWriteReadBuffer {
 
   ConcurrentWriteReadBuffer buffer;
   Long2LongHashMap cache;

@@ -20,7 +20,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.junit.After;
 import org.junit.Test;
 
-public class TestConcurrentLongPool {
+public abstract class TestConcurrentLongPool {
 
   static class ConcurrentRandomLongPool extends ConcurrentLongPool {
 

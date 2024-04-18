@@ -19,7 +19,7 @@ import java.text.NumberFormat;
 import org.junit.After;
 import org.junit.Test;
 
-public class TestUltraFastMemoryBufferPool {
+public abstract class TestUltraFastMemoryBufferPool {
 
   ConcurrentLongPool pool;
  

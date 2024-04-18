@@ -750,7 +750,7 @@ public class Segment implements Persistent {
    * Is segment full
    * @return true or false
    */
-  private boolean isFull() {
+  boolean isFull() {
     return this.info.isFull();
   }
   
@@ -758,7 +758,7 @@ public class Segment implements Persistent {
    * Set segment full
    * @param full
    */
-  private void setFull(boolean full) {
+  void setFull(boolean full) {
     this.info.setFull(full);
   }
   
@@ -984,8 +984,8 @@ public class Segment implements Persistent {
     // Only one thread can write, but many can read
     WriteBatch wb = getWriteBatch();
     long offset = 0;
-    if (wb != null && kvSize < wb.batchSize()) {
-      if (!wb.acceptsWrites()) {
+    if (wb != null) {
+      if (!wb.acceptsWrite(kvSize)) {
         // data writer MUST acquire write lock (only for copy data operation)
         // and call setFull(true) while holding write lock
         // reset write buffer on success
@@ -994,9 +994,14 @@ public class Segment implements Persistent {
           return -1;
         }
       }
-      // Now repeat the call
-      wb.addOrUpdate(key, keyOffset, keySize, value, valueOffset, valueSize);
-      offset = wb.getId();
+      if (kvSize < wb.batchSize()){
+        // Add to write buffer
+        wb.addOrUpdate(key, keyOffset, keySize, value, valueOffset, valueSize);
+        offset = wb.getId();
+      } else {
+        // Add single as a batch
+        offset = this.dataWriter.appendSingle(this, key, keyOffset, keySize, value, valueOffset, valueSize);
+      }
     } else {
       try {
         writeLock();
@@ -1075,8 +1080,8 @@ public class Segment implements Persistent {
     int kvSize = Utils.kvSize(keySize, valueSize);
     WriteBatch wb = getWriteBatch();
     long offset = 0;
-    if (wb != null && kvSize < wb.batchSize()) {
-      if (!wb.acceptsWrites()) {
+    if (wb != null) {
+      if (!wb.acceptsWrite(kvSize)) {
         // data writer MUST acquire write lock (only for copy data operation)
         // and call setFull(true) while holding write lock
         // reset write buffer on success
@@ -1085,9 +1090,14 @@ public class Segment implements Persistent {
           return -1;
         }
       }
-      // Now repeat the call
-      wb.addOrUpdate(keyPtr, keySize, valuePtr, valueSize);
-      offset = wb.getId();
+      if (kvSize < wb.batchSize()) {
+        // Append to write batch
+        wb.addOrUpdate(keyPtr, keySize, valuePtr, valueSize);
+        offset = wb.getId();
+      } else {
+        // Append to the segment as single element batch
+        offset = this.dataWriter.appendSingle(this, keyPtr, keySize, valuePtr, valueSize);
+      }
     } else {
       try {
         writeLock();

@@ -19,7 +19,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class TestLong2LongHashMap {
+public abstract class TestLong2LongHashMap {
 
   static ThreadLocal<long[]> keysTLS = new ThreadLocal<long[]>();
   

@@ -490,7 +490,7 @@ public abstract class IOEngine implements Persistent {
     try {
 
       long offset = 0;
-      while (offset < -1) {
+      do {
         // We can stuck in the endless loop if memory index contains
         // 'orphan' index for some write buffer
         // FIXME ?
@@ -523,7 +523,7 @@ public abstract class IOEngine implements Persistent {
             return size;
           }
         }
-      }
+      } while (offset < -1);
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
       // TODO: actually, not correct IT CAN RETURN -1
@@ -707,7 +707,7 @@ public abstract class IOEngine implements Persistent {
     int bufferAvail = buffer.length - bufOffset;
     try {
       long offset = 0;
-      while (offset < -1) {
+      do {
         // We can stuck in the endless loop if memory index contains
         // 'orphan' index for some write buffer
         // FIXME ?
@@ -740,7 +740,7 @@ public abstract class IOEngine implements Persistent {
             return size;
           }
         }
-      }
+      } while (offset < -1); // offset -1 means NOT_FOUND, offset < -1 means item is in write batch
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
       // can be negative
@@ -933,7 +933,7 @@ public abstract class IOEngine implements Persistent {
     //int slot = 0;
     try {
       long offset = 0;
-      while (offset < -1) {
+      do {
         // We can stuck in the endless loop if memory index contains
         // 'orphan' index for some write buffer
         // FIXME ?
@@ -966,7 +966,7 @@ public abstract class IOEngine implements Persistent {
             return size;
           }
         }
-      }
+      } while (offset < -1);
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
       // TODO: actually, not correct
@@ -1153,7 +1153,7 @@ public abstract class IOEngine implements Persistent {
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     try {
       long offset = 0;
-      while (offset < -1) {
+      do {
         // We can stuck in the endless loop if memory index contains
         // 'orphan' index for some write buffer
         // FIXME ?
@@ -1186,7 +1186,7 @@ public abstract class IOEngine implements Persistent {
             return size;
           }
         }
-      }
+      } while (offset < -1);
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
       // TODO: actually, not correct
@@ -2426,7 +2426,7 @@ public abstract class IOEngine implements Persistent {
     // Offset must less 32bit
     long offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength, expire);
 
-    if (offset < 0) {
+    if (offset == -1) {
       if(!s.isSealed()) {
         //FIXME: is it sync call
         save(s); // removes segment from RAM buffers
@@ -2520,7 +2520,7 @@ public abstract class IOEngine implements Persistent {
       return false;
     }
     long offset = s.append(keyPtr, keyLength, valuePtr, valueLength, expire);
-    if (offset < 0) {
+    if (offset== -1) {
       if(!s.isSealed()) {
         save(s); // removes segment from RAM buffers
       }

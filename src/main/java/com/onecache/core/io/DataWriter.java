@@ -105,5 +105,40 @@ public interface DataWriter {
    * @return offset at a segment for a new entry or -1 (can not append) 
    */
   public long append(Segment s, byte[] key, int keyOffset, int keySize, byte[] value, int valueOffset, int valueSize);
+  
+  /**
+   * Appends single entry to a segment (batch mode)
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param itemPtr value address
+   * @param itemSize value size
+   * @param s data segment
+   * @return offset at a segment for a new entry or -1 (can not append) 
+   */
+  public default long appendSingle(Segment s, long keyPtr, int keySize, long itemPtr, int itemSize) {
+    if (!isWriteBatchSupported()) {
+      throw new UnsupportedOperationException("append single write batch");
+    }
+    return -1;
+  }
+  
+  
+  /**
+   * Appends entry to a segment (batch mode)
+   * @param key key buffer
+   * @param keyOffset offset
+   * @param keySize key size
+   * @param value value buffer
+   * @param valueOffset offset
+   * @param valueSize value size
+   * @param s data segment
+   * @return offset at a segment for a new entry or -1 (can not append) 
+   */
+  public default long appendSingle(Segment s, byte[] key, int keyOffset, int keySize, byte[] value, int valueOffset, int valueSize) {
+    if (!isWriteBatchSupported()) {
+      throw new UnsupportedOperationException("append single write batch");
+    }
+    return -1;
+  }
 
 }

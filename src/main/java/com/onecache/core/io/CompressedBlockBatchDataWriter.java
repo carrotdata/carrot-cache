@@ -23,17 +23,27 @@ import static com.onecache.core.compression.CompressionCodec.COMP_META_SIZE;
 public class CompressedBlockBatchDataWriter extends CompressedBlockDataWriter {
 
   static ThreadLocal<Long> bufTLS = new ThreadLocal<Long>();
-   
+  
+  static ThreadLocal<Integer> bufSizeTLS = new ThreadLocal<Integer>();
+  
   private int bufferSize;
   
-  private long getBuffer() {
+  private long getBuffer(int reqSize) {
+    Integer size = bufSizeTLS.get();
     Long ptr = bufTLS.get();
-    if (ptr == null) {
-      this.bufferSize = 4 * this.blockSize;
-      ptr = UnsafeAccess.mallocZeroed(this.bufferSize);
+    if (size == null || size < reqSize) {
+      reqSize = Math.max(reqSize,  4 * this.blockSize);
+      if (ptr != null) {
+        UnsafeAccess.free(ptr);
+      }
+      ptr = UnsafeAccess.mallocZeroed(reqSize);
+      this.bufferSize = reqSize;
       bufTLS.set(ptr);
+      bufSizeTLS.set(this.bufferSize);
+    } else {
+      this.bufferSize = size.intValue();
     }
-    return ptr;
+    return ptr.longValue();
   }
   
   @Override
@@ -51,8 +61,8 @@ public class CompressedBlockBatchDataWriter extends CompressedBlockDataWriter {
     processEmptySegment(s);
     checkCodec();
     long src = batch.memory();
-    int len = batch.capacity();
-    long dst = getBuffer();
+    int len = batch.position();
+    long dst = getBuffer(2 * len);
     int dictVersion = this.codec.getCurrentDictionaryVersion();
     int compressed = this.codec.compress(src, len, dictVersion, dst, bufferSize);
     if (compressed >= len) {
@@ -63,8 +73,12 @@ public class CompressedBlockBatchDataWriter extends CompressedBlockDataWriter {
     long offset = 0;
     try {
       s.writeLock();
+      if (s.isFull() || s.isSealed()) {
+        return -1;
+      }
       offset = s.getSegmentDataSize();
       if (s.size() - offset < compressed + COMP_META_SIZE) {
+        s.setFull(true);
         return -1;
       }
       long sdst = s.getAddress() + offset + COMP_META_SIZE;
@@ -102,4 +116,96 @@ public class CompressedBlockBatchDataWriter extends CompressedBlockDataWriter {
     return offset;
   }
 
+  @Override
+  public long appendSingle(Segment s, long keyPtr, int keySize, long valuePtr, int valueSize) {
+    processEmptySegment(s);
+    checkCodec();
+    int reqSize = Utils.kvSize(keySize, valueSize);
+    long dst = getBuffer(reqSize);
+    // Copy k-v to dst
+    int off = Utils.writeUVInt(dst, keySize);
+    off += Utils.writeUVInt(dst + off, valueSize);
+    UnsafeAccess.copy(keyPtr, dst + off, keySize);
+    off += keySize;
+    UnsafeAccess.copy(valuePtr, dst + off, valueSize);
+
+    int dictVersion = this.codec.getCurrentDictionaryVersion();
+    int compressed = this.codec.compress(dst, reqSize, dictVersion);
+    if (compressed >= reqSize) {
+      dictVersion = -1;// uncompressed
+      compressed = reqSize;
+    }
+    long offset = 0;
+    try {
+      s.writeLock();
+      if (s.isFull() || s.isSealed()) {
+        return -1;
+      }
+      offset = s.getSegmentDataSize();
+      if (s.size() - offset < compressed + COMP_META_SIZE) {
+        s.setFull(true);
+        return -1;
+      }
+      long sdst = s.getAddress() + offset + COMP_META_SIZE;
+      // Copy
+      UnsafeAccess.copy(dst, sdst, compressed);
+      sdst -= COMP_META_SIZE;
+      UnsafeAccess.putInt(sdst, reqSize);
+      UnsafeAccess.putInt(sdst + Utils.SIZEOF_INT, dictVersion);
+      UnsafeAccess.putInt(sdst + 2 * Utils.SIZEOF_INT, compressed);
+      // Update segment
+      s.setSegmentDataSize(offset + compressed + COMP_META_SIZE);
+      s.setCurrentBlockOffset(offset + compressed + COMP_META_SIZE);
+      return offset;
+    } finally {
+      s.writeUnlock();
+    }
+  }
+
+  @Override
+  public long appendSingle(Segment s, byte[] key, int keyOffset, int keySize, byte[] value,
+      int valueOffset, int valueSize) {
+    processEmptySegment(s);
+    checkCodec();
+    int reqSize = Utils.kvSize(keySize, valueSize);
+    long dst = getBuffer(reqSize);
+    // Copy k-v to dst
+    int off = Utils.writeUVInt(dst, keySize);
+    off += Utils.writeUVInt(dst + off, valueSize);
+    UnsafeAccess.copy(key, keyOffset, dst + off, keySize);
+    off += keySize;
+    UnsafeAccess.copy(value, 0, dst + off, valueSize);
+
+    int dictVersion = this.codec.getCurrentDictionaryVersion();
+    int compressed = this.codec.compress(dst, reqSize, dictVersion);
+    if (compressed >= reqSize) {
+      dictVersion = -1;// uncompressed
+      compressed = reqSize;
+    }
+    long offset = 0;
+    try {
+      s.writeLock();
+      if (s.isFull() || s.isSealed()) {
+        return -1;
+      }
+      offset = s.getSegmentDataSize();
+      if (s.size() - offset < compressed + COMP_META_SIZE) {
+        s.setFull(true);
+        return -1;
+      }
+      long sdst = s.getAddress() + offset + COMP_META_SIZE;
+      // Copy
+      UnsafeAccess.copy(dst, sdst, compressed);
+      sdst -= COMP_META_SIZE;
+      UnsafeAccess.putInt(sdst, reqSize);
+      UnsafeAccess.putInt(sdst + Utils.SIZEOF_INT, dictVersion);
+      UnsafeAccess.putInt(sdst + 2 * Utils.SIZEOF_INT, compressed);
+      // Update segment
+      s.setSegmentDataSize(offset + compressed + COMP_META_SIZE);
+      s.setCurrentBlockOffset(offset + compressed + COMP_META_SIZE);
+      return offset;
+    } finally {
+      s.writeUnlock();
+    }
+  }
 }

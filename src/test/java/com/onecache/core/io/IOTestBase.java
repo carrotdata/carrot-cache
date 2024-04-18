@@ -108,7 +108,7 @@ public abstract class IOTestBase {
     }  
   }
   
-  private List<String> loadGithubData() throws URISyntaxException, IOException{
+  protected List<String> loadGithubData() throws URISyntaxException, IOException{
     
     File dir = new File("./src/test/resources/github");
     File[] list = dir.listFiles();
@@ -362,6 +362,7 @@ public abstract class IOTestBase {
     int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
     byte[] buffer = new byte[bufferSize];
     for (int i = 0; i < num; i++) {
+      //*DEBUG*/ System.out.println(i);
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);

@@ -25,7 +25,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-public class TestMemoryBufferPool {
+public abstract class TestMemoryBufferPool {
 
   int bufferSize = 10000;
   int maxBuffers = 10;

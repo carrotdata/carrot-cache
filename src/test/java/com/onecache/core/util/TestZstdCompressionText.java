@@ -18,7 +18,7 @@ import com.github.luben.zstd.ZstdDictTrainer;
 public class TestZstdCompressionText {
 
   private static int DICT_SIZE = 1 << 20; // 16KB
-  private static int COMP_LEVEL = 3;
+  private static int COMP_LEVEL = 6;
   
   @SuppressWarnings("unused")
   public static void main(String[] args) throws IOException {

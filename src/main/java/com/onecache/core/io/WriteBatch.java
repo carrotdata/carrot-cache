@@ -136,9 +136,9 @@ public class WriteBatch implements Persistent {
         // Write key
         this.position += Utils.writeUVInt(this.memory + this.position, keySize);
         this.position += Utils.writeUVInt(this.memory + this.position, valueSize);
-        UnsafeAccess.copy(keyPtr, keySize, this.memory + this.position);
+        UnsafeAccess.copy(keyPtr, this.memory + this.position, keySize);
         this.position += keySize;
-        UnsafeAccess.copy(valuePtr, valueSize, this.memory + this.position);
+        UnsafeAccess.copy(valuePtr, this.memory + this.position, valueSize);
         this.position += valueSize;
         return oldPosition;
       } else {
@@ -151,11 +151,11 @@ public class WriteBatch implements Persistent {
         // Copy
         int $off = off;
         off += Utils.writeUVInt(this.memory + off, keySize);
-        off += Utils.writeUVInt(this.memory + this.position, valueSize);
-        UnsafeAccess.copy(keyPtr, keySize, this.memory + off);
+        off += Utils.writeUVInt(this.memory + off, valueSize);
+        UnsafeAccess.copy(keyPtr, this.memory + off, keySize);
         off += keySize;
-        UnsafeAccess.copy(valuePtr, valueSize, this.memory + off);
-        this.position += toMove;
+        UnsafeAccess.copy(valuePtr, this.memory + off, valueSize);
+        this.position += newSize - oldSize;
         return $off;
       }
     } finally {
@@ -208,11 +208,11 @@ public class WriteBatch implements Persistent {
         // Copy
         int $off = off;
         off += Utils.writeUVInt(this.memory + off, keySize);
-        off += Utils.writeUVInt(this.memory + this.position, valueSize);
+        off += Utils.writeUVInt(this.memory + off, valueSize);
         UnsafeAccess.copy(key, keyOffset, this.memory + off, keySize);
         off += keySize;
         UnsafeAccess.copy(value, valueOffset, this.memory + off, valueSize);
-        this.position += toMove;
+        this.position += newSize - oldSize;
         return $off;
       }
     } finally {
@@ -221,12 +221,12 @@ public class WriteBatch implements Persistent {
   }
   
   /**
-   * Get value by key
+   * Get key - value by key
    * @param keyPtr key pointer
    * @param keySize key size
    * @param buffer buffer pointer
    * @param bufferSize buffer size
-   * @return size of a value, caller must check return value
+   * @return size of a key - value, caller must check return value
    */
   int get(long keyPtr, int keySize, long buffer, int bufferSize) {  
     try {
@@ -237,15 +237,14 @@ public class WriteBatch implements Persistent {
       }
       int kSize = Utils.readUVInt(this.memory + off);
       int kSizeSize = Utils.sizeUVInt(kSize);
-      off += kSizeSize;
-      int valSize = Utils.readUVInt(this.memory + off);
-      if (valSize > bufferSize) {
-        return valSize;
-      }
+      int valSize = Utils.readUVInt(this.memory + off + kSizeSize);
       int vSizeSize = Utils.sizeUVInt(valSize);
-      off += vSizeSize + kSize;
-      UnsafeAccess.copy(this.memory + off, buffer, valSize);
-      return valSize;
+      int kvSize = keySize + valSize + kSizeSize + vSizeSize;
+      if (kvSize > bufferSize) {
+        return kvSize;
+      }
+      UnsafeAccess.copy(this.memory + off, buffer, kvSize);
+      return kvSize;
     } finally {
       lock.readLock().unlock();
     }
@@ -268,15 +267,14 @@ public class WriteBatch implements Persistent {
       }
       int kSize = Utils.readUVInt(this.memory + off);
       int kSizeSize = Utils.sizeUVInt(kSize);
-      off += kSizeSize;
-      int valSize = Utils.readUVInt(this.memory + off);
-      if (valSize > buffer.length - bufferOffset) {
-        return valSize;
-      }
+      int valSize = Utils.readUVInt(this.memory + off + kSizeSize);
       int vSizeSize = Utils.sizeUVInt(valSize);
-      off += vSizeSize + kSize;
-      UnsafeAccess.copy(this.memory + off, buffer, bufferOffset, valSize);
-      return valSize;
+      int kvSize = keySize + valSize + kSizeSize + vSizeSize;
+      if (kvSize > buffer.length - bufferOffset) {
+        return kvSize;
+      }
+      UnsafeAccess.copy(this.memory + off, buffer, bufferOffset, kvSize);
+      return kvSize;
     } finally {
       lock.readLock().unlock();
     }
@@ -300,15 +298,14 @@ public class WriteBatch implements Persistent {
       }
       int kSize = Utils.readUVInt(this.memory + off);
       int kSizeSize = Utils.sizeUVInt(kSize);
-      off += kSizeSize;
-      int valSize = Utils.readUVInt(this.memory + off);
-      if (valSize > bufferSize) {
-        return valSize;
-      }
+      int valSize = Utils.readUVInt(this.memory + off + kSizeSize);
       int vSizeSize = Utils.sizeUVInt(valSize);
-      off += vSizeSize + kSize;
-      UnsafeAccess.copy(this.memory + off, buffer, valSize);
-      return valSize;
+      int kvSize = keySize + valSize + kSizeSize + vSizeSize;
+      if (kvSize > bufferSize) {
+        return kvSize;
+      }
+      UnsafeAccess.copy(this.memory + off, buffer, kvSize);
+      return kvSize;
     } finally {
       lock.readLock().unlock();
     }
@@ -332,15 +329,14 @@ public class WriteBatch implements Persistent {
       }
       int kSize = Utils.readUVInt(this.memory + off);
       int kSizeSize = Utils.sizeUVInt(kSize);
-      off += kSizeSize;
-      int valSize = Utils.readUVInt(this.memory + off);
-      if (valSize > buffer.length - bufferOffset) {
-        return valSize;
-      }
+      int valSize = Utils.readUVInt(this.memory + off + kSizeSize);
       int vSizeSize = Utils.sizeUVInt(valSize);
-      off += vSizeSize + kSize;
-      UnsafeAccess.copy(this.memory + off, buffer, bufferOffset, valSize);
-      return valSize;
+      int kvSize = keySize + valSize + kSizeSize + vSizeSize;
+      if (kvSize > buffer.length - bufferOffset) {
+        return kvSize;
+      }
+      UnsafeAccess.copy(this.memory + off, buffer, bufferOffset, kvSize);
+      return kvSize;
     } finally {
       lock.readLock().unlock();
     }
@@ -364,7 +360,7 @@ public class WriteBatch implements Persistent {
       if (size > avail) {
         return size;
       } else if (size >= 0) {
-        buffer.position(off + size);
+        //buffer.position(off + size);
         return size;
       }
     } else {
@@ -375,7 +371,7 @@ public class WriteBatch implements Persistent {
       if (size > avail) {
         return size;
       } else if (size >= 0) {
-        buffer.position(off + size);
+       // buffer.position(off + size);
         return size;
       }
     }
@@ -397,7 +393,7 @@ public class WriteBatch implements Persistent {
       if (size > avail) {
         return size;
       } else if (size >= 0) {
-        buffer.position(off + size);
+        //buffer.position(off + size);
         return size;
       }
     } else {
@@ -408,7 +404,7 @@ public class WriteBatch implements Persistent {
       if (size > avail) {
         return size;
       } else if (size >= 0) {
-        buffer.position(off + size);
+        //buffer.position(off + size);
         return size;
       }
     }
@@ -419,26 +415,22 @@ public class WriteBatch implements Persistent {
     final long ptr = this.memory;
     int off = 0;
     while (off < this.position) {
+      final int oldOffset = off;
       final int kSize = Utils.readUVInt(ptr + off);
+      // Compare
+      off += Utils.sizeUVInt(kSize);
+      final int vSize = Utils.readUVInt(ptr + off);
+      off += Utils.sizeUVInt(vSize);
       if (kSize == keySize) {
         // Check last bytes
         final byte b1 = UnsafeAccess.toByte(keyPtr + keySize - 1);
         final byte b2 = UnsafeAccess.toByte(ptr + off + keySize - 1);
         if (b1 == b2) {
-          // Compare
-          final int kSizeSize = Utils.sizeUVInt(kSize);
-          final int vSize = Utils.readUVInt(ptr + off + kSizeSize);
-          final int vSizeSize = Utils.sizeUVInt(vSize);
-          if (Utils.compareTo(ptr + off + kSizeSize + vSizeSize, kSize, keyPtr, keySize) == 0) {
-            return off;
+          if (Utils.compareTo(ptr + off, kSize, keyPtr, keySize) == 0) {
+            return oldOffset;
           }
-          off += kSizeSize + vSizeSize + kSize + vSize;
-          continue;
         }
       }
-      off += Utils.sizeUVInt(kSize);
-      int vSize = Utils.readUVInt(ptr + off);
-      off += Utils.sizeUVInt(vSize);
       off += kSize + vSize;
     }
     return -1; // Not found
@@ -448,26 +440,22 @@ public class WriteBatch implements Persistent {
     final long ptr = this.memory;
     int off = 0;
     while (off < this.position) {
+      final int oldOffset = off;
       final int kSize = Utils.readUVInt(ptr + off);
+      off += Utils.sizeUVInt(kSize);
+      int vSize = Utils.readUVInt(ptr + off);
+      off += Utils.sizeUVInt(vSize);
       if (kSize == keySize) {
         // Check last bytes
         final byte b1 = key[keyOffset + keySize - 1];
         final byte b2 = UnsafeAccess.toByte(ptr + off + keySize - 1);
         if (b1 == b2) {
           // Compare
-          final int kSizeSize = Utils.sizeUVInt(kSize);
-          final int vSize = Utils.readUVInt(ptr + off + kSizeSize);
-          final int vSizeSize = Utils.sizeUVInt(vSize);
-          if (Utils.compareTo(key, keyOffset, keySize, ptr + off + kSizeSize + vSizeSize, kSize) == 0) {
-            return off;
+          if (Utils.compareTo(key, keyOffset, keySize, ptr + off, kSize) == 0) {
+            return oldOffset;
           }
-          off += kSizeSize + vSizeSize + kSize + vSize;
-          continue;
         }
       }
-      off += Utils.sizeUVInt(kSize);
-      int vSize = Utils.readUVInt(ptr + off);
-      off += Utils.sizeUVInt(vSize);
       off += kSize + vSize;
     }
     return -1; // Not found
@@ -524,11 +512,27 @@ public class WriteBatch implements Persistent {
   }
   
   /**
+   *  Get rank of segment group this batch belongs to
+   * @return rank
+   */
+  int getRank() {
+    return -this.id >>> 16;
+  }
+  
+  /**
+   * Get thread id which this batch belongs to
+   * @return
+   */
+  int getThreadId () {
+    return (-this.id & 0xffff) - 2;
+  }
+  
+  /**
    * Does this batch accepts writes
    * @return true if accepts, false otherwise
    */
-  boolean acceptsWrites() {
-    return this.position < this.batchSize;
+  boolean acceptsWrite(int kvSize) {
+    return this.position < this.batchSize && this.position + kvSize <= this.capacity;
   }
 
   @Override

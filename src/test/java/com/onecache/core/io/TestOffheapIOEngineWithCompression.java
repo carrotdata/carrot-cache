@@ -46,24 +46,27 @@ public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{
     ZstdCompressionCodec.reset();
   }
   
+  
   @Test
   public void testLoadReadBytesSingleSegmentNoDictionaryNoRandom() throws IOException, URISyntaxException {
     createEngine(4 * 1024 * 1024, 4 * 1024 * 1024, false, false, 10000);
     testLoadReadBytesSingleSegment();
   }
   
+  
   @Test
   public void testLoadReadBytesSingleSegmentNoDictionaryRandom() throws IOException, URISyntaxException {
     createEngine(4 * 1024 * 1024, 4 * 1024 * 1024, true, false, 10000);
     testLoadReadBytesSingleSegment();
-
   }
 
+  
   @Test
   public void testLoadReadBytesSingleSegmentDictionaryNoRandom() throws IOException, URISyntaxException {
     createEngine(4 * 1024 * 1024, 4 * 1024 * 1024, false, true, 10000);
     testLoadReadBytesSingleSegment();
   }
+  
   
   @Test
   public void testLoadReadBytesSingleSegmentDictionaryRandom() throws IOException, URISyntaxException {
@@ -80,11 +83,13 @@ public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{
     verifyBytesEngineByteBuffer(engine, loaded);
   }
   
+  
   @Test
   public void testLoadReadMemorySingleSegmentNoDictionaryNoRandom() throws IOException, URISyntaxException {
     createEngine(4 * 1024 * 1024, 4 * 1024 * 1024, false, false, 10000);
     testLoadReadMemorySingleSegment();
   }
+  
   
   @Test
   public void testLoadReadMemorySingleSegmentNoDictionaryRandom() throws IOException, URISyntaxException {
@@ -92,11 +97,13 @@ public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{
     testLoadReadMemorySingleSegment();
   }
   
+  
   @Test
   public void testLoadReadMemorySingleSegmentDictionaryNoRandom() throws IOException, URISyntaxException {
     createEngine(4 * 1024 * 1024, 4 * 1024 * 1024, false, true, 10000);
     testLoadReadMemorySingleSegment();
   }
+  
   
   @Test
   public void testLoadReadMemorySingleSegmentDictionaryRandom() throws IOException, URISyntaxException {
@@ -122,7 +129,7 @@ public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{
     createEngine(4 * 1024 * 1024, 20 * 1024 * 1024, true, false, 100000);
     testLoadReadBytesMultipleSegments();
   }
-
+  
   @Test
   public void testLoadReadBytesMultipleSegmentsDictionaryNoRandom() throws IOException, URISyntaxException {
     createEngine(4 * 1024 * 1024, 20 * 1024 * 1024, false, true, 100000);
@@ -155,12 +162,14 @@ public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{
     createEngine(4 * 1024 * 1024, 20 * 1024 * 1024, true, false, 100000);
     testLoadReadMemoryMultipleSegments();
   }
-
+  
+  
   @Test
   public void testLoadReadMemoryMultipleSegmentsDictionaryNoRandom() throws IOException, URISyntaxException {
     createEngine(4 * 1024 * 1024, 20 * 1024 * 1024, false, true, 100000);
     testLoadReadMemoryMultipleSegments();
   }
+  
   
   @Test
   public void testLoadReadMemoryMultipleSegmentsDictionaryRandom() throws IOException, URISyntaxException {
@@ -176,6 +185,7 @@ public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{
     verifyMemoryEngine(engine, loaded);
   }
   
+  
   @Test
   public void testLoadReadBytesMultipleSegmentsWithDeletesNoDictionaryNoRandom() 
       throws IOException, URISyntaxException {
@@ -183,12 +193,14 @@ public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{
     testLoadReadBytesMultipleSegmentsWithDeletes();
   }
 
+  
   @Test
   public void testLoadReadBytesMultipleSegmentsWithDeletesNoDictionaryRandom() 
       throws IOException, URISyntaxException {
     createEngine(4 * 1024 * 1024, 20 * 4 * 1024 * 1024, true, false, 100000);
     testLoadReadBytesMultipleSegmentsWithDeletes();
   }
+  
   
   @Test
   public void testLoadReadBytesMultipleSegmentsWithDeletesDictionaryNoRandom() 
@@ -197,6 +209,7 @@ public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{
     testLoadReadBytesMultipleSegmentsWithDeletes();
   }
 
+  
   @Test
   public void testLoadReadBytesMultipleSegmentsWithDeletesDictionaryRandom() 
       throws IOException, URISyntaxException {
@@ -213,6 +226,7 @@ public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{
     verifyBytesEngineWithDeletes(engine, loaded, loaded / 2);
   }
   
+  
   @Test
   public void testLoadReadMemoryMultipleSegmentsWithDeletesNoDictionaryNoRandom() 
       throws IOException, URISyntaxException {
@@ -220,12 +234,14 @@ public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{
     testLoadReadMemoryMultipleSegmentsWithDeletes();
   }
 
+  
   @Test
   public void testLoadReadMemoryMultipleSegmentsWithDeletesNoDictionaryRandom() 
       throws IOException, URISyntaxException {
     createEngine(4 * 1024 * 1024, 20 * 4 * 1024 * 1024, true, false, 100000);
     testLoadReadMemoryMultipleSegmentsWithDeletes();
   }
+  
   
   @Test
   public void testLoadReadMemoryMultipleSegmentsWithDeletesDictionaryNoRandom() 
@@ -234,6 +250,7 @@ public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{
     testLoadReadBytesMultipleSegmentsWithDeletes();
   }
 
+  
   @Test
   public void testLoadReadMemoryMultipleSegmentsWithDeletesDictionaryRandom() 
       throws IOException, URISyntaxException {
@@ -255,7 +272,6 @@ public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{
     createEngine(4 * 1024 * 1024, 20 * 4 * 1024 * 1024, false, true, 100000);
     int loaded = loadMemoryEngine(engine);
     /*DEBUG*/ System.out.println("loaded=" + loaded);
-    //verifyMemoryEngine(engine, loaded);
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
@@ -265,10 +281,8 @@ public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase{
     // Dispose engine
     engine.dispose();
     // Re-create new one (creates new root directory for cache)
-    //createEngine(4 * 1024 * 1024, 20 * 4 * 1024 * 1024, false, true, 100000);
     engine = getEngine(config);
-    //CarrotConfig conf = CarrotConfig.getInstance();
-    //conf.setCacheRootDir(cacheName, rootDir);
+ 
     ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
     DataInputStream dis = new DataInputStream(bais);
     engine.load(dis);

@@ -63,6 +63,14 @@ public class WriteBatches implements Persistent {
     wbMap.clear();
   }
   
+  /**
+   * Number of write batch objects
+   * @return size
+   */
+  public int size() {
+    return wbMap.size();
+  }
+  
   @Override
   public void save(OutputStream os) throws IOException {
     DataOutputStream dos = Utils.toDataOutputStream(os);
