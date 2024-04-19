@@ -440,8 +440,8 @@ public class ZstdCompressionCodec implements CompressionCodec {
   }
 
   private synchronized void startTraining() {
-    /*DEBUG*/ System.out.println("START TRAINING");
     if (this.trainingInProgress) return;
+    /*DEBUG*/ System.out.println("START TRAINING");
     this.trainingDataSize = new AtomicInteger();
     this.trainingData = new ConcurrentLinkedQueue<Long>();
     this.trainingInProgress = true;

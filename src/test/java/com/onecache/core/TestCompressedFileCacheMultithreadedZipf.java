@@ -17,7 +17,7 @@ package com.onecache.core;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
-public class TestFileCompressedCacheMultithreadedZipf extends TestOffheapCompressedCacheMultithreadedZipf {
+public class TestCompressedFileCacheMultithreadedZipf extends TestCompressedOffheapCacheMultithreadedZipf {
   
   @Override
   public void setUp() throws IOException, URISyntaxException {

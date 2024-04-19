@@ -17,6 +17,7 @@ import com.onecache.core.compression.CodecFactory;
 import com.onecache.core.compression.CompressionCodec;
 import com.onecache.core.compression.zstd.ZstdCompressionCodec;
 import com.onecache.core.index.CompactBaseIndexFormat;
+import com.onecache.core.io.CompressedBlockBatchDataWriter;
 import com.onecache.core.io.CompressedBlockDataWriter;
 import com.onecache.core.io.CompressedBlockFileDataReader;
 import com.onecache.core.io.CompressedBlockMemoryDataReader;
@@ -67,7 +68,7 @@ public abstract class TestCompressedCacheMultithreadedZipfBase extends TestCache
   @Override
   protected Builder withAddedConfigurations(Builder b) {
        
-    b.withDataWriter(CompressedBlockDataWriter.class.getName());
+    b.withDataWriter(CompressedBlockBatchDataWriter.class.getName());
     b.withMemoryDataReader(CompressedBlockMemoryDataReader.class.getName());
     b.withFileDataReader(CompressedBlockFileDataReader.class.getName());
     b.withCacheCompressionDictionaryEnabled(dictionaryEnabled);

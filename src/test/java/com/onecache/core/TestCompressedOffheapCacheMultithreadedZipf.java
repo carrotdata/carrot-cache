@@ -29,7 +29,7 @@ import com.onecache.core.controllers.MinAliveRecyclingSelector;
 import com.onecache.core.eviction.LRUEvictionPolicy;
 import com.onecache.core.eviction.SLRUEvictionPolicy;
 
-public class TestOffheapCompressedCacheMultithreadedZipf extends TestCompressedCacheMultithreadedZipfBase {
+public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedCacheMultithreadedZipfBase {
   
   /**
    * Eviction tested:
@@ -57,7 +57,7 @@ public class TestOffheapCompressedCacheMultithreadedZipf extends TestCompressedC
     // 
     this.scavDumpBelowRatio = 1.0;
     // We reduced cache size by 10x to account for compression (which is 10-11x)
-    this.maxCacheSize = 20 * this.segmentSize;
+    this.maxCacheSize = 40 * this.segmentSize;
     this.scavNumberThreads = 2;
   }
   

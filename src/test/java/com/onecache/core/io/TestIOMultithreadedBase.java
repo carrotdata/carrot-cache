@@ -17,7 +17,6 @@ package com.onecache.core.io;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -25,7 +24,6 @@ import java.util.Arrays;
 import java.util.Random;
 
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.onecache.core.util.TestUtils;
@@ -504,6 +502,7 @@ public abstract class TestIOMultithreadedBase {
     clearData();
   }
   
+  @Test
   public void testLoadReadBytesWithDeletesRun() {
     Runnable r = () -> {
       try {

@@ -13,30 +13,23 @@
  * limitations under the License.
  */
 
-package com.onecache.core.io;
+package com.onecache.core;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 
-import com.onecache.core.util.CacheConfig;
+import org.junit.Before;
 
-public class TestFileIOEngineMultithreaded extends TestIOEngineMultithreadedBase {
+public class TestCompressedOffheapCacheMultithreaded extends TestCompressedCacheMultithreadedBase {
 
-  @Override
-  public void setUp() throws IOException {
+  @Before
+  public void setUp() throws IOException, URISyntaxException{
     super.setUp();
-    this.numRecords = 100000;
-    this.numThreads = 4;
+    this.numRecords = 1_000_000;
+    this.numThreads = 8;
+    this.offheap = true;
+    this.segmentSize = 64_000_000;
+    this.maxCacheSize = 1000L * this.segmentSize;
+    this.cache = createCache();
   }
-  
-  @Override
-  protected IOEngine getIOEngine() throws IOException {
-    int segmentSize = 4 * 1024 * 1024;
-    long cacheSize = 100 * segmentSize;
-    CacheConfig conf = CacheConfig.getInstance();
-    conf.setCacheSegmentSize("default", segmentSize);
-    conf.setCacheMaximumSize("default", cacheSize);
-    this.engine = new FileIOEngine(conf);
-    return this.engine;
-  }
-  
 }

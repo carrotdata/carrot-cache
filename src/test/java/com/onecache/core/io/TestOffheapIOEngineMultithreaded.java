@@ -18,7 +18,6 @@ package com.onecache.core.io;
 import java.io.IOException;
 
 import com.onecache.core.util.CacheConfig;
-import com.onecache.core.util.TestUtils;
 
 public class TestOffheapIOEngineMultithreaded extends TestIOEngineMultithreadedBase {
 
@@ -36,6 +35,7 @@ public class TestOffheapIOEngineMultithreaded extends TestIOEngineMultithreadedB
     CacheConfig conf = CacheConfig.getInstance();
     conf.setCacheSegmentSize("default", segmentSize);
     conf.setCacheMaximumSize("default", cacheSize);
+    conf.setCacheTLSSupported("default", true);
     this.engine = new OffheapIOEngine(conf);
     return this.engine;
   }

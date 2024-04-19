@@ -273,18 +273,7 @@ public abstract class IOEngine implements Persistent {
    * @return actual storage usage
    */
   public final long getStorageUsed() {
-//    long used = 0;
-//    for(int i = 0; i < dataSegments.length; i++) {
-//      Segment s = dataSegments[i];
-//      if (s == null || !s.isValid()) {
-//        continue;
-//      }
-//      used += s.getSegmentDataSize();
-//    }
-//    /*DEBUG*/ if (ThreadLocalRandom.current().nextDouble() < 0.001) {
-//      System.out.println("used=" + this.storageUsed.get() + " calc=" + used);
-//    }
-//    return used;
+
     return this.storageUsed.get();
   }
   

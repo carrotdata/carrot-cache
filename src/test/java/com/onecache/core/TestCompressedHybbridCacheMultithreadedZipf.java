@@ -32,7 +32,7 @@ import com.onecache.core.eviction.FIFOEvictionPolicy;
 import com.onecache.core.eviction.LRUEvictionPolicy;
 import com.onecache.core.util.TestUtils;
 
-public class TestHybridCompressedCacheMultithreadedZipf extends TestOffheapCompressedCacheMultithreadedZipf {
+public class TestCompressedHybbridCacheMultithreadedZipf extends TestCompressedOffheapCacheMultithreadedZipf {
   
   int victim_segmentSize = 16 * 1024 * 1024;
   

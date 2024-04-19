@@ -23,11 +23,11 @@ public class TestOffheapCacheMultithreaded extends TestCacheMultithreadedBase {
 
   @Before
   public void setUp() throws IOException{
-    this.numRecords = 100_000;
+    this.numRecords = 1_000_000;
     this.numThreads = 4;
     this.offheap = true;
     this.segmentSize = 64_000_000;
-    this.maxCacheSize = 100L * this.segmentSize;
+    this.maxCacheSize = 1000L * this.segmentSize;
     this.evictionDisabled = true;
     this.cache = createCache();
   }

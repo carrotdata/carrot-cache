@@ -132,7 +132,7 @@ public class BlockReaderWriterSupport {
         break;
       }
       //FIXME: use Utils.equals()
-      if (Utils.compareTo(key, keyOffset, keySize, $ptr, kSize) == 0) {
+      if (Utils.equals(key, keyOffset, keySize, $ptr, kSize)) {
         $ptr -= kSizeSize + vSizeSize;
         found = $ptr;
       }
@@ -193,7 +193,7 @@ public class BlockReaderWriterSupport {
       if ($ptr + kSize >= ptr + blockDataSize + META_SIZE) {
         break;
       }
-      if (Utils.compareTo(keyPtr, keySize, $ptr, kSize) == 0) {
+      if (Utils.equals(keyPtr, keySize, $ptr, kSize)) {
         $ptr -= kSizeSize + vSizeSize;
         found = $ptr;
       }
@@ -245,7 +245,7 @@ public class BlockReaderWriterSupport {
       if (off + kSize >= blockDataSize + META_SIZE) {
         break;
       }
-      if (Utils.compareTo(key, keyOffset, keySize, block, off, kSize) == 0) {
+      if (Utils.equals(key, keyOffset, keySize, block, off, kSize)) {
         found = off - kSizeSize - vSizeSize;
       }
       off += kSize + vSize;
@@ -294,7 +294,7 @@ public class BlockReaderWriterSupport {
       if (off + kSize >= blockDataSize + META_SIZE) {
         break;
       }
-      if (Utils.compareTo(block, off, kSize, keyPtr, keySize) == 0) {
+      if (Utils.equals(block, off, kSize, keyPtr, keySize)) {
         found = off - kSizeSize - vSizeSize;
       }
       off += kSize + vSize;

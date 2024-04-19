@@ -22,6 +22,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.onecache.core.compression.CompressionCodec;
 import com.onecache.core.util.Persistent;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;

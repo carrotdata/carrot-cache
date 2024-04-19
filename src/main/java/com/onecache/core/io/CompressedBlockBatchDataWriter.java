@@ -62,6 +62,9 @@ public class CompressedBlockBatchDataWriter extends CompressedBlockDataWriter {
     checkCodec();
     long src = batch.memory();
     int len = batch.position();
+    if (codec.isTrainingRequired()) {
+      codec.addTrainingData(src, len);
+    }
     long dst = getBuffer(2 * len);
     int dictVersion = this.codec.getCurrentDictionaryVersion();
     int compressed = this.codec.compress(src, len, dictVersion, dst, bufferSize);

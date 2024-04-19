@@ -74,7 +74,8 @@ public abstract class TestCacheMultithreadedBase extends TestIOMultithreadedBase
       //.withMainQueueIndexFormat(CompactWithExpireIndexFormat.class.getName())
       .withCacheRootDir(rootDir)
       .withMinimumActiveDatasetRatio(minActiveRatio)
-      .withEvictionDisabledMode(evictionDisabled);
+      .withEvictionDisabledMode(evictionDisabled)
+      .withTLSSupported(false);
     
     if (offheap) {
       return builder.buildMemoryCache();

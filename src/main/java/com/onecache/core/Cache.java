@@ -2449,7 +2449,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
           //this.engine.setEvictionEnabled(true);
         }
         this.tcEnabled = true;
-        startScavengers();
+        //FIXME: do we need to start scavengers here?
+        //startScavengers();
       } else if (used < min){
         //this.engine.setEvictionEnabled(false);
       }
