@@ -2613,7 +2613,6 @@ public abstract class IOEngine implements Persistent {
     if (this.writeBatches != null) {
       this.writeBatches.save(dos);
     }
-    dos.close();
   }
 
   protected int getNumberOfActiveSegments() {
