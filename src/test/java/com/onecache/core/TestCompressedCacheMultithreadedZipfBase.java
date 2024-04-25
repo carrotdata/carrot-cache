@@ -30,7 +30,7 @@ import com.onecache.core.util.Utils;
 public abstract class TestCompressedCacheMultithreadedZipfBase extends TestCacheMultithreadedZipfBase {
 
   protected boolean dictionaryEnabled = true;
-  protected boolean asyncTrainingMode = false;
+  protected boolean asyncTrainingMode = true;
   protected int dictionarySize = 1 << 16;
   protected int compLevel = 3; 
   

@@ -100,12 +100,12 @@ public abstract class TestCompressedCacheMultithreadedBase {
     b.withCacheCompressionDictionaryEnabled(dictionaryEnabled);
     b.withCacheCompressionEnabled(true);
     b.withTLSSupported(true);
-    b.withCacheCompressionDictionaryTrainingAsync(asyncTrainingMode);
     //b.withMainQueueIndexFormat(CompactBaseIndexFormat.class.getName());
     b.withCacheCompressionKeysEnabled(true);
     b.withCacheCompressionDictionarySize(dictionarySize);
     b.withCacheCompressionLevel(compLevel);
     b.withCacheDataSegmentSize(segmentSize);
+    b.withCacheCompressionDictionaryTrainingAsync(true);
     b.withCacheMaximumSize(maxCacheSize);
     b.withScavengerRunInterval(scavengerInterval);
     b.withScavengerDumpEntryBelowMin(scavDumpBelowRatio);

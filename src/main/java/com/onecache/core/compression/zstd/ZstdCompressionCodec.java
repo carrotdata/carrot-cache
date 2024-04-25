@@ -1,3 +1,17 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ *
+ * <p>http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * <p>Unless required by applicable law or agreed to in writing, software distributed under the
+ * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.onecache.core.compression.zstd;
 
 import java.io.File;
@@ -11,6 +25,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.github.luben.zstd.ZstdCompressCtx;
@@ -129,7 +144,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
   /**
    * Finalizing training
    */
-  private volatile boolean finalizingTraining = false;
+  private AtomicBoolean finalizingTraining = new AtomicBoolean(false);
   
   /* Current size of a training data */
   private AtomicInteger trainingDataSize;
@@ -449,7 +464,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
 
   @Override
   public synchronized void addTrainingData(byte[]... data) {
-    if (!trainingInProgress) {
+    if (!trainingInProgress || finalizingTraining.get()) {
       return;
     }
     for(byte[] b: data) {
@@ -464,7 +479,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
 
   @Override
   public synchronized void addTrainingData(byte[] data, int off, int len) {
-    if (!trainingInProgress) {
+    if (!trainingInProgress || finalizingTraining.get()) {
       return;
     }
     long ptr = UnsafeAccess.malloc(len + Utils.SIZEOF_INT);
@@ -477,7 +492,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
 
   @Override
   public synchronized void addTrainingData(long ptr, int size) {
-    if (!trainingInProgress) {
+    if (!trainingInProgress || finalizingTraining.get()) {
       return;
     }
     long $ptr = UnsafeAccess.malloc(size + Utils.SIZEOF_INT);
@@ -513,8 +528,9 @@ public class ZstdCompressionCodec implements CompressionCodec {
   
   @SuppressWarnings("unused")
   private void finishTraining() {
-    if (this.finalizingTraining) return;
-    this.finalizingTraining = true;
+    if (! finalizingTraining.compareAndSet(false, true)) {
+      return;
+    }
     /*DEBUG*/ System.out.println("FINISH TRAINING");
 
     Runnable r = () -> {
@@ -534,11 +550,13 @@ public class ZstdCompressionCodec implements CompressionCodec {
       dictMap.put(this.currentDictVersion + 1, dict);
       this.currentDictVersion++;
       // Deallocate resources
-      this.trainingDataSize = null;
-      this.trainingData.stream().forEach(x -> UnsafeAccess.free(x));
-      this.trainingData = null;
+      this.trainingDataSize.set(0);
+      while(!this.trainingData.isEmpty()) {
+        long ptr = this.trainingData.poll();
+        UnsafeAccess.free(ptr);
+      }
       this.trainingInProgress = false;
-      this.finalizingTraining = false;
+      this.finalizingTraining.set(false);
       try {
         saveDictionary(this.currentDictVersion, dict);
       } catch (IOException e) {

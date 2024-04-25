@@ -550,7 +550,7 @@ public class CacheConfig {
   public final static String DEFAULT_CACHE_COMPRESSION_CODEC = "ZSTD";
   
   /** Compression dictionary training async */
-  public final static boolean DEFAULT_CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC = false;
+  public final static boolean DEFAULT_CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC = true;
   
   /** Default probability for random promotion controller */
   public final static double DEFAULT_CACHE_RANDOM_PROMOTION_PROBABILITY = 0.1d;
