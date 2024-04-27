@@ -27,12 +27,14 @@ import java.util.Random;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.util.CacheConfig;
-import com.onecache.core.util.TestUtils;
 
 public class TestFileIOEngine extends IOTestBase{
-  
+  private static final Logger LOG = LoggerFactory.getLogger(TestFileIOEngine.class);
+
   FileIOEngine engine;
   long cacheSize;
   
@@ -41,7 +43,7 @@ public class TestFileIOEngine extends IOTestBase{
     r = new Random();
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
-    /*DEBUG*/ System.out.println("r.seed=" + seed);
+    /*DEBUG*/ LOG.info("r.seed=" + seed);
   }
   
   @After
@@ -52,71 +54,71 @@ public class TestFileIOEngine extends IOTestBase{
   
   @Test
   public void testLoadReadBytesSingleSegment() throws IOException {
-    /*DEBUG*/ System.out.println("testLoadReadBytesSingleSegment");
+    /*DEBUG*/ LOG.info("testLoadReadBytesSingleSegment");
     createEngine(4 * 1024 * 1024, 4 * 1024 * 1024);
     prepareRandomData(10000);
     int loaded = loadBytesEngine(engine);
-    /*DEBUG*/ System.out.println("loaded=" + loaded);
+    /*DEBUG*/ LOG.info("loaded=" + loaded);
     verifyBytesEngine(engine, loaded);
     verifyBytesEngineByteBuffer(engine, loaded);
   }
   
   @Test
   public void testLoadReadMemorySingleSegment() throws IOException {
-    /*DEBUG*/ System.out.println("testLoadReadMemorySingleSegment");
+    /*DEBUG*/ LOG.info("testLoadReadMemorySingleSegment");
     createEngine(4 * 1024 * 1024, 4 * 1024 * 1024);
     prepareRandomData(10000);
     int loaded = loadMemoryEngine(engine);
-    /*DEBUG*/ System.out.println("loaded=" + loaded);
+    /*DEBUG*/ LOG.info("loaded=" + loaded);
     verifyMemoryEngine(engine, loaded);
   }
   
   @Test
   public void testLoadReadBytesMultipleSegments() throws IOException {
-    /*DEBUG*/ System.out.println("testLoadReadBytesMultipleSegments");
+    /*DEBUG*/ LOG.info("testLoadReadBytesMultipleSegments");
     createEngine(4 * 1024 * 1024, 20 * 4 * 1024 * 1024);
     prepareRandomData(100000);
     int loaded = loadBytesEngine(engine);
-    /*DEBUG*/ System.out.println("loaded=" + loaded);
+    /*DEBUG*/ LOG.info("loaded=" + loaded);
     verifyBytesEngine(engine, loaded);
     verifyBytesEngineByteBuffer(engine, loaded);
   }
   
   @Test
   public void testLoadReadMemoryMultipleSegments() throws IOException {
-    /*DEBUG*/ System.out.println("testLoadReadMemoryMultipleSegments");
+    /*DEBUG*/ LOG.info("testLoadReadMemoryMultipleSegments");
     createEngine(4 * 1024 * 1024, 20 * 4 * 1024 * 1024);
     prepareRandomData(100000);
     int loaded = loadMemoryEngine(engine);
-    /*DEBUG*/ System.out.println("loaded=" + loaded);
+    /*DEBUG*/ LOG.info("loaded=" + loaded);
     verifyMemoryEngine(engine, loaded);
   }
   
   @Test
   public void testLoadReadBytesMultipleSegmentsWithDeletes() throws IOException {
-    /*DEBUG*/ System.out.println("testLoadReadBytesMultipleSegmentsWithDeletes");
+    /*DEBUG*/ LOG.info("testLoadReadBytesMultipleSegmentsWithDeletes");
     createEngine(4 * 1024 * 1024, 20 * 4 * 1024 * 1024);
     prepareRandomData(100000);
     int loaded = loadBytesEngine(engine);
-    /*DEBUG*/ System.out.println("loaded=" + loaded);
+    /*DEBUG*/ LOG.info("loaded=" + loaded);
     deleteBytesEngine(engine, loaded / 2);
     verifyBytesEngineWithDeletes(engine, loaded, loaded / 2);
   }
   
   @Test
   public void testLoadReadMemoryMultipleSegmentsWithDeletes() throws IOException {
-    /*DEBUG*/ System.out.println("testLoadReadMemoryMultipleSegmentsWithDeletes");
+    /*DEBUG*/ LOG.info("testLoadReadMemoryMultipleSegmentsWithDeletes");
     createEngine(4 * 1024 * 1024, 20 * 4 * 1024 * 1024);
     prepareRandomData(100000);
     int loaded = loadMemoryEngine(engine);
-    /*DEBUG*/ System.out.println("loaded=" + loaded);
+    /*DEBUG*/ LOG.info("loaded=" + loaded);
     deleteMemoryEngine(engine, loaded / 2);
     verifyMemoryEngineWithDeletes(engine, loaded, loaded / 2);
   }
   
   @Test
   public void testLoadSave() throws IOException {
-    /*DEBUG*/ System.out.println("testLoadSave");
+    /*DEBUG*/ LOG.info("testLoadSave");
     // data directory
     Path path = Files.createTempDirectory(null);
     File  dir = path.toFile();
@@ -126,7 +128,7 @@ public class TestFileIOEngine extends IOTestBase{
     createEngine(4 * 1024 * 1024, 4 * 4 * 1024 * 1024, dataDir);
     prepareRandomData(100000);
     int loaded = loadMemoryEngine(engine);
-    /*DEBUG*/ System.out.println("loaded=" + loaded);
+    /*DEBUG*/ LOG.info("loaded=" + loaded);
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
     this.engine.save(dos);

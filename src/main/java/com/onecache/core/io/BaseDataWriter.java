@@ -14,11 +14,15 @@
  */
 package com.onecache.core.io;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
 public class BaseDataWriter implements DataWriter {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(BaseDataWriter.class);
+
   public BaseDataWriter() {
   }
   
@@ -61,7 +65,7 @@ public class BaseDataWriter implements DataWriter {
       return -1;
     }
     if (s.getAddress() == 0){
-      /*DEBUG*/ System.err.printf("PTR=NULL sid=%d dataSize=%d isSealed=%s isValid=%s isOffheap=%s\n",
+      LOG.error("PTR=NULL sid={} dataSize={} isSealed={} isValid={} isOffheap={}",
             s.getId(), s.getSegmentDataSize(), Boolean.toString(s.isSealed()), Boolean.toString(s.isValid()),
             Boolean.toString(s.isOffheap()));
     }

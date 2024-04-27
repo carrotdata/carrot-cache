@@ -31,6 +31,8 @@ import java.util.Random;
 
 import org.junit.After;
 import org.junit.BeforeClass;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.Cache;
 import com.onecache.core.index.IndexFormat;
@@ -40,7 +42,8 @@ import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
 public abstract class IOTestBase {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(IOTestBase.class);
+
   protected static String cacheName = "default";
   
   int blockSize = 4096;
@@ -95,7 +98,7 @@ public abstract class IOTestBase {
     Random r = new Random();
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
-    System.out.println("seed="+ seed);
+    LOG.info("seed="+ seed);
     
     for (int i = 0; i < numRecords; i++) {
       int keySize = nextKeySize();
@@ -190,7 +193,7 @@ public abstract class IOTestBase {
     if (indexBuf > 0) {
       UnsafeAccess.free(indexBuf);
     }
-    System.out.println("time="+ (System.currentTimeMillis() - start));
+    LOG.info("time="+ (System.currentTimeMillis() - start));
     return count;
   }
   
@@ -362,7 +365,7 @@ public abstract class IOTestBase {
     int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
     byte[] buffer = new byte[bufferSize];
     for (int i = 0; i < num; i++) {
-      //*DEBUG*/ System.out.println(i);
+      //*DEBUG*/ LOG.info(i);
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);
@@ -440,9 +443,9 @@ public abstract class IOTestBase {
     int bufferSize = safeBufferSize();//.kvSize(maxKeySize, maxValueSize);
     byte[] buffer = new byte[bufferSize];
     int failed = 0;
-    /*DEBUG*/ System.out.println("Verify =" + num);
+    /*DEBUG*/ LOG.info("Verify =" + num);
     for (int i = 0; i < num; i++) {
-      //*DEBUG*/ System.out.println(i);
+      //*DEBUG*/ LOG.info(i);
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);
@@ -459,7 +462,7 @@ public abstract class IOTestBase {
       off += kSize;
       assertTrue( Utils.compareTo(buffer, off, vSize, value, 0, value.length) == 0);
     }
-    System.out.println("verification failed=" + failed);
+    LOG.info("verification failed=" + failed);
   }
   
   protected void verifyBytesCacheByteBuffer(Cache cache, int num) throws IOException {

@@ -18,13 +18,16 @@ import java.io.IOException;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.controllers.AQBasedAdmissionController;
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
 import com.onecache.core.eviction.LRUEvictionPolicy;
 
 public class TestFileCacheMultithreadedZipfWithAQ extends TestCacheMultithreadedZipfBase {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(TestFileCacheMultithreadedZipfWithAQ.class);
+
   protected double startSizeRatio = 0.5;
   
   @Before
@@ -45,7 +48,7 @@ public class TestFileCacheMultithreadedZipfWithAQ extends TestCacheMultithreaded
   
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPIWithAQ() throws IOException {
-    System.out.println("Bytes API: eviction=LRU, selector=MinAlive - AQ");
+    LOG.info("Bytes API: eviction=LRU, selector=MinAlive - AQ");
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = LRUEvictionPolicy.class;
@@ -56,7 +59,7 @@ public class TestFileCacheMultithreadedZipfWithAQ extends TestCacheMultithreaded
   
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=LRU, selector=MinAlive");
+    LOG.info("Bytes API: eviction=LRU, selector=MinAlive");
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = LRUEvictionPolicy.class;

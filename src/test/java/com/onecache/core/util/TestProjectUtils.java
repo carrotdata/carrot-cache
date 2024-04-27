@@ -28,16 +28,19 @@ import java.util.Random;
 
 import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.expire.ExpireSupport;
 
 public class TestProjectUtils {
+  private static final Logger LOG = LoggerFactory.getLogger(TestProjectUtils.class);
 
   class TestClass {
     List<String> list;
     TestClass(List<String> param){
       this.list = param;
-      System.out.println("OK");
+      LOG.info("OK");
     }
   }
   
@@ -71,7 +74,7 @@ public class TestProjectUtils {
       e.printStackTrace();
     }
     
-    System.out.println(list.getClass());
+    LOG.info("{}", list.getClass());
   }
   @Test
   public void testObjectArray() throws SecurityException, IllegalAccessException, IllegalArgumentException, 
@@ -80,18 +83,18 @@ public class TestProjectUtils {
     String[] arr = new String[] {"1", "2", "3"};
     
     Class<?> cls = arr.getClass();
-    System.out.println("is array=" + cls.isArray());
+    LOG.info("is array=" + cls.isArray());
     Object[] f = (Object[]) arr;
-    System.out.println("arr length=" + f.length);
+    LOG.info("arr length=" + f.length);
     String className = cls.getName();
     Class<?> fromName = Class.forName(className);
     
-    System.out.println("class=" +cls + " from name ="+ fromName);
+    LOG.info("class=" +cls + " from name ="+ fromName);
     
     cls = int[].class;
     className = cls.getName();
     fromName = Class.forName(className);
-    System.out.println("class=" +cls + " from name ="+ fromName);
+    LOG.info("class=" +cls + " from name ="+ fromName);
 
   }
   
@@ -104,12 +107,12 @@ public class TestProjectUtils {
     
     
     Collection<?> c = (Collection<?>) l; 
-    System.out.println("list size =" + c.size() + "list instance of Collection=" +
+    LOG.info("list size =" + c.size() + "list instance of Collection=" +
         (l instanceof Collection<?>));
     HashMap<String, String> map = new HashMap<>();
-    System.out.println("map instanceof Collection=" + (map instanceof Collection<?>));
+    LOG.info("map instanceof Collection=" + (map instanceof Collection<?>));
     Iterator<?> it = c.iterator();
-    System.out.println("it=" + it);
+    LOG.info("it=" + it);
     
   }
   
@@ -123,7 +126,7 @@ public class TestProjectUtils {
     }
     long end = System.nanoTime();
     
-    System.out.printf("time=%d\n", (end - start) / 1000);
+    LOG.info("time={}", (end - start) / 1000);
   }
   
   /**
@@ -151,7 +154,7 @@ public class TestProjectUtils {
     int vi = 0xffff;
     int vs = (short) vi;
     int vvs = (short) (0x7fff & vs);
-    System.out.printf(" %d %d %d\n", vi, vs, vvs);
+    LOG.info(" {} {} {}", vi, vs, vvs);
   }
   
   @Test
@@ -159,7 +162,7 @@ public class TestProjectUtils {
     int vi = 0xffff;
     int vs = (short) vi;
     int vvs = (short) (0x3fff & vs);
-    System.out.printf(" %d %d %d\n", vi, vs, vvs);
+    LOG.info(" {} {} {}", vi, vs, vvs);
   }
   @Test
   public void testValue1() {
@@ -170,7 +173,7 @@ public class TestProjectUtils {
     short ss1 = (short)((s1 >> 15) & 1);
     short ss2 = (short) ((s2 >> 15) & 1);
     
-    System.out.printf(" %d %d %d %d %d %d\n", v1, v2, s1, s2, ss1, ss2);
+    LOG.info(" {} {} {} {} {} {}", v1, v2, s1, s2, ss1, ss2);
 
   }
   @Test
@@ -182,7 +185,7 @@ public class TestProjectUtils {
     short ss1 = (short)((s1 >> 14) & 3);
     short ss2 = (short) ((s2 >> 14) & 3);
     
-    System.out.printf(" %d %d %d %d %d %d\n", v1, v2, s1, s2, ss1, ss2);
+    LOG.info(" {} {} {} {} {} {}", v1, v2, s1, s2, ss1, ss2);
 
   }
   
@@ -261,11 +264,11 @@ public class TestProjectUtils {
   
   @Test
   public void testZipfianDistribution() {
-    System.out.println("Zipf distribution");
+    LOG.info("Zipf distribution");
     ZipfDistribution zd = new ZipfDistribution(1000000, 0.9);
     
     for (int i = 0; i < 100; i++) {
-      System.out.println(zd.sample());
+      LOG.info("{}", zd.sample());
     }
   }
   
@@ -384,6 +387,14 @@ public class TestProjectUtils {
     long v = -100000L;
     int vv = (int) v;
     assertEquals(-100000, vv);
+  }
+  
+  @Test
+  public void testEndiness() {
+    long ptr = UnsafeAccess.malloc(8);
+    UnsafeAccess.theUnsafe.putInt(ptr, 100);
+    int v =  UnsafeAccess.theUnsafe.getInt(ptr);
+    assertEquals(100, v);
   }
   /**
    * Utility methods

@@ -8,10 +8,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 import org.junit.Test;
-import static org.junit.Assert.assertTrue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class TestMemoryThroughput {
-    
+  private static final Logger LOG = LoggerFactory.getLogger(TestMemoryThroughput.class);
+
   static class MemoryBuffer {
     long ptr;
     long size;
@@ -69,7 +71,7 @@ public abstract class TestMemoryThroughput {
       }
     }
     long t2 = System.currentTimeMillis();
-    System.out.printf("Producer finished in %dms\n", (t2 - t1));
+    LOG.info("Producer finished in {}ms", (t2 - t1));
   }
   
   void writeBuffers() {
@@ -149,7 +151,7 @@ public abstract class TestMemoryThroughput {
       };
       localBuffer.safeReadLimit += kvSize;
     }
-    System.out.printf("Writer %d finished last memory=%d\n", Thread.currentThread().getId(), localPtr);
+    LOG.info("Writer {} finished last memory={}", Thread.currentThread().getId(), localPtr);
   }
   
   @Test
@@ -158,12 +160,12 @@ public abstract class TestMemoryThroughput {
     long tt1 = System.nanoTime();
     memory = UnsafeAccess.mallocZeroed(bufferSize);
     long tt3 = System.nanoTime();
-    System.out.println("Malloc pre-touch main buffer time=" + (tt3 - tt1));
+    LOG.info("Malloc pre-touch main buffer time=" + (tt3 - tt1));
     memoryBuffer =new MemoryBuffer();
     memoryBuffer.ptr = memory;
     memoryBuffer.size = bufferSize;
     
-    //System.out.printf("Press any button ...");
+    //LOG.info("Press any button ...");
     //System.in.read();
     
     // Start buffer producer
@@ -185,7 +187,7 @@ public abstract class TestMemoryThroughput {
       workers[i].join();
     }
     long t2 = System.currentTimeMillis();
-    System.out.printf("Treads=%d, copied %d bytes in %dms throughput=%d MB/s\n", numThreads, (long) maxBuffers * bufferSize,
+    LOG.info("Treads={}, copied {} bytes in {}ms throughput={} MB/s", numThreads, (long) maxBuffers * bufferSize,
       t2 - t1, (long) maxBuffers * bufferSize/ (1000L * (t2 - t1)));
   }
   
@@ -200,7 +202,7 @@ public abstract class TestMemoryThroughput {
   
   void prepareData(){
     long t1 = System.currentTimeMillis();
-    System.out.printf("Preparing data ...");
+    LOG.info("Preparing data ...");
     if (data == null) {
       data = new long[kvTotal];
       for (int i = 0; i < kvTotal; i++) {
@@ -211,7 +213,7 @@ public abstract class TestMemoryThroughput {
       shuffleArray(data);
     }
     long t2 = System.currentTimeMillis();
-    System.out.printf("Done in %d\n", t2 - t1);
+    LOG.info("Done in {}", t2 - t1);
   }
   
   private void testCopy() {
@@ -231,7 +233,7 @@ public abstract class TestMemoryThroughput {
     }
     long t2 = System.currentTimeMillis();
     
-    System.out.printf("Copied %d datas in %dms throughput=%d MB/s\n", kvTotal, t2 - t1, ((long) numIterations * kvSize)/ (1000L * (t2-t1)));
+    LOG.info("Copied {} datas in {}ms throughput={} MB/s", kvTotal, t2 - t1, ((long) numIterations * kvSize)/ (1000L * (t2-t1)));
   }
   
   private void testCopyAndRead() {
@@ -267,7 +269,7 @@ public abstract class TestMemoryThroughput {
     }
     long t2 = System.currentTimeMillis();
     
-    System.out.printf("Copied  and read %d datas in %dms throughput=%d MB/s\n", 
+    LOG.info("Copied  and read {} datas in {}ms throughput={} MB/s", 
       kvTotal, t2 - t1, (kvTotal * kvSize)/ (1000L * (t2-t1)));
   }
 
@@ -278,7 +280,7 @@ public abstract class TestMemoryThroughput {
     memory = UnsafeAccess.malloc((long) numThreads * kvTotal * kvSize);
     //memory = memory / cacheLine * cacheLine + cacheLine;
     long tt3 = System.nanoTime();
-    System.out.println("Malloc pre-touch main buffer time=" + (tt3 - tt1));
+    LOG.info("Malloc pre-touch main buffer time=" + (tt3 - tt1));
 
     Runnable r = () -> testCopy();
     Thread[] workers = new Thread[numThreads];
@@ -299,18 +301,18 @@ public abstract class TestMemoryThroughput {
     memory = UnsafeAccess.mallocZeroed((long) numIterations * kvSize);
     //memory = memory / cacheLine * cacheLine + cacheLine;
     long tt3 = System.nanoTime();
-    System.out.println("Malloc pre-touch main buffer time=" + (tt3 - tt1));
+    LOG.info("Malloc pre-touch main buffer time=" + (tt3 - tt1));
 
     Runnable r = () -> testCopyAndRead();
     Thread[] workers = new Thread[numThreads];
     int numIterations = 100;
     int iteration = 0;
     while (iteration++ < numIterations) { 
-      System.out.println("Preparing data");
+      LOG.info("Preparing data");
       prepareData();
-      System.out.println("Complete");
+      LOG.info("Complete");
 
-      System.out.println("\n*************** ITERATION=" + iteration + " ***************\n");
+      LOG.info("\n*************** ITERATION=" + iteration + " ***************");
       for(int i = 0; i < numThreads; i++) {
         workers[i] = new Thread(r);
         workers[i].start();

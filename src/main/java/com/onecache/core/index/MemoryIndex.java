@@ -25,8 +25,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.eviction.EvictionPolicy;
 import com.onecache.core.eviction.FIFOEvictionPolicy;
@@ -48,7 +48,7 @@ import com.onecache.core.util.Utils;
  */
 public final class MemoryIndex implements Persistent {
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(MemoryIndex.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MemoryIndex.class);
   
   /** This is value which guarantees that rehashing won't break*/
   public static int MAX_INDEX_ENTRIES_PER_BLOCK = 100;
@@ -243,8 +243,8 @@ public final class MemoryIndex implements Persistent {
   }
   
   public void dump() {
-    System.err.println("ref_index_base length=" + ref_index_base.get().length);
-    System.err.println("ref_index_rehash length=" + ref_index_base_rehash.get().length);
+    LOG.error("ref_index_base length={}", ref_index_base.get().length);
+    LOG.error("ref_index_rehash length={}", ref_index_base_rehash.get().length);
     long[] base = ref_index_base.get();
     long[] rehash = ref_index_base_rehash.get();
     int min = Integer.MAX_VALUE, max = Integer.MIN_VALUE;
@@ -253,20 +253,20 @@ public final class MemoryIndex implements Persistent {
       if (ptr != 0) {
         int n = numEntries(ptr);
         if (n < min) min = n;
-        System.err.printf("i=%d block size=%d num entries=%d\n", i, blockSize(ptr), numEntries(ptr));
+        LOG.error("i={} block size={} num entries={}", i, blockSize(ptr), numEntries(ptr));
       } else {
-        System.err.printf("i=%d\n", i);
+        LOG.error("i={}", i);
         long ptr1 = rehash[i * 2];
         long ptr2 = rehash[i * 2 + 1];
         int n1 = numEntries(ptr1);
         int n2 = numEntries(ptr2);
         if (n1 > max) max = n1;
         if (n2 > max) max = n2;
-        System.err.printf("  ii=%d block size=%d num entries=%d\n", i * 2, blockSize(ptr1), numEntries(ptr1));
-        System.err.printf("  ii=%d block size=%d num entries=%d\n", i * 2 +1, blockSize(ptr2), numEntries(ptr2));
+        LOG.error("  ii={} block size={} num entries={}", i * 2, blockSize(ptr1), numEntries(ptr1));
+        LOG.error("  ii={} block size={} num entries={}", i * 2 + 1, blockSize(ptr2), numEntries(ptr2));
       }
     }
-    System.err.printf("min base=%d max rehash=%d\n", min, max);
+    LOG.error("min base={} max rehash={}", min, max);
   }
   /**
    * Constructor
@@ -559,7 +559,7 @@ public final class MemoryIndex implements Persistent {
       setIndexFormat(format);      
 
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       throw new RuntimeException(e);
     }
   }
@@ -2212,7 +2212,7 @@ public final class MemoryIndex implements Persistent {
     long ptr = index[$slot];
     long $ptr = insert0(ptr, hash, indexPtr, indexSize, rank);
     if ($ptr == FAILED) {
-      /*DEBUG*/ System.err.printf("Insert failed due to race condition during the index rehashing\n");
+      LOG.error("Insert failed due to race condition during the index rehashing");
       return MutationResult.FAILED;
     }
     if (isUpdateOp($ptr)) {
@@ -2524,7 +2524,7 @@ public final class MemoryIndex implements Persistent {
     long ptr = ref_index_base.get()[slot];
     /*DEBUG*/
     if (ptr == 0) {
-      System.err.printf("FATAL rehashSlot ptr == 0");
+      LOG.error("FATAL rehashSlot ptr == 0");
       Thread.dumpStack();
     }
     

@@ -8,6 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.github.luben.zstd.ZstdCompressCtx;
 import com.github.luben.zstd.ZstdDecompressCtx;
 import com.github.luben.zstd.ZstdDictCompress;
@@ -15,12 +18,13 @@ import com.github.luben.zstd.ZstdDictDecompress;
 import com.github.luben.zstd.ZstdDictTrainer;
 
 public class TestZStdCompression {
+  private static final Logger LOG = LoggerFactory.getLogger(TestZStdCompression.class);
 
   private static int DICT_SIZE = 1 << 20; // 16KB
   private static int COMP_LEVEL = 3;
   
   public static void main(String[] args) throws IOException {
-    String dir = "/Users/vrodionov/Downloads/github";
+    String dir = "/Users/vrodionov/Development/datasets/github";
     // Load all files
      List<Path> fileList = Files.list(Path.of(dir)).collect(Collectors.toList());
      List<byte[]> trainingList = new ArrayList<byte[]>();
@@ -30,7 +34,7 @@ public class TestZStdCompression {
        totalSize += b.length;
        trainingList.add(b);
      }
-     System.out.printf("Total size=%d avg=%f\n", totalSize, (float) totalSize / fileList.size());
+     LOG.info("Total size={} avg={}", totalSize, (float) totalSize / fileList.size());
      ZstdDictTrainer trainer = new ZstdDictTrainer(totalSize, DICT_SIZE);
      List<byte[]> toTrain = trainingList.subList(0, trainingList.size()/2);
      for (byte[] b: toTrain) {
@@ -40,15 +44,15 @@ public class TestZStdCompression {
      ByteBuffer dictData = trainer.trainSamplesDirect();
      long end = System.currentTimeMillis();
      
-     System.out.printf("Training time %d sample size=%d\n", end - start, totalSize);
+     LOG.info("Training time {} sample size={}", end - start, totalSize);
      ZstdDictCompress dictCompress = new ZstdDictCompress(dictData, COMP_LEVEL);
      
      ZstdCompressCtx compContext = new ZstdCompressCtx();
      compContext.loadDict(dictCompress);
      compContext.setLevel(COMP_LEVEL);
 
-     int n = 16;
-     System.out.printf("Group of:%d\n", n);
+     int n = 1;
+     LOG.info("Group of:{}", n);
      List<byte[]> group = groupOf(trainingList, n);
      group = group.subList(group.size()/2, group.size());
      List<byte[]> compresed = compress(compContext, group);
@@ -79,9 +83,9 @@ public class TestZStdCompression {
       compSize += cb.length;
     }
     long end = System.nanoTime();
-    System.out.printf("Compression time %d micros total samples=%d\n", (end - start) / 1000, source.size());
-    System.out.printf("Total size=%d compressed=%d ratio=%f\n", totalSize, compSize, (double) totalSize/ compSize);
-    System.out.printf("Compression speed=%fMB/s\n", ((double) totalSize * 1000000000) / ((1 << 20) * (end - start)));
+    LOG.info("Compression time {} micros total samples={}", (end - start) / 1000, source.size());
+    LOG.info("Total size={} compressed={} ratio={}", totalSize, compSize, (double) totalSize/ compSize);
+    LOG.info("Compression speed={}MB/s", ((double) totalSize * 1000000000) / ((1 << 20) * (end - start)));
     return result;
   }
   
@@ -97,7 +101,7 @@ public class TestZStdCompression {
       result.add(db);
     }
     long end = System.nanoTime();
-    System.out.printf("Decompression time=%d size=%d speed=%f MB/s\n", (end - start) / 1000,  decompSize,
+    LOG.info("Decompression time={} size={} speed={} MB/s", (end - start) / 1000,  decompSize,
       ((double) decompSize * 1000000000) / ((1 << 20) * (end - start)));
 
     return result;
@@ -114,7 +118,7 @@ public class TestZStdCompression {
       decompSize += size;
     }
     long end = System.nanoTime();
-    System.out.printf("Decompression ByteArraytime=%d size=%d speed=%f MB/s\n", (end - start) / 1000,  decompSize,
+    LOG.info("Decompression ByteArraytime={} size={} speed={} MB/s", (end - start) / 1000,  decompSize,
       ((double) decompSize * 1000000000) / ((1 << 20) * (end - start)));
 
   }

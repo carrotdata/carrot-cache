@@ -42,7 +42,7 @@ public class TestOffheapCacheMultithreadedZipfStress extends TestOffheapCacheMul
   
 //  @Test
 //  public void testSLRUEvictionAndPopularitySelectorBytesAPI() throws IOException {
-//    System.out.println("Bytes API: eviction=SLRU, selector=Popularity");
+//    LOG.info("Bytes API: eviction=SLRU, selector=Popularity");
 //    this.evictionDisabled = false;
 //    this.scavDumpBelowRatio = 0.5;
 //    this.rsClz = PopularityBasedRecyclingSelector.class;

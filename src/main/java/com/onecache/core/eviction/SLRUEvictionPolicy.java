@@ -14,15 +14,15 @@
  */
 package com.onecache.core.eviction;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.util.CacheConfig;
 
 public class SLRUEvictionPolicy implements EvictionPolicy {
   /** Logger */
   @SuppressWarnings("unused")
-  private static final Logger LOG = LogManager.getLogger(SLRUEvictionPolicy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(SLRUEvictionPolicy.class);
   
   /* Number of segments in SLRU*/
   private int numSegments;

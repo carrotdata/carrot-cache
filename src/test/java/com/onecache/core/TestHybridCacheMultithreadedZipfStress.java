@@ -21,6 +21,8 @@ import java.nio.file.Path;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.controllers.AQBasedAdmissionController;
 import com.onecache.core.controllers.AdmissionController;
@@ -35,6 +37,7 @@ import com.onecache.core.util.Epoch;
 import com.onecache.core.util.TestUtils;
 
 public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithreadedZipfBase {
+  private static final Logger LOG = LoggerFactory.getLogger(TestHybridCacheMultithreadedZipfStress.class);
 
   int victim_segmentSize = 16 * 1024 * 1024;
 
@@ -97,11 +100,11 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
   @After
   public void tearDown() throws IOException {
     Cache victim = cache.getVictimCache();
-    System.out.printf("main cache: size=%d hit rate=%f items=%d\n", cache.getStorageAllocated(),
+    LOG.info("main cache: size={} hit rate={} items={}", cache.getStorageAllocated(),
       cache.getHitRate(), cache.size());
 
     if (victim != null) {
-      System.out.printf("victim cache: size=%d hit rate=%f items=%d\n", victim.getStorageAllocated(),
+      LOG.info("victim cache: size={} hit rate={} items={}", victim.getStorageAllocated(),
         victim.getHitRate(), victim.size());
     }
     super.tearDown();
@@ -151,7 +154,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
 
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=SLRU, selector=MinAlive");
+    LOG.info("Bytes API: eviction=SLRU, selector=MinAlive");
     this.parentCacheName = "RAM-AC-OFF";
     this.victimCacheName = "DISK-AC-OFF";
     super.testContinuosLoadBytesRun();
@@ -160,7 +163,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
 
   @Test
   public void testLRUEvictionAndMinAliveSelectorWithAQBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=SLRU, selector=MinAlive - AQ");
+    LOG.info("Bytes API: eviction=SLRU, selector=MinAlive - AQ");
     this.parentCacheName = "RAM-AC-ON";
     this.victimCacheName = "DISK-AC-ON";
     this.victim_acClz = AQBasedAdmissionController.class;

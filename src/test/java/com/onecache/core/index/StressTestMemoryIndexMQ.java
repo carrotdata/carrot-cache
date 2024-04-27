@@ -17,11 +17,14 @@ package com.onecache.core.index;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.index.MemoryIndex.Type;
 
 public abstract class StressTestMemoryIndexMQ extends TestMemoryIndexFormatBase{
-  
+  private static final Logger LOG = LoggerFactory.getLogger(StressTestMemoryIndexMQ.class);
+
   @Before
   public void setUp() {
   }
@@ -42,7 +45,7 @@ public abstract class StressTestMemoryIndexMQ extends TestMemoryIndexFormatBase{
   @Test
   public void stressTest() {
     for (int i = 0; i < 100; i++) {
-      System.out.printf("\nRun #%d\n", i);
+      LOG.info("\nRun #{}", i);
       setup();
       testLoadReadNoRehashBytes();
       teardown();

@@ -5,8 +5,8 @@ package com.onecache.core.support;
 
 import java.io.IOException;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.Cache;
 import com.onecache.core.util.CacheConfig;
@@ -16,7 +16,7 @@ import com.onecache.core.util.Utils;
 
 public class Memcached {
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(Memcached.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Memcached.class);
   public static class Record {
     private final static byte[] VALUE = "VALUE".getBytes();
     public byte[] value = null;
@@ -233,7 +233,7 @@ public class Memcached {
         boolean result = cache.expire(key, keyOffset, keySize);
         return result? OpResult.STORED: OpResult.NOT_STORED;
       } catch (IOException e) {
-        LOG.error(e);
+        LOG.error("Error:", e);
         return OpResult.ERROR;
       }
     }
@@ -250,7 +250,7 @@ public class Memcached {
       boolean result = cache.put(key, keyOffset, keySize, b, 0, valueSize + Utils.SIZEOF_INT, expTime);
       return result? OpResult.STORED: OpResult.NOT_STORED;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return OpResult.ERROR;
     }
   }
@@ -272,7 +272,7 @@ public class Memcached {
         boolean result = cache.expire(keyPtr, keySize);
         return result? OpResult.STORED: OpResult.NOT_STORED;
       } catch (IOException e) {
-        LOG.error(e);
+        LOG.error("Error:", e);
         return OpResult.ERROR;
       }
     }
@@ -288,7 +288,7 @@ public class Memcached {
       boolean result = cache.put(keyPtr, keySize, ptr, valueSize + Utils.SIZEOF_INT, expTime);
       return result ? OpResult.STORED : OpResult.NOT_STORED;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return OpResult.ERROR;
     }
   }
@@ -310,7 +310,7 @@ public class Memcached {
         boolean result = cache.expire(keyPtr, keySize);
         return result? OpResult.STORED: OpResult.NOT_STORED;
       } catch (IOException e) {
-        LOG.error(e);
+        LOG.error("Error:", e);
         return OpResult.ERROR;
       }
     }
@@ -326,7 +326,7 @@ public class Memcached {
       boolean result = cache.put(keyPtr, keySize, ptr, valueSize + Utils.SIZEOF_INT, expTime);
       return result ? OpResult.STORED : OpResult.NOT_STORED;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return OpResult.ERROR;
     }
   }
@@ -368,7 +368,7 @@ public class Memcached {
           cache.put(key, keyOffset, keySize, b, 0, valueSize + Utils.SIZEOF_INT, expTime);
       return result ? OpResult.STORED : OpResult.ERROR;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return OpResult.ERROR;
     } finally {
       LockSupport.unlock(key, keyOffset, keySize);
@@ -409,7 +409,7 @@ public class Memcached {
           cache.put(keyPtr, keySize, ptr, valueSize + Utils.SIZEOF_INT, expTime);
       return result ? OpResult.STORED : OpResult.ERROR;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return OpResult.ERROR;
     } finally {
       LockSupport.unlock(keyPtr, keySize);
@@ -452,7 +452,7 @@ public class Memcached {
           cache.put(key, keyOffset, keySize, b, 0, valueSize + Utils.SIZEOF_INT, expTime);
       return result ? OpResult.STORED : OpResult.ERROR;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return OpResult.ERROR;
     } finally {
       LockSupport.unlock(key, keyOffset, keySize);
@@ -493,7 +493,7 @@ public class Memcached {
           cache.put(keyPtr, keySize, ptr, valueSize + Utils.SIZEOF_INT, expTime);
       return result ? OpResult.STORED : OpResult.ERROR;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return OpResult.ERROR;
     } finally {
       LockSupport.unlock(keyPtr, keySize);
@@ -540,7 +540,7 @@ public class Memcached {
           cache.put(key, keyOffset, keySize, b, 0, requiredSize, expTime);
       return result ? OpResult.STORED : OpResult.NOT_STORED;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return OpResult.ERROR;
     } finally {
       LockSupport.unlock(key, keyOffset, keySize);
@@ -587,7 +587,7 @@ public class Memcached {
           cache.put(keyPtr, keySize, ptr, requiredSize, expTime);
       return result ? OpResult.STORED : OpResult.NOT_STORED;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return OpResult.ERROR;
     } finally {
       LockSupport.unlock(keyPtr, keySize);
@@ -636,7 +636,7 @@ public class Memcached {
           cache.put(key, keyOffset, keySize, b, 0, requiredSize, expTime);
       return result ? OpResult.STORED : OpResult.NOT_STORED;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return OpResult.ERROR;
     } finally {
       LockSupport.unlock(key, keyOffset, keySize);
@@ -683,7 +683,7 @@ public class Memcached {
           cache.put(keyPtr, keySize, ptr, requiredSize, expTime);
       return result ? OpResult.STORED : OpResult.NOT_STORED;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return OpResult.ERROR;
     } finally {
       LockSupport.unlock(keyPtr, keySize);
@@ -734,7 +734,7 @@ public class Memcached {
           cache.put(key, keyOffset, keySize, b, 0, requiredSize, expTime);
       return result ? OpResult.STORED : OpResult.NOT_STORED;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return OpResult.ERROR;
     } finally {
       LockSupport.unlock(key, keyOffset, keySize);
@@ -782,7 +782,7 @@ public class Memcached {
           cache.put(keyPtr, keySize, ptr, requiredSize, expTime);
       return result ? OpResult.STORED : OpResult.NOT_STORED;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return OpResult.ERROR;
     } finally {
       LockSupport.unlock(keyPtr, keySize);
@@ -819,7 +819,7 @@ public class Memcached {
       result.flags = UnsafeAccess.toInt(buf, result.size);
       return result;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       result.error = true;
       return result;
     }
@@ -852,7 +852,7 @@ public class Memcached {
       result.flags = UnsafeAccess.toInt(buf, result.size);
       return result;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       result.error = true;
       return result;
     }
@@ -930,7 +930,7 @@ public class Memcached {
       result.cas = computeCAS(buf, 0, result.size);
       return result;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       result.error = true;
       return result;
     }
@@ -964,7 +964,7 @@ public class Memcached {
       result.cas = computeCAS(buf, 0, result.size);
       return result;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       result.error = true;
       return result;
     }
@@ -1033,7 +1033,7 @@ public class Memcached {
       if (v == -1) return -1;
       return v / 1000;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return 0;
     }
   }
@@ -1057,7 +1057,7 @@ public class Memcached {
       if (v == -1) return -1;
       return v / 1000;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return 0;
     }    
   }
@@ -1074,7 +1074,7 @@ public class Memcached {
       boolean result = cache.delete(key, keyOffset, keySize);
       return result? OpResult.DELETED: OpResult.NOT_FOUND;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return OpResult.ERROR;
     }
   }
@@ -1229,7 +1229,7 @@ public class Memcached {
       boolean result = cache.delete(keyPtr, keySize);
       return result? OpResult.DELETED: OpResult.NOT_FOUND;
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return OpResult.ERROR;
     }
   }
@@ -1246,7 +1246,7 @@ public class Memcached {
       boolean result = cache.expire(key, keyOffset, keySize);
       return result; 
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return false;
     }
   }
@@ -1262,7 +1262,7 @@ public class Memcached {
       boolean result = cache.expire(keyPtr, keySize);
       return result; 
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       return false;
     }
   }

@@ -21,6 +21,8 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.BeforeClass;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.index.MemoryIndex.MutationResult;
 import com.onecache.core.util.TestUtils;
@@ -28,6 +30,8 @@ import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
 public class TestMemoryIndexMultithreadedBase {
+  private static final Logger LOG = LoggerFactory.getLogger(TestMemoryIndexMultithreadedBase.class);
+
   MemoryIndex memoryIndex;
   
   int numRecords = 10;
@@ -126,10 +130,10 @@ public class TestMemoryIndexMultithreadedBase {
 
     long end = System.currentTimeMillis();
     if (failed == 0) {
-      System.out.println(Thread.currentThread().getName() + " deleted "+ numRecords + 
+      LOG.info(Thread.currentThread().getName() + " deleted "+ numRecords + 
         " RPS=" + ((long) numRecords) * 1000 / (end - start));
     } else {
-      System.err.println(Thread.currentThread().getName() + " deleted "+ numRecords + 
+      LOG.error(Thread.currentThread().getName() + " deleted "+ numRecords + 
         " RPS=" + ((long) numRecords) * 1000 / (end - start) + " failed="+ failed);
     }
     return failed;
@@ -148,10 +152,10 @@ public class TestMemoryIndexMultithreadedBase {
 
     long end = System.currentTimeMillis();
     if (failed == 0) {
-      System.out.println(Thread.currentThread().getName() + " deleted "+ numRecords + 
+      LOG.info(Thread.currentThread().getName() + " deleted "+ numRecords + 
         " RPS=" + ((long) numRecords) * 1000 / (end - start));
     } else {
-      System.err.println(Thread.currentThread().getName() + " deleted "+ numRecords + 
+      LOG.error(Thread.currentThread().getName() + " deleted "+ numRecords + 
         " RPS=" + ((long) numRecords) * 1000 / (end - start) +" failed="+ failed);
     }
     return failed;
@@ -172,7 +176,7 @@ public class TestMemoryIndexMultithreadedBase {
     assertEquals(0, failed);
 
     long end = System.currentTimeMillis();
-    System.out.println(Thread.currentThread().getName() + " verify NOT "+ numRecords + 
+    LOG.info(Thread.currentThread().getName() + " verify NOT "+ numRecords + 
       " RPS=" + ((long) numRecords) * 1000 / (end - start));
     UnsafeAccess.free(buf);
     return failed;
@@ -193,7 +197,7 @@ public class TestMemoryIndexMultithreadedBase {
     assertEquals(0, failed);
 
     long end = System.currentTimeMillis();
-    System.out.println(Thread.currentThread().getName() + " verify NOT "+ numRecords + 
+    LOG.info(Thread.currentThread().getName() + " verify NOT "+ numRecords + 
       " RPS=" + ((long) numRecords) * 1000 / (end - start));
     UnsafeAccess.free(buf);
     return failed;

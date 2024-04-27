@@ -25,6 +25,8 @@ import java.net.URISyntaxException;
 
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 
@@ -32,6 +34,8 @@ import org.mockito.Mockito;
  *
  */
 public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompressionTestBase{
+  private static final Logger LOG = LoggerFactory.getLogger(TestSegmentCompressedBlockDataWriterReaderMemory.class);
+
   @Test
   public void testWritesBytesNoDictionaryNotRandom() throws IOException, URISyntaxException {
     initTestForSegment(false, false);
@@ -58,13 +62,13 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompress
   
   private void testWritesBytes() throws IOException {
     int count = loadBytes();
-    /*DEBUG*/ System.out.println("count=" + count);
+    /*DEBUG*/ LOG.info("count=" + count);
     long expire = expires[count - 1];
     assertEquals(expire, segment.getInfo().getMaxExpireAt());
     long t1 = System.nanoTime();
     verifyBytes(count);
     long t2 = System.nanoTime();
-    /*DEBUG*/ System.out.println("verified bytes in " + (t2-t1)/1000+ " micros");
+    /*DEBUG*/ LOG.info("verified bytes in " + (t2-t1)/1000+ " micros");
     DataReader reader = new CompressedBlockMemoryDataReader();
     reader.init(cacheName);
     IOEngine engine  = Mockito.mock(IOEngine.class);
@@ -72,7 +76,7 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompress
     t1 = System.nanoTime();
     verifyBytesWithReader(count, reader, engine);
     t2 = System.nanoTime();
-    /*DEBUG*/ System.out.println("verified bytes reader in " + (t2-t1)/1000+ " micros");
+    /*DEBUG*/ LOG.info("verified bytes reader in " + (t2-t1)/1000+ " micros");
 
     verifyBytesWithReaderByteBuffer(count, reader, engine);
   }
@@ -109,7 +113,7 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompress
     long t1 = System.nanoTime();
     verifyMemory(count);
     long t2 = System.nanoTime();
-    /*DEBUG*/ System.out.println("verified memory in " + (t2 -t1)/1000 + " micros");
+    /*DEBUG*/ LOG.info("verified memory in " + (t2 -t1)/1000 + " micros");
     DataReader reader = new CompressedBlockMemoryDataReader();
     reader.init(cacheName);
     IOEngine engine  = Mockito.mock(IOEngine.class);
@@ -117,7 +121,7 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompress
     t1 = System.nanoTime();
     verifyMemoryWithReader(count, reader, engine);
     t2 = System.nanoTime();
-    /*DEBUG*/ System.out.println("verified memory reader in " + (t2 -t1)/1000 + " micros");
+    /*DEBUG*/ LOG.info("verified memory reader in " + (t2 -t1)/1000 + " micros");
 
     verifyMemoryWithReaderByteBuffer(count, reader, engine);
 
@@ -137,7 +141,7 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompress
     long t1 = System.nanoTime();
     verifyScanner(scanner, count);
     long t2 = System.nanoTime();
-    /*DEBUG*/ System.out.println("verified scanner in " + (t2-t1)/1000 + " micros");
+    /*DEBUG*/ LOG.info("verified scanner in " + (t2-t1)/1000 + " micros");
   }
   
   @Test
@@ -184,7 +188,7 @@ public class TestSegmentCompressedBlockDataWriterReaderMemory extends IOCompress
     long t1 = System.nanoTime();
     verifyScanner(scanner, count);
     long t2 = System.nanoTime();
-    /*DEBUG*/ System.out.println("verified scanner in " + (t2-t1)/1000 + " micros");
+    /*DEBUG*/ LOG.info("verified scanner in " + (t2-t1)/1000 + " micros");
   }
   
   @Test

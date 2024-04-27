@@ -28,6 +28,8 @@ import java.util.Random;
 
 import org.junit.After;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
 import com.onecache.core.index.CompactBaseWithExpireIndexFormat;
@@ -38,7 +40,8 @@ import com.onecache.core.util.TestUtils;
 import com.onecache.core.util.Utils;
 
 public abstract class TestObjectCacheBase  {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(TestObjectCacheBase.class);
+
   boolean offheap = true;
   ObjectCache cache;
   int segmentSize = 4 * 1024 * 1024;
@@ -109,11 +112,11 @@ public abstract class TestObjectCacheBase  {
       }
       count++;
       if (count % 10000 == 0) {
-        System.out.printf("%d:loaded %d objects last put=%d micro\n", tn, count, (tt2- tt1)/1000);
+        LOG.info("{}:loaded {} objects last put={} micro", tn, count, (tt2- tt1)/1000);
       }
     }
     long t2 = System.currentTimeMillis();
-    System.out.printf("%d:loaded %d in %d ms\n", tn, count, (t2 - t1));
+    LOG.info("{}:loaded {} in {} ms", tn, count, (t2 - t1));
     return count;
   }
   
@@ -134,11 +137,11 @@ public abstract class TestObjectCacheBase  {
       }
       count++;
       if (count % 10000 == 0) {
-        System.out.printf("%d:verified %d objects get=%d micro\n",tn, count, (tt2- tt1) / 1000);
+        LOG.info("{}:verified {} objects get={} micro",tn, count, (tt2- tt1) / 1000);
       }
     }
     long t2 = System.currentTimeMillis();
-    System.out.printf("verified %d in %d ms\n", count, (t2 - t1));
+    LOG.info("verified {} in {} ms", count, (t2 - t1));
   }
 
   private int loadPersonData(int num) throws IOException {
@@ -160,11 +163,11 @@ public abstract class TestObjectCacheBase  {
       }
       count++;
       if (count % 100000 == 0) {
-        System.out.printf("%d:loaded %d objects last put=%d micro\n", tn, count, (tt2- tt1)/1000);
+        LOG.info("{}:loaded {} objects last put={} micro", tn, count, (tt2- tt1)/1000);
       }
     }
     long t2 = System.currentTimeMillis();
-    System.out.printf("%d:loaded %d in %d ms\n", tn, count, (t2 - t1));
+    LOG.info("{}:loaded {} in {} ms", tn, count, (t2 - t1));
     return count;
   }
   
@@ -188,16 +191,16 @@ public abstract class TestObjectCacheBase  {
       
       count++;
       if (count % 100000 == 0) {
-        System.out.printf("%d:verified %d objects get=%d micro\n", tn, count, (tt2- tt1) / 1000);
+        LOG.info("{}:verified {} objects get={} micro", tn, count, (tt2- tt1) / 1000);
       }
     }
     long t2 = System.currentTimeMillis();
-    System.out.printf("%d:verified %d in %d ms\n", tn, count, (t2 - t1));
+    LOG.info("{}:verified {} in {} ms", tn, count, (t2 - t1));
   }
 
   @Test
   public void testLoadAndVerify() throws IOException {
-    System.out.println("Test load and verify");
+    LOG.info("Test load and verify");
     Scavenger.clear();
     this.cache = createCache("test");
     this.cache.addKeyValueClasses(String.class,  ArrayList.class);
@@ -207,7 +210,7 @@ public abstract class TestObjectCacheBase  {
   
   @Test
   public void testLoadAndVerifyPerson() throws IOException {
-    System.out.println("Test load and verify person");
+    LOG.info("Test load and verify person");
     Scavenger.clear();
     this.cache = createCache("testPerson");
     this.cache.addKeyValueClasses(String.class, Person.class);
@@ -223,7 +226,7 @@ public abstract class TestObjectCacheBase  {
   
   @Test
   public void testLoadAndVerifyMultithreaded() throws IOException {
-    System.out.println("Test load and verify multithreaded");
+    LOG.info("Test load and verify multithreaded");
     Scavenger.clear();
     
     this.maxCacheSize = 1000L * this.segmentSize;
@@ -247,7 +250,7 @@ public abstract class TestObjectCacheBase  {
   
   @Test
   public void testLoadAndVerifyPersonMultithreaded() throws IOException {
-    System.out.println("Test load and verify person multithreaded");
+    LOG.info("Test load and verify person multithreaded");
     Scavenger.clear();
     this.maxCacheSize = 1000L * this.segmentSize;
     this.numThreads = 4;
@@ -291,7 +294,7 @@ public abstract class TestObjectCacheBase  {
   
   @Test
   public void testSaveLoad() throws IOException {
-    System.out.println("Test save load");
+    LOG.info("Test save load");
     Scavenger.clear();
 
     this.cache = createCache("test");
@@ -299,14 +302,14 @@ public abstract class TestObjectCacheBase  {
 
     int loaded = loadData(1000000);
     
-    System.out.println("loaded=" + loaded);
+    LOG.info("loaded=" + loaded);
     verifyData(cache, loaded);
 
     String cacheName = cache.getName();
     long t1 = System.currentTimeMillis();
     cache.shutdown();
     long t2 = System.currentTimeMillis();
-    System.out.printf("Saved %d in %d ms\n", cache.getStorageAllocated(), t2 - t1);
+    LOG.info("Saved {} in {} ms", cache.getStorageAllocated(), t2 - t1);
     
     t1 = System.currentTimeMillis();
     String rootDir = cache.getCacheConfig().getCacheRootDir(cacheName);
@@ -314,7 +317,7 @@ public abstract class TestObjectCacheBase  {
     newCache.addKeyValueClasses(String.class, ArrayList.class);
 
     t2 = System.currentTimeMillis();
-    System.out.printf("Loaded %d in %d ms\n", cache.getStorageAllocated(), t2 - t1);
+    LOG.info("Loaded {} in {} ms", cache.getStorageAllocated(), t2 - t1);
     
     assertEquals(cache.getCacheType(), newCache.getCacheType());
     assertEquals(cache.activeSize(), newCache.activeSize());

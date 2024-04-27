@@ -39,15 +39,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.UnsafeAccess;
 
 public class FileIOEngine extends IOEngine {
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(FileIOEngine.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FileIOEngine.class);
   /**
    * Maps data segment Id to a disk file Attention: System MUST provide support for reasonably large
    * number of open files Max = 64K
@@ -96,7 +96,7 @@ public class FileIOEngine extends IOEngine {
         keepAliveTime, TimeUnit.SECONDS,
         taskQueue);
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-      LOG.fatal(e);
+      LOG.error("FATAL", e);
       throw new RuntimeException(e);
     }
   }
@@ -385,7 +385,7 @@ public class FileIOEngine extends IOEngine {
         dataFiles.remove(data.getId());
         super.disposeDataSegment(data);
       } catch (IOException e) {
-        LOG.error(e);
+        LOG.error("Error:", e);
       } finally {
         data.writeUnlock();
       }
@@ -483,10 +483,10 @@ public class FileIOEngine extends IOEngine {
         count++;
       } catch(IOException e) {
         // swallow
-        LOG.error(e);
+        LOG.error("Error:", e);
       }
     }
-    System.out.printf("Closed %d files\n", count);
+    LOG.debug("Closed {} files", count);
   }
   
   @Override

@@ -26,8 +26,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -42,7 +42,7 @@ import com.onecache.core.util.Utils;
 
 public class TestAdmissionQueue {
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(TestAdmissionQueue.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestAdmissionQueue.class);
   AdmissionQueue queue;
   MemoryIndex memoryIndex;
   CacheConfig conf;
@@ -88,7 +88,7 @@ public class TestAdmissionQueue {
     Random r = new Random();
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
-    System.out.println("seed="+ seed);
+    LOG.info("seed="+ seed);
     
     for (int i = 0; i < numRecords; i++) {
       keys[i] = TestUtils.randomBytes(keySize, r);
@@ -349,7 +349,7 @@ public class TestAdmissionQueue {
       int result = (int) memoryIndex.find(keys[i], 0, keySize, false, buf, entrySize);
       if (result == -1) evicted2 ++;
     }
-    System.out.println("evicted1=" + evicted1 + " evicted2="+ evicted2);
+    LOG.info("evicted1=" + evicted1 + " evicted2="+ evicted2);
     assertEquals(0, evicted2);
     assertEquals(toLoad - expectedNum, evicted1);
     UnsafeAccess.free(buf); 
@@ -385,7 +385,7 @@ public class TestAdmissionQueue {
       int result = (int) memoryIndex.find(mKeys[i], keySize, false, buf, entrySize);
       if (result == -1) evicted2 ++;
     }
-    System.out.println("evicted1=" + evicted1 + " evicted2="+ evicted2);
+    LOG.info("evicted1=" + evicted1 + " evicted2="+ evicted2);
     assertEquals(0, evicted2);
     assertEquals(toLoad - expectedNum, evicted1);
     UnsafeAccess.free(buf);
@@ -418,9 +418,9 @@ public class TestAdmissionQueue {
   
   private void loadReadBytes(int num) {
     prepareData(num);
-    System.out.println("prepare done");
+    LOG.info("prepare done");
     loadIndexBytes();
-    System.out.println("load done");
+    LOG.info("load done");
     long size = memoryIndex.size();
     assertEquals((long)num, size);
     verifyIndexBytes();

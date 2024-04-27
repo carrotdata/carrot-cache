@@ -21,12 +21,16 @@ import java.util.Random;
 
 import org.junit.After;
 import org.junit.BeforeClass;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.util.TestUtils;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
 public class TestMemoryIndexBase {
+  private static final Logger LOG = LoggerFactory.getLogger(TestMemoryIndexBase.class);
+
   MemoryIndex memoryIndex;
   
   int numRecords = 10;
@@ -72,7 +76,7 @@ public class TestMemoryIndexBase {
     Random r = new Random();
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
-    System.out.println("seed="+ seed);
+    LOG.info("seed="+ seed);
     
     for (int i = 0; i < numRecords; i++) {
       keys[i] = TestUtils.randomBytes(keySize, r);

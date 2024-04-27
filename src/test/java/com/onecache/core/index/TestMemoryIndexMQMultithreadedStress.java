@@ -16,8 +16,8 @@ package com.onecache.core.index;
 
 import static org.junit.Assert.assertEquals;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -26,7 +26,7 @@ import com.onecache.core.util.UnsafeAccess;
 
 public abstract class TestMemoryIndexMQMultithreadedStress extends TestMemoryIndexMultithreadedBase{
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(TestMemoryIndexMQMultithreadedStress.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMemoryIndexMQMultithreadedStress.class);
   
   
   private void setUp() {
@@ -54,13 +54,13 @@ public abstract class TestMemoryIndexMQMultithreadedStress extends TestMemoryInd
       if (result == MutationResult.INSERTED) {
         total++;
       } else {
-        /*DEBUG*/ System.err.println("Failed insert, loaded=" + i);
+        /*DEBUG*/ LOG.error("Failed insert, loaded=" + i);
         memoryIndex.dump();
         System.exit(-1);
       }
     }
     long end = System.currentTimeMillis();
-    System.out.println(Thread.currentThread().getName() + " loaded "+ total + 
+    LOG.info(Thread.currentThread().getName() + " loaded "+ total + 
       " RPS=" + ((long) numRecords) * 1000 / (end - start));
     UnsafeAccess.free(buf);
     return total;
@@ -95,10 +95,10 @@ public abstract class TestMemoryIndexMQMultithreadedStress extends TestMemoryInd
     UnsafeAccess.free(buf);
     long end = System.currentTimeMillis();
     if (failed == 0) {
-      System.out.println(Thread.currentThread().getName() + " verified "+ loaded + 
+      LOG.info(Thread.currentThread().getName() + " verified "+ loaded + 
       " RPS=" + ((long) numRecords) * 1000 / (end - start) +" failed="+ failed);
     } else {
-      System.err.println(Thread.currentThread().getName() + " verified "+ loaded + 
+      LOG.error(Thread.currentThread().getName() + " verified "+ loaded + 
         " RPS=" + ((long) numRecords) * 1000 / (end - start) +" failed="+ failed);
     }
 
@@ -122,13 +122,13 @@ public abstract class TestMemoryIndexMQMultithreadedStress extends TestMemoryInd
       if (result == MutationResult.INSERTED) {
         total++;
       } else {
-        /*DEBUG*/ System.err.println("Failed insert, loaded=" + i);
+        /*DEBUG*/ LOG.error("Failed insert, loaded=" + i);
         memoryIndex.dump();
         System.exit(-1);
       }
     }
     long end = System.currentTimeMillis();
-    System.out.println(Thread.currentThread().getName() + " loaded "+ total + 
+    LOG.info(Thread.currentThread().getName() + " loaded "+ total + 
       " RPS=" + ((long) numRecords) * 1000 / (end - start));
     UnsafeAccess.free(buf);
     return total;
@@ -161,10 +161,10 @@ public abstract class TestMemoryIndexMQMultithreadedStress extends TestMemoryInd
     }
     long end = System.currentTimeMillis();
     if (failed == 0) {
-      System.out.println(Thread.currentThread().getName() + " verified "+ loaded + 
+      LOG.info(Thread.currentThread().getName() + " verified "+ loaded + 
       " RPS=" + ((long) numRecords) * 1000 / (end - start) + " failed=" + failed);
     } else {
-      System.err.println(Thread.currentThread().getName() + " verified "+ loaded + 
+      LOG.error(Thread.currentThread().getName() + " verified "+ loaded + 
       " RPS=" + ((long) numRecords) * 1000 / (end - start) + " failed=" + failed);
     }
     UnsafeAccess.free(buf);
@@ -179,7 +179,7 @@ public abstract class TestMemoryIndexMQMultithreadedStress extends TestMemoryInd
     int max = 100;
     for (int i = 0; i < max; i++) {
       current_slot_size = getCurrentSlotSize(i, max);
-      System.out.printf("STRESS RUN=%d of %d slot size=%d\n", i, max, current_slot_size);
+      LOG.info("STRESS RUN={} of {} slot size={}", i, max, current_slot_size);
       MemoryIndex.MAX_INDEX_ENTRIES_PER_BLOCK = current_slot_size;
       setUp();
       testLoadReadWithRehashBytesMT();
@@ -209,7 +209,7 @@ public abstract class TestMemoryIndexMQMultithreadedStress extends TestMemoryInd
   @Ignore
   @Test
   public void testLoadReadWithRehashBytesMT() {
-    /*DEBUG*/ System.out.println("testLoadReadWithRehashBytesMT");
+    /*DEBUG*/ LOG.info("testLoadReadWithRehashBytesMT");
     Runnable r = () -> testLoadReadWithRehashBytes();
     Thread[] workers = startAll(r);    
     joinAll(workers);
@@ -224,7 +224,7 @@ public abstract class TestMemoryIndexMQMultithreadedStress extends TestMemoryInd
   @Ignore
   @Test
   public void testLoadReadWithRehashMemoryMT() {
-    /*DEBUG*/ System.out.println("testLoadReadWithRehashMemoryMT");
+    /*DEBUG*/ LOG.info("testLoadReadWithRehashMemoryMT");
 
     Runnable r = () -> testLoadReadWithRehashMemory();
     Thread[] workers = startAll(r);    
@@ -240,7 +240,7 @@ public abstract class TestMemoryIndexMQMultithreadedStress extends TestMemoryInd
   @Ignore
   @Test
   public void testLoadReadDeleteWithRehashBytesMT() {
-    /*DEBUG*/ System.out.println("testLoadReadDeleteWithRehashBytesMT");
+    /*DEBUG*/ LOG.info("testLoadReadDeleteWithRehashBytesMT");
 
     Runnable r = () -> testLoadReadDeleteWithRehashBytes();
     Thread[] workers = startAll(r);    
@@ -258,7 +258,7 @@ public abstract class TestMemoryIndexMQMultithreadedStress extends TestMemoryInd
   @Ignore
   @Test
   public void testLoadReadDeleteWithRehashMemoryMT() {
-    /*DEBUG*/ System.out.println("testLoadReadDeleteWithRehashMemoryMT");
+    /*DEBUG*/ LOG.info("testLoadReadDeleteWithRehashMemoryMT");
 
     Runnable r = () -> testLoadReadDeleteWithRehashMemory();
     Thread[] workers = startAll(r);    

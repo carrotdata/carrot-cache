@@ -17,11 +17,15 @@ package com.onecache.core.io;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.onecache.core.compression.CompressionCodec;
 import com.onecache.core.compression.zstd.ZstdCompressionCodec;
 import com.onecache.core.util.Utils;
 
 public class SegmentValidator {
+  private static final Logger LOG = LoggerFactory.getLogger(SegmentValidator.class);
 
   public static void main(String[] args) throws IOException {
     String fileName = "fault_segment.data";
@@ -39,13 +43,13 @@ public class SegmentValidator {
       int valSize = scanner.valueLength();
       
       String key = new String(Utils.toBytes(keyPtr, keySize));
-      System.out.println(key + " ptr=" + keyPtr + " keySize=" + keySize + " valSize=" + valSize + 
+      LOG.info(key + " ptr=" + keyPtr + " keySize=" + keySize + " valSize=" + valSize + 
         " buffer offset key=" + (keyPtr - scanner.getBufferAddress()));
       count++;
       scanner.next();
     }
     scanner.close();
-    System.out.printf("seg num items=%d count=%d", s.getTotalItems(), count);
+    LOG.info("seg num items={} count={}", s.getTotalItems(), count);
     
     
   }

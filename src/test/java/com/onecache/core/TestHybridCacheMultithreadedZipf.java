@@ -20,6 +20,8 @@ import java.nio.file.Path;
 
 import org.junit.After;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.controllers.AdmissionController;
 import com.onecache.core.controllers.BaseAdmissionController;
@@ -32,7 +34,8 @@ import com.onecache.core.eviction.LRUEvictionPolicy;
 import com.onecache.core.util.TestUtils;
 
 public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithreadedZipf {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(TestHybridCacheMultithreadedZipf.class);
+
   int victim_segmentSize = 16 * 1024 * 1024;
   
   long victim_maxCacheSize = 1000L * victim_segmentSize;
@@ -75,7 +78,7 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
   
   @Test
   public void testLRUEvictionAndMinAliveSelectorMemoryAPI() throws IOException {
-    System.out.println("Memory API: eviction=LRU, selector=MinAlive");
+    LOG.info("Memory API: eviction=LRU, selector=MinAlive");
 
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
@@ -88,10 +91,10 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
   @After  
   public void tearDown() throws IOException {
     Cache victim = cache.getVictimCache();
-    System.out.printf("main cache: size=%d hit rate=%f items=%d\n", 
+    LOG.info("main cache: size={} hit rate={} items={}", 
       cache.getStorageAllocated(), cache.getHitRate(), cache.size());
     
-    System.out.printf("victim cache: size=%d hit rate=%f items=%d\n", 
+    LOG.info("victim cache: size={} hit rate={} items={}", 
       victim.getStorageAllocated(), victim.getHitRate(), victim.size());
     
     super.tearDown();

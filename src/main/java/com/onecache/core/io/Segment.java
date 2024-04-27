@@ -28,8 +28,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.util.CacheConfig;
@@ -56,7 +56,7 @@ public class Segment implements Persistent {
   
   /** Logger */
   @SuppressWarnings("unused")
-  private static final Logger LOG = LogManager.getLogger(Segment.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Segment.class);
   
   public final static int META_SIZE = Utils.SIZEOF_LONG;
   /**
@@ -608,7 +608,7 @@ public class Segment implements Persistent {
    */
   public void dispose() {
     if (this.sip) {
-      System.err.printf("Dispose");
+      LOG.error("FATAL in dispose");
       Thread.dumpStack();
     }
     if (!this.valid) return;
@@ -783,7 +783,7 @@ public class Segment implements Persistent {
    */
   public void setAddress(long ptr) {
     if (this.sip) {
-      System.err.printf("Set address=%", ptr);
+      LOG.error("Set address={}", ptr);
       Thread.dumpStack();
     }
     this.address = ptr;
@@ -1204,7 +1204,7 @@ public class Segment implements Persistent {
     try {
       readLock();
       if (this.sip) {
-        System.err.printf("save sip = true");
+        LOG.error("save sip = true");
         Thread.dumpStack();
       }
       this.sip = true;
@@ -1220,7 +1220,7 @@ public class Segment implements Persistent {
       while (written < size) {
         int toCopy = (int) Math.min(bufSize, size - written);
         if (this.address == 0) {
-          /*DEBUG*/ System.err.printf("address=0, written=%d sealed=%s before: addr=%d sealed=%s\n", written,
+          LOG.error("address=0, written={} sealed={} before: addr={} sealed={}", written,
             Boolean.toString(isSealed()), beforePtr, Boolean.toString(beforeSealed));
         }
         UnsafeAccess.copy(this.address + written, buffer, 0, toCopy);

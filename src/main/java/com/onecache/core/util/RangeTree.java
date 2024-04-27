@@ -18,7 +18,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.onecache.core.ObjectCache;
+
 public class RangeTree {
+  private static final Logger LOG = LoggerFactory.getLogger(ObjectCache.class);
+
   public static class Range implements Comparable<Range> {
     long start;
     int size;
@@ -60,7 +67,7 @@ public class RangeTree {
     Range r = map.floorKey(search);
     boolean result = r != null && start >= r.start && (start + size) <= r.start + r.size;
     if (!result && r != null) {
-      System.out.println(
+      LOG.error(
           "Check FAILED for range ["
               + start
               + ","
@@ -71,7 +78,7 @@ public class RangeTree {
               + r.size
               + "]");
     } else if (!result) {
-      System.out.println(
+      LOG.error(
           "Check FAILED for range [" + start + "," + size + "] No allocation found.");
     }
     return result;

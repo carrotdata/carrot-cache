@@ -19,6 +19,9 @@ import static com.onecache.core.compression.CompressionCodec.COMP_SIZE_OFFSET;
 import static com.onecache.core.compression.CompressionCodec.DICT_VER_OFFSET;
 import static com.onecache.core.compression.CompressionCodec.SIZE_OFFSET;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.onecache.core.compression.CodecFactory;
 import com.onecache.core.compression.CompressionCodec;
 import com.onecache.core.util.CacheConfig;
@@ -41,7 +44,8 @@ import com.onecache.core.util.Utils;
  *  
  */
 public class CompressedBlockDataWriter implements DataWriter {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(CompressedBlockDataWriter.class);
+
   protected int blockSize;
   
   protected CompressionCodec codec;
@@ -152,7 +156,7 @@ public class CompressedBlockDataWriter implements DataWriter {
       compressedSize = toCompress;
     }
     if (compressedSize == 0) {
-      System.err.println("compressed size=0");
+      LOG.error("compressed size=0");
       Thread.dumpStack();
       System.exit(-1);
     }

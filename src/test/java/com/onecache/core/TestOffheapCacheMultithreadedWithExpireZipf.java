@@ -19,6 +19,8 @@ import java.util.Random;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.controllers.AQBasedExpirationAwareAdmissionController;
 import com.onecache.core.controllers.LRCRecyclingSelector;
@@ -28,7 +30,8 @@ import com.onecache.core.eviction.SLRUEvictionPolicy;
 import com.onecache.core.index.CompactBaseWithExpireIndexFormat;
 
 public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultithreadedZipfBase {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(TestOffheapCacheMultithreadedWithExpireZipf.class);
+
   protected int binStartValue = 1;
   
   protected double binMultiplier = 2.0;
@@ -72,7 +75,7 @@ public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultit
   
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=LRU, selector=MinAlive");
+    LOG.info("Bytes API: eviction=LRU, selector=MinAlive");
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = LRUEvictionPolicy.class;
@@ -82,7 +85,7 @@ public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultit
   
   @Test
   public void testSLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=SLRU, selector=MinAlive");
+    LOG.info("Bytes API: eviction=SLRU, selector=MinAlive");
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = SLRUEvictionPolicy.class;
@@ -92,7 +95,7 @@ public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultit
   
   @Test
   public void testLRUEvictionAndLRCSelectorBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=LRU, selector=LRC");
+    LOG.info("Bytes API: eviction=LRU, selector=LRC");
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = LRUEvictionPolicy.class;
@@ -102,7 +105,7 @@ public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultit
   
   @Test
   public void testSLRUEvictionAndLRCSelectorBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=SLRU, selector=LRC");
+    LOG.info("Bytes API: eviction=SLRU, selector=LRC");
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = SLRUEvictionPolicy.class;

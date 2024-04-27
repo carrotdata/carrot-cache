@@ -26,6 +26,8 @@ import java.util.Random;
 
 import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.junit.After;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.util.TestUtils;
 import com.onecache.core.controllers.AdmissionController;
@@ -41,6 +43,7 @@ import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
 public abstract class TestCacheMultithreadedZipfBase {
+  private static final Logger LOG = LoggerFactory.getLogger(TestCacheMultithreadedZipfBase.class);
 
   protected Cache cache;
   
@@ -218,13 +221,13 @@ public abstract class TestCacheMultithreadedZipfBase {
       long end = System.nanoTime();
       perc.add(end - start);
       if (i > 0 && i % 500000 == 0) {
-        System.out.printf("%s - i=%d hit rate=%f\n", Thread.currentThread().getName(), i, 
+        LOG.info("{} - i={} hit rate={}", Thread.currentThread().getName(), i, 
           (float) cache.getOverallHitRate());
       }
     }
-    System.out.printf("%s - hit=%f loaded=%d\n", Thread.currentThread().getName(), 
+    LOG.info("{} - hit={} loaded={}", Thread.currentThread().getName(), 
       (float) hits / total, loaded);
-    System.out.printf("Thread=%s latency: min=%dns max=%dns p50=%dns p90=%dns p99=%dns p999=%dns p9999=%dns\n",
+    LOG.info("Thread={} latency: min={}ns max={}ns p50={}ns p90={}ns p99={}ns p999={}ns p9999={}ns",
       Thread.currentThread().getName(), perc.min(), perc.max(), perc.value(0.5),
       perc.value(0.9), perc.value(0.99), perc.value(0.999), perc.value(0.9999));
   }
@@ -251,13 +254,13 @@ public abstract class TestCacheMultithreadedZipfBase {
       perc.add(end - start);
       
       if (i > 0 && i % 500000 == 0) {
-        System.out.printf("%s - i=%d hit rate=%f\n", Thread.currentThread().getName(), i, 
+        LOG.info("{} - i={} hit rate={}", Thread.currentThread().getName(), i, 
           (float) cache.getOverallHitRate());
       }
     }
-    System.out.printf("%s - hit=%f loaded=%d\n", Thread.currentThread().getName(), 
+    LOG.info("{} - hit={} loaded={}", Thread.currentThread().getName(), 
       (float) hits / total, loaded);
-    System.out.printf("Thread=%s latency: min=%dns max=%dns p50=%dns p90=%dns p99=%dns p999=%dns p9999=%dns\n",
+    LOG.info("Thread={} latency: min={}ns max={}ns p50={}ns p90={}ns p99={}ns p999={}ns p9999={}ns",
       Thread.currentThread().getName(), perc.min(), perc.max(), perc.value(0.5),
       perc.value(0.9), perc.value(0.99), perc.value(0.999), perc.value(0.9999));
   }
@@ -373,7 +376,7 @@ public abstract class TestCacheMultithreadedZipfBase {
     joinAll(all);
     long stop = System.currentTimeMillis();
     Scavenger.printStats();
-    System.out.printf("Thread=%s time=%dms rps=%d\n", Thread.currentThread().getName(), stop - start,
+    LOG.info("Thread={} time={}ms rps={}", Thread.currentThread().getName(), stop - start,
       (this.numThreads * (long) this.numIterations) * 1000 / (stop - start));
   }
   
@@ -394,7 +397,7 @@ public abstract class TestCacheMultithreadedZipfBase {
     joinAll(all);
     long stop = System.currentTimeMillis();
     Scavenger.printStats();
-    System.out.printf("Thread=%s time=%dms rps=%d\n", Thread.currentThread().getName(), stop - start,
+    LOG.info("Thread={} time={}ms rps={}", Thread.currentThread().getName(), stop - start,
       (this.numThreads * (long) this.numIterations) * 1000 / (stop - start));  }
   
 }

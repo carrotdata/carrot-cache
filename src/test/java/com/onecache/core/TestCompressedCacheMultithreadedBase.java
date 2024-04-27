@@ -14,6 +14,8 @@ import java.util.List;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.compression.CodecFactory;
 import com.onecache.core.compression.CompressionCodec;
@@ -29,7 +31,8 @@ import com.onecache.core.util.Utils;
 
 
 public abstract class TestCompressedCacheMultithreadedBase {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(TestCompressedCacheMultithreadedBase.class);
+
   protected String cacheName = "cache";
   
   protected boolean dictionaryEnabled = true;
@@ -193,7 +196,7 @@ public abstract class TestCompressedCacheMultithreadedBase {
       loaded++;
     }
     long t2 = System.currentTimeMillis();
-    System.out.printf("%s loaded bytes %d in %dms. RPS=%d\n", Thread.currentThread().getName(), loaded, (t2 - t1), loaded * 1000L/(t2 - t1));
+    LOG.info("{} loaded bytes {} in {}ms. RPS={}", Thread.currentThread().getName(), loaded, (t2 - t1), loaded * 1000L/(t2 - t1));
     return loaded;
   }
   
@@ -209,7 +212,7 @@ public abstract class TestCompressedCacheMultithreadedBase {
       long expSize = Utils.kvSize(key.length, value.length);
       long size = this.cache.getKeyValue(key, 0, key.length, false, buffer, 0);
       if (size < 0) {
-        //System.err.printf("not found=%d\n", n);
+        //LOG.error("not found={}", n);
         notFound++;
         continue;
       }
@@ -232,7 +235,7 @@ public abstract class TestCompressedCacheMultithreadedBase {
       verified++;
     }
     long t2 = System.currentTimeMillis();
-    System.out.printf("%s verified bytes %d in %dms, not found=%d RPS=%d\n", Thread.currentThread().getName(), 
+    LOG.info("{} verified bytes {} in {}ms, not found={} RPS={}", Thread.currentThread().getName(), 
       verified, t2 - t1, notFound, loaded * 1000L/(t2 - t1));
 
     return verified;
@@ -255,7 +258,7 @@ public abstract class TestCompressedCacheMultithreadedBase {
       loaded ++;
     }
     long t2 = System.currentTimeMillis();
-    System.out.printf("%s loaded memory %d in %dms. RPS=%d\n", Thread.currentThread().getName(), loaded, t2 - t1, loaded * 1000L/(t2 - t1));
+    LOG.info("{} loaded memory {} in {}ms. RPS={}", Thread.currentThread().getName(), loaded, t2 - t1, loaded * 1000L/(t2 - t1));
 
     return loaded;
   }
@@ -302,7 +305,7 @@ public abstract class TestCompressedCacheMultithreadedBase {
       }
     }
     long t2 = System.currentTimeMillis();
-    System.out.printf("%s verified memory %d in %dms, not found=%d RPS=%d\n", Thread.currentThread().getName(), 
+    LOG.info("{} verified memory {} in {}ms, not found={} RPS={}", Thread.currentThread().getName(), 
       verified, t2 - t1, notFound, loaded * 1000L/(t2 - t1));
 
     return verified;

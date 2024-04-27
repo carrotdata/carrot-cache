@@ -20,8 +20,8 @@ package com.onecache.core.io;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.util.CacheConfig;
 
@@ -29,7 +29,7 @@ public class OffheapIOEngine extends IOEngine {
   
   /** Logger */
   @SuppressWarnings("unused")
-  private static final Logger LOG = LogManager.getLogger(OffheapIOEngine.class);
+  private static final Logger LOG = LoggerFactory.getLogger(OffheapIOEngine.class);
     
   public OffheapIOEngine(String cacheName) {
     super(cacheName);

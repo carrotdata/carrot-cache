@@ -23,8 +23,8 @@ import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.esotericsoftware.kryo.kryo5.Kryo;
 import com.esotericsoftware.kryo.kryo5.io.Input;
@@ -42,7 +42,7 @@ public class ObjectCache {
   
   /** Logger */
   @SuppressWarnings("unused")
-  private static final Logger LOG = LogManager.getLogger(ObjectCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ObjectCache.class);
   
   /** Initial buffer size in bytes for Kryo serialization*/
   private final int INITIAL_BUFFER_SIZE = 4096;
@@ -294,7 +294,7 @@ public class ObjectCache {
     Object value = get(key);
     if (value == null) {
       // Loader failed
-      throw new IOException(String.format("Failed to load value for key {}", key.toString()));
+      throw new IOException(String.format("Failed to load value for key %s", key.toString()));
     }
     return value;
   }

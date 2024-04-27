@@ -18,9 +18,12 @@ import java.io.IOException;
 import java.util.Random;
 
 import org.junit.Before;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestFileCacheGetRangeAPI extends TestOffheapCacheGetRangeAPI{
-  
+  private static final Logger LOG = LoggerFactory.getLogger(TestFileCacheGetRangeAPI.class);
+
   @Before
   public void setUp() throws IOException {
     this.offheap = false;
@@ -29,7 +32,7 @@ public class TestFileCacheGetRangeAPI extends TestOffheapCacheGetRangeAPI{
     this.r = new Random();
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
-    System.out.printf("r.seed=%d\n", seed);
+    LOG.info("r.seed={}", seed);
   }
 
 }

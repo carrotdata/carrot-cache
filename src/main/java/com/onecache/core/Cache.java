@@ -34,8 +34,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.Scavenger.Stats;
 import com.onecache.core.controllers.AdmissionController;
@@ -65,8 +65,7 @@ import com.onecache.core.util.Utils;
 public class Cache implements IOEngine.Listener, EvictionListener {
   
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(Cache.class);
-  
+  private static Logger LOG = LoggerFactory.getLogger(Cache.class);
   public static enum Type {
     MEMORY, DISK
   }
@@ -129,7 +128,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     try {
       shutdown();
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
     }
   });
     
@@ -274,7 +273,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     int min = Math.min(maxSize, (int) segmentSize);
 
     if (this.maximumKeyValueSize > min - 8) {
-      LOG.warn("Maximum key-value size {} can not exceed 256MB and data segment size {}", segmentSize, min);
+      LOG.warn("Maximum key-value size %d can not exceed 256MB and data segment size %d", segmentSize, min);
       this.maximumKeyValueSize = min - 8;
     } else if (this.maximumKeyValueSize == 0) {
       this.maximumKeyValueSize = min - 8;
@@ -404,14 +403,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     try {
       this.admissionController = this.conf.getAdmissionController(cacheName);
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       throw new RuntimeException(e);
     }
     if (this.admissionController == null) {
       return;
     }
     this.admissionController.setCache(this);
-    LOG.info("Started Admission Controller [%s]", this.admissionController.getClass().getName());
+    LOG.info("Started Admission Controller [{}]", this.admissionController.getClass().getName());
 
   }
 
@@ -423,14 +422,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     try {
       this.promotionController = this.conf.getPromotionController(cacheName);
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       throw new RuntimeException(e);
     }
     if (this.promotionController == null) {
       return;
     }
     this.promotionController.setCache(this);
-    LOG.info("Started Promotion Controller [%s]", this.admissionController.getClass().getName());
+    LOG.info("Started Promotion Controller [{}]", this.admissionController.getClass().getName());
 
   }
   /**
@@ -442,7 +441,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     try {
       this.throughputController = this.conf.getThroughputController(cacheName);
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
       throw new RuntimeException(e);
     }
 
@@ -468,7 +467,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     long interval = this.conf.getThroughputCheckInterval(this.cacheName);
     this.timer.scheduleAtFixedRate(task, interval, interval);
-    LOG.info("Started throughput controller, interval=%d sec", interval /1000);
+    LOG.info("Started throughput controller, interval={} sec", interval /1000);
   }
   
   /**
@@ -830,7 +829,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   private void checkRank(int rank) {
     int maxRank = this.engine.getNumberOfRanks();
     if (rank < 0 || rank >= maxRank) {
-      throw new IllegalArgumentException(String.format("Items rank %d is illegal"));
+      throw new IllegalArgumentException(String.format("Items rank %d is illegal", rank));
     }
   }
 
@@ -979,8 +978,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     // OK, eviction is disabled
     // check used and maximum storage size
     //FIXME: calculating of storageusedActual can be costly
-    long used = this.engine.getStorageUsed();//getStorageUsedActual();
-    //*DEBUG*/ System.out.printf("USED=%d\n", used);
+    long used = this.engine.getStorageUsed();
     int size = Utils.kvSize(keySize, valueSize);
     return used + size > this.maximumCacheSize;
   }
@@ -2315,7 +2313,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       transferToCache(this.parentCache, ptr, $ptr);
     } catch (IOException e) {
       //TODO: 
-      LOG.error(e);
+      LOG.error("Error:", e);
     }
     return true;
   }
@@ -2345,7 +2343,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       // transfer item to victim cache
       transferToCache(this.victimCache, ptr, $ptr);
     } catch (IOException e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
     }
   }
   /**
@@ -2743,7 +2741,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public void printStats() {
     double compRatio = (double) getRawDataSize() / getStorageAllocated();
     double compRatioReal = (double) getRawDataSize() / getStorageUsedActual();
-    System.out.printf("Cache[%s]: storage size=%d data size=%d comp ratio=%f comp real=%f items=%d hit rate=%f, gets=%d, failed gets=%d, puts=%d, bytes written=%d\n",
+    LOG.info("Cache[{}]: storage size={} data size={} comp ratio={} comp real={} items={} hit rate={}, gets={}, failed gets={}, puts={}, bytes written={}",
       this.cacheName, getStorageAllocated(), getRawDataSize(), compRatio, compRatioReal, size(), 
       getHitRate(), getTotalGets(), getTotalFailedGets(), getTotalWrites(), getTotalWritesSize());
     if (this.victimCache != null) {
@@ -2764,7 +2762,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       CacheJMXSink mbean = new CacheJMXSink(this);
       mbs.registerMBean(mbean, name); 
     } catch (Exception e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
     }
     if (this.victimCache != null) {
       victimCache.registerJMXMetricsSink(domainName);
@@ -2779,7 +2777,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       CacheJMXSink mbean = new CacheJMXSink(this);
       mbs.registerMBean(mbean, name); 
     } catch (Exception e) {
-      LOG.error(e);
+      LOG.error("Error:", e);
     }
     if (this.victimCache != null) {
       victimCache.registerJMXMetricsSink(domainName, type);
@@ -2809,8 +2807,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       systemShutdown = true;
     }
     // Disable writes/reads
-    shutdownStatusMsg = String.format("Shutting down cache %s save data=%s\n", cacheName, saveOnShutdown);
-    System.out.printf(shutdownStatusMsg);
+    shutdownStatusMsg = String.format("Shutting down cache %s save data=%s", cacheName, saveOnShutdown);
+    LOG.info(shutdownStatusMsg);
     long size = getStorageUsedActual();
     size += this.engine.getMemoryIndex().getAllocatedMemory();
     long start = System.currentTimeMillis();
@@ -2828,8 +2826,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     long end = System.currentTimeMillis();
     if (saveOnShutdown) {
-      shutdownStatusMsg += String.format("Cache %s saved %d bytes in %d ms\n", cacheName, size, (end - start));
-      System.out.printf("Cache %s saved %d bytes in {} ms\n", cacheName, size, (end - start));
+      shutdownStatusMsg += String.format("Cache %s saved %d bytes in %d ms", cacheName, size, (end - start));
+      LOG.info(shutdownStatusMsg);
     }
     return size;
   }

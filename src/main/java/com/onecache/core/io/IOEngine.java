@@ -30,8 +30,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.Cache;
 import com.onecache.core.Scavenger;
@@ -57,7 +57,7 @@ import com.onecache.core.util.Utils;
 public abstract class IOEngine implements Persistent {
 
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(IOEngine.class);
+  private static final Logger LOG = LoggerFactory.getLogger(IOEngine.class);
 
   protected static final String FILE_NAME = "data_";
 
@@ -232,7 +232,7 @@ public abstract class IOEngine implements Persistent {
       }
 
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-      LOG.fatal(e);
+      LOG.error("FATAL", e);
       throw new RuntimeException(e);
     }
   }
@@ -532,7 +532,7 @@ public abstract class IOEngine implements Persistent {
         int vSize = Utils.readUVInt(buf + off);
         int vSizeSize = Utils.sizeUVInt(vSize);
         off += vSizeSize;
-        if (Utils.compareTo(keyPtr, keySize, buf + off, kSize) != 0) {
+        if (!Utils.equals(keyPtr, keySize, buf + off, kSize)) {
           return NOT_FOUND;
         }
         off -= kSizeSize + vSizeSize;
@@ -634,7 +634,7 @@ public abstract class IOEngine implements Persistent {
         int vSize = Utils.readUVInt(buf + off);
         int vSizeSize = Utils.sizeUVInt(vSize);
         off += vSizeSize;
-        if (Utils.compareTo(keyPtr, keySize, buf + off, kSize) != 0) {
+        if (!Utils.equals(keyPtr, keySize, buf + off, kSize)) {
           return NOT_FOUND;
         }
         off -= kSizeSize + vSizeSize;
@@ -750,7 +750,7 @@ public abstract class IOEngine implements Persistent {
         int vSize = Utils.readUVInt(buf + off);
         int vSizeSize = Utils.sizeUVInt(vSize);
         off += vSizeSize;
-        if (Utils.compareTo(key, keyOffset, keySize, buf + off, kSize) != 0) {
+        if (!Utils.equals(key, keyOffset, keySize, buf + off, kSize)) {
           return NOT_FOUND;
         }
         off -= kSizeSize + vSizeSize;
@@ -856,7 +856,7 @@ public abstract class IOEngine implements Persistent {
         int vSize = Utils.readUVInt(buf + off);
         int vSizeSize = Utils.sizeUVInt(vSize);
         off += vSizeSize;
-        if (Utils.compareTo(key, keyOffset, keySize, buf + off, kSize) != 0) {
+        if (!Utils.equals(key, keyOffset, keySize, buf + off, kSize)) {
           return NOT_FOUND;
         }
         off -= kSizeSize + vSizeSize;
@@ -976,7 +976,7 @@ public abstract class IOEngine implements Persistent {
         int vSize = Utils.readUVInt(buf + off);
         int vSizeSize = Utils.sizeUVInt(vSize);
         off += vSizeSize;
-        if (Utils.compareTo(keyPtr, keySize, buf + off, kSize) != 0) {
+        if (!Utils.equals(keyPtr, keySize, buf + off, kSize)) {
           return NOT_FOUND;
         }
         off -= kSizeSize + vSizeSize;
@@ -1080,7 +1080,7 @@ public abstract class IOEngine implements Persistent {
         int vSize = Utils.readUVInt(buf + off);
         int vSizeSize = Utils.sizeUVInt(vSize);
         off += vSizeSize;
-        if (Utils.compareTo(keyPtr, keySize, buf + off, kSize) != 0) {
+        if (!Utils.equals(keyPtr, keySize, buf + off, kSize)) {
           return NOT_FOUND;
         }
         off -= kSizeSize + vSizeSize;
@@ -1195,7 +1195,7 @@ public abstract class IOEngine implements Persistent {
         int vSize = Utils.readUVInt(buf + off);
         int vSizeSize = Utils.sizeUVInt(vSize);
         off += vSizeSize;
-        if (Utils.compareTo(key, keyOffset, keySize, buf + off, kSize) != 0) {
+        if (!Utils.equals(key, keyOffset, keySize, buf + off, kSize)) {
           return NOT_FOUND;
         }
         off -= kSizeSize + vSizeSize;
@@ -1299,7 +1299,7 @@ public abstract class IOEngine implements Persistent {
         int vSize = Utils.readUVInt(buf + off);
         int vSizeSize = Utils.sizeUVInt(vSize);
         off += vSizeSize;
-        if (Utils.compareTo(key, keyOffset, keySize, buf + off, kSize) != 0) {
+        if (!Utils.equals(key, keyOffset, keySize, buf + off, kSize)) {
           return NOT_FOUND;
         }
         off -= kSizeSize + vSizeSize;
@@ -2256,7 +2256,7 @@ public abstract class IOEngine implements Persistent {
 
   private void checkId(int id) {
     if (id < 0 || id >= dataSegments.length) {
-      throw new IllegalArgumentException(String.format("illegal id %d ", id));
+      throw new IllegalArgumentException(String.format("illegal id %d", id));
     }
   }
 

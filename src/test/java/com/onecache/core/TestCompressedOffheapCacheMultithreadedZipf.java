@@ -21,6 +21,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.controllers.LRCRecyclingSelector;
 import com.onecache.core.controllers.LeastAccessedRecyclingSelector;
@@ -30,7 +32,8 @@ import com.onecache.core.eviction.LRUEvictionPolicy;
 import com.onecache.core.eviction.SLRUEvictionPolicy;
 
 public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedCacheMultithreadedZipfBase {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(TestCompressedOffheapCacheMultithreadedZipf.class);
+
   /**
    * Eviction tested:
    * 
@@ -63,7 +66,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   
   @Test
   public void testNoEvictionBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=none, selector=null");
+    LOG.info("Bytes API: eviction=none, selector=null");
     this.evictionDisabled = true;
     this.scavengerInterval = 100000; // disable scavenger
     //this.numRecords = 4000000;
@@ -74,7 +77,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   
   @Test
   public void testNoEvictionMemoryAPI() throws IOException {
-    System.out.println("Memory API: eviction=none, selector=null");
+    LOG.info("Memory API: eviction=none, selector=null");
     this.evictionDisabled = true;
     this.scavengerInterval = 100000; // disable scavenger
    // this.numRecords = 1000000;
@@ -84,7 +87,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   
   @Test
   public void testLRUEvictionAndLRCSelectorBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=LRU, selector=LRC");
+    LOG.info("Bytes API: eviction=LRU, selector=LRC");
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = LRUEvictionPolicy.class;
@@ -95,7 +98,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   
   @Test
   public void testLRUEvictionAndLRCSelectorMemoryAPI() throws IOException {
-    System.out.println("Memory API: eviction=LRU, selector=LRC");
+    LOG.info("Memory API: eviction=LRU, selector=LRC");
 
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
@@ -108,7 +111,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   @Ignore
   @Test
   public void testLRUEvictionAndMRCSelectorBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=LRU, selector=MRC");
+    LOG.info("Bytes API: eviction=LRU, selector=MRC");
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = LRUEvictionPolicy.class;
@@ -120,7 +123,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   @Ignore
   @Test
   public void testLRUEvictionAndMRCSelectorMemoryAPI() throws IOException {
-    System.out.println("Memory API: eviction=LRU, selector=MRC");
+    LOG.info("Memory API: eviction=LRU, selector=MRC");
 
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
@@ -132,7 +135,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=LRU, selector=MinAlive");
+    LOG.info("Bytes API: eviction=LRU, selector=MinAlive");
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = LRUEvictionPolicy.class;
@@ -143,7 +146,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   
   @Test
   public void testLRUEvictionAndMinAliveSelectorMemoryAPI() throws IOException {
-    System.out.println("Memory API: eviction=LRU, selector=MinAlive");
+    LOG.info("Memory API: eviction=LRU, selector=MinAlive");
 
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
@@ -156,7 +159,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   @Ignore
   @Test
   public void testLRUEvictionAndLeastAccessedSelectorBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=LRU, selector=LeastAccessed");
+    LOG.info("Bytes API: eviction=LRU, selector=LeastAccessed");
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = LRUEvictionPolicy.class;
@@ -168,7 +171,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   @Ignore
   @Test
   public void testLRUEvictionAndLeastAccessedSelectorMemoryAPI() throws IOException {
-    System.out.println("Memory API: eviction=LRU, selector=LeastAccessed");
+    LOG.info("Memory API: eviction=LRU, selector=LeastAccessed");
 
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
@@ -180,7 +183,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   
   @Test
   public void testSLRUEvictionAndLRCSelectorBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=SLRU, selector=LRC");
+    LOG.info("Bytes API: eviction=SLRU, selector=LRC");
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = SLRUEvictionPolicy.class;
@@ -191,7 +194,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   
   @Test
   public void testSLRUEvictionAndLRCSelectorMemoryAPI() throws IOException {
-    System.out.println("Memory API: eviction=SLRU, selector=LRC");
+    LOG.info("Memory API: eviction=SLRU, selector=LRC");
 
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
@@ -203,7 +206,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   
   @Test
   public void testSLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=SLRU, selector=MinAlive");
+    LOG.info("Bytes API: eviction=SLRU, selector=MinAlive");
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = SLRUEvictionPolicy.class;
@@ -216,7 +219,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   @Test 
   public void runLoop() throws IOException, URISyntaxException {
     for (int i = 0; i < 1000; i++) {
-      System.out.println("\nRun #" + (i+1));
+      LOG.info("\nRun #" + (i+1));
       if (i > 0) {
         setUp();
       }
@@ -231,7 +234,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   
   @Test
   public void testSLRUEvictionAndMinAliveSelectorMemoryAPI() throws IOException {
-    System.out.println("Memory API: eviction=SLRU, selector=MinAlive");
+    LOG.info("Memory API: eviction=SLRU, selector=MinAlive");
 
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
@@ -244,7 +247,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   @Ignore
   @Test
   public void testSLRUEvictionAndLeastAccessedSelectorBytesAPI() throws IOException {
-    System.out.println("Bytes API: eviction=SLRU, selector=LeastAccessed");
+    LOG.info("Bytes API: eviction=SLRU, selector=LeastAccessed");
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
     this.epClz = SLRUEvictionPolicy.class;
@@ -256,7 +259,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
   @Ignore
   @Test
   public void testSLRUEvictionAndLeastAccessedSelectorMemoryAPI() throws IOException {
-    System.out.println("Memory API: eviction=SLRU, selector=LeastAccessed");
+    LOG.info("Memory API: eviction=SLRU, selector=LeastAccessed");
 
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec

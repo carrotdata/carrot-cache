@@ -26,6 +26,8 @@ import java.nio.file.Path;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
 import com.onecache.core.index.CompactBaseWithExpireIndexFormat;
@@ -37,7 +39,8 @@ import com.onecache.core.util.TestUtils;
 import com.onecache.core.util.Utils;
 
 public abstract class TestCacheStreamAPIBase  {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(TestCacheStreamAPIBase.class);
+
   boolean offheap = true;
   Cache cache;
   int segmentSize = 4 * 1024 * 1024;
@@ -90,7 +93,7 @@ public abstract class TestCacheStreamAPIBase  {
   
   @Test
   public void testStreamAPI() throws IOException {
-    System.out.println("Test stream API");
+    LOG.info("Test stream API");
     Scavenger.clear();
     // Create cache
     this.cache = createCache("cache1");
@@ -124,7 +127,7 @@ public abstract class TestCacheStreamAPIBase  {
     while(totalRead < streamLength) {
       int toRead = (int) Math.min(buffer.length, streamLength - totalRead);
       if (toRead < 4096) {
-        System.out.printf("toRead=%d  ", toRead);
+        LOG.info("toRead={}  ", toRead);
       }
       readFully(is, buf, toRead);
       readFully(source, buffer, toRead);

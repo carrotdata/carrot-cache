@@ -24,12 +24,16 @@ import static com.onecache.core.util.Utils.getItemSize;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.onecache.core.compression.CodecFactory;
 import com.onecache.core.compression.CompressionCodec;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
 public class CompressedBlockMemoryDataReader implements DataReader {
+  private static final Logger LOG = LoggerFactory.getLogger(CompressedBlockMemoryDataReader.class);
 
   private static int INIT_BUFFER_SIZE = 1 << 16;
   
@@ -391,7 +395,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       try {
         addr = BlockReaderWriterSupport.findInBlock(ptr + offset + offAdj, uncompressedSize, keyPtr, keySize);
       } catch (Exception e) {
-        System.err.println(" : ptr="+ ptr + " usize="+ uncompressedSize + 
+        LOG.error(" : ptr="+ ptr + " usize="+ uncompressedSize + 
           " cSize=" + compressedSize + " dictVersion=" + dictVersion + " offset=" + offset+ " segmentSize="+ s.getSegmentDataSize()+ 
           " valid=" + s.isValid());
         e.printStackTrace();

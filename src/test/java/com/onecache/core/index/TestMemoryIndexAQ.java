@@ -22,8 +22,8 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -33,7 +33,7 @@ import com.onecache.core.util.Utils;
 
 public class TestMemoryIndexAQ extends TestMemoryIndexBase{
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(TestMemoryIndexAQ.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMemoryIndexAQ.class);
 
   
   @Before
@@ -233,7 +233,7 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
       int result = (int) memoryIndex.find(keys[i], 0, keySize, false, buf, entrySize);
       if (result == -1) evicted2 ++;
     }
-    System.out.println("evicted1=" + evicted1 + " evicted2="+ evicted2);
+    LOG.info("evicted1=" + evicted1 + " evicted2="+ evicted2);
     assertEquals(100000, evicted1 + evicted2);
     UnsafeAccess.free(buf); 
   }
@@ -263,7 +263,7 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
       int result = (int) memoryIndex.find(mKeys[i], keySize, false, buf, entrySize);
       if (result == -1) evicted2 ++;
     }
-    System.out.println("evicted1=" + evicted1 + " evicted2="+ evicted2);
+    LOG.info("evicted1=" + evicted1 + " evicted2="+ evicted2);
     assertEquals(100000, evicted1 + evicted2);
     UnsafeAccess.free(buf);
   }
@@ -295,9 +295,9 @@ public class TestMemoryIndexAQ extends TestMemoryIndexBase{
   
   private void loadReadBytes(int num) {
     prepareData(num);
-    System.out.println("prepare done");
+    LOG.info("prepare done");
     loadIndexBytes();
-    System.out.println("load done");
+    LOG.info("load done");
     long size = memoryIndex.size();
     assertEquals((long)num, size);
     verifyIndexBytes();

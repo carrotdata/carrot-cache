@@ -28,11 +28,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.util.RangeTree.Range;
-
-import org.apache.logging.log4j.LogManager;
 
 import sun.misc.Unsafe;
 
@@ -161,7 +160,7 @@ public final class UnsafeAccess {
       allocMap.delete(address);
       Range r = allocMap.add(new Range(address, (int) alloced));
       if (r != null) {
-        System.err.println("Allocation collision [" + r.start + "," + r.size + "]");
+        LOG.error("Allocation collision [" + r.start + "," + r.size + "]");
       }
       if (isStackTraceRecordingEnabled()) {
         if (stackTraceMap.size() < strLimit) {
@@ -187,7 +186,7 @@ public final class UnsafeAccess {
     @SuppressWarnings("unused")
     private void dumpIfAlloced(String str, long address, int value, long alloced) {
       if (alloced == value) {
-        System.out.println(str + address + " size=" + alloced);
+        LOG.info(str + "{} size={}", address, alloced);
         Thread.dumpStack();
       }
     }
@@ -214,7 +213,7 @@ public final class UnsafeAccess {
       if (!UnsafeAccess.debug) return;
       Range mem = allocMap.delete(address);
       if (mem == null) {
-        System.out.println("FATAL: not found address " + address);
+        LOG.error("FATAL: not found address {}", address);
         Thread.dumpStack();
         System.exit(-1);
       }
@@ -236,7 +235,7 @@ public final class UnsafeAccess {
       if (!UnsafeAccess.debug) return;
 
       if (!allocMap.inside(address, size)) {
-        System.out.println(Thread.currentThread().getName() + ": Memory corruption: address=" + address + " size=" + size);
+        LOG.error(Thread.currentThread().getName() + ": Memory corruption: address={} size={}", address, size);
         Thread.dumpStack();
         System.exit(-1);
       }
@@ -257,26 +256,26 @@ public final class UnsafeAccess {
     public void printStats(boolean printOrphans) {
       if (!UnsafeAccess.debug) return;
 
-      System.out.println("\nMalloc stats:");
-      System.out.println("allocations          =" + allocEvents.get());
-      System.out.println("allocated memory     =" + allocated.get());
-      System.out.println("deallocations        =" + freeEvents.get());
-      System.out.println("deallocated memory   =" + freed.get());
-      System.out.println("leaked (current)     =" + (allocated.get() - freed.get()));
-      System.out.println("Orphaned allocations =" + (allocMap.size()));
+      LOG.info("\nMalloc stats:");
+      LOG.info("allocations          ={}", allocEvents.get());
+      LOG.info("allocated memory     ={}", allocated.get());
+      LOG.info("deallocations        ={}", freeEvents.get());
+      LOG.info("deallocated memory   ={}", freed.get());
+      LOG.info("leaked (current)     ={}", (allocated.get() - freed.get()));
+      LOG.info("Orphaned allocations ={}", (allocMap.size()));
       if (allocMap.size() > 0 && printOrphans) {
-        System.out.println("Orphaned allocation sizes:");
+        LOG.info("Orphaned allocation sizes:");
         for (Map.Entry<Range, Range> entry : allocMap.entrySet()) {
-          System.out.println(entry.getKey().start + " size=" + entry.getValue().size);
+          LOG.info( "{} size={}", entry.getKey().start, entry.getValue().size);
           if (isStackTraceRecordingEnabled()) {
             String strace = stackTraceMap.get(entry.getKey().start);
             if (strace != null) {
-              System.out.println(strace);
+              LOG.info(strace);
             }
           }
         }
       }
-      System.out.println();
+      LOG.info("");
     }
     
     public void clear() {
@@ -311,7 +310,7 @@ public final class UnsafeAccess {
   public static MallocStats mallocStats = new MallocStats();
 
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(UnsafeAccess.class);
+  private static final Logger LOG = LoggerFactory.getLogger(UnsafeAccess.class);
 
   /** The great UNSAFE */
   public static final Unsafe theUnsafe;

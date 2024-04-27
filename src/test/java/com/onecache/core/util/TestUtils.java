@@ -32,6 +32,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Stream;
 
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.Builder;
 import com.onecache.core.Cache;
@@ -43,7 +45,8 @@ import com.onecache.core.io.Segment;
  *
  */
 public class TestUtils {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(TestUtils.class);
+
   
   public static Cache createCache(long maxSize, long segmentSize, boolean offheap, boolean withExpireSupport) throws IOException {
     
@@ -200,9 +203,9 @@ public class TestUtils {
     });
     Files.delete(dir);
     if(Files.exists(dir)) {
-      System.err.printf("Could not delete dir=%s\n", dir.toString());
+      LOG.error("Could not delete dir={}", dir.toString());
     } else {
-      System.out.printf("Deleted dir=%s\n", dir.toString());
+      LOG.info("Deleted dir={}", dir.toString());
     }
     stream.close();
   }

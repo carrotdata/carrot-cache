@@ -31,6 +31,8 @@ import java.util.Random;
 
 import org.junit.After;
 import org.junit.Before;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.compression.CodecFactory;
 import com.onecache.core.compression.CompressionCodec;
@@ -42,6 +44,8 @@ import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
 public class IOCompressionTestBase extends IOTestBase {
+  private static final Logger LOG = LoggerFactory.getLogger(IOCompressionTestBase.class);
+
   @Before
   public void setUp() throws URISyntaxException, IOException {
     this.index = new MemoryIndex(cacheName, Type.MQ);
@@ -77,7 +81,7 @@ public class IOCompressionTestBase extends IOTestBase {
   }
   
   protected void initTest(boolean randomData, boolean dictionaryEnabled) throws IOException, URISyntaxException {
-    /*DEBUG*/ System.out.println("Test dictionary=" + dictionaryEnabled + " random data=" + randomData);
+    /*DEBUG*/ LOG.info("Test dictionary=" + dictionaryEnabled + " random data=" + randomData);
     if (randomData) {
       prepareRandomData(numRecords);
     } else {
@@ -108,7 +112,7 @@ public class IOCompressionTestBase extends IOTestBase {
   
   @After
   public void tearDown() throws IOException {
-    //System.out.println("Data size=" + segment.getSegmentDataSize()); 
+    //LOG.info("Data size=" + segment.getSegmentDataSize()); 
     super.tearDown();
     if (segment != null) {
       this.segment.dispose();

@@ -25,8 +25,8 @@ import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Properties;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.controllers.AdmissionController;
 import com.onecache.core.controllers.PromotionController;
@@ -44,7 +44,7 @@ import com.onecache.core.io.DataWriter;
 @SuppressWarnings("deprecation")
 public class CacheConfig {
   
-  private static final Logger LOG = LogManager.getLogger(CacheConfig.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CacheConfig.class);
 
 
   /** List of all caches logical names, comma-separated*/
@@ -1055,7 +1055,7 @@ public class CacheConfig {
       try {
         Files.createDirectories(p);
       } catch (IOException e) {
-        LOG.error(e);
+        LOG.error("Error:", e);
         return null;
       }
     }
@@ -1077,7 +1077,7 @@ public class CacheConfig {
       try {
         Files.createDirectories(p);
       } catch (IOException e) {
-        LOG.error(e);
+        LOG.error("Error:", e);
         return null;
       }
     }
@@ -1128,7 +1128,7 @@ public class CacheConfig {
       try {
         Files.createDirectories(p);
       } catch (IOException e) {
-        LOG.error(e);
+        LOG.error("Error:", e);
         return null;
       }
     }

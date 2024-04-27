@@ -25,13 +25,16 @@ import java.util.Random;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.util.TestUtils;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
 public abstract class TestIOMultithreadedBase {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(TestIOMultithreadedBase.class);
+
   protected static ThreadLocal<byte[][]> keysTL = new ThreadLocal<byte[][]>();
   protected static ThreadLocal<byte[][]> valuesTL = new ThreadLocal<byte[][]>();
   protected static ThreadLocal<long[]> mKeysTL = new ThreadLocal<long[]>();
@@ -78,7 +81,7 @@ public abstract class TestIOMultithreadedBase {
 
     long seed = Thread.currentThread().getId() * 100000 + System.currentTimeMillis();
     Random r = new Random(seed);
-    System.out.println("seed=" + seed);
+    LOG.info("seed=" + seed);
 
     for (int i = 0; i < numRecords; i++) {
       int keySize = nextKeySize(r);
@@ -90,7 +93,7 @@ public abstract class TestIOMultithreadedBase {
     keysTL.set(keys);
     valuesTL.set(values);
     mExpiresTL.set(expires);
-    System.out.printf("Prepare done numRecords=%d\n", numRecords);
+    LOG.info("Prepare done numRecords={}", numRecords);
   }
   
   protected void prepareDataMemory() throws IOException {
@@ -102,7 +105,7 @@ public abstract class TestIOMultithreadedBase {
 
     long seed = Thread.currentThread().getId() * 100000 + System.currentTimeMillis();
     Random r = new Random(seed);
-    System.out.println("seed=" + seed);
+    LOG.info("seed=" + seed);
 
     for (int i = 0; i < numRecords; i++) {
       int keySize = nextKeySize(r);
@@ -118,7 +121,7 @@ public abstract class TestIOMultithreadedBase {
     mExpiresTL.set(expires);
     mKeySizesTL.set(mKeySizes);
     mValueSizesTL.set(mValueSizes);
-    System.out.printf("Prepare done %d\n", numRecords);
+    LOG.info("Prepare done {}", numRecords);
   }
   
   protected long getExpireStream(long startTime, int n) {
@@ -228,7 +231,7 @@ public abstract class TestIOMultithreadedBase {
       count++;
     }
     long t2 = System.currentTimeMillis();
-    System.out.printf("Loaded bytes %d in %dms. RPS=%d\n", count, (t2 - t1), count * 1000L/(t2 - t1));
+    LOG.info("Loaded bytes {} in {}ms. RPS={}", count, (t2 - t1), count * 1000L/(t2 - t1));
 
     return count;
   }
@@ -241,7 +244,7 @@ public abstract class TestIOMultithreadedBase {
       byte[] key = keys[count];
       boolean result = delete(key, 0, key.length);
       if (result == false) {
-        System.out.println("failed "+ count);
+        LOG.info("failed "+ count);
         count++;
         continue;
       }
@@ -249,7 +252,7 @@ public abstract class TestIOMultithreadedBase {
       count++;
     }    
     long t2 = System.currentTimeMillis();
-    System.out.printf("Deleted bytes %d in %dms. RPS=%d\n", count, (t2 - t1), count * 1000L/(t2 - t1));
+    LOG.info("Deleted bytes {} in {}ms. RPS={}", count, (t2 - t1), count * 1000L/(t2 - t1));
 
     return count;
   }
@@ -276,7 +279,7 @@ public abstract class TestIOMultithreadedBase {
       count++;
     }    
     long t2 = System.currentTimeMillis();
-    System.out.printf("Loaded memory %d in %dms. RPS=%d\n", count, (t2 - t1), count * 1000L/(t2 - t1));
+    LOG.info("Loaded memory {} in {}ms. RPS={}", count, (t2 - t1), count * 1000L/(t2 - t1));
     return count;
   }
   
@@ -290,7 +293,7 @@ public abstract class TestIOMultithreadedBase {
       long keyPtr = mKeys[count];
       boolean result = delete(keyPtr, keySize);
       if (result == false) {
-        System.out.println("failed "+ count);
+        LOG.info("failed "+ count);
         count++;
         continue;
       }
@@ -298,7 +301,7 @@ public abstract class TestIOMultithreadedBase {
       count++;
     }    
     long t2 = System.currentTimeMillis();
-    System.out.printf("Deleted memory %d in %dms. RPS=%d\n", count, (t2 - t1), count * 1000L/(t2 - t1));
+    LOG.info("Deleted memory {} in {}ms. RPS={}", count, (t2 - t1), count * 1000L/(t2 - t1));
 
     return count;
   }
@@ -318,7 +321,7 @@ public abstract class TestIOMultithreadedBase {
       long t2 = System.nanoTime();
       sum += t2 - t1;
       if (size != expSize) {
-        System.out.println(Thread.currentThread().getName() + " i=" + i + " num=" + num);
+        LOG.info(Thread.currentThread().getName() + " i=" + i + " num=" + num);
         continue;
       }
       assertEquals(expSize, size);
@@ -333,7 +336,7 @@ public abstract class TestIOMultithreadedBase {
       off += kSize;
       assertTrue( Utils.compareTo(buffer, off, vSize, value, 0, value.length) == 0);
     }
-    System.out.printf("Get bytes %d in %dms. RPS=%d\n", num, sum / 1000000, num * 1_000_000_000L /(sum));
+    LOG.info("Get bytes {} in {}ms. RPS={}", num, sum / 1000000, num * 1_000_000_000L /(sum));
 
   }
   
@@ -386,7 +389,7 @@ public abstract class TestIOMultithreadedBase {
       long t2 = System.nanoTime();
       sum += t2 - t1;
       if (size != expSize) {
-        System.out.println(Thread.currentThread().getName() + " i=" + i + " num=" + num);
+        LOG.info(Thread.currentThread().getName() + " i=" + i + " num=" + num);
         continue;
       }
       assertEquals(expSize, size);
@@ -406,7 +409,7 @@ public abstract class TestIOMultithreadedBase {
       assertTrue( Utils.compareTo(buffer, vSize, valuePtr, valueSize) == 0);
       buffer.clear();
     }    
-    System.out.printf("Get memory %d in %dms. RPS=%d\n", num, sum / 1000000, num * 1_000_000_000L /(sum));
+    LOG.info("Get memory {} in {}ms. RPS={}", num, sum / 1000000, num * 1_000_000_000L /(sum));
 
   }
   
@@ -468,13 +471,13 @@ public abstract class TestIOMultithreadedBase {
   }
   
   private void testLoadReadBytes() throws IOException {
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + 
+    /*DEBUG*/ LOG.info(Thread.currentThread().getName() + 
       ": testLoadReadBytes");
     prepareDataBytes();
     int loaded = loadBytes();
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + ": loaded=" + loaded);
+    /*DEBUG*/ LOG.info(Thread.currentThread().getName() + ": loaded=" + loaded);
     verifyBytes(loaded);
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + ": verified=" + loaded);
+    /*DEBUG*/ LOG.info(Thread.currentThread().getName() + ": verified=" + loaded);
     clearData();
   }
   
@@ -493,11 +496,11 @@ public abstract class TestIOMultithreadedBase {
   }  
   
   private void testLoadReadMemory() throws IOException {
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + 
+    /*DEBUG*/ LOG.info(Thread.currentThread().getName() + 
       ": testLoadReadMemory");
     prepareDataMemory();
     int loaded = loadMemory();
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + ": loaded=" + loaded);
+    /*DEBUG*/ LOG.info(Thread.currentThread().getName() + ": loaded=" + loaded);
     verifyMemory(loaded);
     clearData();
   }
@@ -517,11 +520,11 @@ public abstract class TestIOMultithreadedBase {
   }  
   
   private void testLoadReadBytesWithDeletes() throws IOException {
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + 
+    /*DEBUG*/ LOG.info(Thread.currentThread().getName() + 
       ": testLoadReadBytesWithDeletes");
     prepareDataBytes();
     int loaded = loadBytes();
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + ": loaded=" + loaded);
+    /*DEBUG*/ LOG.info(Thread.currentThread().getName() + ": loaded=" + loaded);
     deleteBytes(loaded / 2);
     verifyBytesWithDeletes(loaded, loaded / 2);
     clearData();
@@ -542,11 +545,11 @@ public abstract class TestIOMultithreadedBase {
   }  
   
   private void testLoadReadMemoryWithDeletes() throws IOException {
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + 
+    /*DEBUG*/ LOG.info(Thread.currentThread().getName() + 
       ": testLoadReadMemoryWithDeletes");
     prepareDataMemory();
     int loaded = loadMemory();
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + ": loaded=" + loaded);
+    /*DEBUG*/ LOG.info(Thread.currentThread().getName() + ": loaded=" + loaded);
     deleteMemory(loaded / 2);
     verifyMemoryWithDeletes(loaded, loaded / 2);
     clearData();

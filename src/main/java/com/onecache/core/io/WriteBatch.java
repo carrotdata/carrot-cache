@@ -422,15 +422,8 @@ public class WriteBatch implements Persistent {
       off += Utils.sizeUVInt(kSize);
       final int vSize = Utils.readUVInt(ptr + off);
       off += Utils.sizeUVInt(vSize);
-      if (kSize == keySize) {
-        // Check last bytes
-        final byte b1 = UnsafeAccess.toByte(keyPtr + keySize - 1);
-        final byte b2 = UnsafeAccess.toByte(ptr + off + keySize - 1);
-        if (b1 == b2) {
-          if (Utils.compareTo(ptr + off, kSize, keyPtr, keySize) == 0) {
-            return oldOffset;
-          }
-        }
+      if (Utils.equals(ptr + off, kSize, keyPtr, keySize)) {
+        return oldOffset;
       }
       off += kSize + vSize;
     }
@@ -446,16 +439,8 @@ public class WriteBatch implements Persistent {
       off += Utils.sizeUVInt(kSize);
       int vSize = Utils.readUVInt(ptr + off);
       off += Utils.sizeUVInt(vSize);
-      if (kSize == keySize) {
-        // Check last bytes
-        final byte b1 = key[keyOffset + keySize - 1];
-        final byte b2 = UnsafeAccess.toByte(ptr + off + keySize - 1);
-        if (b1 == b2) {
-          // Compare
-          if (Utils.compareTo(key, keyOffset, keySize, ptr + off, kSize) == 0) {
-            return oldOffset;
-          }
-        }
+      if (Utils.compareTo(key, keyOffset, keySize, ptr + off, kSize) == 0) {
+        return oldOffset;
       }
       off += kSize + vSize;
     }

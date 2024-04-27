@@ -22,6 +22,8 @@ import java.util.Arrays;
 
 import org.junit.After;
 import org.junit.Before;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.compression.CodecFactory;
 import com.onecache.core.compression.CompressionCodec;
@@ -33,7 +35,8 @@ import com.onecache.core.io.CompressedBlockMemoryDataReader;
 import com.onecache.core.util.CacheConfig;
 
 public abstract class TestCacheWithCompressionBase extends TestCacheBase {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(TestCacheWithCompressionBase.class);
+
   boolean randomData = false;
   boolean dictionaryEnabled = true;   
   boolean asyncTrainingMode = false;
@@ -147,7 +150,7 @@ public abstract class TestCacheWithCompressionBase extends TestCacheBase {
   
   @Override
   protected void prepareData() {
-    /*DEBUG*/ System.out.println("Test dictionary=" + dictionaryEnabled + " random data=" + randomData);
+    /*DEBUG*/ LOG.info("Test dictionary=" + dictionaryEnabled + " random data=" + randomData);
     if (randomData) {
       prepareRandomData(numRecords);
     } else {

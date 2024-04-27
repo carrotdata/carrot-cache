@@ -19,8 +19,11 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.After;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public abstract class TestConcurrentLongPool {
+  private static final Logger LOG = LoggerFactory.getLogger(TestConcurrentLongPool.class);
 
   static class ConcurrentRandomLongPool extends ConcurrentLongPool {
 
@@ -101,7 +104,7 @@ public abstract class TestConcurrentLongPool {
       pool.offer(v);
     }
     long end = System.nanoTime();
-    System.out.printf("Time for %d pool-offer is %d microsec\n", numIterations,  (end - start)/ 1000);
+    LOG.info("Time for {} pool-offer is {} microsec", numIterations,  (end - start)/ 1000);
   }
   
   @Test
@@ -120,7 +123,7 @@ public abstract class TestConcurrentLongPool {
     }
     long end = System.currentTimeMillis();
     String formatted = NumberFormat.getInstance().format(2L * numThreads * numIterations * 1000 / (end - start));
-    System.out.printf("Throughput %s op/sec size=%d\n", formatted, pool.size());
+    LOG.info("Throughput {} op/sec size={}", formatted, pool.size());
   }
   
   @Test
@@ -139,6 +142,6 @@ public abstract class TestConcurrentLongPool {
     }
     long end = System.currentTimeMillis();
     String formatted = NumberFormat.getInstance().format(2L * numThreads * numIterations * 1000 / (end - start));
-    System.out.printf("Throughput %s op/sec size=%d\n", formatted, pool.size());
+    LOG.info("Throughput {} op/sec size={}", formatted, pool.size());
   }
 }

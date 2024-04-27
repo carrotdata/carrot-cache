@@ -27,6 +27,8 @@ import java.util.Random;
 
 import org.junit.After;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.util.TestUtils;
 import com.onecache.core.controllers.LRCRecyclingSelector;
@@ -36,6 +38,7 @@ import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
 public abstract class TestCacheMultithreadedStreamBase {
+  private static final Logger LOG = LoggerFactory.getLogger(TestCacheMultithreadedStreamBase.class);
 
   protected Cache cache;
   
@@ -153,7 +156,7 @@ public abstract class TestCacheMultithreadedStreamBase {
         loaded++;
       }
       if (loaded > 0 && loaded % 500000 == 0) {
-        System.out.printf("loaded=%d\n", loaded);
+        LOG.info("loaded={}", loaded);
       }
     }
     return loaded;
@@ -166,7 +169,7 @@ public abstract class TestCacheMultithreadedStreamBase {
         loaded++;
       }
       if (loaded > 0 && loaded % 500000 == 0) {
-        System.out.printf("loaded=%d\n", loaded);
+        LOG.info("loaded={}", loaded);
       }
     }
     return loaded;
@@ -180,7 +183,7 @@ public abstract class TestCacheMultithreadedStreamBase {
         loaded++;
       }
       if (loaded > 0 && loaded % 100000 == 0) {
-        System.out.printf("loaded=%d\n", loaded);
+        LOG.info("loaded={}", loaded);
       }
     }
     return loaded;
@@ -193,7 +196,7 @@ public abstract class TestCacheMultithreadedStreamBase {
         loaded++;
       }
       if (loaded > 0 && loaded % 100000 == 0) {
-        System.out.printf("loaded=%d\n", loaded);
+        LOG.info("loaded={}", loaded);
       }
     }
     return loaded;
@@ -286,7 +289,7 @@ public abstract class TestCacheMultithreadedStreamBase {
       if (verifyBytesStream(i, max, buffer)) {
         total ++;
         if (total > 0 && total % 100000 == 0) {
-          System.out.printf("verified=%d\n", total);
+          LOG.info("verified={}", total);
         }
       }
     }
@@ -300,7 +303,7 @@ public abstract class TestCacheMultithreadedStreamBase {
       if (verifyMemoryStream(i, max, buf)) {
         total ++;
         if (total > 0 && total % 100000 == 0) {
-          System.out.printf("verified=%d\n", total);
+          LOG.info("verified={}", total);
         }
       }
     }
@@ -407,7 +410,7 @@ public abstract class TestCacheMultithreadedStreamBase {
     joinAll(all);
     long stop = System.currentTimeMillis();
     Scavenger.printStats();
-    System.out.printf("Time=%dms\n", stop - start);
+    LOG.info("Time={}ms", stop - start);
   }
   
   @Test
@@ -427,43 +430,43 @@ public abstract class TestCacheMultithreadedStreamBase {
     joinAll(all);
     long stop = System.currentTimeMillis();
     Scavenger.printStats();
-    System.out.printf("Time=%dms\n", stop - start);
+    LOG.info("Time={}ms", stop - start);
   }
   
   private void testContinuosLoadBytes() throws IOException {
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + 
+    /*DEBUG*/ LOG.info(Thread.currentThread().getName() + 
       ": testContinuosLoadBytes");
     
     Percentile p = new Percentile(1000, numRecords);
     perc.set(p);
     
     int loaded = loadBytesStreamWithoutExpire(this.numRecords);
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + ": loaded=" + loaded);
+    /*DEBUG*/ LOG.info(Thread.currentThread().getName() + ": loaded=" + loaded);
     long cacheSize = this.cache.size();
     
     int alive = countAliveBytesBetween((int)(this.numRecords - cacheSize / this.numThreads), this.numRecords, this.numRecords);
-    /*DEBUG*/ System.out.printf("%s : cache size=%d alive=%d\n", 
+    /*DEBUG*/ LOG.info("{} : cache size={} alive={}", 
       Thread.currentThread().getName(), cacheSize, alive);
-    System.out.printf("%s : min=%dns max=%dns p50=%dns p90=%dns p99=%dns p999=%dns\n",
+    LOG.info("{} : min={}ns max={}ns p50={}ns p90={}ns p99={}ns p999={}ns",
       Thread.currentThread().getName(),
       p.min(), p.max(), p.value(0.5), p.value(0.9), p.value(0.99), p.value(0.999));
   }
   
   private void testContinuosLoadMemory() throws IOException {
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + 
+    /*DEBUG*/ LOG.info(Thread.currentThread().getName() + 
       ": testContinuosLoadMemory");
     
     Percentile p = new Percentile(1000, numRecords);
     perc.set(p);
     
     int loaded = loadMemoryStreamWithoutExpire(this.numRecords);
-    /*DEBUG*/ System.out.println(Thread.currentThread().getName() + ": loaded=" + loaded);
+    /*DEBUG*/ LOG.info(Thread.currentThread().getName() + ": loaded=" + loaded);
     long cacheSize = this.cache.size();
     
     int alive = countAliveMemoryBetween((int)(this.numRecords - cacheSize / this.numThreads), this.numRecords, this.numRecords);
-    /*DEBUG*/ System.out.printf("%s : cache size=%d alive=%d\n", 
+    /*DEBUG*/ LOG.info("{} : cache size={} alive={}", 
       Thread.currentThread().getName(), cacheSize, alive);
-    System.out.printf("%s : min=%dns max=%dns p50=%dns p90=%dns p99=%dns p999=%dns\n",
+    LOG.info("{} : min={}ns max={}ns p50={}ns p90={}ns p99={}ns p999={}ns",
       Thread.currentThread().getName(),
       p.min(), p.max(), p.value(0.5), p.value(0.9), p.value(0.99), p.value(0.999));
   }

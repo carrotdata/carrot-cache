@@ -20,6 +20,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.junit.After;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.controllers.AQBasedPromotionController;
 import com.onecache.core.controllers.AdmissionController;
@@ -32,8 +34,9 @@ import com.onecache.core.eviction.FIFOEvictionPolicy;
 import com.onecache.core.eviction.LRUEvictionPolicy;
 import com.onecache.core.util.TestUtils;
 
-public class TestCompressedHybbridCacheMultithreadedZipf extends TestCompressedOffheapCacheMultithreadedZipf {
-  
+public class TestCompressedHybridCacheMultithreadedZipf extends TestCompressedOffheapCacheMultithreadedZipf {
+  private static final Logger LOG = LoggerFactory.getLogger(TestCompressedHybridCacheMultithreadedZipf.class);
+
   int victim_segmentSize = 16 * 1024 * 1024;
   
   long victim_maxCacheSize = 1000L * victim_segmentSize;
@@ -83,10 +86,10 @@ public class TestCompressedHybbridCacheMultithreadedZipf extends TestCompressedO
   @After  
   public void tearDown() throws IOException {
     Cache victim = cache.getVictimCache();
-    System.out.printf("main cache: size=%d hit rate=%f items=%d\n", 
+    LOG.info("main cache: size={} hit rate={} items={}", 
       cache.getStorageAllocated(), cache.getHitRate(), cache.size());
     
-    System.out.printf("victim cache: size=%d hit rate=%f items=%d\n", 
+    LOG.info("victim cache: size={} hit rate={} items={}", 
       victim.getStorageAllocated(), victim.getHitRate(), victim.size());
     
     super.tearDown();

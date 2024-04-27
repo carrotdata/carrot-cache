@@ -23,8 +23,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.Random;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -35,7 +35,7 @@ import com.onecache.core.util.UnsafeAccess;
 public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
   /** Logger */
   @SuppressWarnings("unused")
-  private static final Logger LOG = LogManager.getLogger(TestMemoryIndexFormatBase.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMemoryIndexFormatBase.class);
   
   @Before
   public void setUp() {
@@ -65,7 +65,7 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
     long seed = System.currentTimeMillis();
     Random r = new Random();
     r.setSeed(seed);
-    System.out.println("update seed=" + seed);
+    LOG.info("update seed=" + seed);
     long t1 = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
       short expSid = sids[i];
@@ -79,7 +79,7 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
       
     }
     long t2 = System.currentTimeMillis();
-    System.out.printf("Time to update %d indexes=%dms\n", numRecords, t2 - t1);
+    LOG.info("Time to update {} indexes={}ms", numRecords, t2 - t1);
     return updated;
   }
   
@@ -201,7 +201,7 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
       }
       verified ++;
     }
-    System.out.println("verified="+ verified);
+    LOG.info("verified="+ verified);
     assertEquals(expected, verified);
   }
   
@@ -229,7 +229,7 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
       }
       verified ++;
     }
-    System.out.println("verified="+ verified);
+    LOG.info("verified="+ verified);
     assertEquals(expected, verified);
   }
   
@@ -249,7 +249,7 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
     long seed = System.currentTimeMillis();
     Random r = new Random();
     r.setSeed(seed);
-    System.out.println("update seed=" + seed);
+    LOG.info("update seed=" + seed);
 
     long t1 = System.currentTimeMillis();
     for(int i = 0; i < numRecords; i++) {
@@ -263,7 +263,7 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
       }
     }
     long t2 = System.currentTimeMillis();
-    System.out.printf("Time to update %d indexes=%dms\n", numRecords, t2 - t1);
+    LOG.info("Time to update {} indexes={}ms", numRecords, t2 - t1);
     return updated;
   }
   
@@ -277,7 +277,7 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
         loaded--;
       }
       if (i == evictionStartFrom - 1) {
-        /*DEBUG*/ System.out.println("Eviction enabled");
+        /*DEBUG*/ LOG.info("Eviction enabled");
         memoryIndex.setEvictionEnabled(true);
       }
     }
@@ -358,44 +358,44 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
   
   @Test
   public void testLoadReadNoRehashBytes() {
-    System.out.println("Test load and read no rehash bytes");
+    LOG.info("Test load and read no rehash bytes");
     loadReadBytes(100000);
   }
   
   @Test
   public void testLoadReadNoRehashMemory() {
-    System.out.println("Test load and read no rehash memory");
+    LOG.info("Test load and read no rehash memory");
     loadReadMemory(100000);
   }
   
   @Test
   public void testLoadUpdateReadNoRehashBytes() {
-    System.out.println("Test load update and read no rehash bytes");
+    LOG.info("Test load update and read no rehash bytes");
     loadUpdateReadBytes(100000);
   }
   
   @Test
   public void testLoadUpdateReadNoRehashMemory() {
-    System.out.println("Test load update and read no rehash memory");
+    LOG.info("Test load update and read no rehash memory");
     loadUpdateReadMemory(100000);
   }
   
   @Test
   public void testLoadReadNoRehashBytesWithHit() {
-    System.out.println("Test load and read no rehash bytes - with hit");
+    LOG.info("Test load and read no rehash bytes - with hit");
     loadReadBytesWithHit(100000);
   }
   
   @Test
   public void testLoadReadNoRehashMemoryWithHit() {
-    System.out.println("Test load and read no rehash memory - with hit");
+    LOG.info("Test load and read no rehash memory - with hit");
     loadReadMemoryWithHit(100000);
   }
   
   
   @Test
   public void testLoadReadDeleteNoRehashBytes() {
-    System.out.println("Test load and read-delete no rehash bytes");
+    LOG.info("Test load and read-delete no rehash bytes");
     int loaded = loadReadBytes(100000);
     deleteIndexBytes(loaded);
     verifyIndexBytesNot();
@@ -403,7 +403,7 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
   
   @Test
   public void testLoadReadDeleteNoRehashMemory() {
-    System.out.println("Test load and read-delete no rehash memory");
+    LOG.info("Test load and read-delete no rehash memory");
     int loaded = loadReadMemory(100000);
     deleteIndexMemory(loaded);
     verifyIndexMemoryNot();
@@ -411,43 +411,43 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
   
   @Test
   public void testLoadReadWithRehashBytes() {
-    System.out.println("Test load and read with rehash bytes");
+    LOG.info("Test load and read with rehash bytes");
     loadReadBytes(1000000);
   }
   
   @Test
   public void testLoadReadWithRehashMemory() {
-    System.out.println("Test load and read with rehash memory");
+    LOG.info("Test load and read with rehash memory");
     loadReadMemory(1000000);
   }
   
   @Test
   public void testLoadUpdateReadWithRehashBytes() {
-    System.out.println("Test load update and read with rehash bytes");
+    LOG.info("Test load update and read with rehash bytes");
     loadUpdateReadBytes(1000000);
   }
   
   @Test
   public void testLoadUpdateReadWithRehashMemory() {
-    System.out.println("Test load update and read with rehash memory");
+    LOG.info("Test load update and read with rehash memory");
     loadUpdateReadMemory(1000000);
   }
   
   @Test
   public void testLoadReadWithRehashBytesWithHit() {
-    System.out.println("Test load and read with rehash bytes - with hit");
+    LOG.info("Test load and read with rehash bytes - with hit");
     loadReadBytesWithHit(1000000);
   }
   
   @Test
   public void testLoadReadWithRehashMemoryWithHit() {
-    System.out.println("Test load and read with rehash memory - with hit");
+    LOG.info("Test load and read with rehash memory - with hit");
     loadReadMemoryWithHit(1000000);
   }
   
   @Test
   public void testLoadReadDeleteWithRehashBytes() {
-    System.out.println("Test load and read-delete with rehash bytes");
+    LOG.info("Test load and read-delete with rehash bytes");
     int loaded = loadReadBytes(1000000);
     deleteIndexBytes(loaded);
     verifyIndexBytesNot();
@@ -455,7 +455,7 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
   
   @Test
   public void testLoadReadDeleteWithRehashMemory() {
-    System.out.println("Test load and read with rehash memory");
+    LOG.info("Test load and read with rehash memory");
     int loaded = loadReadMemory(1000000);
     deleteIndexMemory(loaded);
     verifyIndexMemoryNot();
@@ -463,13 +463,13 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
   
   @Test
   public void testGetSetExpireBytes() {
-    System.out.println("Test get set expire bytes");
+    LOG.info("Test get set expire bytes");
     loadVerifyGetSetExpireBytes(100000);
   }
   
   @Test
   public void testGetSetExpireMemory() {
-    System.out.println("Test get set expire memory");
+    LOG.info("Test get set expire memory");
     loadVerifyGetSetExpireMemory(100000);
   }
   
@@ -477,7 +477,7 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
   @Test
   public void testEvictionBytes() {
     // We do not support pure eviction anymore - only expired items
-    System.out.println("Test eviction bytes");
+    LOG.info("Test eviction bytes");
     int toLoad = 200000;
     
     prepareData(toLoad);
@@ -523,7 +523,7 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
         }
       }
     }
-    System.out.println("evicted1=" + evicted1 + " evicted2="+ evicted2);
+    LOG.info("evicted1=" + evicted1 + " evicted2="+ evicted2);
     assertEquals(toLoad - loaded, evicted1 + evicted2);
     UnsafeAccess.free(buf); 
   }
@@ -532,7 +532,7 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
   @Test
   public void testEvictionMemory() {
     // We do not support pure eviction anymore - only expired items
-    System.out.println("Test eviction memory");
+    LOG.info("Test eviction memory");
     int toLoad = 200000;
     prepareData(toLoad);
     long loaded = loadIndexMemoryWithEviction(toLoad / 2);
@@ -577,14 +577,14 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
         }
       }
     }
-    System.out.println("evicted1=" + evicted1 + " evicted2="+ evicted2);
+    LOG.info("evicted1=" + evicted1 + " evicted2="+ evicted2);
     assertEquals((int)(toLoad - loaded), evicted1 + evicted2);
     UnsafeAccess.free(buf);
   }
   
   @Test
   public void testLoadSave() throws IOException {
-    System.out.println("Test load save");
+    LOG.info("Test load save");
     prepareData(100000);
     long loaded = loadIndexMemory();
     long size = memoryIndex.size();
@@ -610,9 +610,9 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
   
   protected int loadReadBytes(int num) {
     prepareData(num);
-    System.out.println("prepare done");
+    LOG.info("prepare done");
     int loaded = loadIndexBytes();
-    System.out.println("load done: "+ loaded);
+    LOG.info("load done: "+ loaded);
     long size = memoryIndex.size();
     assertEquals(loaded, (int)size);
     verifyIndexBytes(loaded);
@@ -621,13 +621,13 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
   
   protected int loadUpdateReadBytes(int num) {
     prepareData(num);
-    System.out.println("prepare done");
+    LOG.info("prepare done");
     int loaded = loadIndexBytes();
-    System.out.println("load done: "+ loaded);
+    LOG.info("load done: "+ loaded);
     long size = memoryIndex.size();
     assertEquals(loaded, (int) size);
     int updated = updateIndexBytes();
-    System.out.println("update done: "+ updated);
+    LOG.info("update done: "+ updated);
     // updated == num always but can be larger than loaded due to hash collisions
     // therefore we verify against loaded
     verifyUpdatedIndexBytes(loaded);
@@ -637,9 +637,9 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
   
   protected int loadVerifyGetSetExpireBytes(int num) {
     prepareData(num);
-    System.out.println("prepare done");
+    LOG.info("prepare done");
     int loaded = loadIndexBytes();
-    System.out.println("load done: "+ loaded);
+    LOG.info("load done: "+ loaded);
     long size = memoryIndex.size();
     assertEquals(loaded, (int)size);
     verifyGetSetExpireBytes(loaded);
@@ -658,13 +658,13 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
   protected int loadUpdateReadMemory(int num) {
     prepareData(num);
     int loaded = loadIndexMemory();
-    System.out.println("load done: " + loaded);
+    LOG.info("load done: " + loaded);
 
     long size = memoryIndex.size();
     assertEquals(loaded, (int) size);
     int updated = updateIndexMemory();
     // We will always have updated == num
-    System.out.println("update done: "+ updated);
+    LOG.info("update done: "+ updated);
     verifyUpdatedIndexMemory(loaded);
     return loaded;
   }

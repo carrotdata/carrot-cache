@@ -19,15 +19,15 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.compression.CompressionCodec.Type;
 import com.onecache.core.util.CacheConfig;
 
 public class CodecFactory {
   /* Logger */
-  private static final Logger LOG = LogManager.getLogger(CodecFactory.class);
+  private static final Logger LOG = LoggerFactory.getLogger(CodecFactory.class);
   
   /* Factory instance */
   private static CodecFactory factory = new CodecFactory();

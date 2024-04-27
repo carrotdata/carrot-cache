@@ -28,12 +28,16 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.github.luben.zstd.ZstdCompressCtx;
 import com.github.luben.zstd.ZstdDecompressCtx;
 import com.github.luben.zstd.ZstdDictCompress;
 import com.github.luben.zstd.ZstdDictDecompress;
 import com.github.luben.zstd.ZstdDictTrainer;
 import com.onecache.core.compression.CompressionCodec;
+import com.onecache.core.io.IOEngine;
 import com.onecache.core.util.CacheConfig;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
@@ -46,7 +50,8 @@ import com.onecache.core.util.Utils;
  *
  */
 public class ZstdCompressionCodec implements CompressionCodec {
-  
+  /** Logger */
+  private static final Logger LOG = LoggerFactory.getLogger(IOEngine.class);
   private static int INIT_BUFFER_SIZE = 1 << 16; 
   
   static {
@@ -456,7 +461,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
 
   private synchronized void startTraining() {
     if (this.trainingInProgress) return;
-    /*DEBUG*/ System.out.println("START TRAINING");
+    LOG.debug("Start training");
     this.trainingDataSize = new AtomicInteger();
     this.trainingData = new ConcurrentLinkedQueue<Long>();
     this.trainingInProgress = true;
@@ -531,12 +536,11 @@ public class ZstdCompressionCodec implements CompressionCodec {
     if (! finalizingTraining.compareAndSet(false, true)) {
       return;
     }
-    /*DEBUG*/ System.out.println("FINISH TRAINING");
 
     Runnable r = () -> {
       byte[] dict;
       ZstdDictTrainer trainer = new ZstdDictTrainer(this.trainingDataSize.get(), this.dictSize);
-      
+      LOG.debug("Start training");
       for (Long ptr: this.trainingData) {
         int size = UnsafeAccess.toInt(ptr);
         byte[] data = new byte[size];
@@ -563,15 +567,13 @@ public class ZstdCompressionCodec implements CompressionCodec {
         // TODO Auto-generated catch block
         e.printStackTrace();
       }
+      LOG.debug("Finished training in () ms", System.currentTimeMillis() - start);
     };
     if (this.trainingAsync) {
       // Run training session
       new Thread(r).start();
     } else {
-      long start = System.currentTimeMillis();
       r.run();
-      long end = System.currentTimeMillis();
-      /*DEBUG*/ System.out.println("TIME=" + (end -start)+"ms");
     }
   }
 

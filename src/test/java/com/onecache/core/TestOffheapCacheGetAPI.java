@@ -28,6 +28,8 @@ import java.util.Random;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
 import com.onecache.core.expire.ExpireSupportUnixTime;
@@ -40,7 +42,8 @@ import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
 public class TestOffheapCacheGetAPI {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(TestOffheapCacheGetAPI.class);
+
   int blockSize = 4096;
   int numRecords = 10;
   int maxKeySize = 32;
@@ -72,7 +75,7 @@ public class TestOffheapCacheGetAPI {
     this.r = new Random();
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
-    System.out.printf("r.seed=%d\n", seed);
+    LOG.info("r.seed={}", seed);
 
   }
   
@@ -129,7 +132,7 @@ public class TestOffheapCacheGetAPI {
     Random r = new Random();
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
-    System.out.println("seed="+ seed);
+    LOG.info("seed="+ seed);
     
     for (int i = 0; i < numRecords; i++) {
       int keySize = nextKeySize();
@@ -140,7 +143,7 @@ public class TestOffheapCacheGetAPI {
       mValues[i] = TestUtils.randomMemory(valueSize, r);
       expires[i] = getExpire(i); // To make sure that we have distinct expiration values
     }  
-    //System.out.println("Press any key ...");
+    //LOG.info("Press any key ...");
     //System.in.read();
   }
   
@@ -159,7 +162,7 @@ public class TestOffheapCacheGetAPI {
       count++;
     }  
     long t2 = System.currentTimeMillis();
-    System.out.printf("Time to load (bytes) %d keys is %dms\n", this.numRecords, (t2-t1));
+    LOG.info("Time to load (bytes) {} keys is {}ms", this.numRecords, (t2-t1));
     return count;
   }
   
@@ -179,7 +182,7 @@ public class TestOffheapCacheGetAPI {
       count++;
     }   
     long t2 = System.currentTimeMillis();
-    System.out.printf("Time to load (memory) %d keys is %dms\n", this.numRecords, (t2-t1));
+    LOG.info("Time to load (memory) {} keys is {}ms", this.numRecords, (t2-t1));
 
     return count;
   }
@@ -205,7 +208,7 @@ public class TestOffheapCacheGetAPI {
       assertTrue( Utils.compareTo(buffer, valueSize, valuePtr, valueSize) == 0);
       buffer.clear();
     }
-    System.out.printf("Time to get (memory, cache buffer, hit) %d keys is %dms failed=%s\n", num, getTime / 1_000_000, failed);
+    LOG.info("Time to get (memory, cache buffer, hit) {} keys is {}ms failed={}", num, getTime / 1_000_000, failed);
 
   }
   
@@ -227,7 +230,7 @@ public class TestOffheapCacheGetAPI {
       assertEquals(expSize, size);
       assertTrue( Utils.compareTo(buffer, 0, value.length, value, 0, value.length) == 0);
     }
-    System.out.printf("Time to get (bytes, cache, no hit) %d keys is %dms failed=%d\n", num, getTime / 1_000_000, failed);
+    LOG.info("Time to get (bytes, cache, no hit) {} keys is {}ms failed={}", num, getTime / 1_000_000, failed);
 
   }
   
@@ -246,7 +249,7 @@ public class TestOffheapCacheGetAPI {
       assertTrue(read != null);
       assertTrue(Utils.compareTo(read, 0, read.length, value, 0, value.length) == 0);
     }
-    System.out.printf("Time to get (bytes, no cache, no hit) %d keys is %dms failed=%d\n", num, getTime / 1_000_000, failed);
+    LOG.info("Time to get (bytes, no cache, no hit) {} keys is {}ms failed={}", num, getTime / 1_000_000, failed);
 
   }
   
@@ -276,7 +279,7 @@ public class TestOffheapCacheGetAPI {
       off += kSize;
       assertTrue( Utils.compareTo(buffer, off, vSize, value, 0, value.length) == 0);
     }
-    System.out.printf("Time to get-kv (bytes, cache, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+    LOG.info("Time to get-kv (bytes, cache, no hit) {} keys is {}ms", num, getTime / 1_000_000);
 
   }
   
@@ -303,7 +306,7 @@ public class TestOffheapCacheGetAPI {
       assertTrue( Utils.compareTo(buffer, off, vSize, value, 0, value.length) == 0);
 
     }
-    System.out.printf("Time to get-kv (bytes, no cache, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+    LOG.info("Time to get-kv (bytes, no cache, no hit) {} keys is {}ms", num, getTime / 1_000_000);
 
   }
   
@@ -324,7 +327,7 @@ public class TestOffheapCacheGetAPI {
       assertTrue(Utils.compareTo(buffer, valueSize, value, 0, valueSize) == 0);
       buffer.clear();
     }    
-    System.out.printf("Time to get (bytes, cache buffer, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+    LOG.info("Time to get (bytes, cache buffer, no hit) {} keys is {}ms", num, getTime / 1_000_000);
 
   }
   
@@ -345,7 +348,7 @@ public class TestOffheapCacheGetAPI {
       assertEquals(expSize, size);
       assertTrue( Utils.compareTo(buffer, 0, value.length, valuePtr, expSize) == 0);
     }
-    System.out.printf("Time to get (memory, cache, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+    LOG.info("Time to get (memory, cache, no hit) {} keys is {}ms", num, getTime / 1_000_000);
   }
   
   protected void verifyKeyValueMemoryCache(int num) throws IOException {
@@ -375,7 +378,7 @@ public class TestOffheapCacheGetAPI {
       off += kSize;
       assertTrue(Utils.compareTo(buffer, off, vSize, valuePtr, valueSize) == 0);
     }
-    System.out.printf("Time to get-kv (memory, cache, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+    LOG.info("Time to get-kv (memory, cache, no hit) {} keys is {}ms", num, getTime / 1_000_000);
 
   }
   
@@ -395,7 +398,7 @@ public class TestOffheapCacheGetAPI {
       assertEquals(expSize, buffer.length);
       assertTrue(Utils.compareTo(buffer, 0, value.length, valuePtr, expSize) == 0);
     }
-    System.out.printf("Time to get (memory, no cache, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+    LOG.info("Time to get (memory, no cache, no hit) {} keys is {}ms", num, getTime / 1_000_000);
 
   }
   
@@ -426,7 +429,7 @@ public class TestOffheapCacheGetAPI {
       assertTrue( Utils.compareTo(buffer, off, vSize, valuePtr, valueSize) == 0);
 
     }
-    System.out.printf("Time to get-kv (memory, no cache, no hit) %d keys is %dms\n", num, getTime / 1_000_000);
+    LOG.info("Time to get-kv (memory, no cache, no hit) {} keys is {}ms", num, getTime / 1_000_000);
 
   }
   

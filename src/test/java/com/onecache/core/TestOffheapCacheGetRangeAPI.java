@@ -28,6 +28,8 @@ import java.util.Random;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.controllers.MinAliveRecyclingSelector;
 import com.onecache.core.util.TestUtils;
@@ -35,7 +37,8 @@ import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
 public class TestOffheapCacheGetRangeAPI {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(TestOffheapCacheGetRangeAPI.class);
+
   int blockSize = 4096;
   int numRecords = 10;
   int maxKeySize = 32;
@@ -108,7 +111,7 @@ public class TestOffheapCacheGetRangeAPI {
     Random r = new Random();
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
-    System.out.println("seed="+ seed);
+    LOG.info("seed="+ seed);
     
     for (int i = 0; i < numRecords; i++) {
       int keySize = nextKeySize();
@@ -119,7 +122,7 @@ public class TestOffheapCacheGetRangeAPI {
       mValues[i] = TestUtils.randomMemory(valueSize, r);
       expires[i] = getExpire(i); // To make sure that we have distinct expiration values
     }  
-    System.out.printf("prepare finished in %dms\n", System.currentTimeMillis() - seed );
+    LOG.info("prepare finished in {}ms", System.currentTimeMillis() - seed );
     
   }
   
@@ -136,7 +139,7 @@ public class TestOffheapCacheGetRangeAPI {
       }
       count++;
     }    
-    System.out.printf("loaded=%d\n", count);
+    LOG.info("loaded={}", count);
     return count;
   }
   
@@ -154,7 +157,7 @@ public class TestOffheapCacheGetRangeAPI {
       }
       count++;
     }    
-    System.out.printf("loaded=%d\n", count);
+    LOG.info("loaded={}", count);
 
     return count;
   }

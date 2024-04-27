@@ -18,8 +18,8 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -34,7 +34,7 @@ import com.onecache.core.util.Utils;
  */
 public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryIndexMultithreadedBase{
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(TestMemoryIndexAQMultithreadedStress.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMemoryIndexAQMultithreadedStress.class);
   
   @Before
   public void setUp() {
@@ -60,7 +60,7 @@ public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryInd
     assertEquals(0, failed);
     
     long end = System.currentTimeMillis();
-    System.out.println(Thread.currentThread().getName() + " loaded "+ numRecords + 
+    LOG.info(Thread.currentThread().getName() + " loaded "+ numRecords + 
       " RPS=" + ((long) numRecords) * 1000 / (end - start));
     return failed;
   }
@@ -84,7 +84,7 @@ public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryInd
     assertEquals(0, failed);
 
     long end = System.currentTimeMillis();
-    System.out.println(Thread.currentThread().getName() + " verified "+ numRecords + 
+    LOG.info(Thread.currentThread().getName() + " verified "+ numRecords + 
       " RPS=" + ((long) numRecords) * 1000 / (end - start));
     UnsafeAccess.free(buf);
     return failed;
@@ -103,7 +103,7 @@ public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryInd
     assertEquals(0, failed);
 
     long end = System.currentTimeMillis();
-    System.out.println(Thread.currentThread().getName() + " loaded NOT "+ numRecords + 
+    LOG.info(Thread.currentThread().getName() + " loaded NOT "+ numRecords + 
       " RPS=" + ((long) numRecords) * 1000 / (end - start));
     return failed;
   }
@@ -121,7 +121,7 @@ public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryInd
     assertEquals(0, failed);
 
     long end = System.currentTimeMillis();
-    System.out.println(Thread.currentThread().getName() + " loaded "+ numRecords + 
+    LOG.info(Thread.currentThread().getName() + " loaded "+ numRecords + 
       " RPS=" + ((long) numRecords) * 1000 / (end - start));
     return failed;
   }
@@ -145,7 +145,7 @@ public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryInd
     assertEquals(0, failed);
 
     long end = System.currentTimeMillis();
-    System.out.println(Thread.currentThread().getName() + " verified "+ numRecords + 
+    LOG.info(Thread.currentThread().getName() + " verified "+ numRecords + 
       " RPS=" + ((long) numRecords) * 1000 / (end - start));
     UnsafeAccess.free(buf);
     return failed;
@@ -164,7 +164,7 @@ public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryInd
     assertEquals(0, failed);
 
     long end = System.currentTimeMillis();
-    System.out.println(Thread.currentThread().getName() + " loaded NOT "+ numRecords + 
+    LOG.info(Thread.currentThread().getName() + " loaded NOT "+ numRecords + 
       " RPS=" + ((long) numRecords) * 1000 / (end - start));
     return failed;
   }
@@ -172,7 +172,7 @@ public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryInd
   
   @Test
   public void testLoadReadWithRehashBytesMTLarge() {
-    /*DEBUG*/ System.out.println("testLoadReadWithRehashBytesMTLarge");
+    /*DEBUG*/ LOG.info("testLoadReadWithRehashBytesMTLarge");
 
     Runnable r = () -> testLoadReadWithRehashBytesLarge();
     Thread[] workers = startAll(r);    
@@ -187,7 +187,7 @@ public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryInd
   
   @Test
   public void testLoadReadWithRehashMemoryMTLarge() {
-    /*DEBUG*/ System.out.println("testLoadReadWithRehashMemoryMTLarge");
+    /*DEBUG*/ LOG.info("testLoadReadWithRehashMemoryMTLarge");
 
     Runnable r = () -> testLoadReadWithRehashMemoryLarge();
     Thread[] workers = startAll(r);    
@@ -202,7 +202,7 @@ public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryInd
   
   @Test
   public void testLoadReadDeleteWithRehashBytesMTLarge() {
-    /*DEBUG*/ System.out.println("testLoadReadDeleteWithRehashBytesMTLarge");
+    /*DEBUG*/ LOG.info("testLoadReadDeleteWithRehashBytesMTLarge");
 
     Runnable r = () -> testLoadReadDeleteWithRehashBytesLarge();
     Thread[] workers = startAll(r);    
@@ -221,7 +221,7 @@ public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryInd
   
   @Test
   public void testLoadReadDeleteWithRehashMemoryMTLarge() {
-    /*DEBUG*/ System.out.println("testLoadReadDeleteWithRehashMemoryMTLarge");
+    /*DEBUG*/ LOG.info("testLoadReadDeleteWithRehashMemoryMTLarge");
 
     Runnable r = () -> testLoadReadDeleteWithRehashMemoryLarge();
     Thread[] workers = startAll(r);    
@@ -240,7 +240,7 @@ public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryInd
   
   @Test
   public void testDoubleLoadReadWithRehashBytesMTLarge() {
-    /*DEBUG*/ System.out.println("testDoubleLoadReadWithRehashBytesMTLarge");
+    /*DEBUG*/ LOG.info("testDoubleLoadReadWithRehashBytesMTLarge");
 
     Runnable r = () -> testDoubleLoadReadWithRehashBytesLarge();
     Thread[] workers = startAll(r);    
@@ -255,7 +255,7 @@ public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryInd
   
   @Test
   public void testDoubleLoadReadWithRehashMemoryMTLarge() {
-    /*DEBUG*/ System.out.println("testDoubleLoadReadWithRehashMemoryMTLarge");
+    /*DEBUG*/ LOG.info("testDoubleLoadReadWithRehashMemoryMTLarge");
 
     Runnable r = () -> testDoubleLoadReadWithRehashMemoryLarge();
     Thread[] workers = startAll(r);    
@@ -304,7 +304,7 @@ public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryInd
       int result = (int) memoryIndex.find(keys[i], 0, keySize, false, buf, entrySize);
       if (result == -1) evicted2.incrementAndGet();
     }
-    System.out.println("evicted1=" + evicted1 + " evicted2="+ evicted2);
+    LOG.info("evicted1=" + evicted1 + " evicted2="+ evicted2);
     UnsafeAccess.free(buf); 
     clearData();
   }
@@ -336,7 +336,7 @@ public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryInd
       int result = (int) memoryIndex.find(mKeys[i], keySize, false, buf, entrySize);
       if (result == -1) evicted2 ++;
     }
-    System.out.println("evicted1=" + evicted1 + " evicted2="+ evicted2);
+    LOG.info("evicted1=" + evicted1 + " evicted2="+ evicted2);
     assertEquals(100000, evicted1 + evicted2);
     UnsafeAccess.free(buf);
     clearData();
@@ -345,9 +345,9 @@ public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryInd
   
   private int loadReadBytes(int num) {
     prepareData(num);
-    System.out.println(Thread.currentThread().getName() + ": prepare done");
+    LOG.info(Thread.currentThread().getName() + ": prepare done");
     int failed =loadIndexBytes();
-    System.out.println(Thread.currentThread().getName() + ": load done");
+    LOG.info(Thread.currentThread().getName() + ": load done");
     int unverified = verifyIndexBytes();  
     assertEquals(failed, unverified);
     return failed;

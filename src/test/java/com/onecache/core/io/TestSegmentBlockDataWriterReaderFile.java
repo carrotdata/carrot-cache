@@ -24,6 +24,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.Cache;
 import com.onecache.core.index.MemoryIndex;
@@ -32,7 +34,8 @@ import com.onecache.core.util.TestUtils;
 import com.onecache.core.util.UnsafeAccess;
 
 public class TestSegmentBlockDataWriterReaderFile extends IOTestBase{
-  
+  private static final Logger LOG = LoggerFactory.getLogger(TestSegmentBlockDataWriterReaderFile.class);
+
   @Before
   public void setUp() {
     this.index = new MemoryIndex("default", Type.MQ);
@@ -43,7 +46,7 @@ public class TestSegmentBlockDataWriterReaderFile extends IOTestBase{
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
     
-    System.out.println("r.seed="+ seed);
+    LOG.info("r.seed="+ seed);
     long ptr = UnsafeAccess.mallocZeroed(this.segmentSize);
     segment = Segment.newSegment(ptr, this.segmentSize, 1, 1);
     segment.init("default");

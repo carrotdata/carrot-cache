@@ -31,8 +31,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.index.MemoryIndex;
 import com.onecache.core.index.MemoryIndex.Result;
@@ -62,7 +62,7 @@ public class Scavenger implements Runnable {
     
   }
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(Scavenger.class);
+  private static final Logger LOG = LoggerFactory.getLogger(Scavenger.class);
   
   public static class Stats implements Persistent {
     
@@ -347,7 +347,7 @@ public class Scavenger implements Runnable {
     for(Map.Entry<String,Stats> entry: statsMap.entrySet()) {
       String name = entry.getKey();
       Stats stats = entry.getValue();
-      System.out.printf("Scavenger [%s]: runs=%d scanned=%d freed=%d written back=%d empty segments=%d\n", 
+      LOG.info("Scavenger [{}]: runs={} scanned={} freed={} written back={} empty segments={}", 
         name, stats.getTotalRuns(), stats.getTotalBytesScanned(), 
         stats.getTotalBytesFreed(), stats.getTotalBytesScanned() - stats.getTotalBytesFreed(),
         stats.getTotalEmptySegments());
@@ -514,10 +514,10 @@ public class Scavenger implements Runnable {
           engine.disposeDataSegment(s);
 
         } catch (IOException e) {
-          LOG.error("Cache : %s segment id=%d offheap =%s sealed=%s", cache.getName(),
+          LOG.error("Cache : {} segment id={} offheap ={} sealed={}", cache.getName(),
             s == null ? -1 : s.getId(), s == null ? null : Boolean.toString(s.isOffheap()),
             s == null ? null : Boolean.toString(s.isSealed()));
-          LOG.error(e);
+          LOG.error("Error:", e);
           e.printStackTrace();
           return;
         }

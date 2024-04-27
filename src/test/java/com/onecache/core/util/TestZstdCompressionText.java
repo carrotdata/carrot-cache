@@ -9,6 +9,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.github.luben.zstd.ZstdCompressCtx;
 import com.github.luben.zstd.ZstdDecompressCtx;
 import com.github.luben.zstd.ZstdDictCompress;
@@ -16,9 +19,10 @@ import com.github.luben.zstd.ZstdDictDecompress;
 import com.github.luben.zstd.ZstdDictTrainer;
 
 public class TestZstdCompressionText {
+  private static final Logger LOG = LoggerFactory.getLogger(TestZstdCompressionText.class);
 
   private static int DICT_SIZE = 1 << 20; // 16KB
-  private static int COMP_LEVEL = 6;
+  private static int COMP_LEVEL = 3;
   
   @SuppressWarnings("unused")
   public static void main(String[] args) throws IOException {
@@ -31,7 +35,7 @@ public class TestZstdCompressionText {
      List<byte[]> trainingList = new ArrayList<byte[]>();
      trainingList = getList(b);
      
-     System.out.printf("Avg sentence length=%d\n", totalSize / trainingList.size());
+     LOG.info("Avg sentence length={}", totalSize / trainingList.size());
      
      ZstdDictTrainer trainer = new ZstdDictTrainer(totalSize, DICT_SIZE);
      List<byte[]> toTrain = trainingList.subList(0, trainingList.size());
@@ -42,7 +46,7 @@ public class TestZstdCompressionText {
      ByteBuffer dictData = trainer.trainSamplesDirect();
      long end = System.currentTimeMillis();
      
-     System.out.printf("Training time %d sample size=%d\n", end - start, totalSize);
+     LOG.info("Training time {} sample size={}", end - start, totalSize);
      ZstdDictCompress dictCompress = new ZstdDictCompress(dictData, COMP_LEVEL);
      
      ZstdCompressCtx compContext = new ZstdCompressCtx();
@@ -50,9 +54,8 @@ public class TestZstdCompressionText {
      compContext.setLevel(COMP_LEVEL);
 
      int n = 80;
-     System.out.printf("Group of:%d\n", n);
+     LOG.info("Group of:{}", n);
      List<byte[]> group = groupOf(trainingList, n);
-     //group = group.subList(group.size()/2, group.size());
      
      List<byte[]> compresed = compress(compContext, group);
      
@@ -92,9 +95,6 @@ public class TestZstdCompressionText {
     String[] parts = s.split("\\.|\\?|\\!");
     List<String> list = Arrays.stream(parts).filter(x -> x.length() > 0).collect(Collectors.toList());
     list.stream().forEach(x -> x.trim());
-//    for (int j = 0; j < 100; j++) {
-//      System.out.println(list.get(j));
-//    }
     return list.stream().map( x-> x.getBytes()).collect(Collectors.toList());
   }
 
@@ -111,9 +111,9 @@ public class TestZstdCompressionText {
       compSize += cb.length;
     }
     long end = System.nanoTime();
-    System.out.printf("Compression time %d micros total samples=%d\n", (end - start) / 1000, source.size());
-    System.out.printf("Total size=%d compressed=%d ratio=%f\n", totalSize, compSize, (double) totalSize/ compSize);
-    System.out.printf("Compression speed=%fMB/s\n", ((double) totalSize * 1000000000) / ((1L << 20) * (end - start)));
+    LOG.info("Compression time {} micros total samples={}", (end - start) / 1000, source.size());
+    LOG.info("Total size={} compressed={} ratio={}", totalSize, compSize, (double) totalSize/ compSize);
+    LOG.info("Compression speed={}MB/s", ((double) totalSize * 1000000000) / ((1L << 20) * (end - start)));
     return result;
   }
   
@@ -142,9 +142,9 @@ public class TestZstdCompressionText {
     UnsafeAccess.free(src);
     UnsafeAccess.free(dst);
     long end = System.nanoTime();
-    System.out.printf("Native-Native Compression time %d micros total samples=%d raw time=%d\n", (end - start) / 1000, source.size(), total);
-    System.out.printf("Total size=%d compressed=%d ratio=%f\n", totalSize, compSize, (double) totalSize/ compSize);
-    System.out.printf("Compression speed=%fMB/s\n", ((double) totalSize * 1000000000) / ((1L << 20) * (end - start)));
+    LOG.info("Native-Native Compression time {} micros total samples={} raw time={}", (end - start) / 1000, source.size(), total);
+    LOG.info("Total size={} compressed={} ratio={}", totalSize, compSize, (double) totalSize/ compSize);
+    LOG.info("Compression speed={}MB/s", ((double) totalSize * 1000000000) / ((1L << 20) * (end - start)));
 
     return result;
   }
@@ -171,9 +171,9 @@ public class TestZstdCompressionText {
    }
    UnsafeAccess.free(src);
    long end = System.nanoTime();
-   System.out.printf("Native-ByteArray Compression time %d micros total samples=%d\n", (end - start) / 1000, source.size());
-   System.out.printf("Total size=%d compressed=%d ratio=%f\n", totalSize, compSize, (double) totalSize/ compSize);
-   System.out.printf("Compression speed=%fMB/s\n", ((double) totalSize * 1000000000) / ((1L << 20) * (end - start)));
+   LOG.info("Native-ByteArray Compression time {} micros total samples={}", (end - start) / 1000, source.size());
+   LOG.info("Total size={} compressed={} ratio={}", totalSize, compSize, (double) totalSize/ compSize);
+   LOG.info("Compression speed={}MB/s", ((double) totalSize * 1000000000) / ((1L << 20) * (end - start)));
 
    return result;
  }
@@ -200,9 +200,9 @@ public class TestZstdCompressionText {
    }
    UnsafeAccess.free(dst);
    long end = System.nanoTime();
-   System.out.printf("ByteArray-Native Compression time %d micros total samples=%d\n", (end - start) / 1000, source.size());
-   System.out.printf("Total size=%d compressed=%d ratio=%f\n", totalSize, compSize, (double) totalSize/ compSize);
-   System.out.printf("Compression speed=%fMB/s\n", ((double) totalSize * 1000000000) / ((1L << 20) * (end - start)));
+   LOG.info("ByteArray-Native Compression time {} micros total samples={}", (end - start) / 1000, source.size());
+   LOG.info("Total size={} compressed={} ratio={}", totalSize, compSize, (double) totalSize/ compSize);
+   LOG.info("Compression speed={}MB/s", ((double) totalSize * 1000000000) / ((1L << 20) * (end - start)));
 
    return result;
  }
@@ -219,7 +219,7 @@ public class TestZstdCompressionText {
       result.add(db);
     }
     long end = System.nanoTime();
-    System.out.printf("Decompression time=%d size=%d speed=%f MB/s\n", (end - start) / 1000,  decompSize,
+    LOG.info("Decompression time={} size={} speed={} MB/s", (end - start) / 1000,  decompSize,
       ((double) decompSize * 1000000000) / ((1L << 20) * (end - start)));
 
     return result;
@@ -246,7 +246,7 @@ public class TestZstdCompressionText {
       result.add(db);
     }
     long end = System.nanoTime();
-    System.out.printf("Decompression  Native-Native time=%d size=%d speed=%f MB/s raw time=%d\n", (end - start) / 1000,  decompSize,
+    LOG.info("Decompression  Native-Native time={} size={} speed={} MB/s raw time={}", (end - start) / 1000,  decompSize,
       ((double) decompSize * 1000000000) / ((1L << 20) * (end - start)), total);
 
     UnsafeAccess.free(src);
@@ -272,7 +272,7 @@ public class TestZstdCompressionText {
       result.add(db);
     }
     long end = System.nanoTime();
-    System.out.printf("Decompression  Native-ByteArray time=%d size=%d speed=%f MB/s\n", (end - start) / 1000,  decompSize,
+    LOG.info("Decompression  Native-ByteArray time={} size={} speed={} MB/s", (end - start) / 1000,  decompSize,
       ((double) decompSize * 1000000000) / ((1L << 20) * (end - start)));
 
     UnsafeAccess.free(src);
@@ -297,7 +297,7 @@ public class TestZstdCompressionText {
       result.add(db);
     }
     long end = System.nanoTime();
-    System.out.printf("Decompression  ByteArray-Native time=%d size=%d speed=%f MB/s\n", (end - start) / 1000,  decompSize,
+    LOG.info("Decompression  ByteArray-Native time={} size={} speed={} MB/s", (end - start) / 1000,  decompSize,
       ((double) decompSize * 1000000000) / ((1L << 20) * (end - start)));
 
     UnsafeAccess.free(src);
@@ -315,7 +315,7 @@ public class TestZstdCompressionText {
       decompSize += size;
     }
     long end = System.nanoTime();
-    System.out.printf("Decompression ByteArraytime=%d size=%d speed=%f MB/s\n", (end - start) / 1000,  decompSize,
+    LOG.info("Decompression ByteArraytime={} size={} speed={} MB/s", (end - start) / 1000,  decompSize,
       ((double) decompSize * 1000000000) / ((1 << 20) * (end - start)));
 
   }

@@ -21,8 +21,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.Cache;
 import com.onecache.core.index.MemoryIndex;
@@ -51,7 +51,7 @@ import com.onecache.core.util.Utils;
 public class AdmissionQueue implements Persistent {
   /** Logger */
   @SuppressWarnings("unused")
-  private static final Logger LOG = LogManager.getLogger(AdmissionQueue.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AdmissionQueue.class);
   
   /* Maximum AQ current size */
   protected double currentMaxSizeRatio;
@@ -217,11 +217,9 @@ public class AdmissionQueue implements Persistent {
     double avgItemSize = (double) this.totalSize.get() / this.totalPuts.get();
     long maxItems = (long) (this.maxCacheSize * this.currentMaxSizeRatio / avgItemSize);
     if (maxItems <= this.index.size() && !this.index.isEvictionEnabled()) {
-      //*DEBUG*/ System.out.printf("Eviction ON index size=%d\n", this.index.size());
       this.index.setEvictionEnabled(true);
     } else if (maxItems * 0.95 >= this.index.size() && this.index.isEvictionEnabled()) {
       this.index.setEvictionEnabled(false);
-      //*DEBUG*/ System.out.printf("Eviction OFF index size=%d\n", this.index.size());
 
     }
   }

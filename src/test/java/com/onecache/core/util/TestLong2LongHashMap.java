@@ -17,9 +17,13 @@ package com.onecache.core.util;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static org.junit.Assert.*;
 
 public abstract class TestLong2LongHashMap {
+  private static final Logger LOG = LoggerFactory.getLogger(TestLong2LongHashMap.class);
 
   static ThreadLocal<long[]> keysTLS = new ThreadLocal<long[]>();
   
@@ -30,40 +34,40 @@ public abstract class TestLong2LongHashMap {
 
   @Test
   public void testPutGetWithNoHashedKeys() throws InterruptedException {
-    System.out.printf("Test put-get no hashed keys, delay=0\n");
+    LOG.info("Test put-get no hashed keys, delay=0");
     testPutGet(false, 0);
-    System.out.printf("Test put-get no hashed keys, delay=200ms\n");
+    LOG.info("Test put-get no hashed keys, delay=200ms");
     testPutGet(false, 200);
 
   }
   
   @Test
   public void testPutGetWithHashedKeys() throws InterruptedException {
-    System.out.printf("Test put-get with hashed keys, delay=0\n");
+    LOG.info("Test put-get with hashed keys, delay=0");
     testPutGet(true, 0);
-    System.out.printf("Test put-get no hashed keys, delay=200ms\n");
+    LOG.info("Test put-get no hashed keys, delay=200ms");
     testPutGet(true, 200);
   }
   
   @Test
   public void testPutDeleteAllGet() throws InterruptedException {
-    System.out.printf("Test put-delete all-get, delay=0\n");
+    LOG.info("Test put-delete all-get, delay=0");
     testPutDeleteGet(numIteration, 0);
-    System.out.printf("Test put-delete all-get, delay=200\n");
+    LOG.info("Test put-delete all-get, delay=200");
     testPutDeleteGet(numIteration, 200);
   }
   
   @Test
   public void testPutDeletePartialGet() throws InterruptedException {
-    System.out.printf("Test put-delete partial-get, delay=0\n");
+    LOG.info("Test put-delete partial-get, delay=0");
     testPutDeleteGet(numIteration / 2, 0);
-    System.out.printf("Test put-delete partial-get, delay=200ms\n");
+    LOG.info("Test put-delete partial-get, delay=200ms");
     testPutDeleteGet(numIteration / 2, 200);
   }
     
   @Test
   public void testMultiPutDeleteAllGet() throws InterruptedException {
-      System.out.printf("Test multi-put-delete all-get, delay=200ms\n");
+      LOG.info("Test multi-put-delete all-get, delay=200ms");
       testMultiPutDeleteGet(numIteration, 300);
   }
   
@@ -80,7 +84,7 @@ public abstract class TestLong2LongHashMap {
   private void testMultiPutDeleteGet(int toDelete, long delay) throws InterruptedException {
     Runnable r = () -> {     
       for (int i = 0; i < 1; i++) {
-        System.out.printf("******************%s delay=%d RUN=%d*******************\n\n", 
+        LOG.info("******************{} delay={} RUN={}*******************\n", 
           Thread.currentThread().getName(), delay, i + 1);
         loadData();
         deleteData(toDelete);
@@ -98,7 +102,7 @@ public abstract class TestLong2LongHashMap {
       data[i] = Utils.squirrel3(data[i]);
     }
     long end = System.currentTimeMillis();
-    System.out.printf("%s modfied %d keys in %dms\n", 
+    LOG.info("{} modfied {} keys in {}ms", 
       Thread.currentThread().getName(), data.length, end - start);
   }
 
@@ -127,7 +131,7 @@ public abstract class TestLong2LongHashMap {
     }
 
     long t2 = System.currentTimeMillis();
-    System.out.printf("%s loaded %d key-values in %dms duplicates=%d\n",
+    LOG.info("{} loaded {} key-values in {}ms duplicates={}",
       Thread.currentThread().getName(), numIteration, t2 - t1, duplicates);
   }
   
@@ -146,12 +150,12 @@ public abstract class TestLong2LongHashMap {
       long value = map.get(key);
       if (count < deleted) {
         if (value != 0) {
-          System.err.printf("verify failed key=%d value=%d i=%d\n", key, value, count);
+          LOG.error("verify failed key={} value={} i={}", key, value, count);
           failed++;
         }
       } else if (value == 0 || value != key + id) {
         if (firstFailed) {
-          System.out.printf("First failed %d\n", count);
+          LOG.info("First failed {}", count);
           firstFailed = false;
         }
         lastFailed=count;
@@ -164,7 +168,7 @@ public abstract class TestLong2LongHashMap {
       
     }
     long t2 = System.currentTimeMillis();
-    System.out.printf("%s verified %d key-values in %dms failed=%d failed value=%d lastFailed=%d\n",
+    LOG.info("{} verified {} key-values in {}ms failed={} failed value={} lastFailed={}",
       Thread.currentThread().getName(), n, t2 - t1, failed, failedValue, lastFailed);
     assertTrue(failed == 0);
   }
@@ -181,12 +185,12 @@ public abstract class TestLong2LongHashMap {
       //assertTrue (value != 0);
       if (value == 0) {
         map.trace = true;
-        System.err.printf("delete failed key=%d i=%d\n", key, count);
+        LOG.error("delete failed key={} i={}", key, count);
         failed ++;
       }
     }
     long t2 = System.currentTimeMillis();
-    System.out.printf("%s deleted %d key-values in %dms failed=%d\n",
+    LOG.info("{} deleted {} key-values in {}ms failed={}",
       Thread.currentThread().getName(), toDelete, t2 - t1, failed);
     assertTrue( failed == 0);
   }
@@ -218,7 +222,7 @@ public abstract class TestLong2LongHashMap {
 
     long end = System.currentTimeMillis();
 
-    System.out.printf("Time is %d\n size=%d tombstones=%d capacity=%d\n", 
+    LOG.info("Time is {}\n size={} tombstones={} capacity={}", 
       end - start, map.size(), map.totalTombstoneObjects(), map.capacity());
 
   }

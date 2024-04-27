@@ -14,13 +14,13 @@
  */
 package com.onecache.core.eviction;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FIFOEvictionPolicy implements EvictionPolicy {
   /** Logger */
   @SuppressWarnings("unused")
-  private static final Logger LOG = LogManager.getLogger(FIFOEvictionPolicy.class);
+  private static final Logger LOG = LoggerFactory.getLogger(FIFOEvictionPolicy.class);
   
   public FIFOEvictionPolicy() {
   }

@@ -24,13 +24,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public class MemoryBufferPool {
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(MemoryBufferPool.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MemoryBufferPool.class);
   
   ConcurrentLinkedQueue<Long> memoryBuffers = new ConcurrentLinkedQueue<Long>();
   /*
@@ -76,7 +76,7 @@ public class MemoryBufferPool {
       long t2 = System.currentTimeMillis();
       LOG.debug("Initialized {} memory buffers of size {} in {}ms", maxCapacity, bufferSize, t2 - t1);
     } catch (Exception e) {
-      LOG.warn(e);
+      LOG.warn("Failed", e);
     }
   }
   

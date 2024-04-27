@@ -28,13 +28,16 @@ import java.util.Random;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.util.TestUtils;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
 
 public class TestPrefetchBuffer extends IOTestBase {
-  
+  private static final Logger LOG = LoggerFactory.getLogger(TestPrefetchBuffer.class);
+
   @Before
   public void setUp() {
     this.segmentSize = 4 * 1024 * 1024;
@@ -45,7 +48,7 @@ public class TestPrefetchBuffer extends IOTestBase {
     this.r = new Random();
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
-    System.out.println("r.seed=" + seed);
+    LOG.info("r.seed=" + seed);
     prepareRandomData(this.numRecords);
   }
   

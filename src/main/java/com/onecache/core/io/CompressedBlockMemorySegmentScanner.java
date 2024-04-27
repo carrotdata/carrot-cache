@@ -25,6 +25,9 @@ import static com.onecache.core.compression.CompressionCodec.SIZE_OFFSET;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.onecache.core.compression.CompressionCodec;
 import com.onecache.core.util.UnsafeAccess;
 import com.onecache.core.util.Utils;
@@ -42,6 +45,8 @@ import com.onecache.core.util.Utils;
    * }
    */
   public final class CompressedBlockMemorySegmentScanner implements SegmentScanner {
+    private static final Logger LOG = LoggerFactory.getLogger(CompressedBlockMemorySegmentScanner.class);
+
     /*
      * Data segment
      */
@@ -124,7 +129,7 @@ import com.onecache.core.util.Utils;
       } else if (dictId == -1){
         UnsafeAccess.copy(ptr + this.offset + COMP_META_SIZE, this.bufPtr, this.blockSize);
       } else {
-        System.err.printf("Segment size=%d offset=%d uncompressed=%d compressed=%d dictId=%d index=%d total items=%d\n", 
+        LOG.error("Segment size={} offset={} uncompressed={} compressed={} dictId={} index={} total items={}", 
           segment.getSegmentDataSize(), offset, this.blockSize, compSize, dictId, currentIndex, segment.getTotalItems());
         Thread.dumpStack();
         System.exit(-1);

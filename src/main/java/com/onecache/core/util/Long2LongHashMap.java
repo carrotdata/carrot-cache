@@ -739,9 +739,6 @@ public class Long2LongHashMap {
       newLen = 2 * len;
     }
     rehashRef = new AtomicLongArray(newLen);
-    // System.err.printf("%s Rehashing started capacity=%d ALIVE=%d DELETED=%d time=%dms\n",
-    // Thread.currentThread().getName(), newLen, aliveObj, deletedObj, System.currentTimeMillis() -
-    // start);
     this.rehashChunkSize = 8;
 
     rg.rehashData = rehashRef;
@@ -758,8 +755,6 @@ public class Long2LongHashMap {
     updateRehashCheckMask();
     rehashGroup.set(null);
     rehashStarter.set(null);
-    //System.err.printf("%s Rehashing finished ALIVE=%d DELETED=%d\n", 
-    //  Thread.currentThread(), alive.longValue(), tombstones.longValue());
   }
   
   /**
@@ -889,11 +884,9 @@ public class Long2LongHashMap {
     int len = data.length();
     final int mask = (int) (data.length() - 1) & 0xfffffffe;
     int index = (int) (key & mask);
-    //System.out.printf("At index %d found=%d\n", index, data.get(index));
     for(int i = index; i < len; i+=2) {
       long k = data.get(i);
       if (k == key) {
-        //System.out.printf("start index=%d found=%d key=%d\n", index, i, key);
         return data.get(i + 1);
       } 
     }

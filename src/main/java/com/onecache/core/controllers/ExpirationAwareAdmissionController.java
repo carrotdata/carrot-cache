@@ -16,8 +16,8 @@ package com.onecache.core.controllers;
 
 import java.io.IOException;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.Cache;
 import com.onecache.core.util.CacheConfig;
@@ -48,7 +48,7 @@ import com.onecache.core.util.CacheConfig;
 
 public class ExpirationAwareAdmissionController implements AdmissionController{
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(ExpirationAwareAdmissionController.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ExpirationAwareAdmissionController.class);
   long[] ttlBins;
   long binStart;
   double multiplier;
@@ -81,11 +81,11 @@ public class ExpirationAwareAdmissionController implements AdmissionController{
   
   private void sanityCheck() {
     if (binStart <= 0) {
-      LOG.error(String.format("Wrong value for  expiration bin start value {}, assigning 1", binStart));
+      LOG.error("Wrong value for  expiration bin start value {}, assigning 1", binStart);
       binStart = 1;
     }
     if (multiplier <= 1.0) {
-      LOG.error(String.format("Wrong value for  expiration bin multiplier value {}, assigning 2.", multiplier));
+      LOG.error("Wrong value for  expiration bin multiplier value {}, assigning 2.", multiplier);
       multiplier = 2.0;
     }
   }

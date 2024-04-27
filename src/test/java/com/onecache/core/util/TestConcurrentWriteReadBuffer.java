@@ -2,23 +2,19 @@ package com.onecache.core.util;
 
 import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.LockSupport;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 public abstract class TestConcurrentWriteReadBuffer {
+  private static final Logger LOG = LoggerFactory.getLogger(TestConcurrentWriteReadBuffer.class);
 
   ConcurrentWriteReadBuffer buffer;
   Long2LongHashMap cache;
@@ -88,11 +84,11 @@ public abstract class TestConcurrentWriteReadBuffer {
   }
   
   synchronized void printKeys(long[] keys) {
-    System.out.println(Thread.currentThread());
+    LOG.info("{}", Thread.currentThread());
     for (int i = 0; i < n; i++ ) {
-      System.out.println(keys[i]);
+      LOG.info("{}", keys[i]);
     }
-    System.out.println();
+    LOG.info("");
   }
   
   private void deallocate(long v) {
@@ -126,7 +122,7 @@ public abstract class TestConcurrentWriteReadBuffer {
     keysTLS.set(keys);
     valuesTLS.set(values);
     long end = System.currentTimeMillis();
-    System.out.printf("%s generated %d in %dms\n", Thread.currentThread().getName(), n, end - start);
+    LOG.info("{} generated {} in {}ms", Thread.currentThread().getName(), n, end - start);
 
   }
   AtomicLong totalEvacuatedTime  = new AtomicLong();
@@ -152,7 +148,7 @@ public abstract class TestConcurrentWriteReadBuffer {
       long val = mainStorage.put(key, $ptr);
       if (val >  0) {
         boolean b = equalsKeys(ptr + off + keySizeSize + valueSizeSize, keySize, val);
-        System.out.printf("%s Put key hash=%d found hash=%d  value=%d slot=%d off=%d keys eq=%b\n",
+        LOG.info("{} Put key hash={} found hash={}  value={} slot={} off={} keys eq=%b",
           Thread.currentThread().getName(), key, keyHash(val), val, slot, off, b);
         
       }
@@ -184,7 +180,7 @@ public abstract class TestConcurrentWriteReadBuffer {
 
     }
     long end = System.currentTimeMillis();
-    System.out.printf("%s loaded %d in %dms evacuation time=%dms, failedCHM reads=%d failed reads=%d\n", 
+    LOG.info("{} loaded {} in {}ms evacuation time={}ms, failedCHM reads={} failed reads={}", 
       Thread.currentThread().getName(), n, end - start, totalEvacuatedTime.get() / 1_000_000, failedCHM.get(), failed.get());
     
   }
@@ -200,32 +196,32 @@ public abstract class TestConcurrentWriteReadBuffer {
       if (ptr <= 0) {
         long found = cache.search(hash(keyPtr, keySize));
         if (found > 0) {
-          System.err.printf("%s i=%d verify failed, hash=%d run=%d slot=%d off=%d\n", 
+          LOG.error("{} i={} verify failed, hash={} run={} slot={} off={}", 
             Thread.currentThread(), i, hash(keyPtr, keySize), ConcurrentWriteReadBuffer.getWriteRun(found),
             ConcurrentWriteReadBuffer.getSlotNumber(found), ConcurrentWriteReadBuffer.getOffset(found));
         } else {
-          System.err.printf("%s i=%d verify failed, hash=%d founf=%d\n", 
+          LOG.error("{} i={} verify failed, hash={} founf={}", 
             Thread.currentThread(), i, hash(keyPtr, keySize), found);
         }
         continue;
       }
       boolean result = equalsKeys(keyPtr, keySize, ptr);
       if (!result) {
-        System.err.printf("Expected key hash=%d size=%d\n", hash(keyPtr, keySize), keySize);
+        LOG.error("Expected key hash={} size={}", hash(keyPtr, keySize), keySize);
         int kSize = Utils.readUVInt(ptr);
         int kSizeSize = Utils.sizeUVInt(kSize);
         ptr += kSizeSize;
         int vSize = Utils.readUVInt(ptr);
         int vSizeSize = Utils.sizeUVInt(vSize);
         ptr += vSizeSize;
-        System.err.printf("Found key hash=%d size=%d\n", hash(ptr, kSize), kSize);
+        LOG.error("Found key hash={} size={}", hash(ptr, kSize), kSize);
 
       }
       assertTrue(result);
       assertTrue(equalsValues(valPtr, valSize, ptr));
     }
     long end = System.currentTimeMillis();
-    System.out.printf("%s verified %d in %dms\n", Thread.currentThread().getName(), n, end - start);
+    LOG.info("{} verified {} in {}ms", Thread.currentThread().getName(), n, end - start);
   }
   
   private long getKeyValueBlob(long keyPtr, int keySize) {
@@ -233,7 +229,7 @@ public abstract class TestConcurrentWriteReadBuffer {
     long value = mainStorage.get(key);
     if (value != 0) {
       if (!equalsKeys(keyPtr, keySize, value)) {
-        System.err.printf("Failed read from mainStorage\n");
+        LOG.error("Failed read from mainStorage");
       }
       return value;
     }
@@ -241,7 +237,7 @@ public abstract class TestConcurrentWriteReadBuffer {
     value = index > 0? buffer.getAddressByIndex(index): 0;
     if (value > 0) {
       if (!equalsKeys(keyPtr, keySize, value)) {
-        System.err.printf("Failed read from cache\n");
+        LOG.error("Failed read from cache");
       }
       return value;
     }
@@ -254,11 +250,11 @@ public abstract class TestConcurrentWriteReadBuffer {
           break;
         }
       }
-      //System.err.printf("Waited for %d ns, value=%d\n", System.nanoTime() - start, value);
+      //LOG.error("Waited for {} ns, value={}", System.nanoTime() - start, value);
     }
     if (value > 0) {
       if (!equalsKeys(keyPtr, keySize, value)) {
-        System.err.printf("Failed read from mainStorage after wait\n");
+        LOG.error("Failed read from mainStorage after wait");
       }
       return value;
     }

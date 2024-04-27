@@ -18,8 +18,8 @@ import static org.junit.Assert.*;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -34,7 +34,7 @@ import com.onecache.core.util.Utils;
  */
 public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreadedBase{
   /** Logger */
-  private static final Logger LOG = LogManager.getLogger(TestMemoryIndexAQMultithreaded.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMemoryIndexAQMultithreaded.class);
   
   @Before
   public void setUp() {
@@ -156,7 +156,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Test
   public void testLoadReadNoRehashBytesMT(){
-    /*DEBUG*/ System.out.println("testLoadReadNoRehashBytesMT");
+    /*DEBUG*/ LOG.info("testLoadReadNoRehashBytesMT");
     Runnable r = () -> testLoadReadNoRehashBytes();
     Thread[] workers = startAll(r);    
     joinAll(workers);
@@ -170,7 +170,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Test
   public void testLoadReadNoRehashBytesMTWithHit(){
-    /*DEBUG*/ System.out.println("testLoadReadNoRehashBytesMT with hit ");
+    /*DEBUG*/ LOG.info("testLoadReadNoRehashBytesMT with hit ");
     Runnable r = () -> testLoadReadNoRehashBytesWithHit();
     Thread[] workers = startAll(r);    
     joinAll(workers);
@@ -184,7 +184,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Test
   public void testLoadReadNoRehashMemoryMT(){
-    /*DEBUG*/ System.out.println("testLoadReadNoRehashMemoryMT");
+    /*DEBUG*/ LOG.info("testLoadReadNoRehashMemoryMT");
 
     Runnable r = () -> testLoadReadNoRehashMemory();
     Thread[] workers = startAll(r);    
@@ -199,7 +199,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Test
   public void testLoadReadNoRehashMemoryMTWithHit(){
-    /*DEBUG*/ System.out.println("testLoadReadNoRehashMemoryMT with hit");
+    /*DEBUG*/ LOG.info("testLoadReadNoRehashMemoryMT with hit");
 
     Runnable r = () -> testLoadReadNoRehashMemoryWithHit();
     Thread[] workers = startAll(r);    
@@ -214,7 +214,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Test
   public void testLoadReadDeleteNoRehashBytesMT() {
-    /*DEBUG*/ System.out.println("testLoadReadDeleteNoRehashBytesMT");
+    /*DEBUG*/ LOG.info("testLoadReadDeleteNoRehashBytesMT");
     Runnable r = () -> testLoadReadDeleteNoRehashBytes();
     Thread[] workers = startAll(r);    
     joinAll(workers);
@@ -232,7 +232,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Test
   public void testLoadReadDeleteNoRehashMemoryMT() {
-    /*DEBUG*/ System.out.println("testLoadReadDeleteNoRehashMemoryMT");
+    /*DEBUG*/ LOG.info("testLoadReadDeleteNoRehashMemoryMT");
     Runnable r = () -> testLoadReadDeleteNoRehashMemory();
     Thread[] workers = startAll(r);    
     joinAll(workers);
@@ -250,7 +250,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
 
   @Test
   public void testDoubleLoadReadNoRehashBytesMT() {
-    /*DEBUG*/ System.out.println("testDoubleLoadReadNoRehashBytesMT");
+    /*DEBUG*/ LOG.info("testDoubleLoadReadNoRehashBytesMT");
 
     Runnable r = () -> testDoubleLoadReadNoRehashBytes();
     Thread[] workers = startAll(r);    
@@ -265,7 +265,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Test
   public void testDoubleLoadReadNoRehashMemoryMT() {
-    /*DEBUG*/ System.out.println("testDoubleLoadReadNoRehashMemoryMT");
+    /*DEBUG*/ LOG.info("testDoubleLoadReadNoRehashMemoryMT");
 
     Runnable r = () -> testDoubleLoadReadNoRehashMemory();
     Thread[] workers = startAll(r);    
@@ -280,7 +280,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Test
   public void testLoadReadWithRehashBytesMT() {
-    /*DEBUG*/ System.out.println("testLoadReadWithRehashBytesMT");
+    /*DEBUG*/ LOG.info("testLoadReadWithRehashBytesMT");
 
     Runnable r = () -> testLoadReadWithRehashBytes();
     Thread[] workers = startAll(r);    
@@ -295,7 +295,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Test
   public void testLoadReadWithRehashBytesMTWithHit() {
-    /*DEBUG*/ System.out.println("testLoadReadWithRehashBytesMT with hit");
+    /*DEBUG*/ LOG.info("testLoadReadWithRehashBytesMT with hit");
 
     Runnable r = () -> testLoadReadWithRehashBytesWithHit();
     Thread[] workers = startAll(r);    
@@ -310,7 +310,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Test
   public void testLoadReadWithRehashMemoryMT() {
-    /*DEBUG*/ System.out.println("testLoadReadWithRehashMemoryMT");
+    /*DEBUG*/ LOG.info("testLoadReadWithRehashMemoryMT");
 
     Runnable r = () -> testLoadReadWithRehashMemory();
     Thread[] workers = startAll(r);    
@@ -325,7 +325,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Test
   public void testLoadReadWithRehashMemoryMTWithHit() {
-    /*DEBUG*/ System.out.println("testLoadReadWithRehashMemoryMT with hit");
+    /*DEBUG*/ LOG.info("testLoadReadWithRehashMemoryMT with hit");
 
     Runnable r = () -> testLoadReadWithRehashMemoryWithHit();
     Thread[] workers = startAll(r);    
@@ -340,7 +340,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Test
   public void testLoadReadDeleteWithRehashBytesMT() {
-    /*DEBUG*/ System.out.println("testLoadReadDeleteWithRehashBytesMT");
+    /*DEBUG*/ LOG.info("testLoadReadDeleteWithRehashBytesMT");
 
     Runnable r = () -> testLoadReadDeleteWithRehashBytes();
     Thread[] workers = startAll(r);    
@@ -359,7 +359,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Test
   public void testLoadReadDeleteWithRehashMemoryMT() {
-    /*DEBUG*/ System.out.println("testLoadReadDeleteWithRehashMemoryMT");
+    /*DEBUG*/ LOG.info("testLoadReadDeleteWithRehashMemoryMT");
 
     Runnable r = () -> testLoadReadDeleteWithRehashMemory();
     Thread[] workers = startAll(r);    
@@ -378,7 +378,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Test
   public void testDoubleLoadReadWithRehashBytesMT() {
-    /*DEBUG*/ System.out.println("testDoubleLoadReadWithRehashBytesMT");
+    /*DEBUG*/ LOG.info("testDoubleLoadReadWithRehashBytesMT");
 
     Runnable r = () -> testDoubleLoadReadWithRehashBytes();
     Thread[] workers = startAll(r);    
@@ -393,7 +393,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Test
   public void testDoubleLoadReadWithRehashMemoryMT() {
-    /*DEBUG*/ System.out.println("testDoubleLoadReadWithRehashMemoryMT");
+    /*DEBUG*/ LOG.info("testDoubleLoadReadWithRehashMemoryMT");
 
     Runnable r = () -> testDoubleLoadReadWithRehashMemory();
     Thread[] workers = startAll(r);    
@@ -442,7 +442,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
       int result = (int) memoryIndex.find(keys[i], 0, keySize, false, buf, entrySize);
       if (result == -1) evicted2.incrementAndGet();
     }
-    System.out.println("evicted1=" + evicted1 + " evicted2="+ evicted2);
+    LOG.info("evicted1=" + evicted1 + " evicted2="+ evicted2);
     UnsafeAccess.free(buf); 
     clearData();
   }
@@ -473,7 +473,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
       int result = (int) memoryIndex.find(mKeys[i], keySize, false, buf, entrySize);
       if (result == -1) evicted2 ++;
     }
-    System.out.println("evicted1=" + evicted1 + " evicted2="+ evicted2);
+    LOG.info("evicted1=" + evicted1 + " evicted2="+ evicted2);
     assertEquals(100000, evicted1 + evicted2);
     UnsafeAccess.free(buf);
     clearData();
@@ -482,9 +482,9 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   private int loadReadBytes(int num) {
     prepareData(num);
-    System.out.println(Thread.currentThread().getName() + ": prepare done");
+    LOG.info(Thread.currentThread().getName() + ": prepare done");
     int failed =loadIndexBytes();
-    System.out.println(Thread.currentThread().getName() + ": load done");
+    LOG.info(Thread.currentThread().getName() + ": load done");
     int unverified = verifyIndexBytes();  
     assertEquals(failed, unverified);
     return failed;

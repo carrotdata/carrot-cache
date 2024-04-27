@@ -20,8 +20,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.onecache.core.Cache;
 import com.onecache.core.util.CacheConfig;
@@ -33,7 +33,7 @@ public class AQBasedExpirationAwareAdmissionController extends ExpirationAwareAd
   /** Logger */
   @SuppressWarnings("unused")
   private static final Logger LOG = 
-      LogManager.getLogger(AQBasedExpirationAwareAdmissionController.class);
+      LoggerFactory.getLogger(AQBasedExpirationAwareAdmissionController.class);
   
   protected AdmissionQueue admissionQueue;
   /* AQ current size ratio */

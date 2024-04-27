@@ -17,8 +17,12 @@ package com.onecache.core.util;
 import java.util.Random;
 
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestHash64Distribution {
+  private static final Logger LOG = LoggerFactory.getLogger(TestHash64Distribution.class);
+
   int[] sizes = new int[] {100000, 200000, 1000000, 2000000, 300000, 4000000, 5000000, 6000000, 7000000, 8000000, 9000000, 10000000};
   int[] slots = new int[] {1024, 2048, 4096, 8192, 16384, 32768, 65536}; 
   
@@ -34,7 +38,7 @@ public class TestHash64Distribution {
   private void runTest(int size, int indexSize) {
     int[] direct = new int[indexSize];
     int[] reverse = new int[indexSize];
-    System.out.println("INDEX SIZE=" + indexSize + " NUMBER="+ size) ;
+    LOG.info("INDEX SIZE=" + indexSize + " NUMBER="+ size) ;
     Random r = new Random();
     
     for (int i = 0; i < size; i++) {
@@ -45,7 +49,7 @@ public class TestHash64Distribution {
       slot = getSlotNumberReverse(hash, indexSize);
       reverse[slot]++;
     }
-    System.out.println("Direct "+ analyze(direct) + " Reverse="+ analyze(reverse));
+    LOG.info("Direct "+ analyze(direct) + " Reverse="+ analyze(reverse));
 
   }
   
