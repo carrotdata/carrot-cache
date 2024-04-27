@@ -51,7 +51,7 @@ import com.onecache.core.util.Utils;
  */
 public class ZstdCompressionCodec implements CompressionCodec {
   /** Logger */
-  private static final Logger LOG = LoggerFactory.getLogger(IOEngine.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZstdCompressionCodec.class);
   private static int INIT_BUFFER_SIZE = 1 << 16; 
   
   static {
