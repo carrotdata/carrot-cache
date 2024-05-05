@@ -12,12 +12,12 @@
            <plugin>
         	<groupId>org.apache.maven.plugins</groupId>
         	<artifactId>maven-javadoc-plugin</artifactId>
-        	<version>3.4.1</version>
+        	<version>3.6.3</version>
       	   </plugin>
               <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.0</version>
+                <version>3.13.0</version>
                 <configuration>
                     <!--release>8</release-->
                     <source>11</source>
@@ -27,12 +27,12 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
-                <version>2.4</version>
+                <version>3.6.1</version>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>2.1.2</version>
+                <version>3.3.1</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -46,7 +46,7 @@
      <plugin>
        <groupId>org.apache.maven.plugins</groupId>
        <artifactId>maven-jar-plugin</artifactId>
-       <version>2.4</version>
+       <version>3.4.1</version>
        <executions>
          <execution>
            <goals>
@@ -58,9 +58,9 @@
      <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0-M5</version>
+                <version>3.2.5</version>
                 <configuration>
-                    <argLine>-Xmx4g --add-opens java.base/java.nio=ALL-UNNAMED</argLine>
+		    <argLine>-Xmx4g --add-opens jdk.unsupported/sun.misc=ALL-UNNAMED --add-opens java.base/jdk.internal.misc=ALL-UNNAMED --add-opens java.base/java.nio=ALL-UNNAMED</argLine>	
                     <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     <forkCount>1</forkCount>
                     <reuseForks>false</reuseForks>
@@ -91,11 +91,6 @@
     </build>
     <!--dependencyManagement-->
         <dependencies>
-	<!--dependency>
-                <groupId>org.apache.logging.log4j</groupId>
-                <artifactId>log4j-core</artifactId>
-                <version>2.17.2</version>
-       </dependency-->
 <dependency>
     <groupId>org.apache.logging.log4j</groupId>
     <artifactId>log4j-api</artifactId>
