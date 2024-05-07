@@ -231,7 +231,7 @@ public class Utils {
    */
   public static int compareTo(final byte[] buffer1, final int offset1, final int length1, final long address, final int length2) {
 
-    if (UnsafeAccess.debug) {
+    if (UnsafeAccess.isMallocDebugEnabled()) {
       UnsafeAccess.mallocStats.checkAllocation(address, length2);
     }
     Unsafe theUnsafe = UnsafeAccess.theUnsafe;
@@ -312,7 +312,7 @@ public class Utils {
    * @return 0 if equal,&lt; 0 if left is less than right, etc.
    */
   public static int compareTo(final long address1, final int length1, final long address2, final int length2) {
-    if(UnsafeAccess.debug) {
+    if(UnsafeAccess.isMallocDebugEnabled()) {
       UnsafeAccess.mallocStats.checkAllocation(address1, length1);
       UnsafeAccess.mallocStats.checkAllocation(address2, length2);
     }

@@ -30,7 +30,7 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Before
   public void setUp() {
-    UnsafeAccess.debug = false;
+    //UnsafeAccess.debug = false;
     UnsafeAccess.mallocStats.clear();
     memoryIndex = new MemoryIndex("default", MemoryIndex.Type.MQ);
     numThreads = 4;

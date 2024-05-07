@@ -38,7 +38,7 @@ public class TestMemoryIndexAQMultithreaded extends TestMemoryIndexMultithreaded
   
   @Before
   public void setUp() {
-    UnsafeAccess.debug = false;
+    //UnsafeAccess.debug = false;
     UnsafeAccess.mallocStats.clear();
     memoryIndex = new MemoryIndex("default", MemoryIndex.Type.AQ);
     memoryIndex.setMaximumSize(10000000);

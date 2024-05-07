@@ -144,7 +144,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
   private volatile int currentDictVersion;
   
   /* Training in progress */
-  private volatile boolean trainingInProgress = false;
+  private AtomicBoolean trainingInProgress = new AtomicBoolean(false);
   
   /**
    * Finalizing training
@@ -460,16 +460,18 @@ public class ZstdCompressionCodec implements CompressionCodec {
   }
 
   private synchronized void startTraining() {
-    if (this.trainingInProgress) return;
-    LOG.debug("Start training");
+    if (this.trainingInProgress.get()) return;
+    boolean success = this.trainingInProgress.compareAndSet(false, true);
+    if (!success) {
+      return;
+    }
     this.trainingDataSize = new AtomicInteger();
     this.trainingData = new ConcurrentLinkedQueue<Long>();
-    this.trainingInProgress = true;
   }
 
   @Override
   public synchronized void addTrainingData(byte[]... data) {
-    if (!trainingInProgress || finalizingTraining.get()) {
+    if (!trainingInProgress.get() || finalizingTraining.get()) {
       return;
     }
     for(byte[] b: data) {
@@ -484,7 +486,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
 
   @Override
   public synchronized void addTrainingData(byte[] data, int off, int len) {
-    if (!trainingInProgress || finalizingTraining.get()) {
+    if (!trainingInProgress.get() || finalizingTraining.get()) {
       return;
     }
     long ptr = UnsafeAccess.malloc(len + Utils.SIZEOF_INT);
@@ -497,7 +499,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
 
   @Override
   public synchronized void addTrainingData(long ptr, int size) {
-    if (!trainingInProgress || finalizingTraining.get()) {
+    if (!trainingInProgress.get() || finalizingTraining.get()) {
       return;
     }
     long $ptr = UnsafeAccess.malloc(size + Utils.SIZEOF_INT);
@@ -514,7 +516,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
       return false;
     }
     boolean required = this.currentDictVersion == 0;
-    if (required && !this.trainingInProgress) {
+    if (required && !this.trainingInProgress.get()) {
       startTraining();
     }
     return required;
@@ -559,7 +561,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
         long ptr = this.trainingData.poll();
         UnsafeAccess.free(ptr);
       }
-      this.trainingInProgress = false;
+      this.trainingInProgress.set(false);
       this.finalizingTraining.set(false);
       try {
         saveDictionary(this.currentDictVersion, dict);
@@ -567,7 +569,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
         // TODO Auto-generated catch block
         e.printStackTrace();
       }
-      LOG.debug("Finished training in () ms", System.currentTimeMillis() - start);
+      LOG.debug("Finished training in {} ms", System.currentTimeMillis() - start);
     };
     if (this.trainingAsync) {
       // Run training session

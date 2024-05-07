@@ -38,7 +38,7 @@ public abstract class TestMemoryIndexAQMultithreadedStress extends TestMemoryInd
   
   @Before
   public void setUp() {
-    UnsafeAccess.debug = false;
+    //UnsafeAccess.debug = false;
     UnsafeAccess.mallocStats.clear();
     memoryIndex = new MemoryIndex("default", MemoryIndex.Type.AQ);
     //memoryIndex.setMaximumSize(10000000);

@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,8 +38,55 @@ import sun.misc.Unsafe;
 
 public final class UnsafeAccess {
 
-  public static boolean debug = false;
+ public final static String MALLOC_DEBUG = "MALLOC_DEBUG";
+  
+  static interface Platform {
+    
+    public void copy(byte[] src, int srcOffset, long address, int length);
+    
+    public void copy(long src, byte[] dest, int off, int length);
+    
+    public void copy(long src, long dst, long len);
+    
+    public void copy_no_dst_check(long src, long dst, long len);
+    
+    public void copy_no_src_check(long src, long dst, long len);
+    
+    public void putByte(long addr, byte val);
+    
+    public void putShort(long addr, short val);
+    
+    public int putShort(byte[] b, int off, short val);
+    
+    public void putInt(long addr, int val);
+    
+    public int putInt(byte[] b, int off, int val);
+    
+    public void putLong(long addr, long val);
+    
+    public int putLong(byte[] b, int off, long val);
 
+    public byte toByte(long addr);
+    
+    public short toShort(long addr);
+    
+    public short toShort(byte[] b, int off);
+    
+    public int toInt(long addr);
+    
+    public int toInt(byte[] b, int off);
+    
+    public long toLong(long addr);
+    
+    public long toLong(byte[] b, int off);
+    
+    public Platform getDebugVersion();
+    
+    public Platform getNormalVersion();
+  }
+  
+  private static boolean debug = false;
+  
   public static final class MallocStats {
 
     public static interface TraceFilter {
@@ -331,6 +379,8 @@ public final class UnsafeAccess {
    */
   static final long UNSAFE_COPY_THRESHOLD = 1024L * 1024L;
 
+  static final Platform platform;
+
   static {
     theUnsafe =
         (Unsafe)
@@ -354,7 +404,14 @@ public final class UnsafeAccess {
     } else {
       BYTE_ARRAY_BASE_OFFSET = -1;
     }
+    debug = System.getProperty(MALLOC_DEBUG) != null;
+    if (littleEndian) {
+      platform = debug? new LittleEndianPlatformDebug(): new LittleEndianPlatform();
+    } else {
+      platform = debug? new BigEndianPlatformDebug(): new BigEndianPlatform();
+    }
   }
+
 
   /** Method handler for DirectByteBuffer::address method */
   static Method addressMethod;
@@ -366,7 +423,7 @@ public final class UnsafeAccess {
 
   /**
    * Set debug mode enabled/disabled
-   *
+   * Set MALLOC_DEBUG system property before using this class 
    * @param b
    */
   public static void setMallocDebugEnabled(boolean b) {
@@ -475,11 +532,7 @@ public final class UnsafeAccess {
    * @return the short value
    */
   public static short toShort(byte[] bytes, int offset) {
-    if (littleEndian) {
-      return Short.reverseBytes(theUnsafe.getShort(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
-    } else {
-      return theUnsafe.getShort(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
-    }
+    return platform.toShort(bytes, offset);
   }
 
   /**
@@ -489,14 +542,7 @@ public final class UnsafeAccess {
    * @return short value
    */
   public static short toShort(long addr) {
-    if (UnsafeAccess.debug) {
-      mallocStats.checkAllocation(addr, 2);
-    }
-    if (littleEndian) {
-      return Short.reverseBytes(theUnsafe.getShort(addr));
-    } else {
-      return theUnsafe.getShort(addr);
-    }
+    return platform.toShort(addr);
   }
 
   /** Bit manipulation routines */
@@ -632,11 +678,7 @@ public final class UnsafeAccess {
    * @return the int value
    */
   public static int toInt(byte[] bytes, int offset) {
-    if (littleEndian) {
-      return Integer.reverseBytes(theUnsafe.getInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
-    } else {
-      return theUnsafe.getInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
-    }
+    return platform.toInt(bytes, offset);
   }
 
   /**
@@ -647,11 +689,7 @@ public final class UnsafeAccess {
    * @return the long value
    */
   public static long toLong(byte[] bytes, int offset) {
-    if (littleEndian) {
-      return Long.reverseBytes(theUnsafe.getLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
-    } else {
-      return theUnsafe.getLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
-    }
+    return platform.toLong(bytes, offset);
   }
 
   // APIs to write primitive data to a byte[] using Unsafe way
@@ -664,11 +702,7 @@ public final class UnsafeAccess {
    * @return incremented offset
    */
   public static int putShort(byte[] bytes, int offset, short val) {
-    if (littleEndian) {
-      val = Short.reverseBytes(val);
-    }
-    theUnsafe.putShort(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
-    return offset + Bytes.SIZEOF_SHORT;
+    return platform.putShort(bytes, offset, val);
   }
 
   /**
@@ -678,28 +712,10 @@ public final class UnsafeAccess {
    * @param val short to write out
    */
   public static void putShort(long addr, short val) {
-    if (UnsafeAccess.debug) {
-      mallocStats.checkAllocation(addr, 2);
-    }
-
-    if (littleEndian) {
-      val = Short.reverseBytes(val);
-    }
-    theUnsafe.putShort(addr, val);
+    platform.putShort(addr, val);
   }
 
-  /**
-   * Put a byte value out to the specified byte array position.
-   *
-   * @param bytes byte array
-   * @param offset offset
-   * @param val value
-   * @return new offset
-   */
-  public static int putByte(byte[] bytes, int offset, byte val) {
-    theUnsafe.putByte(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
-    return offset + Bytes.SIZEOF_BYTE;
-  }
+
 
   /**
    * Put a byte value to a specified memory address
@@ -708,10 +724,7 @@ public final class UnsafeAccess {
    * @param val byte value
    */
   public static void putByte(long addr, byte val) {
-    if(UnsafeAccess.debug) {
-      mallocStats.checkAllocation(addr, 1);
-    }
-    theUnsafe.putByte(addr, val);
+    platform.putByte(addr, val);
   }
 
   /**
@@ -723,11 +736,7 @@ public final class UnsafeAccess {
    * @return incremented offset
    */
   public static int putInt(byte[] bytes, int offset, int val) {
-    if (littleEndian) {
-      val = Integer.reverseBytes(val);
-    }
-    theUnsafe.putInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
-    return offset + Bytes.SIZEOF_INT;
+    return platform.putInt(bytes, offset, val)  ;
   }
 
   /**
@@ -737,15 +746,9 @@ public final class UnsafeAccess {
    * @param val integer value
    */
   public static void putInt(long addr, int val) {
-    if (UnsafeAccess.debug) {
-      mallocStats.checkAllocation(addr, 4);
-    }
-
-    if (littleEndian) {
-      val = Integer.reverseBytes(val);
-    }
-    theUnsafe.putInt(addr, val);
+    platform.putInt(addr, val);
   }
+  
   /**
    * Put a long value out to the specified byte array position in big-endian format.
    *
@@ -755,11 +758,7 @@ public final class UnsafeAccess {
    * @return incremented offset
    */
   public static int putLong(byte[] bytes, int offset, long val) {
-    if (littleEndian) {
-      val = Long.reverseBytes(val);
-    }
-    theUnsafe.putLong(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
-    return offset + Bytes.SIZEOF_LONG;
+    return platform.putLong(bytes, offset, val);
   }
 
   /**
@@ -769,14 +768,7 @@ public final class UnsafeAccess {
    * @param val byte value
    */
   public static void putLong(long addr, long val) {
-    if (UnsafeAccess.debug) {
-      mallocStats.checkAllocation(addr, 8);
-    }
-
-    if (littleEndian) {
-      val = Long.reverseBytes(val);
-    }
-    theUnsafe.putLong(addr, val);
+    platform.putLong(addr, val);
   }
 
   /**
@@ -815,15 +807,7 @@ public final class UnsafeAccess {
    * @return integer value
    */
   public static int toInt(long addr) {
-    if (UnsafeAccess.debug) {
-      mallocStats.checkAllocation(addr, 4);
-    }
-
-    if (littleEndian) {
-      return Integer.reverseBytes(theUnsafe.getInt(addr));
-    } else {
-      return theUnsafe.getInt(addr);
-    }
+    return platform.toInt(addr);
   }
 
   /**
@@ -848,15 +832,7 @@ public final class UnsafeAccess {
    * @return long value
    */
   public static long toLong(long addr) {
-    if (UnsafeAccess.debug) {
-      mallocStats.checkAllocation(addr, Utils.SIZEOF_LONG);
-    }
-
-    if (littleEndian) {
-      return Long.reverseBytes(theUnsafe.getLong(addr));
-    } else {
-      return theUnsafe.getLong(addr);
-    }
+    return platform.toLong(addr);
   }
 
   /*
@@ -940,13 +916,7 @@ public final class UnsafeAccess {
    * @param length number of bytes to copy
    */
   public static void copy(byte[] src, int srcOffset, long address, int length) {
-    if (UnsafeAccess.debug) {
-      mallocStats.checkAllocation(address, length);
-    }
-
-    Object destBase = null;
-    long srcAddress = srcOffset + BYTE_ARRAY_BASE_OFFSET;
-    unsafeCopy(src, srcAddress, destBase, address, length);
+    platform.copy(src, srcOffset, address, length);
   }
 
   /**
@@ -978,13 +948,7 @@ public final class UnsafeAccess {
    * @param length number of bytes to copy
    */
   public static void copy(long src, byte[] dest, int off, int length) {
-    if (UnsafeAccess.debug) {
-      mallocStats.checkAllocation(src, length);
-    }
-
-    Object srcBase = null;
-    long dstOffset = off + BYTE_ARRAY_BASE_OFFSET;
-    unsafeCopy(srcBase, src, dest, dstOffset, length);
+    platform.copy(src, dest, off, length);
   }
 
   /**
@@ -995,18 +959,7 @@ public final class UnsafeAccess {
    * @param len number of bytes to copy
    */
   public static void copy(long src, long dst, long len) {
-    if(UnsafeAccess.debug) {
-      mallocStats.checkAllocation(src, (int) len);
-      mallocStats.checkAllocation(dst, (int) len);
-    }
-
-    while (len > 0) {
-      long size = (len > UNSAFE_COPY_THRESHOLD) ? UNSAFE_COPY_THRESHOLD : len;
-      theUnsafe.copyMemory(src, dst, size);
-      len -= size;
-      src += size;
-      dst += size;
-    }
+    platform.copy(src, dst, len);
   }
 
   /**
@@ -1017,17 +970,7 @@ public final class UnsafeAccess {
    * @param len number of bytes to copy
    */
   public static void copy_no_src_check(long src, long dst, long len) {
-    if (UnsafeAccess.debug) {
-      mallocStats.checkAllocation(dst, (int) len);
-    }
-
-    while (len > 0) {
-      long size = (len > UNSAFE_COPY_THRESHOLD) ? UNSAFE_COPY_THRESHOLD : len;
-      theUnsafe.copyMemory(src, dst, size);
-      len -= size;
-      src += size;
-      dst += size;
-    }
+    platform.copy_no_src_check(src, dst, len);
   }
 
   /**
@@ -1038,16 +981,7 @@ public final class UnsafeAccess {
    * @param len number of bytes to copy
    */
   public static void copy_no_dst_check(long src, long dst, long len) {
-    if (UnsafeAccess.debug) {
-      mallocStats.checkAllocation(src, (int) len);
-    }
-    while (len > 0) {
-      long size = (len > UNSAFE_COPY_THRESHOLD) ? UNSAFE_COPY_THRESHOLD : len;
-      theUnsafe.copyMemory(src, dst, size);
-      len -= size;
-      src += size;
-      dst += size;
-    }
+    platform.copy_no_dst_check(src, dst, len);
   }
 
   /**
@@ -1059,7 +993,7 @@ public final class UnsafeAccess {
    * @param destAddr destination object address
    * @param len number of bytes to copy
    */
-  private static void unsafeCopy(Object src, long srcAddr, Object dst, long destAddr, long len) {
+  static void unsafeCopy(Object src, long srcAddr, Object dst, long destAddr, long len) {
     while (len > 0) {
       long size = (len > UNSAFE_COPY_THRESHOLD) ? UNSAFE_COPY_THRESHOLD : len;
       theUnsafe.copyMemory(src, srcAddr, dst, destAddr, size);
@@ -1208,11 +1142,7 @@ public final class UnsafeAccess {
    * @return the byte at the given offset
    */
   public static byte toByte(long addr) {
-    if (UnsafeAccess.debug) {
-      mallocStats.checkAllocation(addr, 1);
-    }
-
-    return theUnsafe.getByte(addr);
+    return platform.toByte(addr);
   }
 
   /**
