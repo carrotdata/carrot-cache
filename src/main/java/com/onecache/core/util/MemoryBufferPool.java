@@ -101,8 +101,10 @@ public class MemoryBufferPool {
         executor.submit(() -> addBuffers());
       }
     }
-    while ((ptr = memoryBuffers.poll()) == null) {
-      LockSupport.parkNanos(10_000);
+    ptr = memoryBuffers.poll();
+    if (ptr  == null) {
+      // do not initialize
+      ptr = UnsafeAccess.malloc(this.bufferSize);
     }
     return ptr;
   }
@@ -116,8 +118,6 @@ public class MemoryBufferPool {
   public boolean offer (long ptr) {
     checkDisabled();
     if (memoryBuffers.size() >= maxCapacity) {
-      // dispose
-      //UnsafeAccess.free(ptr);
       return false;
     } else {
       this.memoryBuffers.add(ptr);

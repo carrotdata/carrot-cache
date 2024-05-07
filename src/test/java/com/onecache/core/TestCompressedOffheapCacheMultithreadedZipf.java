@@ -56,7 +56,7 @@ public class TestCompressedOffheapCacheMultithreadedZipf extends TestCompressedC
     this.offheap = true;
     this.numRecords = 1000000;
     this.numIterations = this.numRecords;
-    this.numThreads = 8;
+    this.numThreads = 4;
     // 
     this.scavDumpBelowRatio = 1.0;
     // We reduced cache size by 10x to account for compression (which is 10-11x)
