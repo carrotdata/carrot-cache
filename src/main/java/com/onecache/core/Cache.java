@@ -410,7 +410,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return;
     }
     this.admissionController.setCache(this);
-    LOG.info("Started Admission Controller [{}]", this.admissionController.getClass().getName());
+    LOG.info("Started Admission Controller [{}], cache={}", this.admissionController.getClass().getName(), getName());
 
   }
 

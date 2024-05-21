@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -104,7 +105,10 @@ public class MemoryBufferPool {
     ptr = memoryBuffers.poll();
     if (ptr  == null) {
       // do not initialize
-      ptr = UnsafeAccess.malloc(this.bufferSize);
+      // TODO: Dirty segments can be potential hazard
+      // Check if DataWriter can accidentally read old meta data
+      //FIXME: this is safety precaution. 
+      ptr = UnsafeAccess.mallocZeroed(this.bufferSize);
     }
     return ptr;
   }
@@ -120,6 +124,8 @@ public class MemoryBufferPool {
     if (memoryBuffers.size() >= maxCapacity) {
       return false;
     } else {
+      // Clear buffer
+      UnsafeAccess.setMemory(ptr, bufferSize, (byte)0);
       this.memoryBuffers.add(ptr);
       return true;
     }

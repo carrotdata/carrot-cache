@@ -397,9 +397,10 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       } catch (Exception e) {
         LOG.error(" : ptr="+ ptr + " usize="+ uncompressedSize + 
           " cSize=" + compressedSize + " dictVersion=" + dictVersion + " offset=" + offset+ " segmentSize="+ s.getSegmentDataSize()+ 
-          " valid=" + s.isValid());
-        e.printStackTrace();
-        System.exit(-1);
+          " valid=" + s.isValid(), e);
+        Thread.dumpStack();
+        System.exit(-1);;
+        //throw new RuntimeException();
       }
       if (addr < 0) {
         return IOEngine.NOT_FOUND;

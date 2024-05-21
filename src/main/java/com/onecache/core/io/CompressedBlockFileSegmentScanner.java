@@ -144,6 +144,7 @@ import com.onecache.core.util.Utils;
         LOG.error("Segment size={} offset={} uncompressed={} compressed={} dictId={} index={} total items={}", 
           segment.getSegmentDataSize(), this.prefetch.getFileOffset(), this.blockSize, compSize, dictId, currentIndex, segment.getTotalItems());
         Thread.dumpStack();
+        //throw new RuntimeException();
         System.exit(-1);
       }
       // Advance segment offset

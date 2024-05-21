@@ -127,43 +127,54 @@ public abstract class TestCompressedCacheMultithreadedBase {
   }
   
   @Test
-  public void testLoadVerifyBytesMultithreaded() throws InterruptedException {
-    Runnable r = () -> {
-      try {
-        testLoadVerifyBytes();
-      } catch (IOException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+  public void testLoadVerifyBytesMultithreaded() throws InterruptedException, IOException, URISyntaxException {
+    int n  = 10;
+    for (int k = 0; k < n; k++) {
+      if (k > 0) setUp();
+      Runnable r = () -> {
+        try {
+          testLoadVerifyBytes();
+        } catch (IOException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+      };
+      Thread[] workers = new Thread[numThreads];
+      for (int i = 0; i < numThreads; i++) {
+        workers[i] = new Thread(r);
+        //Thread.sleep(1000);
+        workers[i].start();
       }
-    };
-    Thread[] workers = new Thread[numThreads];
-    for (int i = 0; i < numThreads; i++) {
-      workers[i] = new Thread(r);
-      //Thread.sleep(1000);
-      workers[i].start();
-    }
-    for (int i = 0; i < numThreads; i++) {
-      workers[i].join();
+      for (int i = 0; i < numThreads; i++) {
+        workers[i].join();
+      }
+      if (k < n - 1) tearDown();
     }
   }
   
   @Test
-  public void testLoadVerifyMemoryMultithreaded() throws InterruptedException {
-    Runnable r = () -> {
-      try {
-        testLoadVerifyMemory();
-      } catch (IOException e) {
-        // TODO Auto-generated catch block
-        e.printStackTrace();
+  public void testLoadVerifyMemoryMultithreaded()
+      throws InterruptedException, IOException, URISyntaxException {
+    int n = 10;
+    for (int k = 0; k < n; k++) {
+      if (k > 0) setUp();
+      Runnable r = () -> {
+        try {
+          testLoadVerifyMemory();
+        } catch (IOException e) {
+          // TODO Auto-generated catch block
+          e.printStackTrace();
+        }
+      };
+      Thread[] workers = new Thread[numThreads];
+      for (int i = 0; i < numThreads; i++) {
+        workers[i] = new Thread(r);
+        workers[i].start();
       }
-    };
-    Thread[] workers = new Thread[numThreads];
-    for (int i = 0; i < numThreads; i++) {
-      workers[i] = new Thread(r);
-      workers[i].start();
-    }
-    for (int i = 0; i < numThreads; i++) {
-      workers[i].join();
+      for (int i = 0; i < numThreads; i++) {
+        workers[i].join();
+      }
+      if (k < n - 1) tearDown();
     }
   }
   private void testLoadVerifyBytes() throws IOException {

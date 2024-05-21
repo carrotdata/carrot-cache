@@ -263,7 +263,7 @@ public final class UnsafeAccess {
       if (mem == null) {
         LOG.error("FATAL: not found address {}", address);
         Thread.dumpStack();
-        System.exit(-1);
+        throw new RuntimeException();
       }
 
       freed.addAndGet(mem.size);
@@ -285,7 +285,7 @@ public final class UnsafeAccess {
       if (!allocMap.inside(address, size)) {
         LOG.error(Thread.currentThread().getName() + ": Memory corruption: address={} size={}", address, size);
         Thread.dumpStack();
-        System.exit(-1);
+        throw new RuntimeException();
       }
     }
 

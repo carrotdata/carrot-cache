@@ -26,7 +26,7 @@ public class TestCompressedOffheapCacheMultithreaded extends TestCompressedCache
   public void setUp() throws IOException, URISyntaxException{
     super.setUp();
     this.numRecords = 1_000_000;
-    this.numThreads = 2;
+    this.numThreads = 8;
     this.offheap = true;
     this.segmentSize = 64_000_000;
     this.maxCacheSize = 1000L * this.segmentSize;

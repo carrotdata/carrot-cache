@@ -93,6 +93,8 @@ public class BlockDataWriter implements DataWriter {
     // corner case: fullDataSize / blockSize * blockSize == fullDataSize
     boolean fullBlocks = fullDataSize > 0 && (fullDataSize / blockSize * blockSize == fullDataSize);
     if (fullBlocks) {
+      // Zero meta section
+      UnsafeAccess.setMemory(s.getAddress() + fullDataSize, META_SIZE, (byte) 0);
       return s.getAddress() + fullDataSize + META_SIZE; 
     }
     
@@ -107,6 +109,8 @@ public class BlockDataWriter implements DataWriter {
         // Not enough space in this segment for additional block
         return IOEngine.NOT_FOUND;
       }
+      // Zero meta section
+      UnsafeAccess.setMemory(s.getAddress() + off, META_SIZE, (byte) 0);
     }
     // This is equivalent to :
     // if (fullDataSize == 0) {
@@ -184,7 +188,7 @@ public class BlockDataWriter implements DataWriter {
   private void processEmptySegment(Segment s) {
     if (s.getTotalItems() == 0) {
       long ptr = s.getAddress();
-      UnsafeAccess.putShort(ptr, (short) 0);
+      UnsafeAccess.setMemory(ptr, META_SIZE, (byte) 0);
     }
   }
   
