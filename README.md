@@ -1,36 +1,35 @@
-# Onecache Core (OCC)
-The project goal is to modernize data caching and to allow users to build custom caching solutions by providing pluggable components to the OCC framework. OCC is 100% Java solution, which extensively utilizes java off heap memory and virtually has no impact on Java GC.
+# Carrot Cache (CC)
+The Carrot Cache (CC) project aims to modernize data caching and enable users to build custom caching solutions through pluggable components within the CC framework. CC is a 100% Java solution that extensively utilizes off-heap memory, minimizing the impact on Java garbage collection (GC).
 
 ## Features
 
-- Supports multiple modes of operations: Only RAM, Only SSD, Hybrid mode (RAM -> SSD). 
-- Highly configurable (customizable):  Cache Admission policy (important for SSD) Promotion Policy (from victim cache back to the parent cache), eviction policy, throughput controller are four major policies which can be replaced by users. Other customizable components : memory index formats, internal GC recycling selector, data writers/data readers. 
-- ML (Machine Learning) ready. Custom cache admission and eviction policies can utilize sophisticated ML models, trained to a customer specific workloads.   
-- **CacheGuard (tm)** protected. It is the combination of a Cache Admission Policy and scan resistant cache eviction algorithm - significantly reduces SSD wearing and increases its longevity.  
-- **Low SSD DWA** (device write amplification) and CLWA (cache level write amplification), which can be controlled via desired sustained write througput setting. One can set desired sustained write throughput which is safe for a particular SSD device and the system will adjust its parameters dynamically to meet this requirement. **Estimates for 75% SSD used space DLWA = 1.1, 100% - 1.8**. So, even if SSD is almost full, writing to it does not incur significant DLWA. For example, in some commercially available products SSD DLWA can be as high as 10 (random writes of data by blocks of 1MB size).
-- **Very low cached item overhead in RAM: 6-16 bytes for both RAM and SSD and with expiration support**. The overhead depends on a particular index format. Several index formats are provided out of box, both: with and without expiration support.  
-- Very low meta overhead in RAM. Example: Keeping 1M data items in the **OCC** requires less than 1MB of Java heap and less than 10MB of Java offheap memory for meta.
-- Several eviction algorithms available out of the box: Segmented LRU (default), LRU, FIFO. Segmented LRU is scan resistent algorithms. Eviction policy is pluggable and customers can provide their own implementation.  
-- **Scalable**. Multiple TBs of storage is supported - up to **256TB** with only 16 bytes per cached item in RAM overhead, per single cache instance.
-- Efficient eviction of expired cached items (for appliaction which require eviction support). 
-- Highly configurable (over 50 parameters). 
-- **Warm restart**. This allows cache data to survive full server's reboot. Saving and loading data is very fast and depends only on disk available I/O throughput (GBs per sec).
-- **Compression**. OCC can compress and decompress both keys and values in a real-time by utilizing plugguble compression codecs thus significantly reducing overall memory usage. Currently **Zstd with dictionary** is supported.
-- **Memchached API** compatible layer. All store, retrieval and miscelaneous commands are supported.
+- **Multiple Modes of Operation**: Supports RAM-only, SSD-only, and hybrid modes (RAM -> SSD).
+- **Highly Configurable**: Users can customize cache admission policies (important for SSD), promotion policies (from victim cache back to the parent cache), eviction policies, and throughput controllers. Additional customizable components include memory index formats, internal GC recycling selectors, data writers, and data readers.
+- **AI/ML Ready**: Custom cache admission and eviction policies can leverage sophisticated machine learning models tailored to specific workloads.
+- **CacheGuard** Protected: Combines a cache admission policy with a scan-resistant cache eviction algorithm, significantly reducing SSD wear and increasing longevity.
+- **Low SSD Write Amplification (DWA) and Cache Level Write Amplification (CLWA)**: Controlled via a sustained write throughput setting. Users can set a desired sustained write throughput safe for a particular SSD device, with the system dynamically adjusting parameters to meet this requirement. Estimates for 75% SSD used space DLWA = 1.1, and 100% = 1.8. Even with nearly full SSDs, writing does not incur significant DLWA.
+- **Low RAM Overhead for Cached Items**: Overhead ranges from 6-16 bytes per item for both RAM and SSD, including expiration support. The overhead depends on the index format used. Several index formats, both with and without expiration support, are provided out of the box.
+- **Low Meta Overhead in RAM**: Example: Managing 1M data items in CC requires less than 1MB of Java heap and less than 10MB of Java off-heap memory for metadata.
+- **Multiple Eviction Algorithms**: Available out of the box, including Segmented LRU (default), LRU, and FIFO. Segmented LRU is a scan-resistant algorithm. Eviction policies are pluggable, allowing customers to implement their own.
+- **Scalability**: Supports multiple terabytes of storage, up to 256TB, with only 16 bytes of RAM overhead per cached item for disk storage.
+- **Efficient Expired Item Eviction**: Designed for applications requiring expiration support.
+- **Highly Configurable**: Over 50 configurable parameters.
+- **Warm Restart**: Allows cache data to survive a full server reboot. Data saving and loading are very fast, dependent only on available disk I/O throughput (GBs per second).
+- **Compression**: CC can compress and decompress both keys and values in real-time using pluggable compression codecs, significantly reducing memory usage. Currently supports Zstd with dictionary.
+- **Memcached API Compatible**: Supports all store, retrieval, and miscellaneous commands (text protocol only).
 
-Features which are not implemented yet but are being planned (TBI): 
-
-- Concurrent save - will allow to save cache data and meta on demand concurrently with normal cache operation. Similar to BGSAVE in Redis.
-- **AutoConfiguration** mode allows to find optimal parameters for a particular workload, incuding cache size (offline mode). 
-- **Shadow Mode** allows to make quick decisions real-time on optimal cache sizing. It is important when workload varies by time of day.
-- Periodic cache backup.  
--
-- Rolling restart in cluster mode (Add-On TBI)
-- Fast scale up - scale down in a cluster mode (Add-On TBI)
+## Features in Development (TBI)
+- **Replication for HA**
+- **Concurrent Save**: Allows concurrent saving of cache data and metadata on demand, similar to Redis's BGSAVE.
+- **AutoConfiguration Mode**: Finds optimal parameters for specific workloads, including cache size, in offline mode.
+- **Shadow Mode**: Enables real-time decision-making on optimal cache sizing, important for workloads that vary by time of day.
+- **Periodic Cache Backup**
+- **Rolling Restart** in Cluster Mode (Add-On TBI)
+- **Fast Scale Up/Down** in Cluster Mode (Add-On TBI)
 
 ## Building prerequisits
 
-- Java 11
+- Java 11+ (JVM supported versions are 11-17, no support for 21+ yet)
 - Maven 3.x
 - Git client
 
@@ -49,7 +48,7 @@ To run unit tests:
 ### Create in-memory cache
 
 ```
-import com.onecache.core.*;
+import com.carrotdata.cache.*;
 
  protected  Cache createInMemoryCache(String cacheName) throws IOException{
     // Data directory is needed even for in-memory cache, this is where 
@@ -79,7 +78,7 @@ import com.onecache.core.*;
 ### Create disk-based cache
 
 ```
-import com.onecache.core.*;
+import com.carrotdata.cache.*;
  protected  Cache createDiskCache(String cacheName) throws IOException{
     
     Path dataDirPath = Files.createTempDirectory(null);
@@ -117,7 +116,7 @@ protected Cache createHybridCache(String ramCacheName, String diskCacheName) thr
 
 ### Cache configuration
 
-At minimum you need to provide the maximum cache size, the data segment size (if you do not like default - 4MB), the data directory and the snapshot directory names, all other parameters wiil be default ones. It is a good idea to read ```com.carrot.cache.util.CacheConfig``` class, which contains all configuration parameters with annotations and default values.
+At minimum you need to provide the maximum cache size, the data segment size (if you do not like default - 4MB), the data directory and the snapshot directory names, all other parameters wiil be default ones. It is a good idea to read ```com.carrotdata.cache.util.CacheConfig``` class, which contains all configuration parameters with annotations and default values.
 
 ### Simple code example
 
@@ -147,16 +146,16 @@ System.out.printf("Value for key %s is %s", key2, result);
 
 ### Important - core dumps are possible
 
-... because the code has direct access to the native memory via ```sun.misc.Unsafe``` class and this is the alpha-version.
+... because the code has direct access to the native memory via ```sun.misc.Unsafe``` class and this is the pre beta-version.
 To debug possible core dumps you need to activate the debug mode in the memory allocator
 
 ```
   UnsafeAccess.setMallocDebugEnabled(true);
 ```
 
-This will prevents core dumps and will throw exception on memory corruption. 
+This will prevents core dumps and will throw exception on memory corruption, but wiil runs significantly slower, use this only for small scale tests. 
 
-To track the potential memory leaks, for example an allocations of a size 64, you need additionally to enable the allocations stack track 
+To track a potential memory leaks, for example an allocations of a size 64, you need additionally to enable the allocations stack track 
 monitoring
 
 ```
@@ -175,10 +174,10 @@ UnsafeAccess.mallocStats.printStats();
 Happy using and testing, folks.
 
 Best regards,
-Vladimir Rodionov
+Carrot Data, Inc.
 
 You can reach me easily at
-vladrodionov@gmail.com
+vlad@trycarrots.io
 
 
 
