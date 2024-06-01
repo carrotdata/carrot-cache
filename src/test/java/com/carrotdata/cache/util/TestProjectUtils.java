@@ -373,16 +373,6 @@ public class TestProjectUtils {
   }
   
   @Test
-  public void testAtomicMemoryAccess() {
-    
-    sun.misc.Unsafe unsafe = UnsafeAccess.theUnsafe;
-    long ptr = unsafe.allocateMemory(8);
-    unsafe.putLongVolatile(null, ptr, 9);
-    long v = unsafe.getLongVolatile(null, ptr);
-    
-  }
-  
-  @Test
   public void testNumericConversion() {
     long v = -100000L;
     int vv = (int) v;

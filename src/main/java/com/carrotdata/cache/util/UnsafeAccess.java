@@ -36,6 +36,7 @@ import com.carrotdata.cache.util.RangeTree.Range;
 
 import sun.misc.Unsafe;
 
+@SuppressWarnings({ "removal", "deprecation" })
 public final class UnsafeAccess {
 
  public final static String MALLOC_DEBUG = "MALLOC_DEBUG";

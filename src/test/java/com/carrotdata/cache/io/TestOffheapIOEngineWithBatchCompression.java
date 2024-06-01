@@ -17,7 +17,6 @@ package com.carrotdata.cache.io;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.List;
-import java.util.Random;
 
 import com.carrotdata.cache.util.CacheConfig;
 import com.carrotdata.cache.util.TestUtils;
@@ -48,7 +47,7 @@ public void setUp() {
     List<String> dataList = loadGithubData();
     String[] sdata = new String[dataList.size()];
     dataList.toArray(sdata);
-    Random r = new Random();
+    //Random r = new Random();
     for (int i = 0; i < numRecords; i++) {
       keys[i] = (key + i).getBytes();
       int off = i % sdata.length;

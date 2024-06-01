@@ -240,7 +240,7 @@ public abstract class TestMemoryThroughput {
 
     final long dst = memory;
     long t1 = System.currentTimeMillis();
-    ThreadLocalRandom r = ThreadLocalRandom.current();
+    //ThreadLocalRandom r = ThreadLocalRandom.current();
     for (;;) {
       int index = currentIndex.getAndIncrement();
       if (index >= numIterations) {

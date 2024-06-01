@@ -18,7 +18,6 @@ import com.carrotdata.cache.compression.CompressionCodec;
 import com.carrotdata.cache.compression.zstd.ZstdCompressionCodec;
 import com.carrotdata.cache.index.CompactBaseIndexFormat;
 import com.carrotdata.cache.io.CompressedBlockBatchDataWriter;
-import com.carrotdata.cache.io.CompressedBlockDataWriter;
 import com.carrotdata.cache.io.CompressedBlockFileDataReader;
 import com.carrotdata.cache.io.CompressedBlockMemoryDataReader;
 import com.carrotdata.cache.util.CacheConfig;

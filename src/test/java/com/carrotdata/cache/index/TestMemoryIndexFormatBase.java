@@ -159,7 +159,6 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase{
       if (sids[i] != sid) {
         continue;
       }
-      int off = offsets[i];
       if(offsets[i] != offset) {
         continue;
       }
