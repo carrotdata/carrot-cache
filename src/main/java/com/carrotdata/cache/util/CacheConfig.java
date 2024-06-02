@@ -103,7 +103,7 @@ public class CacheConfig {
   public final static String CACHE_ROOT_DIR_PATH_KEY = "root.dir-path";
   
   /**Default cache root directory path */
-  public final static String DEFAULT_CACHE_ROOT_DIR_PATH = "." + File.separator + "onecache";
+  public final static String DEFAULT_CACHE_ROOT_DIR_PATH = "." + File.separator + "data";
     
   /**Data segment size */
   public static final String CACHE_SEGMENT_SIZE_KEY = "data.segment-size";
@@ -204,7 +204,7 @@ public class CacheConfig {
   public static final String THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS_KEY = "throughput.adjustment-steps";
   
   /**
-   * Does index support memory embedding
+   * Does index support memory embedding (not implemented yet)
    */
   public static final String INDEX_DATA_EMBEDDED_KEY = "index.data-embedded";
   
