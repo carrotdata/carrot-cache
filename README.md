@@ -35,8 +35,8 @@ The Carrot Cache (CC) project aims to modernize data caching and enable users to
 
 To build:
 ```
-git clone https://github.com/VladRodionov/onecache-core.git
-cd onecache-core
+git clone https://github.com/carrotdata/carrot-cache.git
+cd carrot-cache
 mvn install -DskipTests
 ```
 
