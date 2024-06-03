@@ -46,6 +46,9 @@ import com.carrotdata.cache.index.IndexFormat;
 import com.carrotdata.cache.index.MemoryIndex;
 import com.carrotdata.cache.io.CacheInputStream;
 import com.carrotdata.cache.io.CacheOutputStream;
+import com.carrotdata.cache.io.CompressedBlockBatchDataWriter;
+import com.carrotdata.cache.io.CompressedBlockFileDataReader;
+import com.carrotdata.cache.io.CompressedBlockMemoryDataReader;
 import com.carrotdata.cache.io.FileIOEngine;
 import com.carrotdata.cache.io.IOEngine;
 import com.carrotdata.cache.io.IOEngine.IOEngineEvent;
@@ -219,6 +222,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public Cache(String name) throws IOException {
     this.cacheName = name;
     this.conf = CacheConfig.getInstance();
+    preprocessConf();
     this.conf.sanityCheck(cacheName);
     this.engine = IOEngine.getEngineForCache(this);
     // set engine listener
@@ -227,9 +231,19 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     initAll();
   }
 
+  private void preprocessConf() {
+	  boolean compEnabled = this.conf.isCacheCompressionEnabled(cacheName);
+	  if (compEnabled) {
+		  this.conf.setDataWriter(cacheName, CompressedBlockBatchDataWriter.class.getName());
+		  this.conf.setMemoryDataReader(cacheName, CompressedBlockMemoryDataReader.class.getName());
+		  this.conf.setFileDataReader(cacheName, CompressedBlockFileDataReader.class.getName());
+	  }
+  }
+
   public Cache(String name, CacheConfig conf) throws IOException {
     this.cacheName = name;
     this.conf = conf;
+    preprocessConf();
     this.conf.sanityCheck(cacheName);
     this.engine = IOEngine.getEngineForCache(this);
     // set engine listener
