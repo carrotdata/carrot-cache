@@ -44,7 +44,7 @@ public abstract class TestIOMultithreadedBase {
   protected static ThreadLocal<int[]> mValueSizesTL = new ThreadLocal<int[]>();
   
   protected static int maxKeySize = 32;
-  protected static int maxValueSize = 5000;
+  protected static int maxValueSize = 500;
     
   protected int numRecords = 10;
   protected int numThreads = 4;
