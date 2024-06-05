@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.util;
 
@@ -28,7 +28,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,60 +38,61 @@ import sun.misc.Unsafe;
 @SuppressWarnings({ "removal", "deprecation" })
 public final class UnsafeAccess {
 
- public final static String MALLOC_DEBUG = "MALLOC_DEBUG";
-  
+  public final static String MALLOC_DEBUG = "MALLOC_DEBUG";
+
   static interface Platform {
-    
+
     public void copy(byte[] src, int srcOffset, long address, int length);
-    
+
     public void copy(long src, byte[] dest, int off, int length);
-    
+
     public void copy(long src, long dst, long len);
-    
+
     public void copy_no_dst_check(long src, long dst, long len);
-    
+
     public void copy_no_src_check(long src, long dst, long len);
-    
+
     public void putByte(long addr, byte val);
-    
+
     public void putShort(long addr, short val);
-    
+
     public int putShort(byte[] b, int off, short val);
-    
+
     public void putInt(long addr, int val);
-    
+
     public int putInt(byte[] b, int off, int val);
-    
+
     public void putLong(long addr, long val);
-    
+
     public int putLong(byte[] b, int off, long val);
 
     public byte toByte(long addr);
-    
+
     public short toShort(long addr);
-    
+
     public short toShort(byte[] b, int off);
-    
+
     public int toInt(long addr);
-    
+
     public int toInt(byte[] b, int off);
-    
+
     public long toLong(long addr);
-    
+
     public long toLong(byte[] b, int off);
-    
+
     public Platform getDebugVersion();
-    
+
     public Platform getNormalVersion();
   }
-  
+
   private static boolean debug = false;
-  
+
   public static final class MallocStats {
 
     public static interface TraceFilter {
       public boolean recordAllocationStackTrace(int size);
     }
+
     /*
      * Number of memory allocations
      */
@@ -125,7 +125,6 @@ public final class UnsafeAccess {
 
     /**
      * Is stack trace recording enabled
-     *
      * @return true, false
      */
     public boolean isStackTraceRecordingEnabled() {
@@ -134,7 +133,6 @@ public final class UnsafeAccess {
 
     /**
      * Set STR enabled
-     *
      * @param b
      */
     public void setStackTraceRecordingEnabled(boolean b) {
@@ -143,7 +141,6 @@ public final class UnsafeAccess {
 
     /**
      * Set STR filter
-     *
      * @param f filter
      */
     public void setStackTraceRecordingFilter(TraceFilter f) {
@@ -152,7 +149,6 @@ public final class UnsafeAccess {
 
     /**
      * Get STR filter
-     *
      * @return filter
      */
     public TraceFilter getStackTraceRecordingFilter() {
@@ -161,7 +157,6 @@ public final class UnsafeAccess {
 
     /**
      * Set stack trace recording limit
-     *
      * @param limit maximum number of records to keep
      */
     public void setStackTraceRecordingLimit(int limit) {
@@ -170,7 +165,6 @@ public final class UnsafeAccess {
 
     /**
      * Get STR limit
-     *
      * @return limit
      */
     public int getStackTraceRecordingLimit() {
@@ -179,7 +173,6 @@ public final class UnsafeAccess {
 
     /**
      * Returns total number of memory allocations
-     *
      * @return number
      */
     public long getAllocEventNumber() {
@@ -188,7 +181,6 @@ public final class UnsafeAccess {
 
     /**
      * Returns total number of free events
-     *
      * @return number
      */
     public long getFreeEventNumber() {
@@ -197,7 +189,6 @@ public final class UnsafeAccess {
 
     /**
      * Records memory allocation event
-     *
      * @param address memory address
      * @param alloced memory size
      */
@@ -242,7 +233,6 @@ public final class UnsafeAccess {
 
     /**
      * Records memory re-allocation event
-     *
      * @param address memory address
      * @param alloced memory size
      */
@@ -253,9 +243,9 @@ public final class UnsafeAccess {
       allocated.addAndGet(alloced);
       freed.addAndGet(r.size);
     }
+
     /**
      * Records memory free event
-     *
      * @param address memory address
      */
     public void freeEvent(long address) {
@@ -276,7 +266,6 @@ public final class UnsafeAccess {
 
     /**
      * Checks if we access valid memory
-     *
      * @param address memory address
      * @param size memory size
      */
@@ -284,7 +273,8 @@ public final class UnsafeAccess {
       if (!UnsafeAccess.debug) return;
 
       if (!allocMap.inside(address, size)) {
-        LOG.error(Thread.currentThread().getName() + ": Memory corruption: address={} size={}", address, size);
+        LOG.error(Thread.currentThread().getName() + ": Memory corruption: address={} size={}",
+          address, size);
         Thread.dumpStack();
         throw new RuntimeException();
       }
@@ -299,7 +289,6 @@ public final class UnsafeAccess {
 
     /**
      * Prints memory allocation statistics
-     *
      * @param printOrphans if true - print all orphan allocations
      */
     public void printStats(boolean printOrphans) {
@@ -315,7 +304,7 @@ public final class UnsafeAccess {
       if (allocMap.size() > 0 && printOrphans) {
         LOG.info("Orphaned allocation sizes:");
         for (Map.Entry<Range, Range> entry : allocMap.entrySet()) {
-          LOG.info( "{} size={}", entry.getKey().start, entry.getValue().size);
+          LOG.info("{} size={}", entry.getKey().start, entry.getValue().size);
           if (isStackTraceRecordingEnabled()) {
             String strace = stackTraceMap.get(entry.getKey().start);
             if (strace != null) {
@@ -326,12 +315,12 @@ public final class UnsafeAccess {
       }
       LOG.info("");
     }
-    
+
     public void clear() {
       /*
        * Number of memory allocations
        */
-       allocEvents = new AtomicLong();
+      allocEvents = new AtomicLong();
       /*
        * Number of memory free events
        */
@@ -349,8 +338,7 @@ public final class UnsafeAccess {
       /** Trace recorder maximum record number */
       strLimit = Integer.MAX_VALUE; // default - no limit
       /** Stack traces map (allocation address -> stack trace) */
-      stackTraceMap =
-          Collections.synchronizedMap(new HashMap<Long, String>());
+      stackTraceMap = Collections.synchronizedMap(new HashMap<Long, String>());
 
     }
   }
@@ -374,31 +362,27 @@ public final class UnsafeAccess {
   static final boolean littleEndian = ByteOrder.nativeOrder().equals(ByteOrder.LITTLE_ENDIAN);
 
   /*
-   * This number limits the number of bytes to copy per call to Unsafe's
-   * copyMemory method. A limit is imposed to allow for safepoint polling
-   * during a large copy
+   * This number limits the number of bytes to copy per call to Unsafe's copyMemory method. A limit
+   * is imposed to allow for safepoint polling during a large copy
    */
   static final long UNSAFE_COPY_THRESHOLD = 1024L * 1024L;
 
   static final Platform platform;
 
   static {
-    theUnsafe =
-        (Unsafe)
-            AccessController.doPrivileged(
-                new PrivilegedAction<Object>() {
-                  @Override
-                  public Object run() {
-                    try {
-                      Field f = Unsafe.class.getDeclaredField("theUnsafe");
-                      f.setAccessible(true);
-                      return f.get(null);
-                    } catch (Throwable e) {
-                      LOG.warn("sun.misc.Unsafe is not accessible", e);
-                    }
-                    return null;
-                  }
-                });
+    theUnsafe = (Unsafe) AccessController.doPrivileged(new PrivilegedAction<Object>() {
+      @Override
+      public Object run() {
+        try {
+          Field f = Unsafe.class.getDeclaredField("theUnsafe");
+          f.setAccessible(true);
+          return f.get(null);
+        } catch (Throwable e) {
+          LOG.warn("sun.misc.Unsafe is not accessible", e);
+        }
+        return null;
+      }
+    });
 
     if (theUnsafe != null) {
       BYTE_ARRAY_BASE_OFFSET = theUnsafe.arrayBaseOffset(byte[].class);
@@ -407,24 +391,23 @@ public final class UnsafeAccess {
     }
     debug = System.getProperty(MALLOC_DEBUG) != null;
     if (littleEndian) {
-      platform = debug? new LittleEndianPlatformDebug(): new LittleEndianPlatform();
+      platform = debug ? new LittleEndianPlatformDebug() : new LittleEndianPlatform();
     } else {
-      platform = debug? new BigEndianPlatformDebug(): new BigEndianPlatform();
+      platform = debug ? new BigEndianPlatformDebug() : new BigEndianPlatform();
     }
   }
-
 
   /** Method handler for DirectByteBuffer::address method */
   static Method addressMethod;
 
   /** Private constructor */
-  private UnsafeAccess() {}
+  private UnsafeAccess() {
+  }
 
   /** Malloc stats methods */
 
   /**
-   * Set debug mode enabled/disabled
-   * Set MALLOC_DEBUG system property before using this class 
+   * Set debug mode enabled/disabled Set MALLOC_DEBUG system property before using this class
    * @param b
    */
   public static void setMallocDebugEnabled(boolean b) {
@@ -433,7 +416,6 @@ public final class UnsafeAccess {
 
   /**
    * Is malloc debug enabled
-   *
    * @return enabled/disabled
    */
   public static boolean isMallocDebugEnabled() {
@@ -442,7 +424,6 @@ public final class UnsafeAccess {
 
   /**
    * Set STR enabled
-   *
    * @param b true or false
    */
   public static void setMallocDebugStackTraceEnabled(boolean b) {
@@ -451,7 +432,6 @@ public final class UnsafeAccess {
 
   /**
    * Is STR enabled
-   *
    * @return true or false
    */
   public static boolean isMallocDebugStackTraceEnabled() {
@@ -460,7 +440,6 @@ public final class UnsafeAccess {
 
   /**
    * Set STR filter
-   *
    * @param f filter
    */
   public static void setStackTraceRecordingFilter(MallocStats.TraceFilter f) {
@@ -469,7 +448,6 @@ public final class UnsafeAccess {
 
   /**
    * Get STR filter
-   *
    * @return filter
    */
   public static MallocStats.TraceFilter getStackTraceRecordingFilter() {
@@ -478,7 +456,6 @@ public final class UnsafeAccess {
 
   /**
    * Set STR limit
-   *
    * @param limit
    */
   public static void setStackTraceRecordingLimit(int limit) {
@@ -487,7 +464,6 @@ public final class UnsafeAccess {
 
   /**
    * Get STR limit
-   *
    * @return limit
    */
   public static int getStackTraceRecordingLimit() {
@@ -496,7 +472,6 @@ public final class UnsafeAccess {
 
   /**
    * Get memory address for direct byte buffer
-   *
    * @param buf direct byte buffer
    * @return address of a memory buffer or -1 (if not direct or not accessible)
    */
@@ -527,7 +502,6 @@ public final class UnsafeAccess {
   // APIs to read primitive data from a byte[] using Unsafe way
   /**
    * Converts a byte array to a short value considering it was written in big-endian format.
-   *
    * @param bytes byte array
    * @param offset offset into array
    * @return the short value
@@ -538,7 +512,6 @@ public final class UnsafeAccess {
 
   /**
    * Reads short value at a memory address
-   *
    * @param addr memory address
    * @return short value
    */
@@ -550,7 +523,6 @@ public final class UnsafeAccess {
 
   /**
    * TODO: test Get offset of a first bit set in a long value (8 bytes)
-   *
    * @param addr address to read value from
    * @return offset, or -1 if no bits set
    */
@@ -566,7 +538,6 @@ public final class UnsafeAccess {
 
   /**
    * Get offset of a first bit unset in a long value (8 bytes)
-   *
    * @param addr address to read value from
    * @return offset, or -1 if no bits unset
    */
@@ -583,7 +554,6 @@ public final class UnsafeAccess {
 
   /**
    * Get offset of a first bit set in a integer value (4 bytes)
-   *
    * @param addr address to read value from
    * @return offset, or -1 if
    */
@@ -599,7 +569,6 @@ public final class UnsafeAccess {
 
   /**
    * Get offset of a first bit unset in a integer value (4 bytes)
-   *
    * @param addr address to read value from
    * @return offset of first '0', or -1 if not found
    */
@@ -616,7 +585,6 @@ public final class UnsafeAccess {
 
   /**
    * Get offset of a first bit set in a byte value (1 byte)
-   *
    * @param addr address to read value from
    * @return offset of first '1', or -1 if not found
    */
@@ -628,7 +596,6 @@ public final class UnsafeAccess {
 
   /**
    * Get offset of a first bit unset in a byte value (1 byte)
-   *
    * @param addr address to read value from
    * @return offset of first '0', or -1 if not found
    */
@@ -642,7 +609,6 @@ public final class UnsafeAccess {
 
   /**
    * Get offset of a first bit set in a short value (2 bytes)
-   *
    * @param addr address to read value from
    * @return offset of first '1', or -1 if not found
    */
@@ -657,7 +623,6 @@ public final class UnsafeAccess {
 
   /**
    * Get offset of a first bit unset in a short value (2 bytes)
-   *
    * @param addr address to read value from
    * @return offset of first '0', or -1 if not found
    */
@@ -673,7 +638,6 @@ public final class UnsafeAccess {
 
   /**
    * Converts a byte array to an int value considering it was written in big-endian format.
-   *
    * @param bytes byte array
    * @param offset offset into array
    * @return the int value
@@ -684,7 +648,6 @@ public final class UnsafeAccess {
 
   /**
    * Converts a byte array to a long value considering it was written in big-endian format.
-   *
    * @param bytes byte array
    * @param offset offset into array
    * @return the long value
@@ -696,7 +659,6 @@ public final class UnsafeAccess {
   // APIs to write primitive data to a byte[] using Unsafe way
   /**
    * Put a short value out to the specified byte array position in big-endian format.
-   *
    * @param bytes the byte array
    * @param offset position in the array
    * @param val short to write out
@@ -708,7 +670,6 @@ public final class UnsafeAccess {
 
   /**
    * Put a short value out to the specified address in a big-endian format.
-   *
    * @param addr memory address
    * @param val short to write out
    */
@@ -716,11 +677,8 @@ public final class UnsafeAccess {
     platform.putShort(addr, val);
   }
 
-
-
   /**
    * Put a byte value to a specified memory address
-   *
    * @param addr memory address
    * @param val byte value
    */
@@ -730,29 +688,26 @@ public final class UnsafeAccess {
 
   /**
    * Put an int value out to the specified byte array position in big-endian format.
-   *
    * @param bytes the byte array
    * @param offset position in the array
    * @param val int to write out
    * @return incremented offset
    */
   public static int putInt(byte[] bytes, int offset, int val) {
-    return platform.putInt(bytes, offset, val)  ;
+    return platform.putInt(bytes, offset, val);
   }
 
   /**
    * Put an integer value to a specified memory address
-   *
    * @param addr memory address
    * @param val integer value
    */
   public static void putInt(long addr, int val) {
     platform.putInt(addr, val);
   }
-  
+
   /**
    * Put a long value out to the specified byte array position in big-endian format.
-   *
    * @param bytes the byte array
    * @param offset position in the array
    * @param val long to write out
@@ -764,7 +719,6 @@ public final class UnsafeAccess {
 
   /**
    * Put a long value to a specified memory address
-   *
    * @param addr memory address
    * @param val byte value
    */
@@ -775,7 +729,6 @@ public final class UnsafeAccess {
   /**
    * Reads a short value at the given Object's offset considering it was written in big-endian
    * format.
-   *
    * @param ref
    * @param offset
    * @return short value at offset
@@ -789,7 +742,6 @@ public final class UnsafeAccess {
 
   /**
    * Reads a int value at the given Object's offset considering it was written in big-endian format.
-   *
    * @param ref
    * @param offset
    * @return int value at offset
@@ -803,7 +755,6 @@ public final class UnsafeAccess {
 
   /**
    * Reads integer value at a given address
-   *
    * @param addr memory address
    * @return integer value
    */
@@ -814,7 +765,6 @@ public final class UnsafeAccess {
   /**
    * Reads a long value at the given Object's offset considering it was written in big-endian
    * format.
-   *
    * @param ref
    * @param offset
    * @return long value at offset
@@ -828,7 +778,6 @@ public final class UnsafeAccess {
 
   /**
    * Reads a long value at the given memory address considering it was written in big-endian format.
-   *
    * @param addr memory address
    * @return long value
    */
@@ -837,12 +786,11 @@ public final class UnsafeAccess {
   }
 
   /*
-   *  APIs to copy data. This will be direct memory location copy and will be much faster
+   * APIs to copy data. This will be direct memory location copy and will be much faster
    */
 
   /**
    * Copy from a memory to a byte buffer
-   *
    * @param src memory address
    * @param dst byte buffer
    * @param len number of bytes to copy
@@ -866,7 +814,6 @@ public final class UnsafeAccess {
 
   /**
    * Copy from a byte buffer to a direct memory
-   *
    * @param src byte buffer
    * @param ptr memory destination
    * @param len number of bytes to copy
@@ -886,9 +833,9 @@ public final class UnsafeAccess {
     }
     src.position(pos + len);
   }
+
   /**
    * Copies the bytes from given array's offset to length part into the given buffer.
-   *
    * @param src source array
    * @param srcOffset offset at source
    * @param dest destination byte buffer
@@ -910,7 +857,6 @@ public final class UnsafeAccess {
 
   /**
    * Copy data from a byte array to a specified memory address
-   *
    * @param src source byte array
    * @param srcOffset byte array offset
    * @param address memory address
@@ -922,7 +868,6 @@ public final class UnsafeAccess {
 
   /**
    * Copy data between two byte arrays
-   *
    * @param src source array
    * @param srcOffset offset in a source
    * @param dst destination array
@@ -940,9 +885,9 @@ public final class UnsafeAccess {
     long dstAddress = dstOffset + BYTE_ARRAY_BASE_OFFSET;
     theUnsafe.copyMemory(src, srcAddress, dst, dstAddress, length);
   }
+
   /**
    * Copy data from a memory to a byte array
-   *
    * @param src source memory address
    * @param dest destination array
    * @param off offset in a destination array
@@ -954,7 +899,6 @@ public final class UnsafeAccess {
 
   /**
    * Copy data in memory
-   *
    * @param src source address
    * @param dst destination address
    * @param len number of bytes to copy
@@ -965,7 +909,6 @@ public final class UnsafeAccess {
 
   /**
    * Copy data in memory (no src check in a debug memory mode)
-   *
    * @param src source address
    * @param dst destination address
    * @param len number of bytes to copy
@@ -976,7 +919,6 @@ public final class UnsafeAccess {
 
   /**
    * Copy data in memory (no dst check in a debug memory mode)
-   *
    * @param src source address
    * @param dst destination address
    * @param len number of bytes to copy
@@ -987,7 +929,6 @@ public final class UnsafeAccess {
 
   /**
    * Unsafe copy
-   *
    * @param src source
    * @param srcAddr source object address
    * @param dst destination object
@@ -1006,7 +947,6 @@ public final class UnsafeAccess {
 
   /**
    * Returns current allocated memory size
-   *
    * @return allocated memory size
    */
   public static long getAllocatedMemory() {
@@ -1015,7 +955,6 @@ public final class UnsafeAccess {
 
   /**
    * Allocate native memory and copy array
-   *
    * @param arr array to copy
    * @param off offset
    * @param len length
@@ -1029,7 +968,6 @@ public final class UnsafeAccess {
 
   /**
    * Allocate native memory and copy string
-   *
    * @param s string
    * @param off offset
    * @param len length
@@ -1041,7 +979,6 @@ public final class UnsafeAccess {
 
   /**
    * Allocate native memory and copy source
-   *
    * @param src source data
    * @param size size of a source data
    * @return address
@@ -1053,11 +990,10 @@ public final class UnsafeAccess {
   }
 
   /*
-   *  APIs to add primitives to BBs
+   * APIs to add primitives to BBs
    */
   /**
    * Put a short value out to the specified BB position in big-endian format.
-   *
    * @param buf the byte buffer
    * @param offset position in the buffer
    * @param val short to write out
@@ -1078,7 +1014,6 @@ public final class UnsafeAccess {
 
   /**
    * Put an integer value out to the specified BB position in big-endian format.
-   *
    * @param buf the byte buffer
    * @param offset position in the buffer
    * @param val integer to write out
@@ -1099,7 +1034,6 @@ public final class UnsafeAccess {
 
   /**
    * Put a long value out to the specified BB position in big-endian format.
-   *
    * @param buf the byte buffer
    * @param offset position in the buffer
    * @param val long to write out
@@ -1117,9 +1051,9 @@ public final class UnsafeAccess {
     }
     return offset + Bytes.SIZEOF_LONG;
   }
+
   /**
    * Put a byte value out to the specified BB position in big-endian format.
-   *
    * @param buf the byte buffer
    * @param offset position in the buffer
    * @param b byte to write out
@@ -1138,7 +1072,6 @@ public final class UnsafeAccess {
 
   /**
    * Returns the byte at the given offset of the object
-   *
    * @param addr
    * @return the byte at the given offset
    */
@@ -1148,7 +1081,6 @@ public final class UnsafeAccess {
 
   /**
    * Allocate memory
-   *
    * @param size size of a memory to allocate
    * @return memory pointer
    */
@@ -1160,7 +1092,6 @@ public final class UnsafeAccess {
 
   /**
    * Allocate memory zeroed
-   *
    * @param size size of amemory to allocate
    * @return memory pointer
    */
@@ -1178,7 +1109,6 @@ public final class UnsafeAccess {
 
   /**
    * Reallocate memory
-   *
    * @param ptr memory address
    * @param newSize new size
    * @return memory address
@@ -1211,9 +1141,9 @@ public final class UnsafeAccess {
   public static void setMemory(long ptr, long size, byte v) {
     theUnsafe.setMemory(ptr, size, v);
   }
+
   /**
    * Free memory
-   *
    * @param ptr memory pointer
    */
   public static void free(long ptr) {

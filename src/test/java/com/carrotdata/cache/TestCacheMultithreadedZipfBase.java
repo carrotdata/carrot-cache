@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 
 package com.carrotdata.cache;
@@ -46,105 +46,95 @@ public abstract class TestCacheMultithreadedZipfBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheMultithreadedZipfBase.class);
 
   protected Cache cache;
-  
+
   protected boolean offheap = true;
-  
+
   protected boolean evictionDisabled = false;
-  
+
   protected long segmentSize = 4 * 1024 * 1024;
-  
+
   protected long maxCacheSize = 1000L * segmentSize;
-  
+
   int scavengerInterval = 2; // seconds
-  
+
   int scavNumberThreads = 1;
-  
+
   double scavDumpBelowRatio = 1.0;
-  
+
   double minActiveRatio = 0.90;
-  
+
   protected int maxKeySize = 32;
-  
+
   protected int maxValueSize = 5000;
-  
+
   protected int numRecords = 10;
-  
+
   protected int numIterations = 0;
-  
+
   protected int numThreads = 1;
-  
+
   protected int blockSize = 4096;
-  
+
   protected Class<? extends EvictionPolicy> epClz = LRUEvictionPolicy.class;
-  
+
   protected Class<? extends RecyclingSelector> rsClz = LRCRecyclingSelector.class;
-  
+
   protected Class<? extends AdmissionController> acClz = BaseAdmissionController.class;
-  
+
   protected Class<? extends PromotionController> pcController = BasePromotionController.class;
-    
+
   protected double zipfAlpha = 0.9;
-  
+
   protected long testStartTime = System.currentTimeMillis();
-  
+
   protected double aqStartRatio = 0.3;
-  
+
   protected double pqStartRatio = 0.2;
 
   protected String parentCacheName = "default";
-  
+
   protected String victimCacheName = "victim";
-  
+
   protected int slruInsertionPoint = 6;
-  
+
   protected long spinOnWaitTime;
-  
+
   protected int windowSize = 60;
-  
+
   protected int binsCount = 60;
-  
+
   protected boolean hybridCacheInverseMode = false;
-    
-  
-  
-  @After  
+
+  @After
   public void tearDown() throws IOException {
     this.cache.printStats();
     Scavenger.printStats();
     this.cache.dispose();
     // Delete temp data
     TestUtils.deleteCacheFiles(cache);
-    
+
     Scavenger.clear();
   }
-  
-  protected  Cache createCache() throws IOException{
+
+  protected Cache createCache() throws IOException {
     String cacheName = parentCacheName;
     // Data directory
     Path rootDirPath = Files.createTempDirectory(null);
     String rootDir = rootDirPath.toFile().getAbsolutePath();
     Builder builder = new Builder(cacheName);
-    
-    builder
-      .withCacheDataSegmentSize(segmentSize)
-      .withCacheMaximumSize(maxCacheSize)
-      .withScavengerRunInterval(scavengerInterval)
-      .withScavengerDumpEntryBelowMax(scavDumpBelowRatio)
-      .withCacheEvictionPolicy(epClz.getName())
-      .withRecyclingSelector(rsClz.getName())
-      .withCacheRootDir(rootDir)
-      .withMinimumActiveDatasetRatio(minActiveRatio)
-      .withEvictionDisabledMode(evictionDisabled)
-      .withAdmissionQueueStartSizeRatio(aqStartRatio)
-      .withAdmissionController(acClz.getName())
-      .withSLRUInsertionPoint(slruInsertionPoint)
-      .withCacheSpinWaitTimeOnHighPressure(spinOnWaitTime)
-      .withRollingWindowDuration(windowSize)
-      .withRollingWindowBinsCount(binsCount)
-      .withScavengerNumberOfThreads(scavNumberThreads)
-      .withCacheHybridInverseMode(hybridCacheInverseMode)
-      .withPromotionController(pcController.getName())
-      .withPromotionQueueStartSizeRatio(pqStartRatio);
+
+    builder.withCacheDataSegmentSize(segmentSize).withCacheMaximumSize(maxCacheSize)
+        .withScavengerRunInterval(scavengerInterval)
+        .withScavengerDumpEntryBelowMax(scavDumpBelowRatio).withCacheEvictionPolicy(epClz.getName())
+        .withRecyclingSelector(rsClz.getName()).withCacheRootDir(rootDir)
+        .withMinimumActiveDatasetRatio(minActiveRatio).withEvictionDisabledMode(evictionDisabled)
+        .withAdmissionQueueStartSizeRatio(aqStartRatio).withAdmissionController(acClz.getName())
+        .withSLRUInsertionPoint(slruInsertionPoint)
+        .withCacheSpinWaitTimeOnHighPressure(spinOnWaitTime).withRollingWindowDuration(windowSize)
+        .withRollingWindowBinsCount(binsCount).withScavengerNumberOfThreads(scavNumberThreads)
+        .withCacheHybridInverseMode(hybridCacheInverseMode)
+        .withPromotionController(pcController.getName())
+        .withPromotionQueueStartSizeRatio(pqStartRatio);
     builder = withAddedConfigurations(builder);
     if (offheap) {
       return builder.buildMemoryCache();
@@ -152,7 +142,7 @@ public abstract class TestCacheMultithreadedZipfBase {
       return builder.buildDiskCache();
     }
   }
-  
+
   /**
    * Subclasses may override
    * @param b builder instance
@@ -161,21 +151,21 @@ public abstract class TestCacheMultithreadedZipfBase {
   protected Builder withAddedConfigurations(Builder b) {
     return b;
   }
-  
+
   protected int safeBufferSize() {
     int bufSize = Utils.kvSize(maxKeySize, maxValueSize);
     return (bufSize / blockSize + 1) * blockSize;
   }
-  
+
   protected void joinAll(Thread[] workers) {
     for (Thread t : workers) {
       try {
         t.join();
-      } catch(Exception e) {
+      } catch (Exception e) {
       }
     }
   }
-  
+
   protected Thread[] startAll(Runnable r) {
     Thread[] workers = new Thread[numThreads];
     for (int i = 0; i < workers.length; i++) {
@@ -184,15 +174,15 @@ public abstract class TestCacheMultithreadedZipfBase {
     }
     return workers;
   }
-  
+
   protected long getExpireStream(long startTime, int n) {
     return startTime + 1000000L;
   }
-  
+
   protected long getExpire(int n) {
     return System.currentTimeMillis() + 1000000L;
   }
-  
+
   protected int nextKeySize(Random r) {
     int size = maxKeySize / 2 + r.nextInt(maxKeySize / 2);
     return size;
@@ -202,7 +192,7 @@ public abstract class TestCacheMultithreadedZipfBase {
     int size = 1 + r.nextInt(maxValueSize - 1);
     return size;
   }
-  
+
   protected void runBytesStreamZipf(int total) throws IOException {
     int loaded = 0;
     int hits = 0;
@@ -210,40 +200,39 @@ public abstract class TestCacheMultithreadedZipfBase {
     byte[] buffer = new byte[kvSize];
     ZipfDistribution dist = new ZipfDistribution(this.numRecords, this.zipfAlpha);
     Percentile perc = new Percentile(10000, total);
-    for(int i = 0; i < total; i++) {
-      int n  = dist.sample();
+    for (int i = 0; i < total; i++) {
+      int n = dist.sample();
       long start = System.nanoTime();
       if (verifyBytesStream(n, buffer)) {
         hits++;
-      } else if(loadBytesStream(n)) {
+      } else if (loadBytesStream(n)) {
         loaded++;
       }
       long end = System.nanoTime();
       perc.add(end - start);
       if (i > 0 && i % 500000 == 0) {
-        LOG.info("{} - i={} hit rate={}", Thread.currentThread().getName(), i, 
+        LOG.info("{} - i={} hit rate={}", Thread.currentThread().getName(), i,
           (float) cache.getOverallHitRate());
       }
     }
-    LOG.info("{} - hit={} loaded={}", Thread.currentThread().getName(), 
-      (float) hits / total, loaded);
+    LOG.info("{} - hit={} loaded={}", Thread.currentThread().getName(), (float) hits / total,
+      loaded);
     LOG.info("Thread={} latency: min={}ns max={}ns p50={}ns p90={}ns p99={}ns p999={}ns p9999={}ns",
-      Thread.currentThread().getName(), perc.min(), perc.max(), perc.value(0.5),
-      perc.value(0.9), perc.value(0.99), perc.value(0.999), perc.value(0.9999));
+      Thread.currentThread().getName(), perc.min(), perc.max(), perc.value(0.5), perc.value(0.9),
+      perc.value(0.99), perc.value(0.999), perc.value(0.9999));
   }
-  
-  
+
   protected void runMemoryStreamZipf(int total) throws IOException {
     int loaded = 0;
     int hits = 0;
     int kvSize = safeBufferSize();
     ByteBuffer buffer = ByteBuffer.allocate(kvSize);
-    
+
     ZipfDistribution dist = new ZipfDistribution(this.numRecords, this.zipfAlpha);
     Percentile perc = new Percentile(10000, this.numRecords);
 
-    for(int i = 0; i < total; i++) {
-      int n  = dist.sample();
+    for (int i = 0; i < total; i++) {
+      int n = dist.sample();
       long start = System.nanoTime();
       if (verifyMemoryStream(n, buffer)) {
         hits++;
@@ -252,20 +241,19 @@ public abstract class TestCacheMultithreadedZipfBase {
       }
       long end = System.nanoTime();
       perc.add(end - start);
-      
+
       if (i > 0 && i % 500000 == 0) {
-        LOG.info("{} - i={} hit rate={}", Thread.currentThread().getName(), i, 
+        LOG.info("{} - i={} hit rate={}", Thread.currentThread().getName(), i,
           (float) cache.getOverallHitRate());
       }
     }
-    LOG.info("{} - hit={} loaded={}", Thread.currentThread().getName(), 
-      (float) hits / total, loaded);
+    LOG.info("{} - hit={} loaded={}", Thread.currentThread().getName(), (float) hits / total,
+      loaded);
     LOG.info("Thread={} latency: min={}ns max={}ns p50={}ns p90={}ns p99={}ns p999={}ns p9999={}ns",
-      Thread.currentThread().getName(), perc.min(), perc.max(), perc.value(0.5),
-      perc.value(0.9), perc.value(0.99), perc.value(0.999), perc.value(0.9999));
+      Thread.currentThread().getName(), perc.min(), perc.max(), perc.value(0.5), perc.value(0.9),
+      perc.value(0.99), perc.value(0.999), perc.value(0.9999));
   }
-  
-  
+
   protected boolean loadBytesStream(int n) throws IOException {
     Random r = new Random(testStartTime + n);
     int keySize = nextKeySize(r);
@@ -277,11 +265,11 @@ public abstract class TestCacheMultithreadedZipfBase {
     boolean result = this.cache.put(key, value, expire);
     return result;
   }
-  
+
   protected boolean verifyBytesStream(int n, byte[] buffer) throws IOException {
-    
+
     Random r = new Random(testStartTime + n);
-    
+
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);
     byte[] key = TestUtils.randomBytes(keySize, r);
@@ -301,17 +289,16 @@ public abstract class TestCacheMultithreadedZipfBase {
       int vSizeSize = Utils.sizeUVInt(vSize);
       int off = kSizeSize + vSizeSize;
       assertTrue(Utils.compareTo(buffer, off, kSize, key, 0, keySize) == 0);
-      
-    } catch(AssertionError e) {
+
+    } catch (AssertionError e) {
       return false;
-    } 
+    }
     return true;
   }
 
-
   protected boolean loadMemoryStream(int n) throws IOException {
     Random r = new Random(testStartTime + n);
-    
+
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);
     long keyPtr = TestUtils.randomMemory(keySize, r);
@@ -322,11 +309,11 @@ public abstract class TestCacheMultithreadedZipfBase {
     UnsafeAccess.free(valuePtr);
     return result;
   }
-  
+
   protected boolean verifyMemoryStream(int n, ByteBuffer buffer) throws IOException {
 
     Random r = new Random(testStartTime + n);
-    
+
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);
     long keyPtr = TestUtils.randomMemory(keySize, r);
@@ -358,19 +345,20 @@ public abstract class TestCacheMultithreadedZipfBase {
     }
     return true;
   }
-  
+
   protected void testContinuosLoadBytesRun() throws IOException {
-   
+
     // Create cache after setting is configuration parameters
     this.cache = createCache();
-    this.numIterations = this.numIterations > 0? this.numIterations: this.numRecords;
+    this.numIterations = this.numIterations > 0 ? this.numIterations : this.numRecords;
     Runnable r = () -> {
       try {
         runBytesStreamZipf(this.numIterations);
       } catch (IOException e) {
         // TODO Auto-generated catch block
         e.printStackTrace();
-    }};
+      }
+    };
     long start = System.currentTimeMillis();
     Thread[] all = startAll(r);
     joinAll(all);
@@ -379,11 +367,11 @@ public abstract class TestCacheMultithreadedZipfBase {
     LOG.info("Thread={} time={}ms rps={}", Thread.currentThread().getName(), stop - start,
       (this.numThreads * (long) this.numIterations) * 1000 / (stop - start));
   }
-  
+
   protected void testContinuosLoadMemoryRun() throws IOException {
     // Create cache after setting is configuration parameters
     this.cache = createCache();
-    this.numIterations = this.numIterations > 0? this.numIterations: this.numRecords;
+    this.numIterations = this.numIterations > 0 ? this.numIterations : this.numRecords;
 
     Runnable r = () -> {
       try {
@@ -391,13 +379,15 @@ public abstract class TestCacheMultithreadedZipfBase {
       } catch (IOException e) {
         // TODO Auto-generated catch block
         e.printStackTrace();
-    }};
+      }
+    };
     long start = System.currentTimeMillis();
     Thread[] all = startAll(r);
     joinAll(all);
     long stop = System.currentTimeMillis();
     Scavenger.printStats();
     LOG.info("Thread={} time={}ms rps={}", Thread.currentThread().getName(), stop - start,
-      (this.numThreads * (long) this.numIterations) * 1000 / (stop - start));  }
-  
+      (this.numThreads * (long) this.numIterations) * 1000 / (stop - start));
+  }
+
 }

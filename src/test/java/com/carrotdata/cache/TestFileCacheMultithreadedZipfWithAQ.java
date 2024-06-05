@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache;
 
@@ -26,10 +26,11 @@ import com.carrotdata.cache.controllers.MinAliveRecyclingSelector;
 import com.carrotdata.cache.eviction.LRUEvictionPolicy;
 
 public class TestFileCacheMultithreadedZipfWithAQ extends TestCacheMultithreadedZipfBase {
-  private static final Logger LOG = LoggerFactory.getLogger(TestFileCacheMultithreadedZipfWithAQ.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFileCacheMultithreadedZipfWithAQ.class);
 
   protected double startSizeRatio = 0.5;
-  
+
   @Before
   public void setUp() {
     this.offheap = false;
@@ -39,13 +40,13 @@ public class TestFileCacheMultithreadedZipfWithAQ extends TestCacheMultithreaded
     this.segmentSize = 16 * 1024 * 1024;
     this.maxCacheSize = 50 * this.segmentSize;
   }
-  
+
   @Override
   protected Builder withAddedConfigurations(Builder b) {
-     b = b.withAdmissionQueueStartSizeRatio(startSizeRatio);
-     return b;
+    b = b.withAdmissionQueueStartSizeRatio(startSizeRatio);
+    return b;
   }
-  
+
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPIWithAQ() throws IOException {
     LOG.info("Bytes API: eviction=LRU, selector=MinAlive - AQ");
@@ -56,7 +57,7 @@ public class TestFileCacheMultithreadedZipfWithAQ extends TestCacheMultithreaded
     this.acClz = AQBasedAdmissionController.class;
     super.testContinuosLoadBytesRun();
   }
-  
+
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
     LOG.info("Bytes API: eviction=LRU, selector=MinAlive");

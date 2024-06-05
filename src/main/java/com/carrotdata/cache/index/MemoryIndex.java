@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.index;
 
@@ -40,104 +40,99 @@ import com.carrotdata.cache.util.Utils;
 /**
  * Memory Index is a dynamic hash table, which implements smart incremental rehashing technique to
  * avoid large pauses during operation. It supports blocked rehashing as well
- *
- * <p>[SHORT] - block size [SHORT] - number of entries [SHORT] - data size [entry]+
- * 
- * This is fixed header size. Implementation of IndexFormat can increase header size, but first 
- * 6 bytes are always fixed. 
+ * <p>
+ * [SHORT] - block size [SHORT] - number of entries [SHORT] - data size [entry]+ This is fixed
+ * header size. Implementation of IndexFormat can increase header size, but first 6 bytes are always
+ * fixed.
  */
 public final class MemoryIndex implements Persistent {
   /** Logger */
   private static final Logger LOG = LoggerFactory.getLogger(MemoryIndex.class);
-  
-  /** This is value which guarantees that rehashing won't break*/
+
+  /** This is value which guarantees that rehashing won't break */
   public static int MAX_INDEX_ENTRIES_PER_BLOCK = 100;
-  
-  public static enum MutationResult{
-    INSERTED, /* Operation succeeded */ 
-    DELETED,  /* Operation succeeded (for AQ and MQ), but existing one was deleted in case of AQ*/
-    UPDATED,  /* Insert was update, probably due to hash collision */
-    FAILED    /* Failed - blocked rehashing is required  */
+
+  public static enum MutationResult {
+    INSERTED, /* Operation succeeded */
+    DELETED, /* Operation succeeded (for AQ and MQ), but existing one was deleted in case of AQ */
+    UPDATED, /* Insert was update, probably due to hash collision */
+    FAILED /* Failed - blocked rehashing is required */
   }
-  
+
   /**
    * This is result of a check key operation
-   *  
    */
   public static enum Result {
-    OK,
-    NOT_FOUND,
-    DELETED,
-    EXPIRED
+    OK, NOT_FOUND, DELETED, EXPIRED
   }
-  
+
   public static class ResultWithRankAndExpire {
-    
+
     private Result result;
-    
+
     private int rank;
-    
+
     long expire;
-    
+
     public ResultWithRankAndExpire setResultRankExpire(Result result, int rank, long expire) {
       this.result = result;
       this.rank = rank;
       return this;
     }
+
     public int getRank() {
       return this.rank;
     }
+
     public Result getResult() {
       return this.result;
     }
-    public long getExpire( ) {
+
+    public long getExpire() {
       return this.expire;
     }
   }
-  
+
   public static enum Type {
-    AQ, /* Admission Queue*/
+    AQ, /* Admission Queue */
     /*
      * AQ Index item is 8 bytes hashed key value
      */
-    MQ  /* Main Queue */
+    MQ /* Main Queue */
     /*
      * MQ Index item is 6 - 20 bytes (depends on implementation):
      */
   }
-  
+
   /* Failure code */
   private static final int FAILED = -1;
-  
+
   /* Not found code */
   private static final int NOT_FOUND = -1;
-  
-  /* Offsets in meta section of an index segment*/
+
+  /* Offsets in meta section of an index segment */
   private static final int BLOCK_SIZE_OFFSET = 0;
-  
+
   /* Entries offset */
   private static final int ENTRIES_OFFSET = Utils.SIZEOF_SHORT;
-  
-  /*Data size offset */
+
+  /* Data size offset */
   private static final int DATA_SIZE_OFFSET = 2 * Utils.SIZEOF_SHORT;
 
   /*
-   * TODO: make this configurable
-   * TODO: Optimal block ratios (jemalloc default arena sizes)
+   * TODO: make this configurable TODO: Optimal block ratios (jemalloc default arena sizes)
    */
   public static int BASE_SIZE = 64;
- 
-  static int[] BASE_MULTIPLIERS =
-      new int[] {
-        4 /*256*/, 5 /*320*/, 6 /*384*/, 7 /*448*/, 8 /*512*/, 10 /*640*/, 12 /*768*/, 14 /*896*/, 16 /*1024*/, 
-        20 /*1280*/, 24 /*1536*/, 28 /*1792*/, 32 /*2048*/, 
-        40 /*2560*/, 48 /*3072*/, 56 /*3584*/, 64 /*4096*/, 
-        80 /*5K*/, 96 /*6K*/, 112 /*7K*/, 128 /*8K*/,
-        160 /*10K*/, 192 /*12K*/, 224 /*14K*/, 256 /*16K*/ 
-      };
+
+  static int[] BASE_MULTIPLIERS = new int[] { 4 /* 256 */, 5 /* 320 */, 6 /* 384 */, 7 /* 448 */,
+      8 /* 512 */, 10 /* 640 */, 12 /* 768 */, 14 /* 896 */, 16 /* 1024 */, 20 /* 1280 */,
+      24 /* 1536 */, 28 /* 1792 */, 32 /* 2048 */, 40 /* 2560 */, 48 /* 3072 */, 56 /* 3584 */,
+      64 /* 4096 */, 80 /* 5K */, 96 /* 6K */, 112 /* 7K */, 128 /* 8K */, 160 /* 10K */,
+      192 /* 12K */, 224 /* 14K */, 256 /* 16K */
+  };
 
   private static ThreadLocal<Long> membuffer = new ThreadLocal<Long>();
-      
+
   /**
    * Get maximum index block size
    * @return maximum index block size
@@ -153,11 +148,9 @@ public final class MemoryIndex implements Persistent {
   public static int getMinimumBlockSize() {
     return BASE_SIZE * BASE_MULTIPLIERS[0];
   }
-  
-  
+
   /**
    * Get min size greater than current
-   *
    * @param max - max size
    * @param current current size
    * @return min size or -1;
@@ -173,82 +166,83 @@ public final class MemoryIndex implements Persistent {
 
   /* Global locks */
   private ReentrantLock[] locks = new ReentrantLock[10007];
-  
-  /** Index base array 
-   * TODO: use native memory */
+
+  /**
+   * Index base array TODO: use native memory
+   */
   private AtomicReference<long[]> ref_index_base = new AtomicReference<long[]>();
-  
+
   /** When rehash is in progress this is the rehash destination */
   private AtomicReference<long[]> ref_index_base_rehash = new AtomicReference<long[]>();
-  
+
   /* Cache configuration */
   private CacheConfig cacheConfig;
-  
+
   /* Eviction policy */
   private EvictionPolicy evictionPolicy;
-  
+
   /* Eviction listener */
-  //private EvictionListener evictionListener;
-  
+  // private EvictionListener evictionListener;
+
   /* Index type */
   private Type indexType = Type.MQ;
-  
+
   /* Index entry size */
   private int indexSize;
-  
-  // index block size (2) followed by number of entries (2) followed by data size (2) 
+
+  // index block size (2) followed by number of entries (2) followed by data size (2)
   private volatile int indexBlockHeaderSize = 3 * Utils.SIZEOF_SHORT;
 
-  /* Is eviction enabled yet?*/
+  /* Is eviction enabled yet? */
   private volatile boolean evictionEnabled = false;
-  
+
   /* Total number of index entries */
   private AtomicLong numEntries = new AtomicLong(0);
-  
+
   private AtomicLong allocatedMemory = new AtomicLong(0);
-  
-  /* Maximum number of entries - for AQ*/
+
+  /* Maximum number of entries - for AQ */
   private volatile long maxEntries = 0; // 0 - means no max
-  
-  /* I/O engine  */
+
+  /* I/O engine */
   private IOEngine engine;
-  
+
   /* Parent cache name */
   private String cacheName;
-  
+
   /* Index format */
   private AbstractIndexFormat indexFormat;
-  
+
   /* Is rehashing in progress */
   private volatile boolean rehashInProgress;
-  
+
   /* Number of rehashed slots so far */
   private AtomicLong rehashedSlots = new AtomicLong();
-  
-  /* Number of popularity ranks*/
+
+  /* Number of popularity ranks */
   private int numRanks;
-  
+
   /* Counter for total expired - evicted balance */
   private AtomicLong expiredEvictedBalance = new AtomicLong();
-  
-  /* Thread Local Memory buffer size*/
-  private int memBufferSize ;
-  
+
+  /* Thread Local Memory buffer size */
+  private int memBufferSize;
+
   /* Thread local storage enabled */
   private boolean tlsEnabled = true;
-  
+
   public MemoryIndex() {
     this.cacheConfig = CacheConfig.getInstance();
     initLocks();
   }
-  
+
   public void dump() {
     LOG.error("ref_index_base length={}", ref_index_base.get().length);
     LOG.error("ref_index_rehash length={}", ref_index_base_rehash.get().length);
     long[] base = ref_index_base.get();
     long[] rehash = ref_index_base_rehash.get();
     int min = Integer.MAX_VALUE, max = Integer.MIN_VALUE;
-    for(int i = 0; i < base.length; i++) {
+    for (int i = 0; i < base.length; i++) {
       long ptr = base[i];
       if (ptr != 0) {
         int n = numEntries(ptr);
@@ -263,14 +257,15 @@ public final class MemoryIndex implements Persistent {
         if (n1 > max) max = n1;
         if (n2 > max) max = n2;
         LOG.error("  ii={} block size={} num entries={}", i * 2, blockSize(ptr1), numEntries(ptr1));
-        LOG.error("  ii={} block size={} num entries={}", i * 2 + 1, blockSize(ptr2), numEntries(ptr2));
+        LOG.error("  ii={} block size={} num entries={}", i * 2 + 1, blockSize(ptr2),
+          numEntries(ptr2));
       }
     }
     LOG.error("min base={} max rehash={}", min, max);
   }
+
   /**
    * Constructor
-   *
    * @param type index type
    */
   public MemoryIndex(IOEngine engine, Type type) {
@@ -292,19 +287,16 @@ public final class MemoryIndex implements Persistent {
     init();
     setType(type);
   }
-  
+
   /**
-   * For testing
-   * 
-   * Call setEvictionPolicy and setIndexFormat
+   * For testing Call setEvictionPolicy and setIndexFormat
    */
   public MemoryIndex(String cacheName) {
     this.cacheConfig = CacheConfig.getInstance();
     this.cacheName = cacheName;
     init();
   }
-  
-  
+
   private long getMemoryBuffer(int size) {
     if (!this.tlsEnabled) {
       return UnsafeAccess.mallocZeroed(size);
@@ -330,58 +322,62 @@ public final class MemoryIndex implements Persistent {
     UnsafeAccess.setMemory(ptr, this.memBufferSize, (byte) 0);
     return addr.longValue();
   }
-  
+
   private void freeMemoryBuffer(long ptr) {
     if (!this.tlsEnabled) {
       UnsafeAccess.free(ptr);
     }
   }
-  
+
   /**
    * Get expired evicted balance
-   * @return balance 
+   * @return balance
    */
   public long getExpiredEvictedBalance() {
     return this.expiredEvictedBalance.get();
   }
-  
+
   /**
    * Disposes array of pointers
    */
   public void dispose() {
-    //FIXME: not a thread safe, can't be called twice
-    Arrays.stream(ref_index_base.get()).forEach( x -> {if (x != 0) UnsafeAccess.free(x);});
+    // FIXME: not a thread safe, can't be called twice
+    Arrays.stream(ref_index_base.get()).forEach(x -> {
+      if (x != 0) UnsafeAccess.free(x);
+    });
     if (ref_index_base_rehash.get() != null) {
-      Arrays.stream(ref_index_base_rehash.get()).forEach( x -> {if (x != 0) UnsafeAccess.free(x);});
+      Arrays.stream(ref_index_base_rehash.get()).forEach(x -> {
+        if (x != 0) UnsafeAccess.free(x);
+      });
     }
   }
-  
+
   /**
    * Set eviction listener
    * @param aListener
    */
-//  public void setEvictionListener(EvictionListener aListener) {
-//    this.evictionListener = aListener;
-//  }
-  
+  // public void setEvictionListener(EvictionListener aListener) {
+  // this.evictionListener = aListener;
+  // }
+
   /**
    * Get eviction listener
    * @return eviction listener
    */
-//  public EvictionListener getEvictionListener() {
-//    return this.evictionListener;
-//  }
-  
+  // public EvictionListener getEvictionListener() {
+  // return this.evictionListener;
+  // }
+
   /**
    * Set index format
    * @param format index format
    */
-  public void setIndexFormat (IndexFormat format) {
+  public void setIndexFormat(IndexFormat format) {
     this.indexFormat = (AbstractIndexFormat) format;
     this.indexSize = this.indexFormat.indexEntrySize();
     this.indexBlockHeaderSize = this.indexFormat.getIndexBlockHeaderSize();
   }
-  
+
   /**
    * Get index format
    * @return index format
@@ -389,7 +385,7 @@ public final class MemoryIndex implements Persistent {
   public IndexFormat getIndexFormat() {
     return this.indexFormat;
   }
-  
+
   /**
    * Size of the index in number of entries
    * @return number of entries
@@ -397,10 +393,9 @@ public final class MemoryIndex implements Persistent {
   public long size() {
     return this.numEntries.get();
   }
-  
+
   /**
-   * Increment number of index entries
-   * TODO: eviction ON/OFF
+   * Increment number of index entries TODO: eviction ON/OFF
    * @param n increment value
    * @return number of entries after increment
    */
@@ -409,7 +404,7 @@ public final class MemoryIndex implements Persistent {
     checkEviction();
     return c;
   }
-  
+
   /**
    * Trigger eviction on/off (only for AQ)
    */
@@ -430,10 +425,10 @@ public final class MemoryIndex implements Persistent {
   public long getMaximumSize() {
     return this.maxEntries;
   }
-  
+
   /**
-   * Set maximum size of an index (for AQ). 
-   * By varying maximum size of an index - we can control overall disk write rate
+   * Set maximum size of an index (for AQ). By varying maximum size of an index - we can control
+   * overall disk write rate
    * @param max maximum number of entries to keep
    */
   public void setMaximumSize(long max) {
@@ -451,36 +446,35 @@ public final class MemoryIndex implements Persistent {
    * For AQ memory index - asynchronous operation
    */
   private void shrinkIndex() {
-    //TODO: have not been tested yet
-    Runnable r =
-        () -> {
-          /*1*/long[] index = ref_index_base.get();
-          for (int i = 0; i < index.length; i++) {
-            boolean result = shrinkIndexSlot(index, i);
-            if (!result) {
-              // Rehashing is in progress
-           /*2*/   index = ref_index_base_rehash.get();
-              if (index == null) {
-                // Rare race condition possible when index rehashing finishes 
-                // between 1 and 2
-                // Try main again
-                index = ref_index_base.get();
-                result = shrinkIndexSlot(index, i);
-                // Please enable assertions
-                assert result;
-              } else {
-                shrinkIndexSlot(index, i * 2);
-                shrinkIndexSlot(index, i * 2 + 1);
-              }
-            }
+    // TODO: have not been tested yet
+    Runnable r = () -> {
+      /* 1 */long[] index = ref_index_base.get();
+      for (int i = 0; i < index.length; i++) {
+        boolean result = shrinkIndexSlot(index, i);
+        if (!result) {
+          // Rehashing is in progress
+          /* 2 */ index = ref_index_base_rehash.get();
+          if (index == null) {
+            // Rare race condition possible when index rehashing finishes
+            // between 1 and 2
+            // Try main again
+            index = ref_index_base.get();
+            result = shrinkIndexSlot(index, i);
+            // Please enable assertions
+            assert result;
+          } else {
+            shrinkIndexSlot(index, i * 2);
+            shrinkIndexSlot(index, i * 2 + 1);
           }
-        };
+        }
+      }
+    };
     new Thread(r).start();
   }
 
   private boolean shrinkIndexSlot(long[] index, int slot) {
     double ratio = ((double) this.maxEntries) / size();
-    
+
     try {
       lock(slot);
       long ptr = index[slot];
@@ -492,21 +486,21 @@ public final class MemoryIndex implements Persistent {
       setNumEntries(ptr, newNum);
       incrDataSize(ptr, (newNum - num) * this.indexSize);
       incrIndexSize(newNum - num);
-      index[slot] = shrink(ptr); 
+      index[slot] = shrink(ptr);
     } finally {
       unlock(slot);
     }
     return true;
   }
-  
+
   /**
    * Set eviction policy for this index
    * @param policy eviction policy
    */
-  public void setEvictionPolicy (EvictionPolicy policy) {
+  public void setEvictionPolicy(EvictionPolicy policy) {
     this.evictionPolicy = policy;
   }
-  
+
   /**
    * Get current eviction policy
    * @return eviction policy
@@ -514,7 +508,7 @@ public final class MemoryIndex implements Persistent {
   public EvictionPolicy getEvictionPolicy() {
     return this.evictionPolicy;
   }
-  
+
   /**
    * Set eviction enabled. Eviction is enabled when cache reaches max
    * @param b true/false
@@ -522,7 +516,7 @@ public final class MemoryIndex implements Persistent {
   public void setEvictionEnabled(boolean b) {
     this.evictionEnabled = b;
   }
-  
+
   /**
    * Is eviction enabled
    * @return true - false
@@ -538,10 +532,9 @@ public final class MemoryIndex implements Persistent {
   public long getAllocatedMemory() {
     return this.allocatedMemory.get() + Utils.SIZEOF_LONG + ref_index_base.get().length;
   }
-  
+
   /**
    * Set type of an index - either AdmissionQueue index or Main Queue
-   *
    * @param type
    */
   public void setType(Type type) {
@@ -556,7 +549,7 @@ public final class MemoryIndex implements Persistent {
         setEvictionPolicy(policy);
         format = cacheConfig.getMainQueueIndexFormat(cacheName);
       }
-      setIndexFormat(format);      
+      setIndexFormat(format);
 
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
       LOG.error("Error:", e);
@@ -571,13 +564,12 @@ public final class MemoryIndex implements Persistent {
   public Type getType() {
     return this.indexType;
   }
-  
-  
+
   /** Index initializer */
   private void init() {
     this.numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
     int startNumberOfSlots = 1 << cacheConfig.getStartIndexNumberOfSlotsPower(this.cacheName);
-    //TODO: must be positive 
+    // TODO: must be positive
     long[] index_base = new long[startNumberOfSlots];
     int size = BASE_SIZE * BASE_MULTIPLIERS[0];
     for (int i = 0; i < index_base.length; i++) {
@@ -591,16 +583,16 @@ public final class MemoryIndex implements Persistent {
     initLocks();
     this.tlsEnabled = this.cacheConfig.isCacheTLSSupported(this.cacheName);
   }
-  
+
   private void initLocks() {
     // Initialize locks
     for (int i = 0; i < locks.length; i++) {
       locks[i] = new ReentrantLock();
     }
   }
+
   /**
    * Expand index block
-   *
    * @param indexBlockPtr current pointer
    * @return new pointer - can be -1 (check return value)
    */
@@ -628,9 +620,9 @@ public final class MemoryIndex implements Persistent {
   long expand(long indexBlockPtr, int requiredSize) {
     return expand(indexBlockPtr, requiredSize, false);
   }
+
   /**
    * Shrink index block (after deletion, rarely needed)
-   *
    * @param indexBlockPtr current pointer
    * @return new pointer
    */
@@ -653,7 +645,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Get index data size in bytes
-   *
    * @param indexBlockPtr index block pointer
    * @return data size
    */
@@ -663,7 +654,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Sets new index data size
-   *
    * @param indexBlockPtr index block pointer
    * @param newSize new size
    */
@@ -673,7 +663,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Increment data size
-   *
    * @param indexBlockPtr index block pointer
    * @param incr increment value
    * @return size after increment
@@ -686,7 +675,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Get index block size in bytes
-   *
    * @param indexBlockPtr index block pointer
    * @return size
    */
@@ -696,7 +684,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Sets new index block size
-   *
    * @param indexBlockPtr index block pointer
    * @param newSize new size
    */
@@ -706,7 +693,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Get number of entries in a given index block
-   *
    * @param indexBlockPtr index block pointer
    * @return number of entries
    */
@@ -716,7 +702,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Set number of entries in index block
-   *
    * @param indexBlockPtr index block pointer
    * @param num new number of entries
    */
@@ -726,7 +711,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Get number of entries
-   *
    * @param indexBlockPtr
    * @param incr
    * @return
@@ -734,11 +718,11 @@ public final class MemoryIndex implements Persistent {
   final int incrNumEntries(long indexBlockPtr, int incr) {
     int num = numEntries(indexBlockPtr);
     setNumEntries(indexBlockPtr, num + incr);
-    //TODO: avoid eviction flip/flop
+    // TODO: avoid eviction flip/flop
     incrIndexSize(incr);
     return num + incr;
   }
-  
+
   /**
    * Is rehashing in progress
    * @return true or false
@@ -746,7 +730,7 @@ public final class MemoryIndex implements Persistent {
   public final boolean isRehashingInProgress() {
     return this.rehashInProgress;
   }
-    
+
   /**
    * Write lock on a key (slot)
    * @param keyPtr key address
@@ -754,14 +738,14 @@ public final class MemoryIndex implements Persistent {
    * @return slot number
    */
   public int lock(long keyPtr, int keySize) {
-    
+
     long hash = Utils.hash64(keyPtr, keySize);
     long[] index = ref_index_base.get();
     // Always != null - safe
     int slot = getSlotNumber(hash, index.length);
     ReentrantLock lock = locks[slot % locks.length];
     lock.lock();
-    if(index[slot] == 0) {
+    if (index[slot] == 0) {
       // rehash is in progress
       lock.unlock();
       index = ref_index_base_rehash.get();
@@ -795,7 +779,7 @@ public final class MemoryIndex implements Persistent {
     int slot = getSlotNumber(hash, index.length);
     ReentrantLock lock = locks[slot % locks.length];
     lock.lock();
-    if(index[slot] == 0) {
+    if (index[slot] == 0) {
       // rehash is in progress
       lock.unlock();
       index = ref_index_base_rehash.get();
@@ -813,6 +797,7 @@ public final class MemoryIndex implements Persistent {
     }
     return slot;
   }
+
   /**
    * Write lock on a random slot
    * @return slot number
@@ -820,11 +805,11 @@ public final class MemoryIndex implements Persistent {
   public PtrSlotPair lockRandom() {
     long[] index = ref_index_base.get();
     ThreadLocalRandom tlr = ThreadLocalRandom.current();
-    int slot =  tlr.nextInt(index.length);
+    int slot = tlr.nextInt(index.length);
 
     ReentrantLock lock = locks[slot % locks.length];
     lock.lock();
-    if(index[slot] == 0) {
+    if (index[slot] == 0) {
       // rehash is in progress
       lock.unlock();
       index = ref_index_base_rehash.get();
@@ -841,18 +826,19 @@ public final class MemoryIndex implements Persistent {
       // In both cases we are safe
     }
     return new PtrSlotPair(index[slot], slot);
-  }    
-  
+  }
+
   public static class PtrSlotPair {
-    
+
     long ptr;
     int slot;
-    
-    PtrSlotPair(long ptr, int slot){
+
+    PtrSlotPair(long ptr, int slot) {
       this.ptr = ptr;
       this.slot = slot;
     }
   }
+
   /**
    * Write lock on a slot
    * @param slot slot number
@@ -861,7 +847,7 @@ public final class MemoryIndex implements Persistent {
     ReentrantLock lock = locks[slot % locks.length];
     lock.lock();
   }
-  
+
   /**
    * Write unlock on a slot
    * @param slot slot number
@@ -872,10 +858,9 @@ public final class MemoryIndex implements Persistent {
       lock.unlock();
     }
   }
-  
+
   /**
    * Find index for a key
-   *
    * @param key key array
    * @param off key offset
    * @param size key size
@@ -933,7 +918,7 @@ public final class MemoryIndex implements Persistent {
       }
     }
   }
-  
+
   /**
    * Does key exist
    * @param key key buffer
@@ -942,7 +927,7 @@ public final class MemoryIndex implements Persistent {
    * @return true or false
    */
   public boolean exists(byte[] key, int off, int size) {
-    //TODO: does it work for variable sizes?
+    // TODO: does it work for variable sizes?
     int bufSize = this.indexFormat.indexEntrySize();
     long buf = getMemoryBuffer(bufSize);
     try {
@@ -952,19 +937,20 @@ public final class MemoryIndex implements Persistent {
       }
       return true;
     } finally {
-      freeMemoryBuffer(buf);;
+      freeMemoryBuffer(buf);
+      ;
     }
   }
-  
+
   /**
-   * Touch the key (activates eviction policy) 
+   * Touch the key (activates eviction policy)
    * @param key key buffer
    * @param off key offset
    * @param size key size
    * @return true or false (key does not exist)
    */
   public boolean touch(byte[] key, int off, int size) {
-    //TODO: does it work for variable sizes?
+    // TODO: does it work for variable sizes?
     int bufSize = this.indexFormat.indexEntrySize();
     long buf = getMemoryBuffer(bufSize);
     try {
@@ -977,7 +963,7 @@ public final class MemoryIndex implements Persistent {
       freeMemoryBuffer(buf);
     }
   }
-  
+
   /**
    * Get item size (only for MQ)
    * @param key key buffer
@@ -986,7 +972,7 @@ public final class MemoryIndex implements Persistent {
    * @return size of an item, both key and value (-1 - not found)
    */
   public int getItemSize(byte[] key, int off, int size) {
-    //TODO: does it work for variable sizes?
+    // TODO: does it work for variable sizes?
     int bufSize = this.indexFormat.indexEntrySize();
     long buf = getMemoryBuffer(bufSize);
     try {
@@ -997,10 +983,11 @@ public final class MemoryIndex implements Persistent {
       int itemSize = this.indexFormat.getKeyValueSize(buf);
       return itemSize;
     } finally {
-      freeMemoryBuffer(buf);;
+      freeMemoryBuffer(buf);
+      ;
     }
   }
-  
+
   /**
    * Get item size (only for MQ)
    * @param keyPtr key address
@@ -1008,7 +995,7 @@ public final class MemoryIndex implements Persistent {
    * @return size of an item, both key and value (-1 - not found)
    */
   public int getItemSize(long keyPtr, int keySize) {
-    //TODO: embedded item case, and format w/o size ?
+    // TODO: embedded item case, and format w/o size ?
     int bufSize = this.indexFormat.indexEntrySize();
     long buf = getMemoryBuffer(bufSize);
     try {
@@ -1029,7 +1016,7 @@ public final class MemoryIndex implements Persistent {
    * @return hit count
    */
   public int getHitCount(long hash) {
-    //TODO: OPTIMIZE, no memory allocation
+    // TODO: OPTIMIZE, no memory allocation
 
     int bufSize = this.indexFormat.indexEntrySize();
     long buf = getMemoryBuffer(bufSize);
@@ -1045,17 +1032,16 @@ public final class MemoryIndex implements Persistent {
       freeMemoryBuffer(buf);
     }
   }
-  
+
   /**
    * Get item's hit count (only for MQ)
-   *
    * @param key key buffer
    * @param off offset
    * @param size key size
    * @return hit count (or -1)
    */
   public int getHitCount(byte[] key, int off, int size) {
-    //TODO: OPTIMIZE, no memory allocation
+    // TODO: OPTIMIZE, no memory allocation
     int bufSize = this.indexFormat.indexEntrySize();
     long buf = getMemoryBuffer(bufSize);
     try {
@@ -1073,18 +1059,17 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Get item's hit count (only for MQ)
-   *
    * @param keyPtr key address
    * @param keySize key size
    * @return hit count (or -1)
    */
   public int getHitCount(long keyPtr, int keySize) {
-    //TODO: OPTIMIZE, no memory allocation
+    // TODO: OPTIMIZE, no memory allocation
 
     int bufSize = this.indexFormat.indexEntrySize();
     long buf = getMemoryBuffer(bufSize);
     try {
-      
+
       long result = find(keyPtr, keySize, false, buf, bufSize);
       if (result != bufSize) {
         return -1;
@@ -1116,7 +1101,7 @@ public final class MemoryIndex implements Persistent {
       unlock(slot);
     }
   }
-  
+
   /**
    * Get old and set new expiration time for a key
    * @param keyPtr key address
@@ -1136,9 +1121,9 @@ public final class MemoryIndex implements Persistent {
       unlock(slot);
     }
   }
+
   /**
    * Get item's expiration time
-   *
    * @param key key buffer
    * @param off offset
    * @param size key size
@@ -1160,7 +1145,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Get item's expiration time
-   *
    * @param keyPtr key address
    * @param keySize key size
    * @return expiration time (0 - does not expire -1)
@@ -1182,7 +1166,7 @@ public final class MemoryIndex implements Persistent {
   private void deleteAt(long ptr, long $ptr, int rank) {
     deleteAt(ptr, $ptr, rank, -1);
   }
-  
+
   /**
    * Delete entry from a given index block at a given address
    * @param ptr index block address
@@ -1204,7 +1188,7 @@ public final class MemoryIndex implements Persistent {
       this.engine.updateStats(sid1, expire);
     }
   }
-  
+
   /**
    * Full scan - update of a n index block
    * @param ptr index block address
@@ -1222,12 +1206,12 @@ public final class MemoryIndex implements Persistent {
       if (expire > 0) {
         long current = System.currentTimeMillis();
         if (current > expire) {
-          //TODO: separate method
+          // TODO: separate method
           int rank = this.evictionPolicy.getRankForIndex(numRanks, count, numEntries);
           deleteAt(ptr, $ptr, rank, expire);
           // Update total expired counter
           this.expiredEvictedBalance.incrementAndGet();
-          numEntries --;
+          numEntries--;
           continue;
         }
       }
@@ -1235,10 +1219,9 @@ public final class MemoryIndex implements Persistent {
       $ptr += this.indexFormat.fullEntrySize($ptr);
     }
   }
-  
+
   /**
    * Finds entry in index and promote if hit == true
-   *
    * @param ptr address of index block
    * @param hash has of a key
    * @param hit promote if true
@@ -1247,12 +1230,13 @@ public final class MemoryIndex implements Persistent {
    * @return found index size or -1
    */
   // TODO: check return value
-  private int findAndPromote(final long ptr, final long hash, final boolean hit, final long buf, final int bufSize) {
+  private int findAndPromote(final long ptr, final long hash, final boolean hit, final long buf,
+      final int bufSize) {
     int numEntries = numEntries(ptr);
 
-    //TODO: this works ONLY when index size = item size (no embedded data)
-    //TODO: Check count when delete
-    //TODO: If deleted > 0, update number of items and size
+    // TODO: this works ONLY when index size = item size (no embedded data)
+    // TODO: Check count when delete
+    // TODO: If deleted > 0, update number of items and size
     long $ptr = ptr + this.indexBlockHeaderSize;
     int count = 0;
     int indexSize = NOT_FOUND; // not found
@@ -1261,7 +1245,7 @@ public final class MemoryIndex implements Persistent {
     long current = System.currentTimeMillis();
     AbstractExpireSupport support = this.indexFormat.expireSupport;
     final boolean expireSupported = support != null;
-    //TODO: variable size support? Do we need it?
+    // TODO: variable size support? Do we need it?
     final int indexEntrySize = this.indexFormat.indexEntrySize;
     final int indexMetaSize = this.indexFormat.superIndexBlockHeaderSize;
     final int expireOffset = this.indexFormat.expireOffset;
@@ -1270,7 +1254,7 @@ public final class MemoryIndex implements Persistent {
     try {
       while (count < numEntries) {
         // Check if expired - pro-active expiration check
-        //TODO: this is expensive - make it configurable
+        // TODO: this is expensive - make it configurable
         // We check ALL expired items for every find/get operation
         long expire = -1;
         if (expireSupported) {
@@ -1282,12 +1266,12 @@ public final class MemoryIndex implements Persistent {
             deleteAt(ptr, $ptr, rank, expire);
             // update total expired counter
             this.expiredEvictedBalance.incrementAndGet();
-            numEntries --;
+            numEntries--;
             continue;
           }
         }
         if (!found && this.indexFormat.equals($ptr, hash)) {
-          indexSize = indexEntrySize; //this.indexFormat.fullEntrySize($ptr);
+          indexSize = indexEntrySize; // this.indexFormat.fullEntrySize($ptr);
           found = true;
           if (indexSize > bufSize) {
             return indexSize;
@@ -1302,8 +1286,8 @@ public final class MemoryIndex implements Persistent {
           if (hit && count > 0) {
             // ask parent where to move
             int idx = this.evictionPolicy.getPromotionIndex(ptr, count, numEntries);
-            int off = indexBlockHeaderSize + idx * indexEntrySize; //offsetFor(ptr, idx);
-            int offc = indexBlockHeaderSize + count * indexEntrySize;//offsetFor(ptr, count);
+            int off = indexBlockHeaderSize + idx * indexEntrySize; // offsetFor(ptr, idx);
+            int offc = indexBlockHeaderSize + count * indexEntrySize;// offsetFor(ptr, count);
             int toMove = offc - off;
             // Move data between 'idx' (inclusive) and 'count' (exclusive)(count > idx must be)
             UnsafeAccess.copy(ptr + off, ptr + off + indexSize, toMove);
@@ -1312,14 +1296,14 @@ public final class MemoryIndex implements Persistent {
           }
           // 1. if expireSupported == false - break;
           // 2. if expire supported == true, we do not have to scan the whole block
-          //   till the end every time - must be something probabilistic, say 1 in 4
-          //   should be made configurable?
+          // till the end every time - must be something probabilistic, say 1 in 4
+          // should be made configurable?
           if (!expireSupported || r.nextDouble() < 0.75) {
             break;
           }
         }
         count++;
-        $ptr += indexEntrySize;//this.indexFormat.fullEntrySize($ptr);
+        $ptr += indexEntrySize;// this.indexFormat.fullEntrySize($ptr);
       }
     } finally {
       // Report end of a scan operation
@@ -1331,8 +1315,7 @@ public final class MemoryIndex implements Persistent {
   final int getSegmentIdForEntry(long ptr, int entryNumber) {
     long $ptr = ptr + this.indexBlockHeaderSize;
     if (this.indexFormat.isFixedSize()) {
-      return this.indexFormat.getSegmentId($ptr + 
-        entryNumber * this.indexFormat.indexEntrySize());
+      return this.indexFormat.getSegmentId($ptr + entryNumber * this.indexFormat.indexEntrySize());
     }
     int count = 0;
     while (count < entryNumber) {
@@ -1341,11 +1324,10 @@ public final class MemoryIndex implements Persistent {
     }
     return this.indexFormat.getSegmentId($ptr);
   }
-  
+
   final int offsetFor(long ptr, int idx) {
     if (this.indexFormat.isFixedSize()) {
-      return this.indexBlockHeaderSize + 
-          this.indexFormat.indexEntrySize() * idx;
+      return this.indexBlockHeaderSize + this.indexFormat.indexEntrySize() * idx;
     } else {
       long $ptr = ptr + this.indexBlockHeaderSize;
       int count = 0;
@@ -1355,7 +1337,7 @@ public final class MemoryIndex implements Persistent {
       return (int) ($ptr - ptr);
     }
   }
-  
+
   /**
    * Get segment Id for a key
    * @param key key buffer
@@ -1373,7 +1355,7 @@ public final class MemoryIndex implements Persistent {
       unlock(slot);
     }
   }
-  
+
   /**
    * Get segment id for a key
    * @param keyPtr key address
@@ -1390,7 +1372,7 @@ public final class MemoryIndex implements Persistent {
       unlock(slot);
     }
   }
-  
+
   private int getSegmentIdForHash(long hash) {
     long ptr = getIndexBlockForHash(hash);
     int numEntries = numEntries(ptr);
@@ -1406,10 +1388,9 @@ public final class MemoryIndex implements Persistent {
     }
     return NOT_FOUND;
   }
-  
+
   /**
-   * Finds entry in index and deletes if hit == true
-   * This is used by AQ (admission queue)
+   * Finds entry in index and deletes if hit == true This is used by AQ (admission queue)
    * @param ptr address of index block
    * @param hash has of a key
    * @param delete delete if true
@@ -1425,9 +1406,9 @@ public final class MemoryIndex implements Persistent {
       if (this.indexFormat.equals($ptr, hash)) {
         if (delete) {
           int dataSize = dataSize(ptr);
-          int toMove =(int) (ptr + dataSize + this.indexBlockHeaderSize - $ptr - indexSize);
+          int toMove = (int) (ptr + dataSize + this.indexBlockHeaderSize - $ptr - indexSize);
           // Move
-          UnsafeAccess.copy($ptr + indexSize, $ptr, toMove); 
+          UnsafeAccess.copy($ptr + indexSize, $ptr, toMove);
           incrNumEntries(ptr, -1);
           incrDataSize(ptr, -indexSize);
         }
@@ -1440,21 +1421,21 @@ public final class MemoryIndex implements Persistent {
     }
     return NOT_FOUND;
   }
-  
+
   private int getSlotNumber(long hash, int indexSize) {
     int level = Integer.numberOfTrailingZeros(indexSize);
     int $slot = (int) (hash >>> (64 - level));
     return $slot;
   }
-  
+
   /**
-   * Checks if a key with a given sid, offset and size exists in the index
-   * if exists , then index is copied into a given buffer (NOPE - FIXME)
+   * Checks if a key with a given sid, offset and size exists in the index if exists , then index is
+   * copied into a given buffer (NOPE - FIXME)
    * @param keyPtr key address
    * @param keySize key size
    * @param sid segment id
    * @param offset offset of a key in a segment
-   * @param buf buffer 
+   * @param buf buffer
    * @param bufSize buffer size
    * @return true if exists, false otherwise
    */
@@ -1474,9 +1455,9 @@ public final class MemoryIndex implements Persistent {
       unlock(slot);
     }
   }
+
   /**
    * Find index for a key
-   *
    * @param ptr key address
    * @param size key size
    * @param hit - perform promotion if true
@@ -1503,19 +1484,19 @@ public final class MemoryIndex implements Persistent {
    * @param dumpBelowRatio
    * @return operation result (OK, NOT_FOUND, EXPIRED, DELETED)
    */
-  public ResultWithRankAndExpire checkDeleteKeyForScavenger(int sid, byte[] key, int keyOffset, int keySize, 
-      ResultWithRankAndExpire result, double dumpBelowRatio) {
+  public ResultWithRankAndExpire checkDeleteKeyForScavenger(int sid, byte[] key, int keyOffset,
+      int keySize, ResultWithRankAndExpire result, double dumpBelowRatio) {
     int slot = 0;
     try {
       slot = lock(key, keyOffset, keySize);
-      long hash = Utils.hash64(key, keyOffset,keySize);
+      long hash = Utils.hash64(key, keyOffset, keySize);
       long ptr = getIndexBlockForHash(hash);
       return checkDeleteKeyForScavenger(sid, ptr, hash, result, dumpBelowRatio);
     } finally {
       unlock(slot);
     }
   }
-  
+
   /**
    * This method is used exclusively by the Scavenger
    * @param sid segment id
@@ -1525,7 +1506,7 @@ public final class MemoryIndex implements Persistent {
    * @param dumpBelowRatio
    * @return operation result (OK, NOT_FOUND, EXPIRED, DELETED)
    */
-  public ResultWithRankAndExpire checkDeleteKeyForScavenger(int sid, long keyPtr, int keySize, 
+  public ResultWithRankAndExpire checkDeleteKeyForScavenger(int sid, long keyPtr, int keySize,
       ResultWithRankAndExpire result, double dumpBelowRatio) {
     int slot = 0;
     try {
@@ -1537,33 +1518,33 @@ public final class MemoryIndex implements Persistent {
       unlock(slot);
     }
   }
-  
-  private ResultWithRankAndExpire checkDeleteKeyForScavenger(int sid, long ptr, long hash, 
+
+  private ResultWithRankAndExpire checkDeleteKeyForScavenger(int sid, long ptr, long hash,
       ResultWithRankAndExpire result, double dumpBelowRatio) {
     int numEntries = numEntries(ptr);
-    //ATTN: we do not check keys directly - only hashes, for small hashes this may result in 
+    // ATTN: we do not check keys directly - only hashes, for small hashes this may result in
     // collisions. Addressed by checking segment ids
     // TODO: this works ONLY when index size = item size (no embedded data)
-    //TODO: Check count when delete
-    //TODO: If deleted > 0, update number of items and size
+    // TODO: Check count when delete
+    // TODO: If deleted > 0, update number of items and size
     long $ptr = ptr + this.indexBlockHeaderSize;
     int count = 0;
-    
+
     result = result.setResultRankExpire(Result.NOT_FOUND, 0, 0);
-    
+
     this.indexFormat.begin(ptr, true); // force scan
     try {
-      
+
       while (count < numEntries) {
         if (this.indexFormat.equals($ptr, hash)) {
           int $sid = this.indexFormat.getSegmentId($ptr);
-          if($sid != sid) {
-            // hash collision or newer version return NOT_FOUND to delete item 
+          if ($sid != sid) {
+            // hash collision or newer version return NOT_FOUND to delete item
             return result;
           }
           long $offset = this.indexFormat.getOffset($ptr);
           if ($offset < 0) {
-            // hash collision or newer version in write buffer return NOT_FOUND to delete item 
+            // hash collision or newer version in write buffer return NOT_FOUND to delete item
             return result;
           }
           long expire = this.indexFormat.getExpire(ptr, $ptr);
@@ -1585,12 +1566,12 @@ public final class MemoryIndex implements Persistent {
               result.setResultRankExpire(Result.OK, rank, expire);
             }
           }
-//          if (result.getResult() == Result.DELETED && this.evictionListener != null) {
-//            // Report eviction
-//            this.evictionListener.onEviction(ptr, $ptr);
-//          } 
+          // if (result.getResult() == Result.DELETED && this.evictionListener != null) {
+          // // Report eviction
+          // this.evictionListener.onEviction(ptr, $ptr);
+          // }
           if (result.getResult() == Result.DELETED || result.getResult() == Result.EXPIRED) {
-            deleteAt(ptr, $ptr, rank, result.getResult() == Result.EXPIRED? expire: -1);
+            deleteAt(ptr, $ptr, rank, result.getResult() == Result.EXPIRED ? expire : -1);
           }
           break;
         }
@@ -1605,8 +1586,7 @@ public final class MemoryIndex implements Persistent {
   }
 
   /**
-   *  Get expiration time from a index block by hash
-   *
+   * Get expiration time from a index block by hash
    * @param hash key's hash
    * @return expiration time
    */
@@ -1623,13 +1603,12 @@ public final class MemoryIndex implements Persistent {
       count++;
       $ptr += this.indexFormat.fullEntrySize($ptr);
     }
-    
+
     return NOT_FOUND;
   }
-  
+
   /**
    * Find index for a key's hash and copy its value to a buffer
-   *
    * @param hash key's hash
    * @param expire new expiration time
    * @return old expiration time
@@ -1649,10 +1628,9 @@ public final class MemoryIndex implements Persistent {
     }
     return NOT_FOUND;
   }
-  
-  
+
   private long getIndexBlockForHash(long hash) {
-    // This  method is called under lock
+    // This method is called under lock
     // Get slot number
     long[] index = ref_index_base.get();
     int $slot = getSlotNumber(hash, index.length);
@@ -1671,10 +1649,9 @@ public final class MemoryIndex implements Persistent {
     }
     return ptr;
   }
-  
+
   /**
    * Find index for a key's hash and copy its value to a buffer
-   *
    * @param hash key's hash
    * @param hit if true - promote item on hit
    * @return found index size or -1 (not found)
@@ -1685,14 +1662,12 @@ public final class MemoryIndex implements Persistent {
   }
 
   private int findInternal(long ptr, long hash, boolean hit, long buf, int bufSize) {
-    return this.indexType == Type.AQ? findAndDelete(ptr, hash, hit, buf, bufSize) : 
-        findAndPromote(ptr, hash, hit, buf, bufSize);
+    return this.indexType == Type.AQ ? findAndDelete(ptr, hash, hit, buf, bufSize)
+        : findAndPromote(ptr, hash, hit, buf, bufSize);
   }
-  
-  
+
   /**
    * Delete key from index
-   *
    * @param keyPtr key address
    * @param keySize key size
    * @return true on success, false - otherwise
@@ -1710,7 +1685,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Delete key from index
-   *
    * @param key key buffer
    * @param keyOffset - key offset
    * @param keySize key size
@@ -1729,7 +1703,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Delete index for a key's hash
-   *
    * @param hash key's hash
    * @return true on success, false - otherwise
    */
@@ -1739,7 +1712,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Delete index for a key's hash
-   *
    * @param hash key's hash
    * @return true on success, false - otherwise
    */
@@ -1753,12 +1725,12 @@ public final class MemoryIndex implements Persistent {
       index = ref_index_base_rehash.get();
       if (index == null) {
         // Rehashing finished in the middle of this operation
-        index = ref_index_base.get(); 
+        index = ref_index_base.get();
       }
       $slot = getSlotNumber(hash, index.length);
       ptr = index[$slot];
     }
-    boolean result = delete(ptr, hash) >= 0? true: false;
+    boolean result = delete(ptr, hash) >= 0 ? true : false;
     if (shrink && result) {
       long nptr = shrink(ptr);
       if (nptr != ptr) {
@@ -1767,11 +1739,9 @@ public final class MemoryIndex implements Persistent {
     }
     return result;
   }
-  
-  
+
   /**
    * Delete key with a given hash from a index block
-   *
    * @param ptr index block address
    * @param hash key's hash
    * @return deleted index or -1
@@ -1791,10 +1761,9 @@ public final class MemoryIndex implements Persistent {
     }
     return -1;
   }
-  
+
   /**
    * If hash exists in the index block
-   *
    * @param ptr index block address
    * @param hash key's hash
    * @return true or false
@@ -1812,16 +1781,14 @@ public final class MemoryIndex implements Persistent {
     }
     return false;
   }
-  
+
   /**
    * Internal API: used by Scavenger Get key's popularity for a given key
-   *
    * @param key key buffer
    * @param off offset
    * @param keySize key size
    * @return number between 1.0 and 0.0 (0.0 - means key is absent), 1.0 - key is at the top of a
-   *     index block.
-   * TODO: remove this API call
+   *         index block. TODO: remove this API call
    */
   public final double popularity(byte[] key, int off, int keySize) {
     int slot = 0;
@@ -1836,11 +1803,10 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Internal API: used by Scavenger Get key's popularity for a given key
-   *
    * @param keyPtr key address
    * @param keySize key size
    * @return number between 1.0 and 0.0 (0.0 - means key is absent), 1.0 - key is at the top of a
-   *     index block.
+   *         index block.
    */
   public final double popularity(long keyPtr, int keySize) {
     int slot = 0;
@@ -1852,13 +1818,12 @@ public final class MemoryIndex implements Persistent {
       unlock(slot);
     }
   }
-  
+
   /**
    * Internal API: used by Scavenger Get key's popularity for a given key's hash
-   *
    * @param hash key's hash
    * @return number between 1.0 and 0.0 (0.0 - means key is absent), 1.0 - key is at the top of a
-   *     index block.
+   *         index block.
    */
   private double popularity(long hash) {
     // Get slot number
@@ -1868,11 +1833,10 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Get popularity of key by a given hash in a given index block
-   *
    * @param ptr address of index block
    * @param hash hash of a key
    * @return number between 1.0 and 0.0 (0.0 - means key is absent), 1.0 - key is at the top of a
-   *     index block.
+   *         index block.
    */
   private double blockPopularity(long ptr, long hash) {
     int numEntries = numEntries(ptr);
@@ -1892,7 +1856,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Insert new index entry with default rank
-   *
    * @param key item key
    * @param keyOff item's key offset
    * @param keySize item key size
@@ -1922,10 +1885,9 @@ public final class MemoryIndex implements Persistent {
       this.indexFormat.end(ibPtr);
     }
   }
-  
+
   /**
    * Insert new index entry with default rank
-   *
    * @param key item key
    * @param keyOffset item's key offset
    * @param keyLength item key size
@@ -1937,18 +1899,16 @@ public final class MemoryIndex implements Persistent {
    * @param expire expiration time
    * @return MutationResult.INSERTED or MutationResult.FAILED
    */
-  
-  public MutationResult insert(byte[] key, int keyOffset, int keyLength, 
-      byte[] value, int valueOffset, int valueLength, 
-      short sid, int offset,  long expire) {
+
+  public MutationResult insert(byte[] key, int keyOffset, int keyLength, byte[] value,
+      int valueOffset, int valueLength, short sid, int offset, long expire) {
     int rank = this.evictionPolicy.getDefaultRankForInsert();
-    return insertWithRank(key, keyOffset, keyLength, value, valueOffset, 
-      valueLength, sid, offset, rank, expire);
+    return insertWithRank(key, keyOffset, keyLength, value, valueOffset, valueLength, sid, offset,
+      rank, expire);
   }
-  
+
   /**
    * Insert new index entry with a rank
-   *
    * @param key item key
    * @param keyOffset item's key offset
    * @param keyLength item key size
@@ -1961,26 +1921,25 @@ public final class MemoryIndex implements Persistent {
    * @param expire expiration time
    * @return INSERTED or FAILED
    */
-  
-  public MutationResult insertWithRank(byte[] key, int keyOffset, int keyLength, 
-      byte[] value, int valueOffset, int valueLength, 
-      short sid, int offset, int rank, long expire) {
+
+  public MutationResult insertWithRank(byte[] key, int keyOffset, int keyLength, byte[] value,
+      int valueOffset, int valueLength, short sid, int offset, int rank, long expire) {
     int slot = 0;
     // get hashed key value
     int dataSize = Utils.kvSize(keyLength, valueLength);
-    
+
     IndexFormat format = this.indexFormat;
     int indexSize = format.fullEntrySize(keyLength, valueLength);
-    long indexPtr = getMemoryBuffer(indexSize); 
+    long indexPtr = getMemoryBuffer(indexSize);
 
     try {
       slot = lock(key, keyOffset, keyLength);
       long ibPtr = getIndexForKey(key, keyOffset, keyLength)[slot];
-      
+
       checkFullScanOnInsert(ibPtr);
-      
-      format.writeIndex(ibPtr, indexPtr, key, keyOffset, keyLength, value,  
-        valueLength, valueOffset, sid, offset, dataSize, expire); 
+
+      format.writeIndex(ibPtr, indexPtr, key, keyOffset, keyLength, value, valueLength, valueOffset,
+        sid, offset, dataSize, expire);
       long hash = Utils.hash64(key, keyOffset, keyLength);
       MutationResult result = insertInternal(hash, indexPtr, indexSize, rank);
       return result;
@@ -1991,22 +1950,20 @@ public final class MemoryIndex implements Persistent {
   }
 
   /**
-   * Compare and Update index entry - change sid and offset only if current
-   * sid and offset are equals to expected values
-   *
+   * Compare and Update index entry - change sid and offset only if current sid and offset are
+   * equals to expected values
    * @param key item key
    * @param keyOffset item's key offset
    * @param keyLength item key size
    * @param expectedSid expected segment id
-   * @param expectedOffset expected offset  
+   * @param expectedOffset expected offset
    * @param sid data segment id
    * @param offset offset in the data segment
    * @return UPDATED or FAILED
    */
-  
-  public MutationResult compareAndUpdate(byte[] key, int keyOffset, int keyLength, 
-      short expectedSid, int expectedOffset, 
-      short newSid, int newOffset) {
+
+  public MutationResult compareAndUpdate(byte[] key, int keyOffset, int keyLength,
+      short expectedSid, int expectedOffset, short newSid, int newOffset) {
     int slot = 0;
     try {
       slot = lock(key, keyOffset, keyLength);
@@ -2017,10 +1974,9 @@ public final class MemoryIndex implements Persistent {
       unlock(slot);
     }
   }
-  
+
   /**
    * Insert new index entry
-   *
    * @param key item key
    * @param indexPtr item index data pointer
    * @param indexSize item's index size
@@ -2032,7 +1988,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Insert new index entry with default rank
-   *
    * @param ptr key address
    * @param size key size
    * @param indexPtr data pointer (not used for AQ, for MQ - its 12 bytes value)
@@ -2053,7 +2008,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Insert new index entry with default rank
-   *
    * @param keyPtr key address
    * @param keyLength key size
    * @param valuePtr value address
@@ -2063,15 +2017,14 @@ public final class MemoryIndex implements Persistent {
    * @param expire expiration time
    * @return MutationResult.INSERTED or MutationResult.FAILED
    */
-  public MutationResult insert(long keyPtr, int keyLength, long valuePtr, int valueLength, 
+  public MutationResult insert(long keyPtr, int keyLength, long valuePtr, int valueLength,
       short sid, int offset, long expire) {
     int rank = this.evictionPolicy.getDefaultRankForInsert();
     return insertWithRank(keyPtr, keyLength, valuePtr, valueLength, sid, offset, rank, expire);
   }
-  
+
   /**
    * Insert new index entry with a rank
-   *
    * @param keyPtr key address
    * @param keyLength key size
    * @param valuePtr value address
@@ -2082,12 +2035,12 @@ public final class MemoryIndex implements Persistent {
    * @param expire expiration time
    * @return MutationResult.INSERTED or MutationResult.FAILED
    */
-  public MutationResult insertWithRank(long keyPtr, int keyLength, long valuePtr, int valueLength, 
+  public MutationResult insertWithRank(long keyPtr, int keyLength, long valuePtr, int valueLength,
       short sid, int offset, int rank, long expire) {
     int slot = 0;
     // get hashed key value
     int dataSize = Utils.kvSize(keyLength, valueLength);
-    
+
     IndexFormat format = this.indexFormat;
     int indexSize = format.fullEntrySize(keyLength, valueLength);
     long indexPtr = getMemoryBuffer(indexSize);
@@ -2098,8 +2051,8 @@ public final class MemoryIndex implements Persistent {
 
       checkFullScanOnInsert(ibPtr);
 
-      format.writeIndex(ibPtr, indexPtr, keyPtr, keyLength, valuePtr,  valueLength, 
-        sid, offset, dataSize, expire); 
+      format.writeIndex(ibPtr, indexPtr, keyPtr, keyLength, valuePtr, valueLength, sid, offset,
+        dataSize, expire);
       long hash = Utils.hash64(keyPtr, keyLength);
       MutationResult result = insertInternal(hash, indexPtr, indexSize, rank);
       return result;
@@ -2108,21 +2061,20 @@ public final class MemoryIndex implements Persistent {
       freeMemoryBuffer(indexPtr);
     }
   }
-  
+
   /**
-   * Compare and Update index entry - change sid and offset only if current
-   * sid and offset are equals to expected values
-   *
+   * Compare and Update index entry - change sid and offset only if current sid and offset are
+   * equals to expected values
    * @param keyPtr key address
    * @param keyLength key size
    * @param expectedSid expected segment id
-   * @param expectedOffset expected offset  
+   * @param expectedOffset expected offset
    * @param newSid data segment id
    * @param mewOffset offset in the data segment
    * @return UPDATED or FAILED
    */
-  public MutationResult compareAndUpdate(long keyPtr, int keyLength, short expectedSid, int expectedOffset,
-      short newSid, int mewOffset) {
+  public MutationResult compareAndUpdate(long keyPtr, int keyLength, short expectedSid,
+      int expectedOffset, short newSid, int mewOffset) {
     int slot = 0;
     try {
       slot = lock(keyPtr, keyLength);
@@ -2133,15 +2085,13 @@ public final class MemoryIndex implements Persistent {
       unlock(slot);
     }
   }
-  
+
   /**
    * Insert hash - value into index
-   *
    * @param hash hash
    * @param indexPtr value
    * @param indexSize index size
    * @return MutationResult.INSERTED | MutationResult.FAILED
-
    */
   private MutationResult insertInternal(long hash, long indexPtr, int indexSize) {
     int rank = this.evictionPolicy.getDefaultRankForInsert();
@@ -2149,9 +2099,9 @@ public final class MemoryIndex implements Persistent {
   }
 
   /**
-   * Selects correct index table for a hashed key
-   * Can be either ref_index_base or ref_index_base_rehash
-   * @param hash hashed key 
+   * Selects correct index table for a hashed key Can be either ref_index_base or
+   * ref_index_base_rehash
+   * @param hash hashed key
    * @return index array
    */
   private long[] getIndexForHash(long hash) {
@@ -2165,16 +2115,16 @@ public final class MemoryIndex implements Persistent {
       if (index == null) {
         // Get back to the main
         index = ref_index_base.get();
-      } 
+      }
     }
     return index;
   }
-  
+
   /**
-   * Selects correct index table for a hashed key
-   * Can be either ref_index_base or ref_index_base_rehash
+   * Selects correct index table for a hashed key Can be either ref_index_base or
+   * ref_index_base_rehash
    * @param key key buffer
-   * @param keyOffset key offset 
+   * @param keyOffset key offset
    * @param keyLength key length
    * @return index array
    */
@@ -2182,10 +2132,10 @@ public final class MemoryIndex implements Persistent {
     long hash = Utils.hash64(key, keyOffset, keyLength);
     return getIndexForHash(hash);
   }
-  
+
   /**
-   * Selects correct index table for a hashed key
-   * Can be either ref_index_base or ref_index_base_rehash
+   * Selects correct index table for a hashed key Can be either ref_index_base or
+   * ref_index_base_rehash
    * @param keyPtr key address
    * @param keyLength key length
    * @return index array
@@ -2194,9 +2144,9 @@ public final class MemoryIndex implements Persistent {
     long hash = Utils.hash64(keyPtr, keyLength);
     return getIndexForHash(hash);
   }
+
   /**
    * Insert hash - value into index
-   *
    * @param hash hash
    * @param indexPtr value
    * @param indexSize index size
@@ -2206,7 +2156,7 @@ public final class MemoryIndex implements Persistent {
   private MutationResult insertInternal(long hash, long indexPtr, int indexSize, int rank) {
     // Get slot number
     MutationResult result = MutationResult.INSERTED;
-    
+
     long[] index = getIndexForHash(hash);
     int $slot = getSlotNumber(hash, index.length);
     long ptr = index[$slot];
@@ -2218,19 +2168,17 @@ public final class MemoryIndex implements Persistent {
     if (isUpdateOp($ptr)) {
       $ptr = clearUpdateFlag($ptr);
       result = MutationResult.UPDATED;
-    } 
+    }
     if ($ptr != ptr && $ptr > 0) {
       // Possible block expansion or rehash (0)
       // update index segment address
       index[$slot] = $ptr;
-    } 
+    }
     return result;
   }
-  
 
   /**
    * Conditional update hash - value into index
-   *
    * @param hash hash
    * @param expectedSid expected segment id
    * @param expectedOffset expected offset
@@ -2238,18 +2186,18 @@ public final class MemoryIndex implements Persistent {
    * @param newOffset new offset
    * @return MutationResult.INSERTED or FAILED
    */
-  private MutationResult updateInternal(long hash, short expectedSid, int expectedOffset, 
+  private MutationResult updateInternal(long hash, short expectedSid, int expectedOffset,
       short newSid, int newOffset) {
-    // Get slot number    
+    // Get slot number
     long[] index = getIndexForHash(hash);
     int $slot = getSlotNumber(hash, index.length);
     long ptr = index[$slot];
     boolean res = update0(ptr, hash, expectedSid, expectedOffset, newSid, newOffset);
-    return res? MutationResult.UPDATED: MutationResult.FAILED;
+    return res ? MutationResult.UPDATED : MutationResult.FAILED;
   }
+
   /**
    * Conditional update hash - value into index
-   * 
    * @param ptr index block address
    * @param hash hash of a key
    * @param expectedSid expected segment id (-1 - forced update)
@@ -2258,15 +2206,15 @@ public final class MemoryIndex implements Persistent {
    * @param newOffset new offset
    * @return true on success, false otherwise
    */
-  private boolean update0(final long ptr, final long hash, final short expectedSid, final int expectedOffset, 
-      short newSid, int newOffset) {
+  private boolean update0(final long ptr, final long hash, final short expectedSid,
+      final int expectedOffset, short newSid, int newOffset) {
     final int numEntries = numEntries(ptr);
     long $ptr = ptr + indexBlockHeaderSize;
     int count = 0;
     final int indexSize = this.indexSize;
     while (count < numEntries) {
       if (this.indexFormat.equals($ptr, hash)) {
-        //TODO: inline call
+        // TODO: inline call
         if (expectedSid != -1) {
           int sid = this.indexFormat.getSegmentId($ptr);
           if (sid != expectedSid) {
@@ -2275,7 +2223,7 @@ public final class MemoryIndex implements Persistent {
         }
         if (expectedOffset != -1) {
           long off = this.indexFormat.getOffset($ptr);
-          if(off != expectedOffset) {
+          if (off != expectedOffset) {
             return false;
           }
         }
@@ -2287,10 +2235,9 @@ public final class MemoryIndex implements Persistent {
     }
     return false;
   }
-  
+
   /**
    * Insert hash - value into a given index block
-   *
    * @param ptr index block address
    * @param hash hash of a key
    * @param indexPtr index data pointer (not used for AQ, 12 bytes for MQ)
@@ -2304,7 +2251,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Insert hash - value into a given index block with a rank
-   *
    * @param ptr index block address
    * @param hash hash of a key
    * @param indexPtr index data pointer (not used for AQ, 12 bytes for MQ)
@@ -2393,33 +2339,30 @@ public final class MemoryIndex implements Persistent {
     return inserted ? retPtr : makeUpdatePtr(retPtr);
   }
 
-  private final long makeUpdatePtr (long ptr) {
+  private final long makeUpdatePtr(long ptr) {
     return ptr | 0x8000000000000000L;
   }
-  
+
   private final boolean isUpdateOp(long ptr) {
     return (ptr & 0x8000000000000000L) == 0x8000000000000000L;
   }
-  
+
   private final long clearUpdateFlag(long ptr) {
     return ptr & 0x7fffffffffffffffL;
   }
-  
+
   private boolean isMainIndex() {
     return this.indexType == Type.MQ;
   }
-  
+
   /**
-   * TODO: eviction by size
-   * TODO: optimize performance for main queue
-   * we can delete all expired items in one run
-   * 
-   * Perform eviction of expired items if any for main queue
-   * or evict non-popular items for admission queue 
+   * TODO: eviction by size TODO: optimize performance for main queue we can delete all expired
+   * items in one run Perform eviction of expired items if any for main queue or evict non-popular
+   * items for admission queue
    * @param slotPtr index-data-block address
-   * @throws IOException 
+   * @throws IOException
    */
-  private void doEviction(long slotPtr) { 
+  private void doEviction(long slotPtr) {
     int toEvict = -1;
     boolean expired = false;
     long expire = -1;
@@ -2427,9 +2370,9 @@ public final class MemoryIndex implements Persistent {
     if (numEntries == 0) {
       return;
     }
-    //TODO: we can improve insert performance by 
+    // TODO: we can improve insert performance by
     // disabling search for expired items
-    if (this.indexFormat.isExpirationSupported()){
+    if (this.indexFormat.isExpirationSupported()) {
       toEvict = findExpired(slotPtr);
       if (toEvict >= 0) {
         expired = true;
@@ -2445,35 +2388,34 @@ public final class MemoryIndex implements Persistent {
     if (expired) {
       expire = this.indexFormat.getExpire(slotPtr, ptr);
     }
-//    // report eviction
-//    if (this.evictionListener != null && !expired && !isMainIndex()) {
-//      // This MUST implements ALL the eviction-related logic
-//      this.evictionListener.onEviction(slotPtr, ptr);
-//    }
+    // // report eviction
+    // if (this.evictionListener != null && !expired && !isMainIndex()) {
+    // // This MUST implements ALL the eviction-related logic
+    // this.evictionListener.onEviction(slotPtr, ptr);
+    // }
     int rank = this.evictionPolicy.getRankForIndex(numRanks, toEvict, numEntries);
     deleteAt(slotPtr, ptr, rank, expire);
   }
-  
+
   private int findExpired(long slotPtr) {
     int toEvict = -1;
     int numEntries = numEntries(slotPtr);
     int count = 0;
     long ptr = slotPtr + this.indexBlockHeaderSize;
-    while(count < numEntries) {
+    while (count < numEntries) {
       long time = this.indexFormat.getExpire(slotPtr, ptr);
       if (time > 0 && System.currentTimeMillis() > time) {
         toEvict = count;
         break;
       }
       ptr += this.indexFormat.fullEntrySize(ptr);
-      count ++;
+      count++;
     }
     return toEvict;
   }
 
   /**
-   * Insert hash - value entry with a rank
-   * TODO: insert by rank
+   * Insert hash - value entry with a rank TODO: insert by rank
    * @param ptr index block address
    * @param hash hash
    * @param indexPtr index data pointer (not relevant for AQ, for MQ - 12 byte data)
@@ -2486,8 +2428,9 @@ public final class MemoryIndex implements Persistent {
     final int deletedIndex = delete(ptr, hash);
     final boolean insert = deletedIndex < 0;
     final int numEntries = numEntries(ptr);
-    int insertIndex = indexType == Type.MQ? evictionPolicy.getStartIndexForRank(numRanks, rank, numEntries):
-      evictionPolicy.getInsertIndex(ptr, numEntries);
+    int insertIndex =
+        indexType == Type.MQ ? evictionPolicy.getStartIndexForRank(numRanks, rank, numEntries)
+            : evictionPolicy.getInsertIndex(ptr, numEntries);
     if (deletedIndex >= 0 && indexType == Type.MQ) {
       // Do not promote on update
       insertIndex = deletedIndex;
@@ -2496,7 +2439,7 @@ public final class MemoryIndex implements Persistent {
     // TODO: entry size can be variable
     int off = offsetFor(ptr, insertIndex);
     int toMove = dataSize(ptr) + this.indexBlockHeaderSize - off;
-    int itemSize = this.indexType == Type.AQ? Utils.SIZEOF_LONG: indexSize;
+    int itemSize = this.indexType == Type.AQ ? Utils.SIZEOF_LONG : indexSize;
     UnsafeAccess.copy(ptr + off, ptr + off + itemSize, toMove);
     // Insert new entry
     // Update number of elements
@@ -2510,11 +2453,10 @@ public final class MemoryIndex implements Persistent {
       return insert;
     } else {
       UnsafeAccess.copy(indexPtr, ptr + off, indexSize);
-    }    
+    }
     return insert;
-  
-  }
 
+  }
 
   private void rehashSlot(int slot) {
     // We keep write lock on parent slot - so we are safe to
@@ -2522,15 +2464,15 @@ public final class MemoryIndex implements Persistent {
     // confirm rehashing
     this.rehashInProgress = true;
     long ptr = ref_index_base.get()[slot];
-    /*DEBUG*/
+    /* DEBUG */
     if (ptr == 0) {
       LOG.error("FATAL rehashSlot ptr == 0");
       Thread.dumpStack();
     }
-    
+
     int numEntries = numEntries(ptr);
     // TODO: again variable sized indexes
-    int blockSize = blockSize(ptr);//getMaximumBlockSize();
+    int blockSize = blockSize(ptr);// getMaximumBlockSize();
     int indexSize = ref_index_base.get().length;
     long[] rehash_index = ref_index_base_rehash.get();
     if (rehash_index == null || rehash_index.length == indexSize) {
@@ -2549,9 +2491,9 @@ public final class MemoryIndex implements Persistent {
     setBlockSize(ptr0, blockSize);
 
     long ptr1 = UnsafeAccess.mallocZeroed(blockSize);
-    
+
     this.allocatedMemory.addAndGet(2 * blockSize);
-    
+
     UnsafeAccess.copy(ptr, ptr1, this.indexBlockHeaderSize);
     setBlockSize(ptr1, blockSize);
 
@@ -2596,8 +2538,8 @@ public final class MemoryIndex implements Persistent {
     setDataSize(ptr1, dataSize1);
 
     // Now we can shrink
-    rehash_index[slot0] = ptr0;//shrink(ptr0);
-    rehash_index[slot1] = ptr1;//shrink(ptr1);
+    rehash_index[slot0] = ptr0;// shrink(ptr0);
+    rehash_index[slot1] = ptr1;// shrink(ptr1);
     // Free previous index block
     // It is safe, because this index block is under write lock
     int oldBlockSize = blockSize(ptr);
@@ -2610,8 +2552,7 @@ public final class MemoryIndex implements Persistent {
   }
 
   /*
-   * This method is not thread safe
-   * TODO : test on save/load when rehasing is in progress
+   * This method is not thread safe TODO : test on save/load when rehasing is in progress
    */
   private void completeRehashing() {
 
@@ -2639,14 +2580,13 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Add-if Absent-Remove-if Present Atomic operation
-   *
    * @param key key
    * @param off offset
    * @param len key length
    * @return MutationResult.FAILED | INSERTED | DELETED
    */
   public MutationResult aarp(byte[] key, int off, int len) {
-    
+
     int slot = 0;
     try {
       slot = lock(key, off, len);
@@ -2660,11 +2600,10 @@ public final class MemoryIndex implements Persistent {
   }
 
   /**
-   * Add-if Absent-Remove-if Present 
-   * Atomic operation
+   * Add-if Absent-Remove-if Present Atomic operation
    * @param keyPtr key address
    * @param keySize key size
-   * @return FAILED, INSERTED or DELETED 
+   * @return FAILED, INSERTED or DELETED
    */
   public MutationResult aarp(long keyPtr, int keySize) {
     int slot = 0;
@@ -2681,7 +2620,6 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Add-if Absent-Remove-if Present Atomic operation - implementation
-   *
    * @param hash hashed key (8 bytes)
    * @return true - if was added, false - if was deleted
    */
@@ -2703,16 +2641,16 @@ public final class MemoryIndex implements Persistent {
       ptr = index[$slot];
     }
     // try to delete first
-    boolean result = delete(hash);//exists(ptr, hash);
+    boolean result = delete(hash);// exists(ptr, hash);
     if (result) {
       return MutationResult.DELETED; // Deleted
     }
-    long $ptr = insert0(ptr, hash, 0L /* not used for AQ*/, 0);
+    long $ptr = insert0(ptr, hash, 0L /* not used for AQ */, 0);
     if ($ptr != ptr && $ptr > 0) {
       // Possible block expansion or rehash (0)
       // update index segment address
       index[$slot] = $ptr;
-    } 
+    }
     return MutationResult.INSERTED;
   }
 
@@ -2734,11 +2672,11 @@ public final class MemoryIndex implements Persistent {
     dos.writeLong(this.ref_index_base.get().length);
     /* Index entry size */
     dos.writeInt(this.indexSize);
-    /* Is eviction enabled yet?*/
+    /* Is eviction enabled yet? */
     dos.writeBoolean(this.evictionEnabled);
     /* Total number of index entries */
     dos.writeLong(numEntries.get());
-    /* Maximum number of entries - for AQ*/
+    /* Maximum number of entries - for AQ */
     dos.writeLong(this.maxEntries);
     /* Number of popularity ranks */
     dos.writeInt(this.numRanks);
@@ -2762,7 +2700,7 @@ public final class MemoryIndex implements Persistent {
   @Override
   public void load(InputStream is) throws IOException {
     DataInputStream dis = Utils.toDataInputStream(is);
- // Read index type
+    // Read index type
     this.cacheName = dis.readUTF();
     int ord = dis.readInt();
     Type type = Type.values()[ord];
@@ -2778,9 +2716,9 @@ public final class MemoryIndex implements Persistent {
         this.evictionPolicy = CacheConfig.getInstance().getCacheEvictionPolicy(this.cacheName);
       } catch (Exception e) {
         throw new IOException(e);
-      } 
+      }
     }
-    
+
     // Load index format
     indexFormat.load(dis);
     // Read table size
@@ -2800,7 +2738,7 @@ public final class MemoryIndex implements Persistent {
     this.expiredEvictedBalance = new AtomicLong(dis.readLong());
     // Total allocated memory
     this.allocatedMemory = new AtomicLong(dis.readLong());
-    
+
     byte[] buffer = new byte[getMaximumBlockSize()];
     for (int i = 0; i < tableSize; i++) {
       // index segment size

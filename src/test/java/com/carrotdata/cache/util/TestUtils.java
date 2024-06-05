@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.util;
 
@@ -42,18 +42,15 @@ import com.carrotdata.cache.io.Segment;
 
 /**
  * Utility methods for unit tests
- *
  */
 public class TestUtils {
   private static final Logger LOG = LoggerFactory.getLogger(TestUtils.class);
 
-  
-  public static Cache createCache(long maxSize, long segmentSize, boolean offheap, boolean withExpireSupport) throws IOException {
-    
+  public static Cache createCache(long maxSize, long segmentSize, boolean offheap,
+      boolean withExpireSupport) throws IOException {
+
     Builder b = new Builder("cache");
-    b.withCacheMaximumSize(maxSize)
-    .withCacheDataSegmentSize(segmentSize)
-    .withTLSSupported(true);
+    b.withCacheMaximumSize(maxSize).withCacheDataSegmentSize(segmentSize).withTLSSupported(true);
     if (withExpireSupport) {
       b.withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName());
     }
@@ -63,8 +60,7 @@ public class TestUtils {
       return b.buildDiskCache();
     }
   }
-  
-  
+
   /**
    * Creates new byte array and fill it with random data
    * @param size size of an array
@@ -72,12 +68,12 @@ public class TestUtils {
    */
   public static byte[] randomBytes(int size) {
     byte[] bytes = new byte[size];
-    ThreadLocalRandom r = ThreadLocalRandom.current();;
+    ThreadLocalRandom r = ThreadLocalRandom.current();
+    ;
     r.nextBytes(bytes);
     return bytes;
   }
-  
-  
+
   /**
    * Creates new byte array and fill it with random data
    * @param size size of an array
@@ -88,17 +84,18 @@ public class TestUtils {
     r.nextBytes(bytes);
     return bytes;
   }
+
   /**
    * Copies an array
    * @param arr array of bytes
    * @return copy
    */
-  public static byte[] copy (byte[] arr) {
+  public static byte[] copy(byte[] arr) {
     byte[] buf = new byte[arr.length];
     System.arraycopy(arr, 0, buf, 0, buf.length);
     return buf;
   }
-  
+
   /**
    * Allocates memory and fills it with random data
    * @param size memory size
@@ -110,7 +107,7 @@ public class TestUtils {
     UnsafeAccess.copy(bytes, 0, ptr, size);
     return ptr;
   }
-  
+
   /**
    * Allocates memory and fills it with random data
    * @param size memory size
@@ -122,7 +119,7 @@ public class TestUtils {
     UnsafeAccess.copy(bytes, 0, ptr, size);
     return ptr;
   }
-  
+
   /**
    * Creates copy of a memory buffer
    * @param ptr memory buffer
@@ -134,25 +131,25 @@ public class TestUtils {
     UnsafeAccess.copy(ptr, mem, size);
     return mem;
   }
-  
+
   public static long copyToMemory(byte[] arr) {
     long mem = UnsafeAccess.malloc(arr.length);
-    UnsafeAccess.copy(arr,  0,  mem, arr.length);
+    UnsafeAccess.copy(arr, 0, mem, arr.length);
     return mem;
   }
-  
+
   public static long copyToMemory(String s) {
     byte[] arr = s.getBytes();
     long mem = UnsafeAccess.malloc(arr.length);
-    UnsafeAccess.copy(arr,  0,  mem, arr.length);
+    UnsafeAccess.copy(arr, 0, mem, arr.length);
     return mem;
   }
-  
+
   public static DataOutputStream getOutputStreamForTest() {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     return new DataOutputStream(baos);
   }
-  
+
   public static RandomAccessFile saveToFile(Segment s) throws IOException {
     File f = File.createTempFile("segment", null);
     f.deleteOnExit();
@@ -160,8 +157,9 @@ public class TestUtils {
     s.save(raf);
     return raf;
   }
-  
-  public static CacheConfig mockConfigForTests(long segmentSize, long maxCacheSize) throws IOException {
+
+  public static CacheConfig mockConfigForTests(long segmentSize, long maxCacheSize)
+      throws IOException {
     CacheConfig mock = Mockito.mock(CacheConfig.class, CALLS_REAL_METHODS);
     mock.init();
     // define segment size
@@ -170,13 +168,14 @@ public class TestUtils {
     Mockito.when(mock.getCacheMaximumSize(Mockito.anyString())).thenReturn(maxCacheSize);
     // data directory
     Path path = Files.createTempDirectory(null);
-    File  dir = path.toFile();
+    File dir = path.toFile();
     dir.deleteOnExit();
     Mockito.when(mock.getDataDir(Mockito.anyString())).thenReturn(dir.getAbsolutePath());
     return mock;
   }
-  
-  public static CacheConfig mockConfigForTests(long segmentSize, long maxCacheSize, String dataDir) throws IOException {
+
+  public static CacheConfig mockConfigForTests(long segmentSize, long maxCacheSize, String dataDir)
+      throws IOException {
     CacheConfig mock = Mockito.mock(CacheConfig.class, CALLS_REAL_METHODS);
     mock.init();
     // define segment size
@@ -186,14 +185,13 @@ public class TestUtils {
     Mockito.when(mock.getDataDir(Mockito.anyString())).thenReturn(dataDir);
     return mock;
   }
-  
-  
+
   public static void deleteDir(Path dir) throws IOException {
     if (!Files.exists(dir)) {
       return;
     }
     Stream<Path> stream = Files.list(dir);
-    stream.forEach( x -> {
+    stream.forEach(x -> {
       try {
         Files.delete(x);
       } catch (IOException e) {
@@ -202,14 +200,14 @@ public class TestUtils {
       }
     });
     Files.delete(dir);
-    if(Files.exists(dir)) {
+    if (Files.exists(dir)) {
       LOG.error("Could not delete dir={}", dir.toString());
     } else {
       LOG.info("Deleted dir={}", dir.toString());
     }
     stream.close();
   }
-  
+
   public static void deleteCacheFiles(Cache cache) throws IOException {
     String snapshotDir = cache.getCacheConfig().getSnapshotDir(cache.getName());
     Path p = Paths.get(snapshotDir);
@@ -218,30 +216,30 @@ public class TestUtils {
     p = Paths.get(dataDir);
     deleteDir(p);
   }
-  
-  public static List<byte[]> loadGithubDataAsBytes() throws URISyntaxException, IOException{
-    
+
+  public static List<byte[]> loadGithubDataAsBytes() throws URISyntaxException, IOException {
+
     File dir = new File("./src/test/resources/github");
     File[] list = dir.listFiles();
     ArrayList<byte[]> dataList = new ArrayList<byte[]>();
-    for (File ff: list) {
+    for (File ff : list) {
       String s = Files.readString(Paths.get(ff.toURI()));
       dataList.add(s.getBytes());
     }
     return dataList;
   }
-  
-  public static List<Long> loadGithubDataAsMemory() throws URISyntaxException, IOException{
-    
+
+  public static List<Long> loadGithubDataAsMemory() throws URISyntaxException, IOException {
+
     File dir = new File("./src/test/resources/github");
     File[] list = dir.listFiles();
     ArrayList<Long> dataList = new ArrayList<Long>();
-    for (File ff: list) {
+    for (File ff : list) {
       String s = Files.readString(Paths.get(ff.toURI()));
       long ptr = copyToMemory(s);
       dataList.add(ptr);
     }
     return dataList;
   }
-    
+
 }

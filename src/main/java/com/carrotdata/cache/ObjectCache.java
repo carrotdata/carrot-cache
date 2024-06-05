@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache;
 
@@ -34,134 +34,134 @@ import com.carrotdata.cache.util.CacheConfig;
 import com.carrotdata.cache.util.ObjectPool;
 
 public class ObjectCache {
-  
-  public static interface SerdeInitializationListener{
-    
+
+  public static interface SerdeInitializationListener {
+
     public void initSerde(Kryo kryo);
   }
-  
+
   /** Logger */
   @SuppressWarnings("unused")
   private static final Logger LOG = LoggerFactory.getLogger(ObjectCache.class);
-  
-  /** Initial buffer size in bytes for Kryo serialization*/
+
+  /** Initial buffer size in bytes for Kryo serialization */
   private final int INITIAL_BUFFER_SIZE = 4096;
-  
-  /** Native cache instance (off-heap, disk or hybrid)*/
+
+  /** Native cache instance (off-heap, disk or hybrid) */
   private Cache cache;
-    
-  /** Kryo object serialization pool*/
+
+  /** Kryo object serialization pool */
   private ObjectPool<Kryo> kryos;
-  
+
   /** Key - Value class map */
   private Map<Class<?>, Class<?>> keyValueClassMap = new ConcurrentHashMap<Class<?>, Class<?>>();
-    
+
   /** Kryo initialization listeners */
-  private List<SerdeInitializationListener> listeners = 
+  private List<SerdeInitializationListener> listeners =
       Collections.synchronizedList(new ArrayList<>());
-  
+
   /** Object pool for Kryo inputs */
   static ObjectPool<Input> inputs;
-  
+
   /** Object pool for Kryo outputs */
   static ObjectPool<Output> outputs;
-  
+
   /** To support loading cache **/
   private Map<Object, Object> waitingKeys = new ConcurrentHashMap<>();
-  
-  /* Each key class can have associated expiration time in milliseconds*/
+
+  /* Each key class can have associated expiration time in milliseconds */
   private Map<Class<?>, Long> keyExpireMap = new ConcurrentHashMap<Class<?>, Long>();
-  
+
   /* Initial output buffer size */
   private int initialOutBufferSize;
-  
+
   /* Maximum output buffer size */
   private int maxOutBufferSize;
-  
+
   /**
    * Default constructor
    * @param c native cache instance
    */
-  ObjectCache(Cache c){
-    Objects.requireNonNull(c, "Cache is null");    
+  ObjectCache(Cache c) {
+    Objects.requireNonNull(c, "Cache is null");
     this.cache = c;
     initIOPools();
   }
-  
+
   /**
-   * Adds Kryo's serialization listener. 
+   * Adds Kryo's serialization listener.
    * @param l listener
    */
   public void addSerdeInitializationListener(SerdeInitializationListener l) {
     this.listeners.add(l);
   }
-  
+
   /**
-   * Adds key-value classes pair 
+   * Adds key-value classes pair
    * @param key key's class
    * @param value value's class
    */
   public void addKeyValueClasses(Class<?> key, Class<?> value) {
-    this.keyValueClassMap.put(key,  value);
+    this.keyValueClassMap.put(key, value);
   }
-  
+
   /**
-   * Sets default expiration time for key's class 
+   * Sets default expiration time for key's class
    * @param keyClass key's class
    * @param expire expiration time in milliseconds (relative)
    */
   public void setKeyClassExpire(Class<?> keyClass, long expire) {
     keyExpireMap.put(keyClass, expire);
   }
-  
+
   private void initIOPools() {
     CacheConfig config = cache.getCacheConfig();
     int poolSize = config.getIOStoragePoolSize(cache.getName());
     this.initialOutBufferSize = config.getObjectCacheInitialOutputBufferSize(cache.getName());
     this.maxOutBufferSize = config.getObjectCacheMaxOutputBufferSize(cache.getName());
     if (inputs == null) {
-      synchronized(ObjectPool.class) {
+      synchronized (ObjectPool.class) {
         if (inputs == null) {
           inputs = new ObjectPool<Input>(poolSize);
         }
       }
     }
     if (outputs == null) {
-      synchronized(ObjectPool.class) {
+      synchronized (ObjectPool.class) {
         if (outputs == null) {
           outputs = new ObjectPool<Output>(poolSize);
         }
       }
     }
     if (kryos == null) {
-      synchronized(ObjectPool.class) {
+      synchronized (ObjectPool.class) {
         if (kryos == null) {
           kryos = new ObjectPool<Kryo>(poolSize);
         }
       }
     }
   }
-  
+
   /**
-   * Put key - value pair into the cache with expiration (absolute time in ms) 
-   * This is operation to bypass admission controller
+   * Put key - value pair into the cache with expiration (absolute time in ms) This is operation to
+   * bypass admission controller
    * @param key key object
    * @param value value object
    * @param expire expiration time (absolute in ms since 01/01/1970)
-   * @return true on success, false  - otherwise
+   * @return true on success, false - otherwise
    * @throws IOException
    */
   public boolean put(Object key, Object value, long expire) throws IOException {
     return put(key, value, expire, true);
   }
-  
+
   /**
-   * Put key - value pair into the cache with expiration (absolute time in ms) 
+   * Put key - value pair into the cache with expiration (absolute time in ms)
    * @param key key object
    * @param value value object
    * @param expire expiration time (absolute)
    * @param force if true - bypass admission controller
-   * @return true on success, false  - otherwise
+   * @return true on success, false - otherwise
    * @throws IOException
    */
   public boolean put(Object key, Object value, long expire, boolean force) throws IOException {
@@ -200,11 +200,12 @@ public class ObjectCache {
     Input in = getInput();
     Kryo kryo = getKryo();
     Class<?> valueClass = this.keyValueClassMap.get(key.getClass());
-    
+
     if (valueClass == null) {
-      throw new IOException(String.format("Value class is not registered for the key class %s", key.getClass()));
+      throw new IOException(
+          String.format("Value class is not registered for the key class %s", key.getClass()));
     }
-    
+
     try {
       kryo.writeObject(outKey, key);
       byte[] keyBuffer = outKey.getBuffer();
@@ -232,7 +233,7 @@ public class ObjectCache {
       release(kryo);
     }
   }
-  
+
   /**
    * Get cache value with value loader
    * @param key key
@@ -261,7 +262,7 @@ public class ObjectCache {
             if (expire > 0) {
               put(key, value, System.currentTimeMillis() + expire);
             } else {
-              put(key, value, 0L);              
+              put(key, value, 0L);
             }
           }
         } catch (Exception e) {
@@ -273,7 +274,7 @@ public class ObjectCache {
     }
     return value;
   }
-  
+
   private long getExpireForKey(Object key) {
     Long expire = keyExpireMap.get(key.getClass());
     if (expire == null) {
@@ -281,13 +282,13 @@ public class ObjectCache {
     }
     return expire;
   }
-  
+
   private Object waitAndGet(Object key) throws IOException {
     // Loading in progress
-    while(waitingKeys.get(key) != null) {
+    while (waitingKeys.get(key) != null) {
       try {
         Thread.sleep(1);
-      } catch(InterruptedException e) {
+      } catch (InterruptedException e) {
       }
     }
     // Repeat call
@@ -298,6 +299,7 @@ public class ObjectCache {
     }
     return value;
   }
+
   /**
    * Delete object by key
    * @param key object key
@@ -314,8 +316,7 @@ public class ObjectCache {
       // TODO: cryptographic hashing of a key
       byte[] keyBuffer = outKey.getBuffer();
       int keyLength = outKey.position();
-      boolean result =
-          cache.delete(keyBuffer, 0, keyLength);
+      boolean result = cache.delete(keyBuffer, 0, keyLength);
       return result;
     } finally {
       release(outKey);
@@ -324,7 +325,7 @@ public class ObjectCache {
       waitingKeys.remove(key);
     }
   }
-  
+
   /**
    * Does key exist
    * @param key object key
@@ -340,17 +341,16 @@ public class ObjectCache {
       // TODO: cryptographic hashing of a key
       byte[] keyBuffer = outKey.getBuffer();
       int keyLength = outKey.position();
-      boolean result =
-          cache.exists(keyBuffer, 0, keyLength);
+      boolean result = cache.exists(keyBuffer, 0, keyLength);
       return result;
     } finally {
       release(outKey);
       release(kryo);
     }
   }
-  
+
   /**
-   * Touch the key 
+   * Touch the key
    * @param key object key
    * @return true on success, false - otherwise (key does not exists)
    * @throws IOException
@@ -364,15 +364,14 @@ public class ObjectCache {
       // TODO: cryptographic hashing of a key
       byte[] keyBuffer = outKey.getBuffer();
       int keyLength = outKey.position();
-      boolean result =
-          cache.touch(keyBuffer, 0, keyLength);
+      boolean result = cache.touch(keyBuffer, 0, keyLength);
       return result;
     } finally {
       release(outKey);
       release(kryo);
     }
   }
-  
+
   /**
    * Shutdown and save cache
    * @throws IOException
@@ -381,25 +380,24 @@ public class ObjectCache {
     // Shutdown main cache
     this.cache.shutdown();
   }
-  
+
   /**
-   * Loads saved object cache.
-   * Make sure that CarrotConfig was already set for the cache
+   * Loads saved object cache. Make sure that CarrotConfig was already set for the cache
    * @param cacheRootDir cache root directory
    * @param cacheName cache name
    * @return object cache or null
    * @throws IOException
    */
   public static ObjectCache loadCache(String cacheRootDir, String cacheName) throws IOException {
-    
+
     Cache c = Cache.loadCache(cacheRootDir, cacheName);
-    if (c != null) {  
-        return new ObjectCache(c);
+    if (c != null) {
+      return new ObjectCache(c);
     }
     // Else create new
     return null;
   }
-  
+
   /**
    * Get Kryo instance from pool or new one
    * @return Kryo input
@@ -414,7 +412,7 @@ public class ObjectCache {
     }
     return in;
   }
-  
+
   /**
    * Get Kryo output or new one
    * @return Kryo output
@@ -428,21 +426,21 @@ public class ObjectCache {
     }
     return out;
   }
-  
+
   /**
    * Get Kryo instance
    * @return instance
    */
   Kryo getKryo() {
     Kryo kryo = kryos.poll();
-    if(kryo == null) {
+    if (kryo == null) {
       kryo = new Kryo();
       kryo.setRegistrationRequired(false);
       for (Map.Entry<Class<?>, Class<?>> entry : keyValueClassMap.entrySet()) {
         kryo.register(entry.getKey());
         kryo.register(entry.getValue());
       }
-      for (SerdeInitializationListener l: listeners) {
+      for (SerdeInitializationListener l : listeners) {
         l.initSerde(kryo);
       }
     } else {
@@ -450,7 +448,7 @@ public class ObjectCache {
     }
     return kryo;
   }
-  
+
   /**
    * Release input back to the pool
    * @param in Kryo input
@@ -458,7 +456,7 @@ public class ObjectCache {
   void release(Input in) {
     inputs.offer(in);
   }
-  
+
   /**
    * Release output back to the pool
    * @param out Kryo output
@@ -466,7 +464,7 @@ public class ObjectCache {
   void release(Output out) {
     outputs.offer(out);
   }
-  
+
   /**
    * Release kryo instance
    * @param kryo
@@ -474,28 +472,28 @@ public class ObjectCache {
   void release(Kryo kryo) {
     kryos.offer(kryo);
   }
-  
+
   /**
    * Adds shutdown hook
    */
   public void addShutdownHook() {
     this.cache.addShutdownHook();
   }
-  
+
   /**
    * Removes shutdown hook
    */
   public void removeShutdownHook() {
     this.cache.removeShutdownHook();
   }
-  
+
   /**
-   * Register JMX metrics 
+   * Register JMX metrics
    */
   public void registerJMXMetricsSink() {
     this.cache.registerJMXMetricsSink();
   }
-  
+
   /**
    * Register JMX metrics with a custom domain name
    * @param domainName
@@ -503,7 +501,7 @@ public class ObjectCache {
   public void registerJMXMetricsSink(String domainName) {
     this.cache.registerJMXMetricsSink(domainName);
   }
-  
+
   /**
    * Get number of objects in the cache
    * @return number of objects in the cache
@@ -511,7 +509,7 @@ public class ObjectCache {
   public long size() {
     return this.cache.size();
   }
-  
+
   /**
    * Total number of active items (accessible)
    * @return active number
@@ -519,7 +517,7 @@ public class ObjectCache {
   public long activeSize() {
     return this.cache.activeSize();
   }
-  
+
   /**
    * Gets memory limit
    * @return memory limit in bytes
@@ -527,43 +525,39 @@ public class ObjectCache {
   public long getMaximumCacheSize() {
     return this.cache.getMaximumCacheSize();
   }
-  
+
   /**
    * Get memory used as a fraction of memory limit
-   *
    * @return memory used fraction
    */
   public double getStorageAllocatedRatio() {
     return this.cache.getStorageAllocatedRatio();
   }
- 
+
   /**
    * Get total used memory (storage) - before compression
-   *
    * @return used memory
    */
   public long getStorageUsed() {
     return this.cache.getRawDataSize();
   }
-  
+
   /**
    * Get total used memory (storage) - after compression
-   *
    * @return used memory
    */
   public long getStorageUsedActual() {
     return this.cache.getStorageUsedActual();
   }
-  
+
   /**
    * Get total allocated memory
-   *
    * @return total allocated memory
    */
   public long getStorageAllocated() {
     return this.cache.getStorageAllocated();
   }
-  
+
   /**
    * Get total gets
    * @return total gets
@@ -571,7 +565,7 @@ public class ObjectCache {
   public long getTotalGets() {
     return this.cache.getTotalGets();
   }
-  
+
   /**
    * Total gets size
    * @return size
@@ -579,7 +573,7 @@ public class ObjectCache {
   public long getTotalGetsSize() {
     return this.cache.getTotalGetsSize();
   }
-  
+
   /**
    * Get total hits
    * @return total hits
@@ -587,7 +581,7 @@ public class ObjectCache {
   public long getTotalHits() {
     return this.cache.getTotalHits();
   }
-  
+
   /**
    * Get total writes
    * @return total writes
@@ -595,7 +589,7 @@ public class ObjectCache {
   public long getTotalWrites() {
     return this.cache.getTotalWrites();
   }
-  
+
   /**
    * Get total writes size
    * @return total writes size
@@ -603,7 +597,7 @@ public class ObjectCache {
   public long getTotalWritesSize() {
     return this.cache.getTotalWritesSize();
   }
-  
+
   /**
    * Get total rejected writes
    * @return total rejected writes
@@ -611,7 +605,7 @@ public class ObjectCache {
   public long getTotalRejectedWrites() {
     return this.cache.getTotalRejectedWrites();
   }
-  
+
   /**
    * Get cache hit rate
    * @return cache hit rate
@@ -619,7 +613,7 @@ public class ObjectCache {
   public double getHitRate() {
     return this.cache.getHitRate();
   }
-  
+
   /**
    * For hybrid caches
    * @return hybrid cache hit rate
@@ -627,7 +621,7 @@ public class ObjectCache {
   public double getOverallHitRate() {
     return this.cache.getOverallHitRate();
   }
-  
+
   /**
    * Get native cache
    * @return cache
@@ -635,7 +629,7 @@ public class ObjectCache {
   public Cache getNativeCache() {
     return this.cache;
   }
-  
+
   /**
    * Get cache name
    * @return cache name
@@ -643,7 +637,7 @@ public class ObjectCache {
   public String getName() {
     return this.cache.getName();
   }
-  
+
   /**
    * Get cache type
    * @return cache type
@@ -651,7 +645,7 @@ public class ObjectCache {
   public Type getCacheType() {
     return this.cache.getCacheType();
   }
-  
+
   /**
    * Get cache configuration
    * @return cache configuration

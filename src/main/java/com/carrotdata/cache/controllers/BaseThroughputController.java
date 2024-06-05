@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.controllers;
 
@@ -28,41 +28,40 @@ import com.carrotdata.cache.util.Utils;
 
 /**
  * Basic implementation of ThroughputController
- *
  */
 public abstract class BaseThroughputController implements ThroughputController {
-  
+
   /* Controller's start time */
   protected long startTime;
-  
+
   /* Total bytes written */
   protected AtomicLong totalBytesWritten;
-  
+
   /* Throughput goal */
   protected long throughputGoal;
-  
+
   /* Tolerance limit */
   protected double toleranceLimit;
-  
+
   /* Cache configuration */
   protected CacheConfig config;
-  
+
   /* Cache name */
   protected String cacheName;
-  
+
   /* Parent cache */
   protected Cache cache;
-  
+
   /* Admission controller */
   protected AdmissionController admissionController;
-    
+
   /**
    * Constructor
    */
   public BaseThroughputController(Cache parent) {
     setCache(cache);
   }
-  
+
   public BaseThroughputController() {
   }
 
@@ -75,7 +74,7 @@ public abstract class BaseThroughputController implements ThroughputController {
     this.toleranceLimit = this.config.getThroughputToleranceLimit(this.cacheName);
     this.admissionController = parent.getAdmissionController();
   }
-  
+
   @Override
   public void save(OutputStream os) throws IOException {
     DataOutputStream dos = Utils.toDataOutputStream(os);
@@ -90,7 +89,7 @@ public abstract class BaseThroughputController implements ThroughputController {
     this.startTime = dis.readLong();
     this.totalBytesWritten.set(dis.readLong());
     this.throughputGoal = dis.readLong();
-    
+
   }
 
   @Override
@@ -111,7 +110,7 @@ public abstract class BaseThroughputController implements ThroughputController {
   @Override
   public long getCurrentThroughput() {
     long secs = (System.currentTimeMillis() - this.startTime) / 1000;
-    return totalBytesWritten.get()/ secs;
+    return totalBytesWritten.get() / secs;
   }
 
   @Override
@@ -123,24 +122,24 @@ public abstract class BaseThroughputController implements ThroughputController {
   public void setThrougputGoal(long goal) {
     this.throughputGoal = goal;
   }
-  
+
   @Override
   public boolean adjustParameters() {
     long current = getCurrentThroughput();
-    if (current >= (1.0 - toleranceLimit) * throughputGoal && 
-        current <= (1.0 + toleranceLimit) * throughputGoal) {
+    if (current >= (1.0 - toleranceLimit) * throughputGoal
+        && current <= (1.0 + toleranceLimit) * throughputGoal) {
       return false;
     } else if (current < (1.0 - toleranceLimit) * throughputGoal) {
       return increaseThroughput();
     } else {
       return decreaseThroughput();
-    }    
+    }
   }
 
   protected boolean decreaseThroughput() {
     // Check scavenger first
-    if (Scavenger.decreaseThroughput(this.cacheName)) { 
-      return true; 
+    if (Scavenger.decreaseThroughput(this.cacheName)) {
+      return true;
     } else {
       // Then admission controller
       return this.admissionController.decreaseThroughput();

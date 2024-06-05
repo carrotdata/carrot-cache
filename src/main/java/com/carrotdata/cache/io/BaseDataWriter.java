@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.io;
 
@@ -25,7 +25,7 @@ public class BaseDataWriter implements DataWriter {
 
   public BaseDataWriter() {
   }
-  
+
   @Override
   public long append(Segment s, long keyPtr, int keySize, long itemPtr, int itemSize) {
     int requiredSize = Utils.requiredSize(keySize, itemSize);
@@ -45,29 +45,23 @@ public class BaseDataWriter implements DataWriter {
     UnsafeAccess.copy(keyPtr, addr, keySize);
     addr += keySize;
     // Copy value (item)
-    UnsafeAccess.copy(itemPtr, addr, itemSize);  
+    UnsafeAccess.copy(itemPtr, addr, itemSize);
     long retValue = s.getSegmentDataSize();
     s.incrDataSize(requiredSize);
     return retValue;
   }
 
   @Override
-  public long append(
-      Segment s,
-      byte[] key,
-      int keyOffset,
-      int keySize,
-      byte[] value,
-      int valueOffset,
-      int valueSize) {
+  public long append(Segment s, byte[] key, int keyOffset, int keySize, byte[] value,
+      int valueOffset, int valueSize) {
     int requiredSize = Utils.requiredSize(keySize, valueSize);
     if (requiredSize + s.getSegmentDataSize() > s.size()) {
       return -1;
     }
-    if (s.getAddress() == 0){
-      LOG.error("PTR=NULL sid={} dataSize={} isSealed={} isValid={} isOffheap={}",
-            s.getId(), s.getSegmentDataSize(), Boolean.toString(s.isSealed()), Boolean.toString(s.isValid()),
-            Boolean.toString(s.isOffheap()));
+    if (s.getAddress() == 0) {
+      LOG.error("PTR=NULL sid={} dataSize={} isSealed={} isValid={} isOffheap={}", s.getId(),
+        s.getSegmentDataSize(), Boolean.toString(s.isSealed()), Boolean.toString(s.isValid()),
+        Boolean.toString(s.isOffheap()));
     }
     long addr = s.getAddress() + s.getSegmentDataSize();
     // Key size
@@ -91,6 +85,6 @@ public class BaseDataWriter implements DataWriter {
   @Override
   public void init(String cacheName) {
     // do nothing
-    
+
   }
 }

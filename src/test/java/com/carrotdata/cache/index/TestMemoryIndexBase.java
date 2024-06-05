@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.index;
 
@@ -32,7 +32,7 @@ public class TestMemoryIndexBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestMemoryIndexBase.class);
 
   MemoryIndex memoryIndex;
-  
+
   int numRecords = 10;
   byte[][] keys;
   byte[][] values;
@@ -42,18 +42,18 @@ public class TestMemoryIndexBase {
   int[] offsets;
   int[] sizes;
   long[] expires;
-  
+
   static int keySize = 16;
   static int valueSize = 16;
-  
+
   @BeforeClass
   public static void enableMallocDebug() {
-//    UnsafeAccess.setMallocDebugEnabled(true);
-//    UnsafeAccess.setMallocDebugStackTraceEnabled(true);
-//    UnsafeAccess.setStackTraceRecordingFilter(x -> x == 1024);
-//    UnsafeAccess.setStackTraceRecordingLimit(20000);
+    // UnsafeAccess.setMallocDebugEnabled(true);
+    // UnsafeAccess.setMallocDebugStackTraceEnabled(true);
+    // UnsafeAccess.setStackTraceRecordingFilter(x -> x == 1024);
+    // UnsafeAccess.setStackTraceRecordingLimit(20000);
   }
-  
+
   @After
   public void tearDown() {
     memoryIndex.dispose();
@@ -61,7 +61,7 @@ public class TestMemoryIndexBase {
     Arrays.stream(mValues).forEach(x -> UnsafeAccess.free(x));
     UnsafeAccess.mallocStats.printStats();
   }
-  
+
   protected void prepareData(int numRecords) {
     this.numRecords = numRecords;
     keys = new byte[numRecords][];
@@ -72,12 +72,12 @@ public class TestMemoryIndexBase {
     offsets = new int[numRecords];
     sizes = new int[numRecords];
     expires = new long[numRecords];
-    
+
     Random r = new Random();
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
-    LOG.info("seed="+ seed);
-    
+    LOG.info("seed=" + seed);
+
     for (int i = 0; i < numRecords; i++) {
       keys[i] = TestUtils.randomBytes(keySize, r);
       values[i] = TestUtils.randomBytes(valueSize, r);
@@ -87,9 +87,9 @@ public class TestMemoryIndexBase {
       offsets[i] = nextOffset(r, 100000000);
       sizes[i] = nextSize(keySize, valueSize);
       expires[i] = nextExpire();
-    }  
+    }
   }
-  
+
   /**
    * Subclasses can overwrite
    * @param r random
@@ -99,7 +99,7 @@ public class TestMemoryIndexBase {
   int nextOffset(Random r, int max) {
     return r.nextInt(max);
   }
-  
+
   /**
    * Subclasses can overwrite
    * @param r random
@@ -108,9 +108,9 @@ public class TestMemoryIndexBase {
    */
   int nextSize(int keySize, int valueSize) {
     IndexFormat format = this.memoryIndex.getIndexFormat();
-    return format.isSizeSupported()? Utils.kvSize(keySize, valueSize): -1;
+    return format.isSizeSupported() ? Utils.kvSize(keySize, valueSize) : -1;
   }
-  
+
   /**
    * Subclasses can override it
    * @return next expiration time
@@ -118,10 +118,10 @@ public class TestMemoryIndexBase {
   long nextExpire() {
     return -1;
   }
-  
+
   protected void deleteIndexBytes(int expected) {
     int deleted = 0;
-    for(int i = 0; i < numRecords; i++) {
+    for (int i = 0; i < numRecords; i++) {
       boolean result = memoryIndex.delete(keys[i], 0, keySize);
       if (result) {
         deleted++;
@@ -130,10 +130,10 @@ public class TestMemoryIndexBase {
     assertEquals(expected, deleted);
     assertEquals(0L, memoryIndex.size());
   }
-  
+
   protected void deleteIndexMemory(int expected) {
     int deleted = 0;
-    for(int i = 0; i < numRecords; i++) {
+    for (int i = 0; i < numRecords; i++) {
       boolean result = memoryIndex.delete(mKeys[i], keySize);
       if (result) {
         deleted++;
@@ -142,7 +142,7 @@ public class TestMemoryIndexBase {
     assertEquals(expected, deleted);
     assertEquals(0L, memoryIndex.size());
   }
-  
+
   protected void verifyIndexBytesNot() {
     int entrySize = memoryIndex.getIndexFormat().indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
@@ -152,19 +152,19 @@ public class TestMemoryIndexBase {
     }
     UnsafeAccess.free(buf);
   }
-  
+
   protected void verifyIndexMemoryNot() {
     int entrySize = memoryIndex.getIndexFormat().indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
-    
+
     for (int i = 0; i < numRecords; i++) {
       int result = (int) memoryIndex.find(mKeys[i], keySize, false, buf, entrySize);
       assertEquals(-1, result);
     }
     UnsafeAccess.free(buf);
   }
-  
-  protected boolean sameExpire (long exp, long value) {
+
+  protected boolean sameExpire(long exp, long value) {
     return Math.abs(exp - value) <= 1000;
   }
 }

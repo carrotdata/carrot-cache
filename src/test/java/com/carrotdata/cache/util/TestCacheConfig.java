@@ -15,10 +15,10 @@ public class TestCacheConfig {
 
   @Test
   public void testCacheConfig() throws URISyntaxException, IOException {
-    
+
     CacheConfig conf = CacheConfig.getInstance("./src/test/resources/conf/test.conf");
     Properties props = conf.getProperties();
     assertEquals(68, props.size());
-    props.forEach((x,y) -> LOG.info(x + "=" + y));
+    props.forEach((x, y) -> LOG.info(x + "=" + y));
   }
 }

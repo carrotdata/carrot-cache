@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.index;
 
@@ -23,7 +23,7 @@ import com.carrotdata.cache.util.CacheConfig;
 public class TestMemoryIndexCompactBlockFormat extends TestMemoryIndexFormatBase {
 
   int blockSize;
-  
+
   @Override
   protected MemoryIndex getMemoryIndex() {
     MemoryIndex index = new MemoryIndex("default");
@@ -34,7 +34,7 @@ public class TestMemoryIndexCompactBlockFormat extends TestMemoryIndexFormatBase
     index.setIndexFormat(format);
     return index;
   }
-  
+
   @Override
   int nextOffset(Random r, int max) {
     if (this.blockSize == 0) {
@@ -44,6 +44,5 @@ public class TestMemoryIndexCompactBlockFormat extends TestMemoryIndexFormatBase
     int n = max / this.blockSize;
     return r.nextInt(n) * this.blockSize;
   }
-  
-  
+
 }

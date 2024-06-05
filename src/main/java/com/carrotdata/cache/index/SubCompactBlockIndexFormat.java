@@ -1,19 +1,12 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
+ * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
+ * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ * for the specific language governing permissions and limitations under the License.
  */
 package com.carrotdata.cache.index;
 
@@ -22,31 +15,23 @@ import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
 /**
- * 
- * Compact index format takes only 6 bytes per cached entry:
- * 
- * First 2 bytes:
- * Bits 15 - 0 keep 16 bits of a hashed key 8 byte value starting with a bit L + 1
- * L is defined in configuration file as 'index.slots.power', default value is 10
- * 
- * Memory index hash table size = 2**L
- * 
- * 2 bytes - segment id (lowest 15 bits only, bit 15 is used for 1-bit hit counter)
- * 2 - bytes data block number which "potentially" stores this key-value
- * 
- * real offset is data block * block size. With 64K blocks addressed and 4K block size 
- * We can address maximum 64K * 4K = 256MB size segments. With 32K maximum segments (15 bits)
- * Total maximum cache size supported is 32K * 256MB = 8TB. 
- * 
+ * Compact index format takes only 6 bytes per cached entry: First 2 bytes: Bits 15 - 0 keep 16 bits
+ * of a hashed key 8 byte value starting with a bit L + 1 L is defined in configuration file as
+ * 'index.slots.power', default value is 10 Memory index hash table size = 2**L 2 bytes - segment id
+ * (lowest 15 bits only, bit 15 is used for 1-bit hit counter) 2 - bytes data block number which
+ * "potentially" stores this key-value real offset is data block * block size. With 64K blocks
+ * addressed and 4K block size We can address maximum 64K * 4K = 256MB size segments. With 32K
+ * maximum segments (15 bits) Total maximum cache size supported is 32K * 256MB = 8TB.
  */
 public class SubCompactBlockIndexFormat extends AbstractIndexFormat {
-  
+
   int blockSize;
-  int  L; // index.slots.power from configuration
-  
+  int L; // index.slots.power from configuration
+
   public SubCompactBlockIndexFormat() {
     super();
   }
+
   /**
    * Cache name for this index format
    * @param cacheName
@@ -57,7 +42,7 @@ public class SubCompactBlockIndexFormat extends AbstractIndexFormat {
     this.blockSize = config.getBlockWriterBlockSize(cacheName);
     this.L = config.getStartIndexNumberOfSlotsPower(cacheName);
   }
-  
+
   @Override
   public final boolean equals(long ptr, long hash) {
     int off = this.hashOffset;
@@ -68,7 +53,7 @@ public class SubCompactBlockIndexFormat extends AbstractIndexFormat {
 
   @Override
   public int indexEntrySize() {
-    return  3 * Utils.SIZEOF_SHORT;
+    return 3 * Utils.SIZEOF_SHORT;
   }
 
   @Override
@@ -85,7 +70,6 @@ public class SubCompactBlockIndexFormat extends AbstractIndexFormat {
   public final long advance(long current) {
     return current + this.indexEntrySize;
   }
-
 
   @Override
   public int getKeyValueSize(long buffer) {
@@ -137,45 +121,25 @@ public class SubCompactBlockIndexFormat extends AbstractIndexFormat {
   }
 
   @Override
-  public void writeIndex(
-      long ibPtr,
-      long ptr,
-      byte[] key,
-      int keyOffset,
-      int keySize,
-      byte[] value,
-      int valueOffset,
-      int valueSize,
-      int sid,
-      int dataOffset,
-      int dataSize,
-      long expire) {
+  public void writeIndex(long ibPtr, long ptr, byte[] key, int keyOffset, int keySize, byte[] value,
+      int valueOffset, int valueSize, int sid, int dataOffset, int dataSize, long expire) {
     long hash = Utils.hash64(key, keyOffset, keySize);
-    short $hash = (short)(hash >>> 64 - L - 16);
+    short $hash = (short) (hash >>> 64 - L - 16);
     UnsafeAccess.putShort(ptr + hashOffset(), $hash);
     UnsafeAccess.putShort(ptr + sidOffset(), (short) sid);
-    UnsafeAccess.putShort(ptr + dataOffsetOffset(), (short) (dataOffset / this.blockSize));     
+    UnsafeAccess.putShort(ptr + dataOffsetOffset(), (short) (dataOffset / this.blockSize));
   }
 
   @Override
-  public void writeIndex(
-      long ibPtr,
-      long ptr,
-      long keyPtr,
-      int keySize,
-      long valuePtr,
-      int valueSize,
-      int sid,
-      int dataOffset,
-      int dataSize,
-      long expire) {
+  public void writeIndex(long ibPtr, long ptr, long keyPtr, int keySize, long valuePtr,
+      int valueSize, int sid, int dataOffset, int dataSize, long expire) {
     long hash = Utils.hash64(keyPtr, keySize);
-    short $hash = (short)(hash >>> 64 - L - 16);
+    short $hash = (short) (hash >>> 64 - L - 16);
     UnsafeAccess.putShort(ptr + hashOffset(), $hash);
     UnsafeAccess.putShort(ptr + sidOffset(), (short) sid);
-    UnsafeAccess.putShort(ptr + dataOffsetOffset(), (short) (dataOffset / this.blockSize));     
+    UnsafeAccess.putShort(ptr + dataOffsetOffset(), (short) (dataOffset / this.blockSize));
   }
-  
+
   /**
    * Offsets in index field sections
    * @return offset
@@ -183,6 +147,7 @@ public class SubCompactBlockIndexFormat extends AbstractIndexFormat {
   public int hashOffset() {
     return 0;
   }
+
   /**
    * Offsets in index field sections
    * @return offset
@@ -190,13 +155,15 @@ public class SubCompactBlockIndexFormat extends AbstractIndexFormat {
   public int sidOffset() {
     return Utils.SIZEOF_SHORT;
   }
+
   /**
    * Offsets in index field sections
    * @return offset
    */
   public int dataOffsetOffset() {
-    return  2 * Utils.SIZEOF_SHORT;
+    return 2 * Utils.SIZEOF_SHORT;
   }
+
   /**
    * Offsets in index field sections
    * @return offset
@@ -205,7 +172,7 @@ public class SubCompactBlockIndexFormat extends AbstractIndexFormat {
     // Not supported
     return -1;
   }
-  
+
   @Override
   public final boolean isSizeSupported() {
     return false;
@@ -216,10 +183,10 @@ public class SubCompactBlockIndexFormat extends AbstractIndexFormat {
     // TODO Auto-generated method stub
     return 0;
   }
-  
+
   @Override
   public final void updateIndex(long ptr, int sid, int dataOffset) {
     UnsafeAccess.putShort(ptr + sidOffset(), (short) (sid & 0xffff));
-    UnsafeAccess.putShort(ptr + dataOffsetOffset(), (short) (dataOffset / this.blockSize));        
+    UnsafeAccess.putShort(ptr + dataOffsetOffset(), (short) (dataOffset / this.blockSize));
   }
 }

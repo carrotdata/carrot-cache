@@ -1,19 +1,12 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
+ * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
+ * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ * for the specific language governing permissions and limitations under the License.
  */
 package com.carrotdata.cache.io;
 
@@ -22,11 +15,11 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 
 import com.carrotdata.cache.util.Utils;
-//FIXME: handling last sK-V in a file which is less than 6 bytes total
+
+// FIXME: handling last sK-V in a file which is less than 6 bytes total
 public class PrefetchBuffer {
   /*
-   * File to prefetch - all operations on file must be 
-   * synchronized
+   * File to prefetch - all operations on file must be synchronized
    */
   protected RandomAccessFile file;
   /*
@@ -53,14 +46,14 @@ public class PrefetchBuffer {
    * Buffer data size - the size of data currently in the prefetch buffer
    */
   protected int bufferDataSize = 0;
-  
+
   protected int keyLength = -1;
-  
+
   protected int valueLength = -1;
-  
+
   /**
    * Constructor
-   * @param file file 
+   * @param file file
    * @param bufferSize buffer size
    * @throws IOException
    */
@@ -74,11 +67,12 @@ public class PrefetchBuffer {
     this.bufferOffset = this.bufferDataSize;
     prefetch();
   }
+
   /**
    * Skip bytes
    * @param nBytes
    * @return true or false (can't skip)
-   * @throws IOException 
+   * @throws IOException
    */
   public boolean skip(int nBytes) throws IOException {
     if (nBytes < 0 && this.bufferOffset + nBytes < 0) {
@@ -90,32 +84,34 @@ public class PrefetchBuffer {
     }
     if (nBytes > 0 && this.bufferOffset + nBytes >= this.bufferDataSize) {
       prefetch();
-    } 
+    }
     this.bufferOffset += nBytes;
     this.fileOffset += nBytes;
     return true;
   }
-  
-  /** advance to the next K-V*/
+
+  /** advance to the next K-V */
   public boolean next() throws IOException {
     int kLength = keyLength();
     int vLength = valueLength();
     int n = Utils.kvSize(kLength, vLength);
     boolean result = advance(n);
-    
+
     // reset key-value sizes
     this.keyLength = -1;
     this.valueLength = -1;
     return result;
   }
+
   /**
-   * Advance - skip 
+   * Advance - skip
    * @param nBytes
    * @return true or false
    */
-  public boolean advance(int nBytes) throws IOException{
+  public boolean advance(int nBytes) throws IOException {
     return skip(nBytes);
   }
+
   /**
    * Ensure remaining capacity
    * @param nBytes
@@ -131,21 +127,21 @@ public class PrefetchBuffer {
       if (nBytes + this.bufferOffset > this.bufferDataSize) {
         return false;
       }
-    } 
+    }
     return true;
   }
-  
+
   void prefetch() throws IOException {
-    int toRead = (int) Math.min(this.bufferOffset, 
-      this.fileLength - this.fileOffset - (bufferDataSize - bufferOffset)); 
+    int toRead = (int) Math.min(this.bufferOffset,
+      this.fileLength - this.fileOffset - (bufferDataSize - bufferOffset));
     System.arraycopy(buffer, bufferOffset, buffer, 0, bufferDataSize - bufferOffset);
-    
-    IOUtils.readFully(file, fileOffset + (bufferDataSize - bufferOffset), 
-      buffer, bufferDataSize - bufferOffset, toRead);
+
+    IOUtils.readFully(file, fileOffset + (bufferDataSize - bufferOffset), buffer,
+      bufferDataSize - bufferOffset, toRead);
     this.bufferDataSize = this.bufferSize - this.bufferOffset + toRead;
     this.bufferOffset = 0;
   }
-  
+
   /**
    * Get file offset
    * @return file offset
@@ -153,7 +149,7 @@ public class PrefetchBuffer {
   public long getFileOffset() {
     return this.fileOffset;
   }
-  
+
   /**
    * Key length
    * @return key length
@@ -161,13 +157,13 @@ public class PrefetchBuffer {
    */
   public int keyLength() throws IOException {
     if (this.keyLength > 0) return keyLength;
-    //FIXME: This can break if at the end of the file is very small K-V
+    // FIXME: This can break if at the end of the file is very small K-V
     // Key length is maximum 4 bytes
     ensure(4);
     this.keyLength = Utils.readUVInt(buffer, bufferOffset);
     return this.keyLength;
   }
-  
+
   /**
    * value length
    * @return
@@ -177,20 +173,20 @@ public class PrefetchBuffer {
     if (this.valueLength > 0) return this.valueLength;
     int kSize = keyLength();
     int kSizeSize = Utils.sizeUVInt(kSize);
-    
-    //FIXME: This can break if at the end of the file is very small K-V
+
+    // FIXME: This can break if at the end of the file is very small K-V
     // We all start at K-V offset
     ensure(4 + kSizeSize);
     this.valueLength = Utils.readUVInt(buffer, bufferOffset + kSizeSize);
     return this.valueLength;
   }
-  
+
   /**
    * Get key from this prefetch buffer to another byte array
    * @param buf byte array
    * @param bufOffset offset
    * @return key size
-   * @throws IOException 
+   * @throws IOException
    */
   public int getKey(byte[] buf, int bufOffset) throws IOException {
     int kSize = keyLength();
@@ -203,16 +199,17 @@ public class PrefetchBuffer {
       return -1;
     }
     if (buf.length - bufOffset >= kSize) {
-      System.arraycopy(this.buffer, this.bufferOffset + kSizeSize + vSizeSize, buf, bufOffset, kSize);
+      System.arraycopy(this.buffer, this.bufferOffset + kSizeSize + vSizeSize, buf, bufOffset,
+        kSize);
     }
     return kSize;
   }
-  
+
   /**
    * Get key from this prefetch buffer to another byte buffer
    * @param buf byte buffer
    * @return number of bytes copied or -1
-   * @throws IOException 
+   * @throws IOException
    */
   public int getKey(ByteBuffer buf) throws IOException {
     int kSize = keyLength();
@@ -227,16 +224,16 @@ public class PrefetchBuffer {
     if (buf.remaining() >= kSize) {
       buf.put(this.buffer, this.bufferOffset + kSizeSize + vSizeSize, kSize);
     }
-    //TODO restore old position?
+    // TODO restore old position?
     return vSize;
   }
-  
+
   /**
    * Get value from this prefetch buffer to another byte array
    * @param buf byte array
    * @param bufOffset offset
    * @return bytes copied or -1
-   * @throws IOException 
+   * @throws IOException
    */
   public int getValue(byte[] buf, int bufOffset) throws IOException {
     int kSize = keyLength();
@@ -249,17 +246,18 @@ public class PrefetchBuffer {
       return -1;
     }
     if (buf.length - bufOffset >= vSize) {
-      System.arraycopy(this.buffer, this.bufferOffset + kSizeSize + vSizeSize + kSize, buf, bufOffset, vSize);
-    } 
+      System.arraycopy(this.buffer, this.bufferOffset + kSizeSize + vSizeSize + kSize, buf,
+        bufOffset, vSize);
+    }
     return vSize;
 
   }
-  
+
   /**
    * Get value from this prefetch buffer to another byte buffer
    * @param buf byte buffer
    * @return number of bytes copied or -1
-   * @throws IOException 
+   * @throws IOException
    */
   public int getValue(ByteBuffer buf) throws IOException {
     int kSize = keyLength();
@@ -271,13 +269,13 @@ public class PrefetchBuffer {
     if (!result) {
       return -1;
     }
-    if (buf.remaining() >= kSize) { 
+    if (buf.remaining() >= kSize) {
       buf.put(this.buffer, this.bufferOffset + kSizeSize + vSizeSize + kSize, vSize);
     }
-    //TODO restore old position?
+    // TODO restore old position?
     return vSize;
   }
-  
+
   /**
    * Get byte buffer
    * @return byte buffer
@@ -285,7 +283,7 @@ public class PrefetchBuffer {
   public byte[] getBuffer() {
     return this.buffer;
   }
-  
+
   /**
    * Get buffer offset
    * @return buffer offset
@@ -293,7 +291,7 @@ public class PrefetchBuffer {
   public int getBufferOffset() {
     return this.bufferOffset;
   }
-  
+
   /**
    * Get current offset in the file
    * @return offset
@@ -301,7 +299,7 @@ public class PrefetchBuffer {
   public long getOffset() {
     return this.fileOffset;// + this.bufferOffset;
   }
-  
+
   /**
    * Return number of available bytes in the prefetch buffer
    * @return available bytes

@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.io;
 
@@ -30,28 +30,20 @@ import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
 public class BlockFileDataReader implements DataReader {
-  
+
   private ConcurrentLinkedQueue<byte[]> buffers = new ConcurrentLinkedQueue<>();
-  
+
   private int blockSize;
-  
+
   @Override
   public void init(String cacheName) {
-    this.blockSize = CacheConfig.getInstance().getBlockWriterBlockSize(cacheName);      
+    this.blockSize = CacheConfig.getInstance().getBlockWriterBlockSize(cacheName);
   }
 
   @Override
-  public int read(
-      IOEngine engine,
-      byte[] key,
-      int keyOffset,
-      int keySize,
-      int sid,
-      long offset,
+  public int read(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid, long offset,
       int size, // can be -1 (unknown)
-      byte[] buffer,
-      int bufOffset)
-      throws IOException {
+      byte[] buffer, int bufOffset) throws IOException {
 
     // FIXME: Dirty hack
     offset += Segment.META_SIZE; // add 8 bytes to the file offset
@@ -64,7 +56,7 @@ public class BlockFileDataReader implements DataReader {
     }
 
     if (avail < blockSize) {
-      // We need at least blockSize available space 
+      // We need at least blockSize available space
       return blockSize;
     }
     // TODO prevent file from being closed/deleted
@@ -81,7 +73,7 @@ public class BlockFileDataReader implements DataReader {
 
     int off = 0;
     // Read first block
-    int toRead =(int) Math.min(blockSize, file.length() - offset);
+    int toRead = (int) Math.min(blockSize, file.length() - offset);
     readFully(file, offset, buffer, bufOffset, toRead);
 
     int dataSize = UnsafeAccess.toInt(buffer, bufOffset);
@@ -90,7 +82,8 @@ public class BlockFileDataReader implements DataReader {
       if (dataSize + META_SIZE > avail) {
         return dataSize + META_SIZE;
       }
-      readFully(file, offset + blockSize, buffer, bufOffset + blockSize, dataSize - blockSize + META_SIZE);
+      readFully(file, offset + blockSize, buffer, bufOffset + blockSize,
+        dataSize - blockSize + META_SIZE);
     }
 
     off = (int) findInBlock(buffer, bufOffset, key, keyOffset, keySize);
@@ -105,16 +98,8 @@ public class BlockFileDataReader implements DataReader {
   // TODO: tests
   // TODO: handle IOException upstream
   @Override
-  public int read(
-      IOEngine engine,
-      byte[] key,
-      int keyOffset,
-      int keySize,
-      int sid,
-      long offset,
-      int size,
-      ByteBuffer buffer)
-      throws IOException {
+  public int read(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid, long offset,
+      int size, ByteBuffer buffer) throws IOException {
     // FIXME: Dirty hack
     offset += Segment.META_SIZE; // add 8 bytes to
 
@@ -191,15 +176,8 @@ public class BlockFileDataReader implements DataReader {
   }
 
   @Override
-  public int read(
-      IOEngine engine,
-      long keyPtr,
-      int keySize,
-      int sid,
-      long offset,
-      int size,
-      byte[] buffer,
-      int bufOffset) throws IOException {
+  public int read(IOEngine engine, long keyPtr, int keySize, int sid, long offset, int size,
+      byte[] buffer, int bufOffset) throws IOException {
     // FIXME: Dirty hack
     offset += Segment.META_SIZE; // add 8 bytes to the file offset
     // every segment in a file system has 8 bytes meta prefix
@@ -211,7 +189,7 @@ public class BlockFileDataReader implements DataReader {
     }
 
     if (avail < blockSize) {
-      // We need at least blockSize available space 
+      // We need at least blockSize available space
       return blockSize;
     }
     // TODO prevent file from being closed/deleted
@@ -237,7 +215,8 @@ public class BlockFileDataReader implements DataReader {
       if (dataSize + META_SIZE > avail) {
         return dataSize + META_SIZE;
       }
-      readFully(file, offset + blockSize, buffer, bufOffset + blockSize, dataSize - blockSize + META_SIZE);
+      readFully(file, offset + blockSize, buffer, bufOffset + blockSize,
+        dataSize - blockSize + META_SIZE);
     }
 
     off = (int) findInBlock(buffer, bufOffset, keyPtr, keySize);
@@ -251,9 +230,8 @@ public class BlockFileDataReader implements DataReader {
   }
 
   @Override
-  public int read(
-      IOEngine engine, long keyPtr, int keySize, int sid, long offset, int size, ByteBuffer buffer)
-      throws IOException {
+  public int read(IOEngine engine, long keyPtr, int keySize, int sid, long offset, int size,
+      ByteBuffer buffer) throws IOException {
     // FIXME: Dirty hack
     offset += Segment.META_SIZE; // add 8 bytes to
     int avail = buffer.remaining();
@@ -332,7 +310,7 @@ public class BlockFileDataReader implements DataReader {
     }
     return buffer;
   }
-  
+
   private void releaseBuffer(byte[] buffer) {
     buffers.offer(buffer);
   }

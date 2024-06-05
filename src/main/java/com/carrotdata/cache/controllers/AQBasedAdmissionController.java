@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.controllers;
 
@@ -25,18 +25,14 @@ import com.carrotdata.cache.util.CacheConfig;
 import com.carrotdata.cache.util.Utils;
 
 /**
- * Basic cache admission controller with AdmissionQueue For newly admitted items it always
- * directs them to the Admission queue. For evicted and re-admitted items 
- * it checks  access counter and if it greater than 0 item gets re-admitted 
- * to the Admission queue, otherwise - it is dumped. 
- * It does nothing on item access.
- * 
- * For disk - based caches (SSD)
- *
+ * Basic cache admission controller with AdmissionQueue For newly admitted items it always directs
+ * them to the Admission queue. For evicted and re-admitted items it checks access counter and if it
+ * greater than 0 item gets re-admitted to the Admission queue, otherwise - it is dumped. It does
+ * nothing on item access. For disk - based caches (SSD)
  */
-public class AQBasedAdmissionController extends BaseAdmissionController 
-  implements AdmissionQueueBased {
- 
+public class AQBasedAdmissionController extends BaseAdmissionController
+    implements AdmissionQueueBased {
+
   protected AdmissionQueue admissionQueue;
   /* AQ current size ratio */
   protected double aqCurrentRatio;
@@ -46,11 +42,11 @@ public class AQBasedAdmissionController extends BaseAdmissionController
   protected double aqMaxRatio;
   /* AQ size adjustment step */
   protected double adjStep;
-  
+
   public AQBasedAdmissionController() {
     super();
   }
-  
+
   @Override
   public void setCache(Cache cache) throws IOException {
     super.setCache(cache);
@@ -64,15 +60,15 @@ public class AQBasedAdmissionController extends BaseAdmissionController
     int steps = config.getThrougputControllerNumberOfAdjustmentSteps(cacheName);
     this.adjStep = (this.aqMaxRatio - this.aqMinRatio) / steps;
   }
-  
+
   /**
    * Initialize admission queue
-   * @throws IOException 
+   * @throws IOException
    */
   private void initAdmissionQueue() throws IOException {
     this.admissionQueue = new AdmissionQueue(this.cache);
   }
-  
+
   /**
    * New items are always submitted to the Admission Queue
    */
@@ -80,13 +76,13 @@ public class AQBasedAdmissionController extends BaseAdmissionController
   public boolean admit(long keyPtr, int keySize, int valueSize) {
     return !this.admissionQueue.addIfAbsentRemoveIfPresent(keyPtr, keySize, valueSize);
   }
-  
+
   /**
    * New items are always submitted to the Admission Queue
    */
   @Override
   public boolean admit(byte[] key, int off, int size, int valueSize) {
-    return !this.admissionQueue.addIfAbsentRemoveIfPresent(key,  off, size, valueSize);
+    return !this.admissionQueue.addIfAbsentRemoveIfPresent(key, off, size, valueSize);
   }
 
   @Override
@@ -115,14 +111,14 @@ public class AQBasedAdmissionController extends BaseAdmissionController
   public AdmissionQueue getAdmissionQueue() {
     return this.admissionQueue;
   }
-  
+
   @Override
   public void setAdmissionQueue(AdmissionQueue queue) {
     this.admissionQueue = queue;
   }
 
   @Override
-  public boolean decreaseThroughput() { 
+  public boolean decreaseThroughput() {
     if (this.aqCurrentRatio - this.adjStep < this.aqMinRatio) {
       return false;
     }

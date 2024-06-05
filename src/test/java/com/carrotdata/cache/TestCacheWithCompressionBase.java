@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache;
 
@@ -38,12 +38,11 @@ public abstract class TestCacheWithCompressionBase extends TestCacheBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheWithCompressionBase.class);
 
   boolean randomData = false;
-  boolean dictionaryEnabled = true;   
+  boolean dictionaryEnabled = true;
   boolean asyncTrainingMode = false;
   static String cacheName1 = "cache1";
   static String cacheName2 = "cache2";
-  
-  
+
   @Before
   public void setUp() throws IOException {
     super.setUp();
@@ -51,7 +50,7 @@ public abstract class TestCacheWithCompressionBase extends TestCacheBase {
     // We need expiration support
     this.indexFormat = CompactBaseWithExpireIndexFormat.class.getName();
   }
-  
+
   @After
   public void tearDown() throws IOException {
     super.tearDown();
@@ -59,37 +58,30 @@ public abstract class TestCacheWithCompressionBase extends TestCacheBase {
     ZstdCompressionCodec.reset();
     CodecFactory.getInstance().clear();
   }
-  
+
   @Override
   protected Cache createCache() throws IOException {
     return createCache(cacheName);
   }
-  
+
   @Override
   protected Cache createCache(String cacheName) throws IOException {
     initTest(cacheName);
     // Data directory
     Path path = Files.createTempDirectory(null);
-    File  dir = path.toFile();
+    File dir = path.toFile();
     dir.deleteOnExit();
     String rootDir = dir.getAbsolutePath();
-    
+
     Builder builder = new Builder(cacheName);
-    
-    builder
-      .withCacheDataSegmentSize(segmentSize)
-      .withCacheMaximumSize(maxCacheSize)
-      .withScavengerRunInterval(scavengerInterval)
-      .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
-      .withRecyclingSelector(recycleSelector)
-      .withDataWriter(dataWriter)
-      .withMemoryDataReader(dataReaderMemory)
-      .withFileDataReader(dataReaderFile)
-      .withMainQueueIndexFormat(indexFormat)
-      .withCacheRootDir(rootDir)
-      .withMinimumActiveDatasetRatio(minActiveRatio)
-      .withCacheStreamingSupportBufferSize(1 << 19)
-      .withEvictionDisabledMode(true);
+
+    builder.withCacheDataSegmentSize(segmentSize).withCacheMaximumSize(maxCacheSize)
+        .withScavengerRunInterval(scavengerInterval)
+        .withScavengerDumpEntryBelowMin(scavDumpBelowRatio).withRecyclingSelector(recycleSelector)
+        .withDataWriter(dataWriter).withMemoryDataReader(dataReaderMemory)
+        .withFileDataReader(dataReaderFile).withMainQueueIndexFormat(indexFormat)
+        .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
+        .withCacheStreamingSupportBufferSize(1 << 19).withEvictionDisabledMode(true);
     if (maxKeyValueSize > 0) {
       builder.withMaximumKeyValueSize(maxKeyValueSize);
     }
@@ -99,11 +91,11 @@ public abstract class TestCacheWithCompressionBase extends TestCacheBase {
       return builder.buildDiskCache();
     }
   }
-  
+
   protected void initTest(String cacheName) throws IOException {
     this.dataWriter = CompressedBlockDataWriter.class.getName();
     this.dataReaderMemory = CompressedBlockMemoryDataReader.class.getName();
-    this.dataReaderFile = CompressedBlockFileDataReader.class.getName(); 
+    this.dataReaderFile = CompressedBlockFileDataReader.class.getName();
     CacheConfig config = CacheConfig.getInstance();
     config.setCacheCompressionDictionaryEnabled(cacheName, dictionaryEnabled);
     config.setCacheCompressionEnabled(cacheName, true);
@@ -116,18 +108,18 @@ public abstract class TestCacheWithCompressionBase extends TestCacheBase {
     File dir = new File(dictDir);
     if (dir.exists()) {
       File[] files = dir.listFiles();
-      Arrays.stream(files).forEach( x -> x.delete());
+      Arrays.stream(files).forEach(x -> x.delete());
     }
-    
+
     initCodec(cacheName);
   }
-  
+
   protected void cleanDictionaries() {
     cleanDictionaries(cacheName);
     cleanDictionaries(cacheName1);
     cleanDictionaries(cacheName2);
   }
-  
+
   protected void cleanDictionaries(String cacheName) {
     // Clean up dictionaries
     CacheConfig config = CacheConfig.getInstance();
@@ -135,10 +127,10 @@ public abstract class TestCacheWithCompressionBase extends TestCacheBase {
     File dir = new File(dictDir);
     if (dir.exists()) {
       File[] files = dir.listFiles();
-      Arrays.stream(files).forEach( x -> x.delete());
+      Arrays.stream(files).forEach(x -> x.delete());
     }
   }
-  
+
   protected void initCodec(String cacheName) throws IOException {
     CodecFactory factory = CodecFactory.getInstance();
     factory.clear();
@@ -147,19 +139,19 @@ public abstract class TestCacheWithCompressionBase extends TestCacheBase {
       factory.initCompressionCodecForCache(cacheName, null);
     }
   }
-  
+
   @Override
   protected void prepareData() {
-    /*DEBUG*/ LOG.info("Test dictionary=" + dictionaryEnabled + " random data=" + randomData);
+    /* DEBUG */ LOG.info("Test dictionary=" + dictionaryEnabled + " random data=" + randomData);
     if (randomData) {
       prepareRandomData(numRecords);
     } else {
       try {
         prepareGithubData(numRecords);
-      } catch(Exception e) {
+      } catch (Exception e) {
         throw new RuntimeException(e);
       }
     }
   }
-  
+
 }

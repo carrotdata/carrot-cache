@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache;
 
@@ -39,7 +39,7 @@ import com.carrotdata.cache.io.BaseMemoryDataReader;
 import com.carrotdata.cache.util.TestUtils;
 import com.carrotdata.cache.util.Utils;
 
-public abstract class TestObjectCacheBase  {
+public abstract class TestObjectCacheBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestObjectCacheBase.class);
 
   boolean offheap = true;
@@ -50,58 +50,54 @@ public abstract class TestObjectCacheBase  {
   long expireTime;
   double scavDumpBelowRatio = 0.5;
   double minActiveRatio = 0.90;
-  
+
   int numThreads = 1;
-  
+
   @After
   public void tearDown() throws IOException {
     cache.getNativeCache().dispose();
     TestUtils.deleteCacheFiles(cache.getNativeCache());
   }
-  
+
   protected ObjectCache createCache(String cacheName) throws IOException {
     // Data directory
     Path path = Files.createTempDirectory(null);
-    File  dir = path.toFile();
+    File dir = path.toFile();
     dir.deleteOnExit();
     String rootDir = dir.getAbsolutePath();
-    
+
     Builder builder = new Builder(cacheName);
-    
+
     builder
-      
-      .withCacheDataSegmentSize(segmentSize)
-      .withCacheMaximumSize(maxCacheSize)
-      .withScavengerRunInterval(scavengerInterval)
-      .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
-      .withRecyclingSelector(MinAliveRecyclingSelector.class.getName())
-      .withDataWriter(BaseDataWriter.class.getName())
-      .withMemoryDataReader(BaseMemoryDataReader.class.getName())
-      .withFileDataReader(BaseFileDataReader.class.getName())
-      .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName())
-      .withCacheRootDir(rootDir)
-      .withMinimumActiveDatasetRatio(minActiveRatio)
-      .withCacheStreamingSupportBufferSize(1 << 19)
-      .withEvictionDisabledMode(true)
-      .withCacheSaveOnShutdown(true);
-    
+
+        .withCacheDataSegmentSize(segmentSize).withCacheMaximumSize(maxCacheSize)
+        .withScavengerRunInterval(scavengerInterval)
+        .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
+        .withRecyclingSelector(MinAliveRecyclingSelector.class.getName())
+        .withDataWriter(BaseDataWriter.class.getName())
+        .withMemoryDataReader(BaseMemoryDataReader.class.getName())
+        .withFileDataReader(BaseFileDataReader.class.getName())
+        .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName())
+        .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
+        .withCacheStreamingSupportBufferSize(1 << 19).withEvictionDisabledMode(true)
+        .withCacheSaveOnShutdown(true);
+
     if (offheap) {
       return builder.buildObjectMemoryCache();
     } else {
       return builder.buildObjectDiskCache();
     }
   }
-  
- 
+
   private int loadData(int num) throws IOException {
 
     int count = 0;
     long tn = Thread.currentThread().getId();
     long t1 = System.currentTimeMillis();
-    while(count < num) {
+    while (count < num) {
       String key = tn + ":user:" + count;
       List<Integer> value = new ArrayList<Integer>();
-      for(int i = 0; i < 1000; i++) {
+      for (int i = 0; i < 1000; i++) {
         value.add(count + i);
       }
       long tt1 = System.nanoTime();
@@ -112,32 +108,32 @@ public abstract class TestObjectCacheBase  {
       }
       count++;
       if (count % 10000 == 0) {
-        LOG.info("{}:loaded {} objects last put={} micro", tn, count, (tt2- tt1)/1000);
+        LOG.info("{}:loaded {} objects last put={} micro", tn, count, (tt2 - tt1) / 1000);
       }
     }
     long t2 = System.currentTimeMillis();
     LOG.info("{}:loaded {} in {} ms", tn, count, (t2 - t1));
     return count;
   }
-  
+
   @SuppressWarnings("deprecation")
   private void verifyData(ObjectCache cache, int n) throws IOException {
     int count = 0;
     long tn = Thread.currentThread().getId();
     long t1 = System.currentTimeMillis();
-    while(count < n) {
+    while (count < n) {
       String key = tn + ":user:" + count;
       long tt1 = System.nanoTime();
       Object v = cache.get(key);
       long tt2 = System.nanoTime();
       ArrayList<?> value = (ArrayList<?>) v;
       assertEquals(1000, value.size());
-      for(int i = 0; i < 1000; i++) {
+      for (int i = 0; i < 1000; i++) {
         assertEquals(new Integer(count + i), value.get(i));
       }
       count++;
       if (count % 10000 == 0) {
-        LOG.info("{}:verified {} objects get={} micro",tn, count, (tt2- tt1) / 1000);
+        LOG.info("{}:verified {} objects get={} micro", tn, count, (tt2 - tt1) / 1000);
       }
     }
     long t2 = System.currentTimeMillis();
@@ -151,10 +147,10 @@ public abstract class TestObjectCacheBase  {
 
     long t1 = System.currentTimeMillis();
     Random r = new Random(1);
-    while(count < num) {
+    while (count < num) {
       Person p = Person.nextPerson(r);
       String key = p.getFio() + tn;
-      
+
       long tt1 = System.nanoTime();
       boolean result = cache.put(key, p, 0);
       long tt2 = System.nanoTime();
@@ -163,20 +159,20 @@ public abstract class TestObjectCacheBase  {
       }
       count++;
       if (count % 100000 == 0) {
-        LOG.info("{}:loaded {} objects last put={} micro", tn, count, (tt2- tt1)/1000);
+        LOG.info("{}:loaded {} objects last put={} micro", tn, count, (tt2 - tt1) / 1000);
       }
     }
     long t2 = System.currentTimeMillis();
     LOG.info("{}:loaded {} in {} ms", tn, count, (t2 - t1));
     return count;
   }
-  
+
   private void verifyPersonData(ObjectCache cache, int n) throws IOException {
     int count = 0;
     long tn = Thread.currentThread().getId();
     long t1 = System.currentTimeMillis();
     Random r = new Random(1);
-    while(count < n) {
+    while (count < n) {
       Person exp = Person.nextPerson(r);
       String key = exp.getFio() + tn;
       long tt1 = System.nanoTime();
@@ -188,10 +184,10 @@ public abstract class TestObjectCacheBase  {
       assertEquals(exp.address.city, v.address.city);
       assertEquals(exp.address.state, v.address.state);
       assertEquals(exp.address.country, v.address.country);
-      
+
       count++;
       if (count % 100000 == 0) {
-        LOG.info("{}:verified {} objects get={} micro", tn, count, (tt2- tt1) / 1000);
+        LOG.info("{}:verified {} objects get={} micro", tn, count, (tt2 - tt1) / 1000);
       }
     }
     long t2 = System.currentTimeMillis();
@@ -203,32 +199,32 @@ public abstract class TestObjectCacheBase  {
     LOG.info("Test load and verify");
     Scavenger.clear();
     this.cache = createCache("test");
-    this.cache.addKeyValueClasses(String.class,  ArrayList.class);
+    this.cache.addKeyValueClasses(String.class, ArrayList.class);
     int loaded = loadData(1000000);
     verifyData(cache, loaded);
   }
-  
+
   @Test
   public void testLoadAndVerifyPerson() throws IOException {
     LOG.info("Test load and verify person");
     Scavenger.clear();
     this.cache = createCache("testPerson");
     this.cache.addKeyValueClasses(String.class, Person.class);
-    
+
     ObjectCache.SerdeInitializationListener listener = (x) -> {
       x.register(Address.class);
     };
-    
+
     this.cache.addSerdeInitializationListener(listener);
     int loaded = loadPersonData(1000000);
     verifyPersonData(cache, loaded);
   }
-  
+
   @Test
   public void testLoadAndVerifyMultithreaded() throws IOException {
     LOG.info("Test load and verify multithreaded");
     Scavenger.clear();
-    
+
     this.maxCacheSize = 1000L * this.segmentSize;
     this.numThreads = 4;
     this.cache = createCache("test");
@@ -247,7 +243,7 @@ public abstract class TestObjectCacheBase  {
     };
     runAll(r);
   }
-  
+
   @Test
   public void testLoadAndVerifyPersonMultithreaded() throws IOException {
     LOG.info("Test load and verify person multithreaded");
@@ -260,9 +256,9 @@ public abstract class TestObjectCacheBase  {
     ObjectCache.SerdeInitializationListener listener = (x) -> {
       x.register(Address.class);
     };
-    
+
     this.cache.addSerdeInitializationListener(listener);
-    
+
     Runnable r = () -> {
       int loaded;
       try {
@@ -276,22 +272,22 @@ public abstract class TestObjectCacheBase  {
     };
     runAll(r);
   }
-  
+
   private void runAll(Runnable r) {
     Thread[] workers = new Thread[numThreads];
     for (int i = 0; i < numThreads; i++) {
       workers[i] = new Thread(r);
       workers[i].start();
     }
-    
-    for(int i = 0; i < numThreads; i++) {
+
+    for (int i = 0; i < numThreads; i++) {
       try {
         workers[i].join();
       } catch (InterruptedException e) {
       }
     }
   }
-  
+
   @Test
   public void testSaveLoad() throws IOException {
     LOG.info("Test save load");
@@ -301,7 +297,7 @@ public abstract class TestObjectCacheBase  {
     this.cache.addKeyValueClasses(String.class, ArrayList.class);
 
     int loaded = loadData(1000000);
-    
+
     LOG.info("loaded=" + loaded);
     verifyData(cache, loaded);
 
@@ -310,7 +306,7 @@ public abstract class TestObjectCacheBase  {
     cache.shutdown();
     long t2 = System.currentTimeMillis();
     LOG.info("Saved {} in {} ms", cache.getStorageAllocated(), t2 - t1);
-    
+
     t1 = System.currentTimeMillis();
     String rootDir = cache.getCacheConfig().getCacheRootDir(cacheName);
     ObjectCache newCache = ObjectCache.loadCache(rootDir, cacheName);
@@ -318,7 +314,7 @@ public abstract class TestObjectCacheBase  {
 
     t2 = System.currentTimeMillis();
     LOG.info("Loaded {} in {} ms", cache.getStorageAllocated(), t2 - t1);
-    
+
     assertEquals(cache.getCacheType(), newCache.getCacheType());
     assertEquals(cache.activeSize(), newCache.activeSize());
     assertEquals(cache.getMaximumCacheSize(), newCache.getMaximumCacheSize());
@@ -332,19 +328,19 @@ public abstract class TestObjectCacheBase  {
 
     verifyData(newCache, loaded);
 
-    newCache.getNativeCache().dispose();;
+    newCache.getNativeCache().dispose();
+    ;
     TestUtils.deleteCacheFiles(newCache.getNativeCache());
   }
-  
+
   static class Person {
     String fio;
     Address address;
-    
- 
+
     public String getFio() {
       return fio;
     }
-    
+
     static Person nextPerson(Random r) {
       Person p = new Person();
       p.fio = Utils.getRandomStr(r, 16);
@@ -352,14 +348,14 @@ public abstract class TestObjectCacheBase  {
       return p;
     }
   }
-  
+
   static class Address {
-    
+
     String street;
     String city;
     String state;
     String country;
-    
+
     static Address nextAddress(Random r) {
       Address a = new Address();
       a.street = Utils.getRandomStr(r, 20);

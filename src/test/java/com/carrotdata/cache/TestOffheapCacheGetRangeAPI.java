@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache;
 
@@ -44,13 +44,13 @@ public class TestOffheapCacheGetRangeAPI {
   int maxKeySize = 32;
   int maxValueSize = 5000;
   public Random r;
-  
+
   byte[][] keys;
   byte[][] values;
   long[] mKeys;
   long[] mValues;
   long[] expires;
-  
+
   boolean offheap = true;
   Cache cache;
   int segmentSize = 4 * 1024 * 1024;
@@ -59,7 +59,7 @@ public class TestOffheapCacheGetRangeAPI {
   long expireTime;
   double scavDumpBelowRatio = 0.5;
   double minActiveRatio = 0.90;
-  
+
   @Before
   public void setUp() throws IOException {
     this.offheap = true;
@@ -67,7 +67,7 @@ public class TestOffheapCacheGetRangeAPI {
     this.numRecords = 100000;
     this.r = new Random();
   }
-  
+
   @After
   public void tearDown() throws IOException {
     cache.dispose();
@@ -75,31 +75,27 @@ public class TestOffheapCacheGetRangeAPI {
     Arrays.stream(mValues).forEach(x -> UnsafeAccess.free(x));
     TestUtils.deleteCacheFiles(this.cache);
   }
-  
+
   protected Cache createCache() throws IOException {
     String cacheName = "cache";
     // Data directory
     Path rootDirPath = Files.createTempDirectory(null);
-    File  dir = rootDirPath.toFile();
+    File dir = rootDirPath.toFile();
     String rootDir = dir.getAbsolutePath();
     Builder builder = new Builder(cacheName);
-    
-    builder
-      .withCacheDataSegmentSize(segmentSize)
-      .withCacheMaximumSize(maxCacheSize)
-      .withScavengerRunInterval(scavengerInterval)
-      .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
-      .withRecyclingSelector(MinAliveRecyclingSelector.class.getName())
-      .withCacheRootDir(rootDir)
-      .withEvictionDisabledMode(true)
-      .withMinimumActiveDatasetRatio(minActiveRatio);
+
+    builder.withCacheDataSegmentSize(segmentSize).withCacheMaximumSize(maxCacheSize)
+        .withScavengerRunInterval(scavengerInterval)
+        .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
+        .withRecyclingSelector(MinAliveRecyclingSelector.class.getName()).withCacheRootDir(rootDir)
+        .withEvictionDisabledMode(true).withMinimumActiveDatasetRatio(minActiveRatio);
     if (offheap) {
       return builder.buildMemoryCache();
     } else {
       return builder.buildDiskCache();
     }
   }
-  
+
   protected void prepareData(int numRecords) {
     this.numRecords = numRecords;
     keys = new byte[numRecords][];
@@ -107,12 +103,12 @@ public class TestOffheapCacheGetRangeAPI {
     mKeys = new long[numRecords];
     mValues = new long[numRecords];
     expires = new long[numRecords];
-    
+
     Random r = new Random();
     long seed = System.currentTimeMillis();
     r.setSeed(seed);
-    LOG.info("seed="+ seed);
-    
+    LOG.info("seed=" + seed);
+
     for (int i = 0; i < numRecords; i++) {
       int keySize = nextKeySize();
       int valueSize = nextValueSize();
@@ -121,31 +117,31 @@ public class TestOffheapCacheGetRangeAPI {
       mKeys[i] = TestUtils.randomMemory(keySize, r);
       mValues[i] = TestUtils.randomMemory(valueSize, r);
       expires[i] = getExpire(i); // To make sure that we have distinct expiration values
-    }  
-    LOG.info("prepare finished in {}ms", System.currentTimeMillis() - seed );
-    
+    }
+    LOG.info("prepare finished in {}ms", System.currentTimeMillis() - seed);
+
   }
-  
+
   protected int loadBytes() throws IOException {
     int count = 0;
-    while(count < this.numRecords) {
+    while (count < this.numRecords) {
       long expire = expires[count];
 
       byte[] key = keys[count];
-      byte[] value = values[count];      
+      byte[] value = values[count];
       boolean result = cache.put(key, value, expire);
       if (!result) {
         break;
       }
       count++;
-    }    
+    }
     LOG.info("loaded={}", count);
     return count;
   }
-  
+
   protected int loadMemory() throws IOException {
     int count = 0;
-    while(count < this.numRecords) {
+    while (count < this.numRecords) {
       long expire = expires[count];
       long keyPtr = mKeys[count];
       int keySize = keys[count].length;
@@ -156,16 +152,16 @@ public class TestOffheapCacheGetRangeAPI {
         break;
       }
       count++;
-    }    
+    }
     LOG.info("loaded={}", count);
 
     return count;
   }
-  
+
   protected void verifyMemoryCache(int num) throws IOException {
     int bufferSize = safeBufferSize();
     ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
-    
+
     for (int i = 0; i < num; i++) {
       int keySize = keys[i].length;
       int valueSize = values[i].length;
@@ -177,9 +173,9 @@ public class TestOffheapCacheGetRangeAPI {
       assertEquals(rangeSize, size);
       assertTrue(Utils.compareTo(buffer, rangeSize, valuePtr + rangeStart, rangeSize) == 0);
       buffer.clear();
-    }    
+    }
   }
-  
+
   protected void verifyBytesCache(int num) throws IOException {
     int bufferSize = safeBufferSize();
     byte[] buffer = new byte[bufferSize];
@@ -194,11 +190,11 @@ public class TestOffheapCacheGetRangeAPI {
       assertTrue(Utils.compareTo(buffer, 0, rangeSize, value, rangeStart, rangeSize) == 0);
     }
   }
-  
+
   protected void verifyBytesCacheBuffer(int num) throws IOException {
     int bufferSize = safeBufferSize();
     ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
-    
+
     for (int i = 0; i < num; i++) {
       byte[] key = keys[i];
       byte[] value = values[i];
@@ -210,9 +206,9 @@ public class TestOffheapCacheGetRangeAPI {
       assertEquals(rangeSize, size);
       assertTrue(Utils.compareTo(buffer, rangeSize, value, rangeStart, rangeSize) == 0);
       buffer.clear();
-    }    
+    }
   }
-  
+
   protected void verifyMemoryCacheBytes(int num) throws IOException {
     int bufferSize = safeBufferSize();
     byte[] buffer = new byte[bufferSize];
@@ -230,11 +226,11 @@ public class TestOffheapCacheGetRangeAPI {
       assertTrue(Utils.compareTo(buffer, 0, rangeSize, valuePtr + rangeStart, rangeSize) == 0);
     }
   }
-  
+
   protected long getExpire(int n) {
     return System.currentTimeMillis() + (n + 1) * 100000L;
   }
-  
+
   protected int nextKeySize() {
     int size = this.maxKeySize / 2 + r.nextInt(this.maxKeySize / 2);
     return size;
@@ -244,12 +240,12 @@ public class TestOffheapCacheGetRangeAPI {
     int size = 100 + r.nextInt(this.maxValueSize - 100);
     return size;
   }
-  
+
   private int safeBufferSize() {
     int bufSize = Utils.kvSize(maxKeySize, maxValueSize);
     return (bufSize / blockSize + 1) * blockSize;
   }
-  
+
   @Test
   public void testGetRangeAPIBytes() throws IOException {
     prepareData(numRecords);
@@ -258,9 +254,9 @@ public class TestOffheapCacheGetRangeAPI {
     verifyBytesCache(loaded);
     verifyBytesCacheBuffer(loaded);
   }
-  
+
   @Test
-  public void testGetRangeAPIMemory() throws IOException{
+  public void testGetRangeAPIMemory() throws IOException {
     prepareData(numRecords);
     int loaded = loadMemory();
     assertEquals(this.numRecords, loaded);

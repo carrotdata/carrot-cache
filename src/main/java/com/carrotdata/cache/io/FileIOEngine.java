@@ -1,19 +1,12 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
+ * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
+ * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ * for the specific language governing permissions and limitations under the License.
  */
 package com.carrotdata.cache.io;
 
@@ -57,25 +50,24 @@ public class FileIOEngine extends IOEngine {
   protected DataReader fileDataReader;
 
   private AtomicInteger activeSaveTasks = new AtomicInteger(0);
-  
-  private int ioStoragePoolSize = 32; 
-   
+
+  private int ioStoragePoolSize = 32;
+
   private BlockingQueue<Runnable> taskQueue;
-  
+
   private ExecutorService unboundedThreadPool;
+
   /**
    * Constructor
-   *
    * @param cacheName cache name
    */
   public FileIOEngine(String cacheName) {
     super(cacheName);
     initEngine();
   }
-  
+
   /**
    * Constructor
-   *
    * @param conf test configuration
    */
   public FileIOEngine(CacheConfig conf) {
@@ -91,19 +83,16 @@ public class FileIOEngine extends IOEngine {
       // This is actually unbounded queue (LinkedBlockingQueue w/o parameters)
       // and bounded thread pool - only coreThreads is maximum, maximum number of threads is ignored
       taskQueue = new LinkedBlockingQueue<>();
-      unboundedThreadPool = new ThreadPoolExecutor(
-        ioStoragePoolSize, Integer.MAX_VALUE, 
-        keepAliveTime, TimeUnit.SECONDS,
-        taskQueue);
+      unboundedThreadPool = new ThreadPoolExecutor(ioStoragePoolSize, Integer.MAX_VALUE,
+          keepAliveTime, TimeUnit.SECONDS, taskQueue);
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
       LOG.error("FATAL", e);
       throw new RuntimeException(e);
     }
   }
-  
+
   /**
    * IOEngine subclass can override this method
-   *
    * @param data data segment
    * @throws FileNotFoundException
    */
@@ -152,29 +141,21 @@ public class FileIOEngine extends IOEngine {
   }
 
   @Override
-  protected int getInternal(
-      int sid,
-      long offset,
-      int size,
-      byte[] key,
-      int keyOffset,
-      int keySize,
-      byte[] buffer,
-      int bufOffset)
-      throws IOException {
-    
+  protected int getInternal(int sid, long offset, int size, byte[] key, int keyOffset, int keySize,
+      byte[] buffer, int bufOffset) throws IOException {
+
     Segment s = getSegmentById(sid);
     if (s == null) {
       return NOT_FOUND;
     }
-    
+
     if (s.isOffheap()) {
-       return this.memoryDataReader.read(
-         this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset); 
+      return this.memoryDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer,
+        bufOffset);
     } else {
       long start = System.nanoTime();
-      int result = this.fileDataReader.read(
-        this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset);
+      int result = this.fileDataReader.read(this, key, keyOffset, keySize, sid, offset, size,
+        buffer, bufOffset);
       long end = System.nanoTime();
       this.totalIOReadDuration.addAndGet(end - start);
       return result;
@@ -182,51 +163,41 @@ public class FileIOEngine extends IOEngine {
   }
 
   @Override
-  protected int getRangeInternal(
-      int sid,
-      long offset,
-      int size,
-      byte[] key,
-      int keyOffset,
-      int keySize,
-      int rangeStart,
-      int rangeSize,
-      byte[] buffer,
-      int bufOffset)
-      throws IOException {
-    
+  protected int getRangeInternal(int sid, long offset, int size, byte[] key, int keyOffset,
+      int keySize, int rangeStart, int rangeSize, byte[] buffer, int bufOffset) throws IOException {
+
     Segment s = getSegmentById(sid);
     if (s == null) {
       return NOT_FOUND;
     }
-    
+
     if (s.isOffheap()) {
-       return this.memoryDataReader.readValueRange(
-         this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset, rangeStart, rangeSize); 
+      return this.memoryDataReader.readValueRange(this, key, keyOffset, keySize, sid, offset, size,
+        buffer, bufOffset, rangeStart, rangeSize);
     } else {
       long start = System.nanoTime();
-      int result = this.fileDataReader.readValueRange(
-        this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset, rangeStart, rangeSize);
+      int result = this.fileDataReader.readValueRange(this, key, keyOffset, keySize, sid, offset,
+        size, buffer, bufOffset, rangeStart, rangeSize);
       long end = System.nanoTime();
       this.totalIOReadDuration.addAndGet(end - start);
       return result;
     }
   }
-  
+
   @Override
-  protected int getInternal(
-      int sid, long offset, int size, byte[] key, int keyOffset, int keySize, ByteBuffer buffer)
-      throws IOException {
+  protected int getInternal(int sid, long offset, int size, byte[] key, int keyOffset, int keySize,
+      ByteBuffer buffer) throws IOException {
     Segment s = getSegmentById(sid);
     if (s == null) {
       return NOT_FOUND;
     }
-    
+
     if (s.isOffheap()) {
       return this.memoryDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
     } else {
       long start = System.nanoTime();
-      int result = this.fileDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
+      int result =
+          this.fileDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
       long end = System.nanoTime();
       this.totalIOReadDuration.addAndGet(end - start);
       return result;
@@ -234,42 +205,20 @@ public class FileIOEngine extends IOEngine {
   }
 
   @Override
-  protected int getRangeInternal(
-      int sid, long offset, int size, byte[] key, int keyOffset, int keySize,
-      int rangeStart, int rangeSize, ByteBuffer buffer)
-      throws IOException {
+  protected int getRangeInternal(int sid, long offset, int size, byte[] key, int keyOffset,
+      int keySize, int rangeStart, int rangeSize, ByteBuffer buffer) throws IOException {
     Segment s = getSegmentById(sid);
     if (s == null) {
       return NOT_FOUND;
     }
-    
+
     if (s.isOffheap()) {
-      return this.memoryDataReader.readValueRange(this, key, keyOffset, keySize, 
-        sid, offset, size, buffer, rangeStart, rangeSize);
+      return this.memoryDataReader.readValueRange(this, key, keyOffset, keySize, sid, offset, size,
+        buffer, rangeStart, rangeSize);
     } else {
       long start = System.nanoTime();
-      int result = this.fileDataReader.readValueRange(this, key, keyOffset, keySize, 
-        sid, offset, size, buffer, rangeStart, rangeSize);
-      long end = System.nanoTime();
-      this.totalIOReadDuration.addAndGet(end - start);
-      return result;
-    }
-  }
-  
-  @Override
-  protected int getInternal(
-      int sid, long offset, int size, long keyPtr, int keySize, byte[] buffer, int bufOffset)
-      throws IOException {
-    Segment s = getSegmentById(sid);
-    if (s == null) {
-      return NOT_FOUND;
-    }
-    
-    if (s.isOffheap()) {
-      return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
-    } else {
-      long start = System.nanoTime();
-      int result = this.fileDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
+      int result = this.fileDataReader.readValueRange(this, key, keyOffset, keySize, sid, offset,
+        size, buffer, rangeStart, rangeSize);
       long end = System.nanoTime();
       this.totalIOReadDuration.addAndGet(end - start);
       return result;
@@ -277,37 +226,55 @@ public class FileIOEngine extends IOEngine {
   }
 
   @Override
-  protected int getRangeInternal(
-      int sid, long offset, int size, long keyPtr, int keySize, int rangeStart, 
-      int rangeSize, byte[] buffer, int bufOffset)
-      throws IOException {
+  protected int getInternal(int sid, long offset, int size, long keyPtr, int keySize, byte[] buffer,
+      int bufOffset) throws IOException {
     Segment s = getSegmentById(sid);
     if (s == null) {
       return NOT_FOUND;
     }
-    
+
     if (s.isOffheap()) {
-      return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, offset,
-        size, buffer, bufOffset, rangeStart, rangeSize);
+      return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer,
+        bufOffset);
     } else {
       long start = System.nanoTime();
-      int result = this.fileDataReader.readValueRange(this, keyPtr, keySize, sid, offset, 
-        size, buffer, bufOffset, rangeStart, rangeSize);
+      int result =
+          this.fileDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
       long end = System.nanoTime();
       this.totalIOReadDuration.addAndGet(end - start);
       return result;
     }
   }
-  
+
   @Override
-  protected int getInternal(
-      int sid, long offset, int size, long keyPtr, int keySize, ByteBuffer buffer)
-      throws IOException {
+  protected int getRangeInternal(int sid, long offset, int size, long keyPtr, int keySize,
+      int rangeStart, int rangeSize, byte[] buffer, int bufOffset) throws IOException {
     Segment s = getSegmentById(sid);
     if (s == null) {
       return NOT_FOUND;
     }
-    
+
+    if (s.isOffheap()) {
+      return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, offset, size, buffer,
+        bufOffset, rangeStart, rangeSize);
+    } else {
+      long start = System.nanoTime();
+      int result = this.fileDataReader.readValueRange(this, keyPtr, keySize, sid, offset, size,
+        buffer, bufOffset, rangeStart, rangeSize);
+      long end = System.nanoTime();
+      this.totalIOReadDuration.addAndGet(end - start);
+      return result;
+    }
+  }
+
+  @Override
+  protected int getInternal(int sid, long offset, int size, long keyPtr, int keySize,
+      ByteBuffer buffer) throws IOException {
+    Segment s = getSegmentById(sid);
+    if (s == null) {
+      return NOT_FOUND;
+    }
+
     if (s.isOffheap()) {
       return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer);
     } else {
@@ -320,28 +287,26 @@ public class FileIOEngine extends IOEngine {
   }
 
   @Override
-  protected int getRangeInternal(
-      int sid, long offset, int size, long keyPtr, int keySize, 
-      int rangeStart, int rangeSize, ByteBuffer buffer)
-      throws IOException {
+  protected int getRangeInternal(int sid, long offset, int size, long keyPtr, int keySize,
+      int rangeStart, int rangeSize, ByteBuffer buffer) throws IOException {
     Segment s = getSegmentById(sid);
     if (s == null) {
       return NOT_FOUND;
     }
-    
+
     if (s.isOffheap()) {
-      return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, 
-        offset, size, buffer, rangeStart, rangeSize);
+      return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, offset, size, buffer,
+        rangeStart, rangeSize);
     } else {
       long start = System.nanoTime();
-      int result = this.fileDataReader.readValueRange(this, keyPtr, keySize, sid, offset, 
-        size, buffer, rangeStart, rangeSize);
+      int result = this.fileDataReader.readValueRange(this, keyPtr, keySize, sid, offset, size,
+        buffer, rangeStart, rangeSize);
       long end = System.nanoTime();
       this.totalIOReadDuration.addAndGet(end - start);
       return result;
     }
   }
-  
+
   OutputStream getOSFor(int id) throws FileNotFoundException {
     Path p = getPathForDataSegment(id);
     FileOutputStream fos = new FileOutputStream(p.toFile());
@@ -361,7 +326,6 @@ public class FileIOEngine extends IOEngine {
 
   /**
    * Get file for by segment id
-   *
    * @param id segment id
    * @return file
    */
@@ -394,15 +358,14 @@ public class FileIOEngine extends IOEngine {
 
   /**
    * Get file prefetch buffer size
-   *
    * @return prefetch buffer size
    */
   public int getFilePrefetchBufferSize() {
     return this.config.getFilePrefetchBufferSize(this.cacheName);
   }
+
   /**
    * Get file path for a data segment
-   *
    * @param id data segment id
    * @return path to a file
    */
@@ -429,7 +392,7 @@ public class FileIOEngine extends IOEngine {
   }
 
   private void saveRAMSegments() throws IOException {
-    for(int i = 0; i < ramBuffers.length; i++) {
+    for (int i = 0; i < ramBuffers.length; i++) {
       Segment s = ramBuffers[i];
       if (s == null) {
         continue;
@@ -449,7 +412,7 @@ public class FileIOEngine extends IOEngine {
   }
 
   private void loadSegments() throws IOException {
-    try (Stream<Path> list = Files.list(Paths.get(dataDir)); ) {
+    try (Stream<Path> list = Files.list(Paths.get(dataDir));) {
       Iterator<Path> it = list.iterator();
       while (it.hasNext()) {
         Path p = it.next();
@@ -461,9 +424,9 @@ public class FileIOEngine extends IOEngine {
       }
     }
   }
-  
+
   private void waitForIoStoragePool() {
-    while(this.activeSaveTasks.get() > 0) {
+    while (this.activeSaveTasks.get() > 0) {
       try {
         Thread.sleep(10);
       } catch (InterruptedException e) {
@@ -471,31 +434,31 @@ public class FileIOEngine extends IOEngine {
       }
     }
   }
-  
+
   @Override
   public void dispose() {
     waitForIoStoragePool();
     super.dispose();
     int count = 0;
-    for (RandomAccessFile f: this.dataFiles.values()) {
+    for (RandomAccessFile f : this.dataFiles.values()) {
       try {
         f.close();
         count++;
-      } catch(IOException e) {
+      } catch (IOException e) {
         // swallow
         LOG.error("Error:", e);
       }
     }
     LOG.debug("Closed {} files", count);
   }
-  
+
   @Override
   public void shutdown() {
     super.shutdown();
     waitForIoStoragePool();
     // should we close files? They are read only
   }
-  
+
   @Override
   protected boolean isOffheap() {
     return false;

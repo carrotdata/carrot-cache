@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.io;
 
@@ -28,7 +28,7 @@ import com.carrotdata.cache.util.Utils;
 
 public class WriteBatch implements Persistent {
   /**
-   *  Data block or batch recommended size
+   * Data block or batch recommended size
    */
   private int batchSize;
   /**
@@ -36,31 +36,30 @@ public class WriteBatch implements Persistent {
    */
   private int capacity;
   /**
-   *  Position of written so far data (key and values), when object is created 
-   *  this value must be equals to META size
+   * Position of written so far data (key and values), when object is created this value must be
+   * equals to META size
    */
   private volatile int position;
-  
+
   /**
-   * Memory pointer to the allocated buffer
-   * which keeps all batched data
+   * Memory pointer to the allocated buffer which keeps all batched data
    */
   private long memory;
-  
+
   /**
-   * Write batch id. It is used as the write batch address
-   * for look up operations
+   * Write batch id. It is used as the write batch address for look up operations
    */
   private int id;
 
   private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-  
+
   /**
    * Empty ctor
    */
   WriteBatch() {
-    
+
   }
+
   /**
    * Nice ctor
    * @param pageSize page size
@@ -73,14 +72,14 @@ public class WriteBatch implements Persistent {
     this.memory = UnsafeAccess.mallocZeroed(this.capacity);
   }
 
-  /** 
+  /**
    * Gets memory buffer address
    * @return address
    */
   long memory() {
     return this.memory;
   }
-  
+
   /**
    * Gets page size
    * @return page size
@@ -88,7 +87,7 @@ public class WriteBatch implements Persistent {
   int batchSize() {
     return this.batchSize;
   }
-  
+
   /**
    * Gets batch capacity
    * @return capacity
@@ -96,7 +95,7 @@ public class WriteBatch implements Persistent {
   int capacity() {
     return this.capacity;
   }
-  
+
   /**
    * Gets current write position
    * @return write position
@@ -104,18 +103,18 @@ public class WriteBatch implements Persistent {
   int position() {
     return this.position;
   }
- 
+
   boolean isFull() {
     return this.position >= this.batchSize;
   }
-  
+
   /**
    * Write key, value, time stamp to this buffer
    * @param keyPtr key address
    * @param keySize key size
    * @param valuePtr value address
    * @param valueSize value size
-   * @return record offset in the batch buffer or -1 if full 
+   * @return record offset in the batch buffer or -1 if full
    */
   int addOrUpdate(long keyPtr, int keySize, long valuePtr, int valueSize) {
     try {
@@ -162,6 +161,7 @@ public class WriteBatch implements Persistent {
       lock.writeLock().unlock();
     }
   }
+
   /**
    * Write key, value, time stamp to this buffer
    * @param key key buffer
@@ -219,7 +219,7 @@ public class WriteBatch implements Persistent {
       lock.writeLock().unlock();
     }
   }
-  
+
   /**
    * Get key - value by key
    * @param keyPtr key pointer
@@ -228,7 +228,7 @@ public class WriteBatch implements Persistent {
    * @param bufferSize buffer size
    * @return size of a key - value, caller must check return value
    */
-  int get(long keyPtr, int keySize, long buffer, int bufferSize) {  
+  int get(long keyPtr, int keySize, long buffer, int bufferSize) {
     try {
       lock.readLock().lock();
       int off = find(keyPtr, keySize);
@@ -249,16 +249,16 @@ public class WriteBatch implements Persistent {
       lock.readLock().unlock();
     }
   }
-  
+
   /**
    * Get value by key
    * @param keyPtr key pointer
    * @param keySize key size
-   * @param buffer byte buffer 
+   * @param buffer byte buffer
    * @param bufferOffset buffer offset
    * @return size of a value, caller must check return value
    */
-  int get(long keyPtr, int keySize, byte[] buffer, int bufferOffset) {  
+  int get(long keyPtr, int keySize, byte[] buffer, int bufferOffset) {
     try {
       lock.readLock().lock();
       int off = find(keyPtr, keySize);
@@ -279,7 +279,7 @@ public class WriteBatch implements Persistent {
       lock.readLock().unlock();
     }
   }
-  
+
   /**
    * Get value by key
    * @param key key buffer
@@ -289,7 +289,7 @@ public class WriteBatch implements Persistent {
    * @param bufferSize buffer size
    * @return size of a value, caller must check return value
    */
-  int get(byte[] key, int keyOffset, int keySize, long buffer, int bufferSize) {  
+  int get(byte[] key, int keyOffset, int keySize, long buffer, int bufferSize) {
     try {
       lock.readLock().lock();
       int off = find(key, keyOffset, keySize);
@@ -310,7 +310,7 @@ public class WriteBatch implements Persistent {
       lock.readLock().unlock();
     }
   }
-  
+
   /**
    * Get value by key
    * @param key key buffer
@@ -320,7 +320,7 @@ public class WriteBatch implements Persistent {
    * @param bufferOffset buffer offset
    * @return size of a value, caller must check return value
    */
-  int get(byte[] key, int keyOffset, int keySize, byte[] buffer, int bufferOffset) {  
+  int get(byte[] key, int keyOffset, int keySize, byte[] buffer, int bufferOffset) {
     try {
       lock.readLock().lock();
       int off = find(key, keyOffset, keySize);
@@ -341,7 +341,7 @@ public class WriteBatch implements Persistent {
       lock.readLock().unlock();
     }
   }
-  
+
   /**
    * Get value by key
    * @param key key buffer
@@ -351,7 +351,7 @@ public class WriteBatch implements Persistent {
    * @return size of a value, caller must check return value
    */
   public int get(byte[] key, int keyOffset, int keySize, ByteBuffer buffer) {
-    
+
     if (buffer.hasArray()) {
       byte[] buf = buffer.array();
       int off = buffer.position();
@@ -360,23 +360,24 @@ public class WriteBatch implements Persistent {
       if (size > avail) {
         return size;
       } else if (size >= 0) {
-        //buffer.position(off + size);
+        // buffer.position(off + size);
         return size;
       }
     } else {
       long ptr = UnsafeAccess.address(buffer);
       int off = buffer.position();
       int avail = buffer.remaining();
-      int size = get(key, keyOffset, keySize,ptr + off, avail);
+      int size = get(key, keyOffset, keySize, ptr + off, avail);
       if (size > avail) {
         return size;
       } else if (size >= 0) {
-       // buffer.position(off + size);
+        // buffer.position(off + size);
         return size;
       }
     }
     return -1;
   }
+
   /**
    * Get value by key
    * @param keyPtr key pointer
@@ -393,7 +394,7 @@ public class WriteBatch implements Persistent {
       if (size > avail) {
         return size;
       } else if (size >= 0) {
-        //buffer.position(off + size);
+        // buffer.position(off + size);
         return size;
       }
     } else {
@@ -404,13 +405,13 @@ public class WriteBatch implements Persistent {
       if (size > avail) {
         return size;
       } else if (size >= 0) {
-        //buffer.position(off + size);
+        // buffer.position(off + size);
         return size;
       }
     }
     return -1;
   }
-  
+
   private int find(final long keyPtr, final int keySize) {
     final long ptr = this.memory;
     int off = 0;
@@ -428,7 +429,7 @@ public class WriteBatch implements Persistent {
     }
     return -1; // Not found
   }
-  
+
   private int find(final byte[] key, final int keyOffset, final int keySize) {
     final long ptr = this.memory;
     int off = 0;
@@ -445,15 +446,15 @@ public class WriteBatch implements Persistent {
     }
     return -1; // Not found
   }
-  
+
   void writeLock() {
     lock.writeLock().lock();
   }
-  
+
   void writeUnlock() {
     lock.writeLock().unlock();
   }
-  
+
   /**
    * Resets batch, makes it ready to accept new writes
    */
@@ -466,14 +467,14 @@ public class WriteBatch implements Persistent {
       lock.writeLock().unlock();
     }
   }
+
   /**
-   * Deallocates memory
-   * For testing only
+   * Deallocates memory For testing only
    */
   void dispose() {
     UnsafeAccess.free(this.memory);
   }
-  
+
   /**
    * Checks if its empty
    * @return
@@ -481,13 +482,14 @@ public class WriteBatch implements Persistent {
   boolean isEmpty() {
     return this.position == 0;
   }
+
   /*
-   * Sets Write batch id. This Id is used as the address identifier
-   * for look-up operations
+   * Sets Write batch id. This Id is used as the address identifier for look-up operations
    */
   void setId(int id) {
     this.id = id;
   }
+
   /**
    * Get write batch id
    * @return id
@@ -495,23 +497,23 @@ public class WriteBatch implements Persistent {
   int getId() {
     return this.id;
   }
-  
+
   /**
-   *  Get rank of segment group this batch belongs to
+   * Get rank of segment group this batch belongs to
    * @return rank
    */
   int getRank() {
     return -this.id >>> 16;
   }
-  
+
   /**
    * Get thread id which this batch belongs to
    * @return
    */
-  int getThreadId () {
+  int getThreadId() {
     return (-this.id & 0xffff) - 2;
   }
-  
+
   /**
    * Does this batch accepts writes
    * @return true if accepts, false otherwise
@@ -548,5 +550,5 @@ public class WriteBatch implements Persistent {
       UnsafeAccess.copy(buf, 0, this.memory, buf.length);
     }
   }
-  
+
 }

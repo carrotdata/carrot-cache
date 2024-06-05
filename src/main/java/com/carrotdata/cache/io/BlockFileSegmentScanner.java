@@ -1,19 +1,12 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
+ * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
+ * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ * for the specific language governing permissions and limitations under the License.
  */
 package com.carrotdata.cache.io;
 
@@ -26,32 +19,31 @@ import java.nio.ByteBuffer;
 
 import com.carrotdata.cache.util.Utils;
 
-
 public final class BlockFileSegmentScanner implements SegmentScanner {
 
-  /** Data segment*/
+  /** Data segment */
   Segment segment;
   /** File */
   RandomAccessFile file;
-  
+
   /** Number of entries in the segment */
   int numEntries;
-  
+
   /** Current entry */
   int currentEntry = 0;
-  
+
   /** Prefetch buffer */
   PrefetchBuffer pBuffer;
-  
+
   /** Block size */
   int blockSize;
-  
+
   /** Current block data size */
   int currentBlockDataSize = 0;
-  
+
   /* Offset in a current block */
   int currentBlockOffset = 0;
-  
+
   public BlockFileSegmentScanner(Segment s, FileIOEngine engine, int blockSize) throws IOException {
     this.segment = s;
     this.file = engine.getOrCreateFileFor(s.getId());
@@ -68,7 +60,7 @@ public final class BlockFileSegmentScanner implements SegmentScanner {
     fileOffset -= Segment.META_SIZE;
     if (fileOffset > 0) {
       // When fileOffset % blockSize == 0, skip == 0, that is why we subtract 1
-      int skip = (int) (((fileOffset -1)/blockSize  + 1) * blockSize  - fileOffset);
+      int skip = (int) (((fileOffset - 1) / blockSize + 1) * blockSize - fileOffset);
       this.pBuffer.skip(skip);
     }
     byte[] buffer = this.pBuffer.getBuffer();
@@ -77,7 +69,7 @@ public final class BlockFileSegmentScanner implements SegmentScanner {
     this.pBuffer.skip(META_SIZE);
     this.currentBlockOffset = 0;
   }
-  
+
   @Override
   public boolean hasNext() throws IOException {
     // TODO Auto-generated method stub
@@ -133,7 +125,7 @@ public final class BlockFileSegmentScanner implements SegmentScanner {
 
   @Override
   public void close() throws IOException {
-    //FIXME
+    // FIXME
     file.close();
   }
 

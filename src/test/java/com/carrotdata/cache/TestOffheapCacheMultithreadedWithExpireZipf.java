@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache;
 
@@ -30,18 +30,19 @@ import com.carrotdata.cache.eviction.SLRUEvictionPolicy;
 import com.carrotdata.cache.index.CompactBaseWithExpireIndexFormat;
 
 public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultithreadedZipfBase {
-  private static final Logger LOG = LoggerFactory.getLogger(TestOffheapCacheMultithreadedWithExpireZipf.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestOffheapCacheMultithreadedWithExpireZipf.class);
 
   protected int binStartValue = 1;
-  
+
   protected double binMultiplier = 2.0;
-  
+
   protected int numberOfBins = 10; // number of ranks
-  
-  protected int[] expArray = new int[] {2, 2, 2, 2, 500, 500, 500, 1000, 1000, 1000, 1000, 1000};
-  
+
+  protected int[] expArray = new int[] { 2, 2, 2, 2, 500, 500, 500, 1000, 1000, 1000, 1000, 1000 };
+
   Random r;
-  
+
   @Before
   public void setUp() {
     this.offheap = true;
@@ -58,21 +59,20 @@ public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultit
     this.acClz = AQBasedExpirationAwareAdmissionController.class;
     r = new Random();
   }
-  
+
   @Override
   protected Builder withAddedConfigurations(Builder b) {
-     b = b.withExpireStartBinValue(binStartValue)
-         .withExpireBinMultiplier(binMultiplier)
-         .withNumberOfPopularityRanks(numberOfBins)
-         .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName());
-     return b;
+    b = b.withExpireStartBinValue(binStartValue).withExpireBinMultiplier(binMultiplier)
+        .withNumberOfPopularityRanks(numberOfBins)
+        .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName());
+    return b;
   }
-  
+
   protected long getExpire(int n) {
     int index = r.nextInt(expArray.length);
     return System.currentTimeMillis() + 1000L * expArray[index];
   }
-  
+
   @Test
   public void testLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
     LOG.info("Bytes API: eviction=LRU, selector=MinAlive");
@@ -82,7 +82,7 @@ public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultit
     this.rsClz = MinAliveRecyclingSelector.class;
     super.testContinuosLoadBytesRun();
   }
-  
+
   @Test
   public void testSLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
     LOG.info("Bytes API: eviction=SLRU, selector=MinAlive");
@@ -92,7 +92,7 @@ public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultit
     this.rsClz = MinAliveRecyclingSelector.class;
     super.testContinuosLoadBytesRun();
   }
-  
+
   @Test
   public void testLRUEvictionAndLRCSelectorBytesAPI() throws IOException {
     LOG.info("Bytes API: eviction=LRU, selector=LRC");
@@ -102,7 +102,7 @@ public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultit
     this.rsClz = LRCRecyclingSelector.class;
     super.testContinuosLoadBytesRun();
   }
-  
+
   @Test
   public void testSLRUEvictionAndLRCSelectorBytesAPI() throws IOException {
     LOG.info("Bytes API: eviction=SLRU, selector=LRC");

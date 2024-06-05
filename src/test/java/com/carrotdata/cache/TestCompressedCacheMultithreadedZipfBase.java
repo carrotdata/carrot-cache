@@ -25,18 +25,18 @@ import com.carrotdata.cache.util.TestUtils;
 import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
-
-public abstract class TestCompressedCacheMultithreadedZipfBase extends TestCacheMultithreadedZipfBase {
+public abstract class TestCompressedCacheMultithreadedZipfBase
+    extends TestCacheMultithreadedZipfBase {
 
   protected boolean dictionaryEnabled = true;
   protected boolean asyncTrainingMode = true;
   protected int dictionarySize = 1 << 16;
-  protected int compLevel = 3; 
-  
+  protected int compLevel = 3;
+
   protected List<byte[]> bValues;
   protected List<Long> mValues;
-  
-  @After  
+
+  @After
   public void tearDown() throws IOException {
     super.tearDown();
     cleanDictionaries();
@@ -45,7 +45,7 @@ public abstract class TestCompressedCacheMultithreadedZipfBase extends TestCache
     // Release memory
     mValues.stream().forEach(x -> UnsafeAccess.free(x));
   }
-  
+
   @Before
   public void setUp() throws IOException, URISyntaxException {
     this.offheap = true;
@@ -58,7 +58,7 @@ public abstract class TestCompressedCacheMultithreadedZipfBase extends TestCache
     bValues = TestUtils.loadGithubDataAsBytes();
     mValues = TestUtils.loadGithubDataAsMemory();
   }
-  
+
   /**
    * Subclasses may override
    * @param b builder instance
@@ -66,7 +66,7 @@ public abstract class TestCompressedCacheMultithreadedZipfBase extends TestCache
    */
   @Override
   protected Builder withAddedConfigurations(Builder b) {
-       
+
     b.withDataWriter(CompressedBlockBatchDataWriter.class.getName());
     b.withMemoryDataReader(CompressedBlockMemoryDataReader.class.getName());
     b.withFileDataReader(CompressedBlockFileDataReader.class.getName());
@@ -78,7 +78,7 @@ public abstract class TestCompressedCacheMultithreadedZipfBase extends TestCache
     b.withCacheCompressionKeysEnabled(true);
     b.withCacheCompressionDictionarySize(dictionarySize);
     b.withCacheCompressionLevel(compLevel);
-    
+
     try {
       initCodecs();
     } catch (IOException e) {
@@ -86,24 +86,24 @@ public abstract class TestCompressedCacheMultithreadedZipfBase extends TestCache
     }
     return b;
   }
-  
+
   private byte[] getKey(int n) {
     return ("KEY:" + n).getBytes();
   }
-  
+
   @Override
   protected final boolean loadBytesStream(int n) throws IOException {
-   
+
     byte[] key = getKey(n);
     byte[] value = bValues.get(n % bValues.size());
     long expire = getExpire(n);
     boolean result = this.cache.put(key, value, expire);
     return result;
   }
-  
+
   @Override
   protected final boolean verifyBytesStream(int n, byte[] buffer) throws IOException {
-    
+
     byte[] key = getKey(n);
     byte[] value = bValues.get(n % bValues.size());
     long expSize = Utils.kvSize(key.length, value.length);
@@ -123,16 +123,16 @@ public abstract class TestCompressedCacheMultithreadedZipfBase extends TestCache
       assertTrue(Utils.compareTo(buffer, off, kSize, key, 0, key.length) == 0);
       off += kSize;
       assertTrue(Utils.compareTo(buffer, off, vSize, value, 0, value.length) == 0);
-      
-    } catch(AssertionError e) {
+
+    } catch (AssertionError e) {
       return false;
-    } 
+    }
     return true;
   }
 
   @Override
   protected final boolean loadMemoryStream(int n) throws IOException {
-    
+
     byte[] key = getKey(n);
     int keySize = key.length;
     long keyPtr = TestUtils.copyToMemory(key);
@@ -143,7 +143,7 @@ public abstract class TestCompressedCacheMultithreadedZipfBase extends TestCache
     UnsafeAccess.free(keyPtr);
     return result;
   }
-  
+
   @Override
   protected final boolean verifyMemoryStream(int n, ByteBuffer buffer) throws IOException {
 
@@ -184,17 +184,17 @@ public abstract class TestCompressedCacheMultithreadedZipfBase extends TestCache
     }
     return true;
   }
-  
+
   protected void cleanDictionaries() {
     cleanDictionaries(this.parentCacheName);
     cleanDictionaries(this.victimCacheName);
   }
-  
+
   protected void initCodecs() throws IOException {
     initCodec(parentCacheName);
     initCodec(victimCacheName);
   }
-  
+
   protected void cleanDictionaries(String cacheName) {
     // Clean up dictionaries
     CacheConfig config = CacheConfig.getInstance();
@@ -202,13 +202,13 @@ public abstract class TestCompressedCacheMultithreadedZipfBase extends TestCache
     File dir = new File(dictDir);
     if (dir.exists()) {
       File[] files = dir.listFiles();
-      Arrays.stream(files).forEach( x -> x.delete());
+      Arrays.stream(files).forEach(x -> x.delete());
     }
   }
-  
+
   protected void initCodec(String cacheName) throws IOException {
     CodecFactory factory = CodecFactory.getInstance();
-    //factory.clear();
+    // factory.clear();
     CompressionCodec codec = factory.getCompressionCodecForCache(cacheName);
     if (codec == null) {
       factory.initCompressionCodecForCache(cacheName, null);

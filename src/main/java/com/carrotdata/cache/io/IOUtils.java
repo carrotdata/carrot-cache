@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.io;
 
@@ -18,12 +18,12 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
+
 /** Utility class for network and file I/O related code */
 public class IOUtils {
 
   /**
    * Drain byte buffer to a file channel
-   *
    * @param buf byte buffer
    * @param fc file channel
    * @throws IOException
@@ -38,7 +38,6 @@ public class IOUtils {
 
   /**
    * Load no less than required number of bytes to a byte buffer
-   *
    * @param fc file channel
    * @param buf byte buffer
    * @param required required number of bytes
@@ -80,6 +79,7 @@ public class IOUtils {
     }
     return avail;
   }
+
   /**
    * Reads data from a file into a buffer under lock
    * @param file file
@@ -99,7 +99,6 @@ public class IOUtils {
 
   /**
    * Reads data from a file into a buffer under lock
-   *
    * @param file file
    * @param fileOffset offset at a file
    * @param buffer buffer to read into
@@ -124,5 +123,3 @@ public class IOUtils {
     }
   }
 }
-  
-    

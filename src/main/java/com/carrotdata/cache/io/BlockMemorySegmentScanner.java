@@ -1,19 +1,12 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
+ * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
+ * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ * for the specific language governing permissions and limitations under the License.
  */
 package com.carrotdata.cache.io;
 
@@ -26,29 +19,19 @@ import java.nio.ByteBuffer;
 import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
-
 /**
-   * Segment scanner
-   * 
-   * Usage:
-   * 
-   * while(scanner.hasNext()){
-   *   // do job
-   *   // ...
-   *   // next()
-   *   scanner.next();
-   * }
-   */
+ * Segment scanner Usage: while(scanner.hasNext()){ // do job // ... // next() scanner.next(); }
+ */
 public final class BlockMemorySegmentScanner implements SegmentScanner {
   /*
    * Data segment
    */
   Segment segment;
   /*
-   * Current scanner index 
+   * Current scanner index
    */
   int currentItemIndex = 0;
-  
+
   /**
    * Total number of items in a segment
    */
@@ -57,31 +40,31 @@ public final class BlockMemorySegmentScanner implements SegmentScanner {
    * Current offset in a parent segment
    */
   int segmentOffset = 0;
-  
+
   /**
    * Offset in a current block
    */
   int blockOffset = 0;
-  
+
   /**
    * Block data size
    */
   int blockDataSize = 0;
-  
+
   /**
    * Block size
    */
   int blockSize;
-  
+
   /**
    * Current block number
    */
   int currentBlockIndex = -1;
-  
+
   /*
    * Private constructor
    */
-  BlockMemorySegmentScanner(Segment s, int blockSize){
+  BlockMemorySegmentScanner(Segment s, int blockSize) {
     // Make sure it is sealed
     if (s.isSealed() == false) {
       throw new RuntimeException("segment is not sealed");
@@ -93,25 +76,25 @@ public final class BlockMemorySegmentScanner implements SegmentScanner {
     this.currentBlockIndex = -1;
     initNextBlock();
   }
-  
-  
+
   private void initNextBlock() {
-    int blockIndexIncrement = this.currentBlockIndex < 0? 1: ((this.blockDataSize + META_SIZE - 1) / this.blockSize + 1);
+    int blockIndexIncrement = this.currentBlockIndex < 0 ? 1
+        : ((this.blockDataSize + META_SIZE - 1) / this.blockSize + 1);
     this.currentBlockIndex += blockIndexIncrement;
     this.segmentOffset = this.currentBlockIndex * this.blockSize;
     this.blockDataSize = getBlockDataSize(this.segment.getAddress() + this.segmentOffset);
     this.blockOffset = META_SIZE;
-    
+
   }
-  
+
   public boolean hasNext() {
     return this.currentItemIndex < this.totalItems;
   }
-  
+
   public boolean next() {
-    
+
     this.currentItemIndex++;
-    
+
     if (this.currentItemIndex == this.totalItems) {
       return false;
     }
@@ -131,7 +114,7 @@ public final class BlockMemorySegmentScanner implements SegmentScanner {
     }
     return true;
   }
-  
+
   /**
    * Get expiration time of a current cached entry
    * @return expiration time
@@ -140,7 +123,7 @@ public final class BlockMemorySegmentScanner implements SegmentScanner {
   public final long getExpire() {
     return -1;
   }
-  
+
   /**
    * Get key size of a current cached entry
    * @return key size
@@ -149,12 +132,12 @@ public final class BlockMemorySegmentScanner implements SegmentScanner {
     long ptr = segment.getAddress();
     return Utils.readUVInt(ptr + this.segmentOffset + this.blockOffset);
   }
-  
+
   /**
    * Get current value size
    * @return value size
    */
-  
+
   public final int valueLength() {
     long ptr = segment.getAddress();
     int off = this.segmentOffset + this.blockOffset;
@@ -163,7 +146,7 @@ public final class BlockMemorySegmentScanner implements SegmentScanner {
     off += keySizeSize;
     return Utils.readUVInt(ptr + off);
   }
-  
+
   /**
    * Get current key's address
    * @return keys address
@@ -179,7 +162,7 @@ public final class BlockMemorySegmentScanner implements SegmentScanner {
     off += valueSizeSize;
     return ptr + off;
   }
-  
+
   /**
    * Get current value's address
    * @return values address
@@ -228,7 +211,7 @@ public final class BlockMemorySegmentScanner implements SegmentScanner {
       return keySize;
     }
     long keyAddress = keyAddress();
-    UnsafeAccess.copy(keyAddress, buffer, offset, keySize); 
+    UnsafeAccess.copy(keyAddress, buffer, offset, keySize);
     return keySize;
   }
 
@@ -243,12 +226,10 @@ public final class BlockMemorySegmentScanner implements SegmentScanner {
     return valueSize;
   }
 
-
   @Override
   public Segment getSegment() {
     return this.segment;
   }
-
 
   @Override
   public final long getOffset() {

@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache;
 
@@ -50,13 +50,13 @@ public abstract class TestCacheBase extends IOTestBase {
   double scavDumpBelowRatio = 0.5;
   double minActiveRatio = 0.90;
   int maxKeyValueSize = 0;
-  
+
   String recycleSelector = MinAliveRecyclingSelector.class.getName();
   String dataWriter = BlockDataWriter.class.getName();
   String dataReaderMemory = BlockMemoryDataReader.class.getName();
   String dataReaderFile = BlockFileDataReader.class.getName();
   String indexFormat = CompactBlockWithExpireIndexFormat.class.getName();
-  
+
   @Before
   public void setUp() throws IOException {
     this.r = new Random();
@@ -66,41 +66,34 @@ public abstract class TestCacheBase extends IOTestBase {
     this.numRecords = 150000;
 
   }
-  
+
   @After
   public void tearDown() throws IOException {
     super.tearDown();
     cache.dispose();
     TestUtils.deleteCacheFiles(cache);
   }
-  
+
   protected Cache createCache() throws IOException {
     return createCache("cache");
   }
-  
+
   protected Cache createCache(String cacheName) throws IOException {
     // Data directory
     Path path = Files.createTempDirectory(null);
-    File  dir = path.toFile();
+    File dir = path.toFile();
     dir.deleteOnExit();
     String rootDir = dir.getAbsolutePath();
-    
+
     Builder builder = new Builder(cacheName);
-    
-    builder
-      .withCacheDataSegmentSize(segmentSize)
-      .withCacheMaximumSize(maxCacheSize)
-      .withScavengerRunInterval(scavengerInterval)
-      .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
-      .withRecyclingSelector(recycleSelector)
-      .withDataWriter(dataWriter)
-      .withMemoryDataReader(dataReaderMemory)
-      .withFileDataReader(dataReaderFile)
-      .withMainQueueIndexFormat(indexFormat)
-      .withCacheRootDir(rootDir)
-      .withMinimumActiveDatasetRatio(minActiveRatio)
-      .withCacheStreamingSupportBufferSize(1 << 19)
-      .withEvictionDisabledMode(true);
+
+    builder.withCacheDataSegmentSize(segmentSize).withCacheMaximumSize(maxCacheSize)
+        .withScavengerRunInterval(scavengerInterval)
+        .withScavengerDumpEntryBelowMin(scavDumpBelowRatio).withRecyclingSelector(recycleSelector)
+        .withDataWriter(dataWriter).withMemoryDataReader(dataReaderMemory)
+        .withFileDataReader(dataReaderFile).withMainQueueIndexFormat(indexFormat)
+        .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
+        .withCacheStreamingSupportBufferSize(1 << 19).withEvictionDisabledMode(true);
     if (maxKeyValueSize > 0) {
       builder.withMaximumKeyValueSize(maxKeyValueSize);
     }
@@ -110,12 +103,12 @@ public abstract class TestCacheBase extends IOTestBase {
       return builder.buildDiskCache();
     }
   }
-  
+
   @Override
   protected long getExpire(int n) {
     return System.currentTimeMillis() + expireTime;
   }
-  
+
   @Test
   public void testBigKeyValue() throws IOException {
     LOG.info("Test big key value");
@@ -123,10 +116,10 @@ public abstract class TestCacheBase extends IOTestBase {
     this.maxKeyValueSize = 100000;
     Scavenger.clear();
     this.cache = createCache();
-    
+
     byte[] key = new byte[20];
     byte[] value = new byte[maxKeyValueSize - 30];
-    
+
     boolean result = cache.put(key, value, 0);
     assertTrue(result);
 
@@ -134,146 +127,146 @@ public abstract class TestCacheBase extends IOTestBase {
     result = cache.put(key, value, 0);
     assertFalse(result);
   }
-  
+
   protected void prepareData() {
     prepareRandomData(numRecords);
   }
-  
+
   @Test
   public void testAllExpiredBytes() throws IOException {
     LOG.info("Test all expired bytes");
     Scavenger.clear();
     // Create cache
     this.cache = createCache();
-    this.expireTime = 1000; 
+    this.expireTime = 1000;
     prepareData();
     int loaded = loadBytesCache(cache);
     LOG.info("loaded=" + loaded);
     // Wait expireTime
     try {
       Thread.sleep(expireTime);
-    } catch(InterruptedException e) {
-      
+    } catch (InterruptedException e) {
+
     }
     long allocated = cache.getStorageAllocated();
     long used = cache.getRawDataSize();
     long size = cache.size();
     long activeSize = cache.activeSize();
-    LOG.info("Before scan: allocated={}, used={}, size={}, active={}", 
-      allocated, used, size, activeSize);
+    LOG.info("Before scan: allocated={}, used={}, size={}, active={}", allocated, used, size,
+      activeSize);
     // Access all objects to remove them from memory index
     // and from data segments statistics
     verifyBytesCacheNot(cache, loaded);
-    
+
     allocated = cache.getStorageAllocated();
     used = cache.getRawDataSize();
     size = cache.size();
     activeSize = cache.activeSize();
-    LOG.info("After scan: allocated={}, used={}, size={}, active={}", 
-      allocated, used, size, activeSize);
-    
+    LOG.info("After scan: allocated={}, used={}, size={}, active={}", allocated, used, size,
+      activeSize);
+
   }
-  
+
   @Test
   public void testAllExpiredMemory() throws IOException {
     LOG.info("Test all expired memory");
     Scavenger.clear();
     // Create cache
     this.cache = createCache();
-    this.expireTime = 1000; 
+    this.expireTime = 1000;
     prepareData();
     int loaded = loadMemoryCache(cache);
     LOG.info("loaded=" + loaded);
     // Wait expireTime
     try {
       Thread.sleep(expireTime);
-    } catch(InterruptedException e) {
-      
+    } catch (InterruptedException e) {
+
     }
     long allocated = cache.getStorageAllocated();
     long used = cache.getRawDataSize();
     long size = cache.size();
     long activeSize = cache.activeSize();
-    LOG.info("Before scan: allocated={}, used={}, size={}, active={}", 
-      allocated, used, size, activeSize);
+    LOG.info("Before scan: allocated={}, used={}, size={}, active={}", allocated, used, size,
+      activeSize);
     // Access all objects to remove them from memory index
     // and from data segments statistics
     verifyMemoryCacheNot(cache, loaded);
-    
+
     allocated = cache.getStorageAllocated();
     used = cache.getRawDataSize();
     size = cache.size();
     activeSize = cache.activeSize();
-    LOG.info("After scan: allocated={}, used={}, size={}, active={}", 
-      allocated, used, size, activeSize);
-    
+    LOG.info("After scan: allocated={}, used={}, size={}, active={}", allocated, used, size,
+      activeSize);
+
   }
-  
+
   @Test
   public void testNoExpiredBytes() throws IOException {
     LOG.info("Test no expired - bytes");
     Scavenger.clear();
     // Create cache
     this.cache = createCache();
-    
-    this.expireTime = 1000000; 
+
+    this.expireTime = 1000000;
     prepareData();
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
     LOG.info("loaded=" + loaded);
-  
+
     long allocated = cache.getStorageAllocated();
     long used = cache.getRawDataSize();
     long size = cache.size();
     long activeSize = cache.activeSize();
-    LOG.info("Before scan: allocated={}, used={}, size={}, active={}", 
-      allocated, used, size, activeSize);
+    LOG.info("Before scan: allocated={}, used={}, size={}, active={}", allocated, used, size,
+      activeSize);
     // Access all objects to remove them from memory index
     // and from data segments statistics
     verifyBytesCache(cache, loaded);
     verifyBytesCacheByteBuffer(cache, loaded);
-    
+
     allocated = cache.getStorageAllocated();
     used = cache.getRawDataSize();
     size = cache.size();
     activeSize = cache.activeSize();
-    LOG.info("After scan: allocated={}, used={}, size={}, active={}", 
-      allocated, used, size, activeSize);
-    
+    LOG.info("After scan: allocated={}, used={}, size={}, active={}", allocated, used, size,
+      activeSize);
+
   }
-  
+
   @Test
   public void testNoExpiredMemory() throws IOException {
     LOG.info("Test no expired - memory");
     Scavenger.clear();
     // Create cache
     this.cache = createCache();
-    
-    this.expireTime = 1000000; 
+
+    this.expireTime = 1000000;
     prepareData();
     // Fill cache completely (no eviction is enabled)
     int loaded = loadMemoryCache(cache);
     LOG.info("loaded=" + loaded);
-  
+
     long allocated = cache.getStorageAllocated();
     long used = cache.getRawDataSize();
     long size = cache.size();
     long activeSize = cache.activeSize();
-    LOG.info("Before scan: allocated={}, used={}, size={}, active={}", 
-      allocated, used, size, activeSize);
+    LOG.info("Before scan: allocated={}, used={}, size={}, active={}", allocated, used, size,
+      activeSize);
     // Access all objects to remove them from memory index
     // and from data segments statistics
     verifyMemoryCache(cache, loaded);
-    
+
     allocated = cache.getStorageAllocated();
     used = cache.getRawDataSize();
     size = cache.size();
     activeSize = cache.activeSize();
-    LOG.info("After scan: allocated={}, used={}, size={}, active={}", 
-      allocated, used, size, activeSize);
-    
+    LOG.info("After scan: allocated={}, used={}, size={}, active={}", allocated, used, size,
+      activeSize);
+
   }
-  
+
   @Test
   public void testNoExpiredWithDeletesBytes() throws IOException {
     LOG.info("Test no expired with deletes bytes");
@@ -282,34 +275,33 @@ public abstract class TestCacheBase extends IOTestBase {
     // Create cache
     this.scavDumpBelowRatio = 0; // remove only deleted
     this.cache = createCache();
-    
-    this.expireTime = 1000000; 
+
+    this.expireTime = 1000000;
     prepareData();
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
     LOG.info("loaded=" + loaded);
     int deleted = deleteBytesCache(cache, loaded / 17);
-  
+
     long allocated = cache.getStorageAllocated();
     long used = cache.getRawDataSize();
     long size = cache.size();
     long activeSize = cache.activeSize();
-    LOG.info("Before scan: allocated={}, used={}, size={}, active={}", 
-      allocated, used, size, activeSize);
+    LOG.info("Before scan: allocated={}, used={}, size={}, active={}", allocated, used, size,
+      activeSize);
     // Access all objects to remove them from memory index
     // and from data segments statistics
     verifyBytesCacheWithDeletes(cache, loaded, deleted);
-    
+
     allocated = cache.getStorageAllocated();
     used = cache.getRawDataSize();
     size = cache.size();
     activeSize = cache.activeSize();
-    LOG.info("After scan: allocated={}, used={}, size={}, active={}", 
-      allocated, used, size, activeSize);
+    LOG.info("After scan: allocated={}, used={}, size={}, active={}", allocated, used, size,
+      activeSize);
 
   }
-  
-  
+
   @Test
   public void testNoExpiredWithDeletesMemory() throws IOException {
     LOG.info("Test no expired with deletes memory");
@@ -318,40 +310,40 @@ public abstract class TestCacheBase extends IOTestBase {
     // Create cache
     this.scavDumpBelowRatio = 0; // remove only deleted
     this.cache = createCache();
-    
-    this.expireTime = 1000000; 
+
+    this.expireTime = 1000000;
     prepareData();
     // Fill cache completely (no eviction is enabled)
     int loaded = loadMemoryCache(cache);
     LOG.info("loaded=" + loaded);
     int deleted = deleteMemoryCache(cache, loaded / 17);
-  
+
     long allocated = cache.getStorageAllocated();
     long used = cache.getRawDataSize();
     long size = cache.size();
     long activeSize = cache.activeSize();
-    LOG.info("Before scan: allocated={}, used={}, size={}, active={}", 
-      allocated, used, size, activeSize);
+    LOG.info("Before scan: allocated={}, used={}, size={}, active={}", allocated, used, size,
+      activeSize);
     // Access all objects to remove them from memory index
     // and from data segments statistics
     verifyMemoryCacheWithDeletes(cache, loaded, deleted);
-    
+
     allocated = cache.getStorageAllocated();
     used = cache.getRawDataSize();
     size = cache.size();
     activeSize = cache.activeSize();
-    LOG.info("After scan: allocated={}, used={}, size={}, active={}", 
-      allocated, used, size, activeSize);
+    LOG.info("After scan: allocated={}, used={}, size={}, active={}", allocated, used, size,
+      activeSize);
   }
-  
+
   @Test
   public void testSaveLoad() throws IOException {
     LOG.info("Test save load");
     Scavenger.clear();
     // Create cache
     this.cache = createCache();
-    
-    this.expireTime = 1000000; 
+
+    this.expireTime = 1000000;
     prepareData();
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
@@ -363,12 +355,12 @@ public abstract class TestCacheBase extends IOTestBase {
     cache.save();
     long t2 = System.currentTimeMillis();
     LOG.info("Saved {} in {} ms", cache.getStorageAllocated(), t2 - t1);
-    
+
     t1 = System.currentTimeMillis();
     Cache newCache = Cache.loadCache(cacheName);
     t2 = System.currentTimeMillis();
     LOG.info("Loaded {} in {} ms", cache.getStorageAllocated(), t2 - t1);
-    
+
     assertEquals(cache.getCacheType(), newCache.getCacheType());
     assertEquals(cache.activeSize(), newCache.activeSize());
     assertEquals(cache.getMaximumCacheSize(), newCache.getMaximumCacheSize());
@@ -385,16 +377,16 @@ public abstract class TestCacheBase extends IOTestBase {
     newCache.dispose();
     TestUtils.deleteCacheFiles(newCache);
   }
-  
+
   @Test
   public void testSaveLoadSmallData() throws IOException {
     LOG.info("Test save load small data");
     Scavenger.clear();
     // Create cache
     this.cache = createCache();
-    
-    this.expireTime = 1000000; 
-    this.numRecords= 1;
+
+    this.expireTime = 1000000;
+    this.numRecords = 1;
     prepareData();
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
@@ -406,12 +398,12 @@ public abstract class TestCacheBase extends IOTestBase {
     cache.save();
     long t2 = System.currentTimeMillis();
     LOG.info("Saved {} in {} ms", cache.getStorageAllocated(), t2 - t1);
-    
+
     t1 = System.currentTimeMillis();
     Cache newCache = Cache.loadCache(cacheName);
     t2 = System.currentTimeMillis();
     LOG.info("Loaded {} in {} ms", newCache.getStorageAllocated(), t2 - t1);
-    
+
     assertEquals(cache.getCacheType(), newCache.getCacheType());
     assertEquals(cache.activeSize(), newCache.activeSize());
     assertEquals(cache.getMaximumCacheSize(), newCache.getMaximumCacheSize());
@@ -424,9 +416,9 @@ public abstract class TestCacheBase extends IOTestBase {
     assertEquals(cache.getTotalWritesSize(), newCache.getTotalWritesSize());
 
     verifyBytesCache(newCache, loaded);
-    
+
     newCache.save();
-    
+
     Cache newCache2 = Cache.loadCache(cacheName);
     assertEquals(newCache2.getCacheType(), newCache.getCacheType());
     assertEquals(newCache2.activeSize(), newCache.activeSize());
@@ -438,22 +430,22 @@ public abstract class TestCacheBase extends IOTestBase {
     assertEquals(newCache2.getTotalHits(), newCache.getTotalHits());
     assertEquals(newCache2.getTotalWrites(), newCache.getTotalWrites());
     assertEquals(newCache2.getTotalWritesSize(), newCache.getTotalWritesSize());
-    
+
     verifyBytesCache(newCache2, loaded);
-    
+
     newCache.dispose();
     newCache2.dispose();
     TestUtils.deleteCacheFiles(newCache);
   }
-  
+
   @Test
   public void testSaveLoadTwoCaches() throws IOException {
     LOG.info("Test save load two caches");
     Scavenger.clear();
     // Create cache
     this.cache = createCache("cache1");
-    
-    this.expireTime = 1000000; 
+
+    this.expireTime = 1000000;
     prepareData();
     // Fill cache completely (no eviction is enabled)
     int loaded = loadBytesCache(cache);
@@ -465,12 +457,12 @@ public abstract class TestCacheBase extends IOTestBase {
     cache.save();
     long t2 = System.currentTimeMillis();
     LOG.info("Saved {} in {} ms", cache.getStorageAllocated(), t2 - t1);
-    
+
     t1 = System.currentTimeMillis();
     Cache newCache = Cache.loadCache(cacheName);
     t2 = System.currentTimeMillis();
     LOG.info("Loaded {} in {} ms", cache.getStorageAllocated(), t2 - t1);
-    
+
     assertEquals(cache.getCacheType(), newCache.getCacheType());
     assertEquals(cache.activeSize(), newCache.activeSize());
     assertEquals(cache.getMaximumCacheSize(), newCache.getMaximumCacheSize());
@@ -494,12 +486,12 @@ public abstract class TestCacheBase extends IOTestBase {
     t2 = System.currentTimeMillis();
 
     LOG.info("Saved {} in {} ms", cache2.getStorageAllocated(), t2 - t1);
-    
+
     t1 = System.currentTimeMillis();
     Cache newCache2 = Cache.loadCache("cache2");
     t2 = System.currentTimeMillis();
     LOG.info("Loaded {} in {} ms", newCache2.getStorageAllocated(), t2 - t1);
-    
+
     assertEquals(cache2.getCacheType(), newCache2.getCacheType());
     assertEquals(cache2.activeSize(), newCache2.activeSize());
     assertEquals(cache2.getMaximumCacheSize(), newCache2.getMaximumCacheSize());
@@ -510,14 +502,14 @@ public abstract class TestCacheBase extends IOTestBase {
     assertEquals(cache2.getTotalHits(), newCache2.getTotalHits());
     assertEquals(cache2.getTotalWrites(), newCache2.getTotalWrites());
     assertEquals(cache2.getTotalWritesSize(), newCache2.getTotalWritesSize());
-    
+
     newCache.dispose();
     TestUtils.deleteCacheFiles(newCache);
     cache2.dispose();
     TestUtils.deleteCacheFiles(cache2);
     newCache2.dispose();
-    TestUtils.deleteCacheFiles(newCache2);    
-    
+    TestUtils.deleteCacheFiles(newCache2);
+
   }
-  
+
 }

@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache;
 
@@ -38,7 +38,7 @@ import com.carrotdata.cache.io.MemoryBufferInputStream;
 import com.carrotdata.cache.util.TestUtils;
 import com.carrotdata.cache.util.Utils;
 
-public abstract class TestCacheStreamAPIBase  {
+public abstract class TestCacheStreamAPIBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheStreamAPIBase.class);
 
   boolean offheap = true;
@@ -49,61 +49,58 @@ public abstract class TestCacheStreamAPIBase  {
   long expireTime;
   double scavDumpBelowRatio = 0.5;
   double minActiveRatio = 0.90;
-      
+
   @Before
   public void setUp() throws IOException {
   }
-  
+
   @After
   public void tearDown() throws IOException {
     cache.dispose();
     TestUtils.deleteCacheFiles(cache);
   }
-    
+
   protected Cache createCache(String cacheName) throws IOException {
     // Data directory
     Path path = Files.createTempDirectory(null);
-    File  dir = path.toFile();
+    File dir = path.toFile();
     dir.deleteOnExit();
     String rootDir = dir.getAbsolutePath();
-    
+
     Builder builder = new Builder(cacheName);
-    
-    builder
-      .withCacheDataSegmentSize(segmentSize)
-      .withCacheMaximumSize(maxCacheSize)
-      .withScavengerRunInterval(scavengerInterval)
-      .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
-      .withRecyclingSelector(MinAliveRecyclingSelector.class.getName())
-      .withDataWriter(BaseDataWriter.class.getName())
-      .withMemoryDataReader(BaseMemoryDataReader.class.getName())
-      .withFileDataReader(BaseFileDataReader.class.getName())
-      .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName())
-      .withCacheRootDir(rootDir)
-      .withMinimumActiveDatasetRatio(minActiveRatio)
-      .withCacheStreamingSupportBufferSize(1 << 19)
-      .withEvictionDisabledMode(true);
-    
+
+    builder.withCacheDataSegmentSize(segmentSize).withCacheMaximumSize(maxCacheSize)
+        .withScavengerRunInterval(scavengerInterval)
+        .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
+        .withRecyclingSelector(MinAliveRecyclingSelector.class.getName())
+        .withDataWriter(BaseDataWriter.class.getName())
+        .withMemoryDataReader(BaseMemoryDataReader.class.getName())
+        .withFileDataReader(BaseFileDataReader.class.getName())
+        .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName())
+        .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
+        .withCacheStreamingSupportBufferSize(1 << 19).withEvictionDisabledMode(true);
+
     if (offheap) {
       return builder.buildMemoryCache();
     } else {
       return builder.buildDiskCache();
     }
   }
-  
+
   @Test
   public void testStreamAPI() throws IOException {
     LOG.info("Test stream API");
     Scavenger.clear();
     // Create cache
     this.cache = createCache("cache1");
-    this.expireTime = 1000000; 
+    this.expireTime = 1000000;
     byte[] key = "stream_key".getBytes();
-    
+
     long streamLength = 81 * (1 << 20) + 135;
     MemoryBufferInputStream source = new MemoryBufferInputStream(streamLength);
-    OutputStream os = cache.getOutputStream(key, 0, key.length, System.currentTimeMillis() + expireTime);
-    
+    OutputStream os =
+        cache.getOutputStream(key, 0, key.length, System.currentTimeMillis() + expireTime);
+
     byte[] buffer = new byte[4096];
     int totalRead = 0;
     while (totalRead < streamLength) {
@@ -115,16 +112,16 @@ public abstract class TestCacheStreamAPIBase  {
       }
       totalRead += read;
     }
-    
+
     os.close();
     source.reset();
-    
+
     InputStream is = cache.getInputStream(key, 0, key.length);
     byte[] buf = new byte[4096];
-    
+
     totalRead = 0;
-    
-    while(totalRead < streamLength) {
+
+    while (totalRead < streamLength) {
       int toRead = (int) Math.min(buffer.length, streamLength - totalRead);
       if (toRead < 4096) {
         LOG.info("toRead={}  ", toRead);
@@ -137,10 +134,10 @@ public abstract class TestCacheStreamAPIBase  {
     is.close();
     source.close();
   }
-  
+
   private void readFully(InputStream is, byte[] buf, int toRead) throws IOException {
     int totalRead = 0;
-    while(totalRead < toRead) {
+    while (totalRead < toRead) {
       int read = is.read(buf, totalRead, toRead - totalRead);
       totalRead += read;
     }

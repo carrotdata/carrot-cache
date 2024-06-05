@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.jmx;
 
@@ -25,15 +25,15 @@ import com.carrotdata.cache.util.CacheConfig;
 import com.carrotdata.cache.util.Epoch;
 
 public class CacheJMXSink implements CacheJMXSinkMBean {
-  
+
   private Cache cache;
   private Scavenger.Stats gcStats;
-  
+
   public CacheJMXSink(Cache cache) {
     this.cache = cache;
     this.gcStats = Scavenger.getStatisticsForCache(cache.getName());
   }
-  
+
   @Override
   public String getepoch_start_time() {
     long startTime = Epoch.getEpochStartTime();
@@ -67,14 +67,14 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   public double getallocated_size_ratio() {
     long max = cache.getMaximumCacheSize();
     long allocd = cache.getStorageAllocated();
-    return (double) allocd/ max;
+    return (double) allocd / max;
   }
 
   @Override
   public double getused_size_ratio() {
     long max = cache.getMaximumCacheSize();
     long used = cache.getRawDataSize();
-    return (double) used/ max;
+    return (double) used / max;
   }
 
   @Override
@@ -95,7 +95,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   @Override
   public String getvictim_cache_name() {
     Cache victim = cache.getVictimCache();
-    return victim == null? null: victim.getName();
+    return victim == null ? null : victim.getName();
   }
 
   @Override
@@ -132,10 +132,10 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     long currentTime = System.currentTimeMillis();
     long elapsedTimeSec = (currentTime - Epoch.getEpochStartTime()) / 1000;
     long totalBytesWritten = gettotal_bytes_written();
-    if(totalBytesWritten == 0 || elapsedTimeSec == 0) {
+    if (totalBytesWritten == 0 || elapsedTimeSec == 0) {
       return 0.0;
     }
-    return (double)totalBytesWritten/ ((1 << 20) * elapsedTimeSec);
+    return (double) totalBytesWritten / ((1 << 20) * elapsedTimeSec);
   }
 
   @Override
@@ -148,10 +148,10 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     long currentTime = System.currentTimeMillis();
     long elapsedTimeSec = (currentTime - Epoch.getEpochStartTime()) / 1000;
     long cacheBytesWritten = getcache_bytes_written();
-    if(cacheBytesWritten == 0 || elapsedTimeSec == 0) {
+    if (cacheBytesWritten == 0 || elapsedTimeSec == 0) {
       return 0.0;
     }
-    return (double)cacheBytesWritten/ ((1 << 20) * elapsedTimeSec);
+    return (double) cacheBytesWritten / ((1 << 20) * elapsedTimeSec);
   }
 
   @Override
@@ -164,10 +164,10 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     long currentTime = System.currentTimeMillis();
     long elapsedTimeSec = (currentTime - Epoch.getEpochStartTime()) / 1000;
     long gcBytesWritten = getgc_bytes_written();
-    if(gcBytesWritten == 0 || elapsedTimeSec == 0) {
+    if (gcBytesWritten == 0 || elapsedTimeSec == 0) {
       return 0.0;
     }
-    return (double)gcBytesWritten/ ((1 << 20) * elapsedTimeSec);
+    return (double) gcBytesWritten / ((1 << 20) * elapsedTimeSec);
   }
 
   @Override
@@ -204,7 +204,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     }
     return totalInserts;
   }
-  
+
   @Override
   public long gettotal_updates() {
     long totalUpdates = cache.getEngine().getTotalUpdates();
@@ -214,7 +214,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     }
     return totalUpdates;
   }
-  
+
   @Override
   public long gettotal_deletes() {
     long totalDeletes = cache.getEngine().getTotalDeletes();
@@ -224,7 +224,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     }
     return totalDeletes;
   }
-  
+
   @Override
   public long getcache_gets() {
     return cache.getTotalGets();
@@ -246,26 +246,26 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     long time = System.currentTimeMillis() - Epoch.getEpochStartTime();
     time /= 1000;
     if (time == 0) return 0.0;
-    
-    return (double) totalRead/ ((1 << 20) * time);
+
+    return (double) totalRead / ((1 << 20) * time);
   }
 
   @Override
   public double getoverall_avg_read_rate() {
     long overallRead = getoverall_bytes_read();
-    long time= System.currentTimeMillis() - Epoch.getEpochStartTime();
+    long time = System.currentTimeMillis() - Epoch.getEpochStartTime();
     time /= 1000;
     if (time == 0) {
       return 0.0;
     }
-    return (double) overallRead/ ((1 << 20) * time);
+    return (double) overallRead / ((1 << 20) * time);
   }
 
   @Override
   public long getoverall_bytes_read() {
     long self = getcache_bytes_read();
     Cache victim = cache.getVictimCache();
-    if(victim != null) {
+    if (victim != null) {
       self += cache.getTotalGetsSize();
     }
     return self;
@@ -295,7 +295,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     String cacheName = cache.getName();
     CacheConfig config = CacheConfig.getInstance();
     String codec = config.getCacheCompressionCodecType(cacheName);
-    return codec != null? codec: "none";
+    return codec != null ? codec : "none";
   }
 
   @Override
@@ -325,7 +325,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
 
   /**
-   *  Compression block size
+   * Compression block size
    * @return compression block size
    */
   @Override
@@ -334,6 +334,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     CacheConfig config = CacheConfig.getInstance();
     return config.getCacheCompressionBlockSize(cacheName);
   }
+
   /**
    * Get compression keys enabled
    * @return true or false

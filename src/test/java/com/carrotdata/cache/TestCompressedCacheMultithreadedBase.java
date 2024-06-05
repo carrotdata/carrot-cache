@@ -29,37 +29,37 @@ import com.carrotdata.cache.util.TestUtils;
 import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
-
 public abstract class TestCompressedCacheMultithreadedBase {
-  private static final Logger LOG = LoggerFactory.getLogger(TestCompressedCacheMultithreadedBase.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestCompressedCacheMultithreadedBase.class);
 
   protected String cacheName = "cache";
-  
+
   protected boolean dictionaryEnabled = true;
   protected boolean asyncTrainingMode = false;
   protected int dictionarySize = 1 << 16;
-  protected int compLevel = 3; 
-  
+  protected int compLevel = 3;
+
   protected boolean offheap = false;
   protected int numRecords;
   protected int numThreads = 1;
-  
-  protected int segmentSize =  4 << 20;
-  
+
+  protected int segmentSize = 4 << 20;
+
   protected long maxCacheSize = 4 << 20;
-  
+
   protected int scavNumberThreads = 1;
-  
+
   protected int scavengerInterval = 10;
-  
+
   protected float scavDumpBelowRatio = 0.5f;
-  
+
   protected List<byte[]> bValues;
   protected List<Long> mValues;
-  
+
   protected Cache cache;
-  
-  @After  
+
+  @After
   public void tearDown() throws IOException {
     cache.printStats();
     cleanDictionaries();
@@ -69,7 +69,7 @@ public abstract class TestCompressedCacheMultithreadedBase {
     mValues.stream().forEach(x -> UnsafeAccess.free(x));
     this.cache.dispose();
   }
-  
+
   @Before
   public void setUp() throws IOException, URISyntaxException {
     this.offheap = true;
@@ -81,22 +81,22 @@ public abstract class TestCompressedCacheMultithreadedBase {
     bValues = TestUtils.loadGithubDataAsBytes();
     mValues = TestUtils.loadGithubDataAsMemory();
   }
-  
+
   /**
    * Subclasses may override
    * @param b builder instance
    * @return builder instance
-   * @throws IOException 
+   * @throws IOException
    */
   protected Cache createCache() throws IOException {
     // Data directory
     Path path = Files.createTempDirectory(null);
-    File  dir = path.toFile();
+    File dir = path.toFile();
     dir.deleteOnExit();
     String rootDir = dir.getAbsolutePath();
-    
+
     Builder b = new Builder(cacheName);
-    
+
     b.withDataWriter(CompressedBlockBatchDataWriter.class.getName());
     b.withMemoryDataReader(CompressedBlockMemoryDataReader.class.getName());
     b.withFileDataReader(CompressedBlockFileDataReader.class.getName());
@@ -113,7 +113,7 @@ public abstract class TestCompressedCacheMultithreadedBase {
     b.withScavengerDumpEntryBelowMin(scavDumpBelowRatio);
     b.withRecyclingSelector(LRCRecyclingSelector.class.getName());
     b.withCacheRootDir(rootDir);
-    
+
     try {
       initCodecs();
     } catch (IOException e) {
@@ -125,10 +125,11 @@ public abstract class TestCompressedCacheMultithreadedBase {
       return b.buildDiskCache();
     }
   }
-  
+
   @Test
-  public void testLoadVerifyBytesMultithreaded() throws InterruptedException, IOException, URISyntaxException {
-    int n  = 10;
+  public void testLoadVerifyBytesMultithreaded()
+      throws InterruptedException, IOException, URISyntaxException {
+    int n = 10;
     for (int k = 0; k < n; k++) {
       if (k > 0) setUp();
       Runnable r = () -> {
@@ -142,7 +143,7 @@ public abstract class TestCompressedCacheMultithreadedBase {
       Thread[] workers = new Thread[numThreads];
       for (int i = 0; i < numThreads; i++) {
         workers[i] = new Thread(r);
-        //Thread.sleep(1000);
+        // Thread.sleep(1000);
         workers[i].start();
       }
       for (int i = 0; i < numThreads; i++) {
@@ -151,7 +152,7 @@ public abstract class TestCompressedCacheMultithreadedBase {
       if (k < n - 1) tearDown();
     }
   }
-  
+
   @Test
   public void testLoadVerifyMemoryMultithreaded()
       throws InterruptedException, IOException, URISyntaxException {
@@ -177,21 +178,21 @@ public abstract class TestCompressedCacheMultithreadedBase {
       if (k < n - 1) tearDown();
     }
   }
+
   private void testLoadVerifyBytes() throws IOException {
     int loaded = loadBytes();
     verifyBytes(loaded);
   }
-  
+
   private void testLoadVerifyMemory() throws IOException {
     int loaded = loadMemory();
     verifyMemory(loaded);
   }
-  
 
   private byte[] getKey(int n) {
     return (Thread.currentThread() + ":" + n).getBytes();
   }
-  
+
   protected final int loadBytes() throws IOException {
     int loaded = 0;
     long t1 = System.currentTimeMillis();
@@ -206,10 +207,11 @@ public abstract class TestCompressedCacheMultithreadedBase {
       loaded++;
     }
     long t2 = System.currentTimeMillis();
-    LOG.info("{} loaded bytes {} in {}ms. RPS={}", Thread.currentThread().getName(), loaded, (t2 - t1), loaded * 1000L/(t2 - t1));
+    LOG.info("{} loaded bytes {} in {}ms. RPS={}", Thread.currentThread().getName(), loaded,
+      (t2 - t1), loaded * 1000L / (t2 - t1));
     return loaded;
   }
-  
+
   protected final int verifyBytes(int loaded) throws IOException {
 
     byte[] buffer = new byte[10000];
@@ -222,7 +224,7 @@ public abstract class TestCompressedCacheMultithreadedBase {
       long expSize = Utils.kvSize(key.length, value.length);
       long size = this.cache.getKeyValue(key, 0, key.length, false, buffer, 0);
       if (size < 0) {
-        //LOG.error("not found={}", n);
+        // LOG.error("not found={}", n);
         notFound++;
         continue;
       }
@@ -245,8 +247,8 @@ public abstract class TestCompressedCacheMultithreadedBase {
       verified++;
     }
     long t2 = System.currentTimeMillis();
-    LOG.info("{} verified bytes {} in {}ms, not found={} RPS={}", Thread.currentThread().getName(), 
-      verified, t2 - t1, notFound, loaded * 1000L/(t2 - t1));
+    LOG.info("{} verified bytes {} in {}ms, not found={} RPS={}", Thread.currentThread().getName(),
+      verified, t2 - t1, notFound, loaded * 1000L / (t2 - t1));
 
     return verified;
   }
@@ -265,10 +267,11 @@ public abstract class TestCompressedCacheMultithreadedBase {
       boolean result = this.cache.put(keyPtr, keySize, valuePtr, valueSize, expire);
       UnsafeAccess.free(keyPtr);
       if (!result) break;
-      loaded ++;
+      loaded++;
     }
     long t2 = System.currentTimeMillis();
-    LOG.info("{} loaded memory {} in {}ms. RPS={}", Thread.currentThread().getName(), loaded, t2 - t1, loaded * 1000L/(t2 - t1));
+    LOG.info("{} loaded memory {} in {}ms. RPS={}", Thread.currentThread().getName(), loaded,
+      t2 - t1, loaded * 1000L / (t2 - t1));
 
     return loaded;
   }
@@ -279,7 +282,7 @@ public abstract class TestCompressedCacheMultithreadedBase {
     int notFound = 0;
     byte[] buffer = new byte[10000];
     long t1 = System.currentTimeMillis();
-    
+
     for (int n = 0; n < loaded; n++) {
       byte[] key = getKey(n);
       int keySize = key.length;
@@ -315,24 +318,24 @@ public abstract class TestCompressedCacheMultithreadedBase {
       }
     }
     long t2 = System.currentTimeMillis();
-    LOG.info("{} verified memory {} in {}ms, not found={} RPS={}", Thread.currentThread().getName(), 
-      verified, t2 - t1, notFound, loaded * 1000L/(t2 - t1));
+    LOG.info("{} verified memory {} in {}ms, not found={} RPS={}", Thread.currentThread().getName(),
+      verified, t2 - t1, notFound, loaded * 1000L / (t2 - t1));
 
     return verified;
   }
-  
+
   protected long getExpire(int n) {
     return System.currentTimeMillis() + 1000000L;
   }
-  
+
   protected void cleanDictionaries() {
     cleanDictionaries(this.cacheName);
   }
-  
+
   protected void initCodecs() throws IOException {
     initCodec(this.cacheName);
   }
-  
+
   protected void cleanDictionaries(String cacheName) {
     // Clean up dictionaries
     CacheConfig config = CacheConfig.getInstance();
@@ -340,13 +343,13 @@ public abstract class TestCompressedCacheMultithreadedBase {
     File dir = new File(dictDir);
     if (dir.exists()) {
       File[] files = dir.listFiles();
-      Arrays.stream(files).forEach( x -> x.delete());
+      Arrays.stream(files).forEach(x -> x.delete());
     }
   }
-  
+
   protected void initCodec(String cacheName) throws IOException {
     CodecFactory factory = CodecFactory.getInstance();
-    //factory.clear();
+    // factory.clear();
     CompressionCodec codec = factory.getCompressionCodecForCache(cacheName);
     if (codec == null) {
       factory.initCompressionCodecForCache(cacheName, null);

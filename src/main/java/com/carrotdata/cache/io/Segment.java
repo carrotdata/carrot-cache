@@ -1,19 +1,12 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
+ * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
+ * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ * for the specific language governing permissions and limitations under the License.
  */
 package com.carrotdata.cache.io;
 
@@ -38,105 +31,98 @@ import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
 /**
- * 
  * Segment encapsulates all the logic associated <br>
  * with a memory allocation, packing cached entry data,<br>
- * saving and loading to/from disk. <br> 
- * 
+ * saving and loading to/from disk. <br>
  * Entry format: <br>
- * 
  * VINT - key size <br>
  * VINT - value size <br>
  * Key <br>
  * Value <br>
- *
  */
 public class Segment implements Persistent {
-  
+
   /** Logger */
   @SuppressWarnings("unused")
   private static final Logger LOG = LoggerFactory.getLogger(Segment.class);
-  
+
   public final static int META_SIZE = Utils.SIZEOF_LONG;
+
   /**
-   * 
-   *  Class encapsulates data segment statistics:
-   *  
-   *  It keeps total number of cached items in the segment as well as 
-   *  total items' rank (sum of ALL item's ranks)
-   *  This information is used by Scavenger during recycling candidate
-   *  selection: the segment with the minimum rank will be selected 
-   *  for recycling.
-   *  
-   *  
-   *  
+   * Class encapsulates data segment statistics: It keeps total number of cached items in the
+   * segment as well as total items' rank (sum of ALL item's ranks) This information is used by
+   * Scavenger during recycling candidate selection: the segment with the minimum rank will be
+   * selected for recycling.
    */
   public static class Info implements Persistent {
-    
-    /* Is segment sealed - closed and stored by IOEngine*/
+
+    /* Is segment sealed - closed and stored by IOEngine */
     private volatile boolean sealed;
-    
-    /* Segment is full but - do not accept new data*/
-    private volatile boolean full; 
-    
+
+    /* Segment is full but - do not accept new data */
+    private volatile boolean full;
+
     /* Segment rank */
     private int groupRank;
-    
+
     /* Segment creation time */
     private long creationTime; // in ms
-    
+
     /* Total number of cached items in the segment */
     private AtomicInteger totalItems = new AtomicInteger(0);
-        
+
     /* Total items expected to expire */
     private AtomicInteger totalExpectedToExpireItems = new AtomicInteger(0);
-    
+
     /* Total expired items */
     private AtomicInteger totalExpiredItems = new AtomicInteger(0);
-    
+
     /* Total evicted and deleted items */
     private AtomicInteger totalEvictedItems = new AtomicInteger(0);
-    
+
     /* Segment's id */
     private volatile int id;
-    
-    /* Segment's size*/
+
+    /* Segment's size */
     private volatile long size;
-    
+
     /* Segment data size */
     private AtomicLong dataSize = new AtomicLong(0);
-    
+
     /* Segment data size uncompressed */
     private AtomicLong dataSizeUncompressed = new AtomicLong(0);
-    
+
     /* Segment block data size - to support block - based writers */
     private AtomicLong blockDataSize = new AtomicLong(0);
-    
-    /* Block offset for block-based compression*/
+
+    /* Block offset for block-based compression */
     private AtomicLong blockOffset = new AtomicLong(0);
-    
-    /* Is this segment off-heap. Every segment starts as offheap, but FileIOEngine it will be converted to a file*/
+
+    /*
+     * Is this segment off-heap. Every segment starts as offheap, but FileIOEngine it will be
+     * converted to a file
+     */
     private volatile boolean offheap;
-    
-    /* Tracks maximum item expiration time - absolute in ms since 01-01-1970 Jan 1st 12am*/
+
+    /* Tracks maximum item expiration time - absolute in ms since 01-01-1970 Jan 1st 12am */
     private AtomicLong maxExpireAt = new AtomicLong(0);
-    
+
     /* Rolling access counter */
     private RollingWindowCounter counter;
-    
-    Info(){
+
+    Info() {
     }
-    
+
     /**
      * Constructor
      */
-    Info (int id, int rank, long creationTime) { 
+    Info(int id, int rank, long creationTime) {
       this();
-      this.id  = id;
+      this.id = id;
       this.groupRank = rank;
       this.creationTime = creationTime;
     }
-    
+
     /**
      * Update segment's statistics
      * @param itemIncrement total items to increment
@@ -144,7 +130,7 @@ public class Segment implements Persistent {
     public void updateEvictedDeleted(int itemIncrement) {
       this.totalEvictedItems.addAndGet(itemIncrement);
     }
-    
+
     /**
      * Is this segment off-heap
      * @return true or false
@@ -152,7 +138,7 @@ public class Segment implements Persistent {
     public boolean isOffheap() {
       return this.offheap;
     }
-    
+
     /**
      * Set off-heap
      * @param b true or false
@@ -160,7 +146,7 @@ public class Segment implements Persistent {
     public void setOffheap(boolean b) {
       this.offheap = b;
     }
-    
+
     /**
      * Is sealed
      * @return true or false
@@ -168,7 +154,7 @@ public class Segment implements Persistent {
     public boolean isSealed() {
       return this.sealed;
     }
-    
+
     /**
      * Set sealed
      * @param b sealed
@@ -176,7 +162,7 @@ public class Segment implements Persistent {
     public void setSealed(boolean b) {
       this.sealed = b;
     }
-    
+
     /**
      * Is full
      * @return true or false
@@ -184,7 +170,7 @@ public class Segment implements Persistent {
     public boolean isFull() {
       return this.full;
     }
-    
+
     /**
      * Set full
      * @param b full
@@ -192,7 +178,7 @@ public class Segment implements Persistent {
     public void setFull(boolean b) {
       this.full = b;
     }
-    
+
     /**
      * Get total number of cached items in this segment
      * @return total number of cached items
@@ -200,7 +186,7 @@ public class Segment implements Persistent {
     public int getTotalItems() {
       return this.totalItems.get();
     }
-    
+
     /**
      * Get total number of active items (which are still accessible)
      * @return number
@@ -208,7 +194,7 @@ public class Segment implements Persistent {
     public int getTotalActiveItems() {
       return this.totalItems.get() - this.totalEvictedItems.get() - this.totalExpiredItems.get();
     }
-    
+
     /**
      * Set total number of items
      * @param num total number of items
@@ -216,7 +202,7 @@ public class Segment implements Persistent {
     public void setTotalItems(int num) {
       this.totalItems.set(num);
     }
-        
+
     /**
      * Get segment size
      * @return segment size
@@ -224,7 +210,7 @@ public class Segment implements Persistent {
     public long getSegmentSize() {
       return this.size;
     }
-    
+
     /**
      * Sets segment size
      * @param size segment size
@@ -232,7 +218,7 @@ public class Segment implements Persistent {
     public void setSegmentSize(long size) {
       this.size = size;
     }
-    
+
     /**
      * Get segment data size (excluding allocated write batch space)
      * @return segment data size
@@ -240,7 +226,7 @@ public class Segment implements Persistent {
     public long getSegmentDataSize() {
       return this.dataSize.get();
     }
-    
+
     /**
      * Sets segment data size
      * @param size segment data size
@@ -248,7 +234,7 @@ public class Segment implements Persistent {
     public void setSegmentDataSize(long size) {
       this.dataSize.set(size);
     }
-    
+
     /**
      * Get segment data size
      * @return segment data size
@@ -256,7 +242,7 @@ public class Segment implements Persistent {
     public long getSegmentDataSizeUncompressed() {
       return this.dataSizeUncompressed.get();
     }
-    
+
     /**
      * Sets segment data size
      * @param size segment data size
@@ -264,7 +250,7 @@ public class Segment implements Persistent {
     public void setSegmentDataSizeUncompressed(long size) {
       this.dataSizeUncompressed.set(size);
     }
-    
+
     /**
      * Get segment block data size
      * @return segment block data size
@@ -272,7 +258,7 @@ public class Segment implements Persistent {
     public long getSegmentBlockDataSize() {
       return this.blockDataSize.get();
     }
-    
+
     /**
      * Sets segment block data size
      * @param size segment data size
@@ -280,7 +266,7 @@ public class Segment implements Persistent {
     public void setSegmentBlockDataSize(long size) {
       this.blockDataSize.set(size);
     }
-    
+
     /**
      * Get (current) block offset (for block-based compression)
      * @return offset
@@ -288,7 +274,7 @@ public class Segment implements Persistent {
     public long getBlockOffset() {
       return this.blockOffset.get();
     }
-    
+
     /**
      * Sets current block offset
      * @param offset block offset
@@ -296,7 +282,7 @@ public class Segment implements Persistent {
     public void setBlockOffset(long offset) {
       this.blockOffset.set(offset);
     }
-    
+
     /**
      * Get segment's id
      * @return segment's id
@@ -304,7 +290,7 @@ public class Segment implements Persistent {
     public int getId() {
       return this.id;
     }
-    
+
     /**
      * Set segments id
      * @param id segment's id
@@ -312,7 +298,7 @@ public class Segment implements Persistent {
     public void setId(int id) {
       this.id = id;
     }
-    
+
     /**
      * Get segment creation time
      * @return segment creation time
@@ -320,7 +306,7 @@ public class Segment implements Persistent {
     public long getCreationTime() {
       return this.creationTime;
     }
-    
+
     /**
      * Set creation time
      * @param time segments creation time
@@ -328,15 +314,15 @@ public class Segment implements Persistent {
     public void setCreationTime(long time) {
       this.creationTime = time;
     }
-    
+
     /**
-     * Get segment group rank 
+     * Get segment group rank
      * @return segment group rank
      */
     public int getGroupRank() {
       return this.groupRank;
     }
-    
+
     /**
      * Sets segment's group rank
      * @param rank segments's rank
@@ -344,22 +330,21 @@ public class Segment implements Persistent {
     public void setGroupRank(int rank) {
       this.groupRank = rank;
     }
-    
+
     /**
      * Get number of expired items
      */
     public int getNumberExpiredItems() {
       return this.totalExpiredItems.get();
     }
-    
-    
+
     /**
      * Get number of expected to expire items
      */
     public int getNumberExpectedToExpireItems() {
       return this.totalExpectedToExpireItems.get();
     }
-    
+
     /**
      * Get number of evicted - deleted items
      * @return number of evicted - deleted items
@@ -367,7 +352,7 @@ public class Segment implements Persistent {
     public int getNumberEvictedDeletedItems() {
       return this.totalEvictedItems.get();
     }
-    
+
     /**
      * Expire one item
      */
@@ -383,7 +368,7 @@ public class Segment implements Persistent {
     public long incrementDataSize(int incr) {
       return this.dataSize.addAndGet(incr);
     }
-     
+
     /**
      * Increment data size uncompressed
      * @param incr increment
@@ -392,7 +377,7 @@ public class Segment implements Persistent {
     public long incrementDataSizeUncompressed(int incr) {
       return this.dataSizeUncompressed.addAndGet(incr);
     }
-     
+
     /**
      * Increment block data size
      * @param incr increment
@@ -401,7 +386,7 @@ public class Segment implements Persistent {
     public long incrementBlockDataSize(int incr) {
       return this.blockDataSize.addAndGet(incr);
     }
-    
+
     /**
      * Get maximum item expiration time
      * @return max expiration time
@@ -409,7 +394,7 @@ public class Segment implements Persistent {
     public long getMaxExpireAt() {
       return this.maxExpireAt.get();
     }
-    
+
     /**
      * Set maximum expiration time
      * @param expected expected time
@@ -419,14 +404,14 @@ public class Segment implements Persistent {
     public boolean setMaxExpireAt(long expected, long newValue) {
       return maxExpireAt.compareAndSet(expected, newValue);
     }
-    
+
     /**
      * Record access to this segment
      */
     public void access() {
       this.counter.increment();
     }
-    
+
     /**
      * Get access count to this segment
      * @return count
@@ -434,50 +419,50 @@ public class Segment implements Persistent {
     public long getAccessCount() {
       return this.counter.count();
     }
-    
+
     @Override
     /**
      * Save segment to output stream
      * @param dos output stream
      * @throws IOException
      */
-    
+
     public void save(OutputStream os) throws IOException {
-      
-        DataOutputStream dos = Utils.toDataOutputStream(os);
-        // Write meta
-        // Sealed
-        dos.writeBoolean(isSealed());
-        // Full is transient - skip
-        // Segment Id
-        dos.writeInt(getId());
-        // Rank
-        dos.writeInt(getGroupRank());
-        // Creation time 
-        dos.writeLong(getCreationTime());
-        // Segment size
-        dos.writeLong(getSegmentSize());
-        // Data size
-        dos.writeLong(getSegmentDataSize());
-        // Data size
-        dos.writeLong(getSegmentDataSizeUncompressed());
-        // Number of entries
-        dos.writeInt(getTotalItems());
-        // Total number of expected to expire items
-        dos.writeInt(getNumberExpectedToExpireItems());
-        //Total number of expired items
-        dos.writeInt(getNumberExpiredItems());
-        // Total evicted and deleted (not expired)
-        dos.writeInt(getNumberEvictedDeletedItems());
-        // Off-heap
-        dos.writeBoolean(isOffheap());
-        // Block data size
-        dos.writeLong(this.blockDataSize.get());
-        // Block offset
-        dos.writeLong(getBlockOffset());
-        // Rolling Window Counter
-        this.counter.save(dos);
-        dos.flush();
+
+      DataOutputStream dos = Utils.toDataOutputStream(os);
+      // Write meta
+      // Sealed
+      dos.writeBoolean(isSealed());
+      // Full is transient - skip
+      // Segment Id
+      dos.writeInt(getId());
+      // Rank
+      dos.writeInt(getGroupRank());
+      // Creation time
+      dos.writeLong(getCreationTime());
+      // Segment size
+      dos.writeLong(getSegmentSize());
+      // Data size
+      dos.writeLong(getSegmentDataSize());
+      // Data size
+      dos.writeLong(getSegmentDataSizeUncompressed());
+      // Number of entries
+      dos.writeInt(getTotalItems());
+      // Total number of expected to expire items
+      dos.writeInt(getNumberExpectedToExpireItems());
+      // Total number of expired items
+      dos.writeInt(getNumberExpiredItems());
+      // Total evicted and deleted (not expired)
+      dos.writeInt(getNumberEvictedDeletedItems());
+      // Off-heap
+      dos.writeBoolean(isOffheap());
+      // Block data size
+      dos.writeLong(this.blockDataSize.get());
+      // Block offset
+      dos.writeLong(getBlockOffset());
+      // Rolling Window Counter
+      this.counter.save(dos);
+      dos.flush();
     }
 
     @Override
@@ -501,63 +486,60 @@ public class Segment implements Persistent {
       this.counter.load(dis);
     }
   }
-  
+
   /*
-   * Default segment size 
+   * Default segment size
    */
   public final static int DEFAULT_SEGMENT_SIZE = 4 * 1024 * 1024;
-   
 
   /**
    * Segment's address (if in RAM)
    */
   private long address;
-  
+
   /**
    * Segment size (Not USED)
    */
   private int size;
-  
+
   /**
-   * Write lock prevents multiple threads from appending data
-   * concurrently
+   * Write lock prevents multiple threads from appending data concurrently
    */
   private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-  
+
   /* Segment info */
   volatile private Info info;
-  
+
   /* Data writer */
   DataWriter dataWriter;
-  
+
   /* Data writer support write batching */
   boolean writeBatchSupported = false;
-  
+
   /* Is valid segment */
   private volatile boolean valid = true;
-  
-  /* Save to file in progress - TESTs only*/
+
+  /* Save to file in progress - TESTs only */
   private volatile boolean sip = false;
-  
+
   /* Segment is in recycling */
   private volatile boolean inRecycling;
-  
+
   /** We need this instance for data used reporting */
   IOEngine engine;
-  
+
   /**
-   * Local reference to write batches 
+   * Local reference to write batches
    */
   WriteBatches writeBatches;
-  
+
   /**
-   * 
    * Default constructor
    * @param info
    */
-  Segment(){
+  Segment() {
   }
-    
+
   /**
    * Private constructor
    * @param address address of a segment
@@ -572,14 +554,14 @@ public class Segment implements Persistent {
     this.info.setSegmentSize(size);
     setOffheap(true);
   }
-  
+
   public void init(String cacheName) {
     CacheConfig conf = CacheConfig.getInstance();
     int numBins = conf.getRollingWindowNumberBins(cacheName);
     int windowsDuration = conf.getRollingWindowDuration(cacheName);
     this.info.counter = new RollingWindowCounter(numBins, windowsDuration);
   }
-  
+
   /**
    * Sets data appender implementation
    * @param da data appender
@@ -593,7 +575,7 @@ public class Segment implements Persistent {
       this.writeBatches = engine.getWriteBatches();
     }
   }
-  
+
   /**
    * Is valid
    * @return true or false
@@ -601,7 +583,7 @@ public class Segment implements Persistent {
   public boolean isValid() {
     return this.valid;
   }
-  
+
   /**
    * Used for testing
    */
@@ -620,7 +602,7 @@ public class Segment implements Persistent {
     }
     this.valid = false;
   }
- 
+
   /**
    * Reuse segment - for off-heap only
    * @param id
@@ -630,7 +612,7 @@ public class Segment implements Persistent {
   public void reuse(int id, int rank, long creationTime) {
     this.info = new Info(id, rank, creationTime);
   }
-    
+
   /**
    * Create new segment
    * @param ptr segment memory address
@@ -642,7 +624,7 @@ public class Segment implements Persistent {
   public static Segment newSegment(long ptr, int size, int id, int rank) {
     return new Segment(ptr, size, id, rank);
   }
-  
+
   /**
    * Is this segment off-heap
    * @return true or false
@@ -650,15 +632,15 @@ public class Segment implements Persistent {
   public boolean isOffheap() {
     return this.info.isOffheap();
   }
-  
+
   /**
    * Set off-heap
-   * @param b true or false 
+   * @param b true or false
    */
   public void setOffheap(boolean b) {
     this.info.setOffheap(b);
   }
-  
+
   /**
    * Increment data size
    * @param incr increment
@@ -670,7 +652,7 @@ public class Segment implements Persistent {
     }
     return this.info.incrementDataSize(incr);
   }
-   
+
   /**
    * Increment block data size
    * @param incr increment
@@ -679,7 +661,7 @@ public class Segment implements Persistent {
   public long incrBlockDataSize(int incr) {
     return this.info.incrementBlockDataSize(incr);
   }
-  
+
   /**
    * Increment number of entries
    * @param incr increment
@@ -688,7 +670,7 @@ public class Segment implements Persistent {
   private int incrNumEntries(int incr) {
     return this.info.totalItems.addAndGet(incr);
   }
-  
+
   /**
    * Increment expected to expire items
    * @param incr increment
@@ -697,7 +679,7 @@ public class Segment implements Persistent {
   private int incrExpectedToExpire(int incr) {
     return this.info.totalExpectedToExpireItems.addAndGet(incr);
   }
-  
+
   /**
    * Get segmemt's id
    * @return segment's id
@@ -705,7 +687,7 @@ public class Segment implements Persistent {
   public int getId() {
     return this.info.getId();
   }
-  
+
   /**
    * Sets segment's id
    * @param id segment's id
@@ -713,7 +695,7 @@ public class Segment implements Persistent {
   public void setId(int id) {
     this.info.setId(id);
   }
-  
+
   /**
    * Get segment info
    * @return segment info
@@ -721,7 +703,7 @@ public class Segment implements Persistent {
   public Info getInfo() {
     return this.info;
   }
-  
+
   /**
    * Get segment's size
    * @return segment's size
@@ -729,7 +711,7 @@ public class Segment implements Persistent {
   public int getSize() {
     return this.size;
   }
-  
+
   /**
    * Set info
    * @param info
@@ -737,7 +719,7 @@ public class Segment implements Persistent {
   public void setInfo(Info info) {
     this.info = info;
   }
-  
+
   /**
    * Is segment sealed
    * @return true if - yes, false - otherwise
@@ -745,7 +727,7 @@ public class Segment implements Persistent {
   public boolean isSealed() {
     return this.info.isSealed();
   }
-  
+
   /**
    * Is segment full
    * @return true or false
@@ -753,7 +735,7 @@ public class Segment implements Persistent {
   boolean isFull() {
     return this.info.isFull();
   }
-  
+
   /**
    * Set segment full
    * @param full
@@ -761,22 +743,22 @@ public class Segment implements Persistent {
   void setFull(boolean full) {
     this.info.setFull(full);
   }
-  
+
   /**
    * Seal segment
    */
   public void seal() {
     this.info.setSealed(true);
   }
-  
+
   /**
    * Get segment's address (if in memory)
    * @return segment address
    */
   public long getAddress() {
-     return this.address;
+    return this.address;
   }
-  
+
   /**
    * Set address
    * @param ptr address
@@ -789,7 +771,7 @@ public class Segment implements Persistent {
     }
     this.address = ptr;
   }
-  
+
   /**
    * Get segment's size
    * @return size
@@ -797,7 +779,7 @@ public class Segment implements Persistent {
   public long size() {
     return this.info.getSegmentSize();
   }
-  
+
   /**
    * Get segment's data size
    * @return segment's data size
@@ -805,7 +787,7 @@ public class Segment implements Persistent {
   public long getSegmentDataSize() {
     return this.info.getSegmentDataSize();
   }
-  
+
   /**
    * Sets new segment data size uncompressed
    * @param newSize new segment data size
@@ -813,7 +795,7 @@ public class Segment implements Persistent {
   public void setSegmentDataSizeUncompressed(long newSize) {
     this.info.setSegmentDataSizeUncompressed(newSize);
   }
-  
+
   /**
    * Get segment's data size uncompressed
    * @return segment's data size
@@ -821,36 +803,36 @@ public class Segment implements Persistent {
   public long getSegmentDataSizeUncompressed() {
     return this.info.getSegmentDataSizeUncompressed();
   }
-  
+
   /**
    * Sets new segment data size (used if block compression is enabled)
    * @param newSize new segment data size
    */
   public void setSegmentDataSize(long newSize) {
     if (this.engine != null) {
-      int incr = (int)(newSize - this.info.getSegmentDataSize());
+      int incr = (int) (newSize - this.info.getSegmentDataSize());
       this.engine.reportStorageUsed(incr);
     }
     this.info.setSegmentDataSize(newSize);
   }
-  
+
   public long getFullDataSize() {
     if (this.dataWriter.isBlockBased()) {
       int blockSize = this.dataWriter.getBlockSize();
-      return BlockReaderWriterSupport.getFullDataSize(this, blockSize); 
+      return BlockReaderWriterSupport.getFullDataSize(this, blockSize);
     } else {
       return getSegmentDataSize();
     }
   }
-  
+
   public long getCurrentBlockOffset() {
     return this.info.getBlockOffset();
   }
-  
+
   public void setCurrentBlockOffset(long off) {
     this.info.setBlockOffset(off);
   }
-  
+
   /**
    * Get segment's block data size
    * @return segment's data size
@@ -858,15 +840,15 @@ public class Segment implements Persistent {
   public long getSegmentBlockDataSize() {
     return this.info.getSegmentBlockDataSize();
   }
-  
+
   /**
-   * Get total number of cached items in this segment 
+   * Get total number of cached items in this segment
    * @return number
    */
   public int getTotalItems() {
     return this.info.getTotalItems();
   }
-  
+
   /**
    * Get total number of alive items in the segment
    * @return
@@ -874,7 +856,7 @@ public class Segment implements Persistent {
   public int getAliveItems() {
     return getTotalItems() - getNumberEvictedDeletedItems() - getNumberExpiredItems();
   }
-  
+
   /**
    * Get number of evicted or explicitly deleted items
    * @return number
@@ -882,15 +864,15 @@ public class Segment implements Persistent {
   public int getNumberEvictedDeletedItems() {
     return this.info.getNumberEvictedDeletedItems();
   }
-  
+
   /**
-   * Get number of expired (reported) items 
+   * Get number of expired (reported) items
    * @return number
    */
   public int getNumberExpiredItems() {
     return this.info.getNumberExpiredItems();
   }
-  
+
   /**
    * Get expected to expire numbers
    * @return number
@@ -898,14 +880,14 @@ public class Segment implements Persistent {
   public int getNumberExpectedExpireItems() {
     return this.getNumberExpectedExpireItems();
   }
-  
+
   /**
    * Read lock the segment
    */
   public void readLock() {
     lock.readLock().lock();
   }
-  
+
   /**
    * Read unlock the segment
    */
@@ -914,14 +896,14 @@ public class Segment implements Persistent {
       lock.readLock().unlock();
     }
   }
-  
+
   /**
    * Write lock the segment
    */
   public void writeLock() {
     lock.writeLock().lock();
   }
-  
+
   /**
    * Write unlock the segment
    */
@@ -930,27 +912,28 @@ public class Segment implements Persistent {
       lock.writeLock().unlock();
     }
   }
-    
+
   private WriteBatch getWriteBatch() {
     if (this.writeBatches == null) {
       return null;
     }
-    // Thread Id is long value, but it starts with 0 and increments by 1 
-    // for every new thread created. We are safe, b/c we have limited number 
+    // Thread Id is long value, but it starts with 0 and increments by 1
+    // for every new thread created. We are safe, b/c we have limited number
     // of working thread in the system, far less than 32K
     int tid = makeIdForThread(Thread.currentThread().getId());
     return writeBatches.getWriteBatch(tid);
   }
-  
+
   private int makeIdForThread(long tid) {
     // Rank is a low number, default maximum is 7
     int rank = this.info.getGroupRank();
-    // Id for a thread is a negative which is intentionally less than -1 (used as NOT_FOUND, 
+    // Id for a thread is a negative which is intentionally less than -1 (used as NOT_FOUND,
     // FAILED moniker) This Id is used as the address for the k-v during look up operation
     // when k-v resides in a write buffer, belonging to some thread
     return -(rank << 16 | (int) tid + 2);
-    
+
   }
+
   /**
    * Append new cached item to this segment
    * @param key item key
@@ -971,8 +954,8 @@ public class Segment implements Persistent {
    * @param valueOffset item offset
    * @param valueSize item size
    * @param expire expiration time
-   * @return cached item offset (-1 means segment is sealed)
-   *   negative offset less than -1 means that item was batched.
+   * @return cached item offset (-1 means segment is sealed) negative offset less than -1 means that
+   *         item was batched.
    */
   public long append(byte[] key, int keyOffset, int keySize, byte[] value, int valueOffset,
       int valueSize, long expire) {
@@ -995,13 +978,14 @@ public class Segment implements Persistent {
           return -1;
         }
       }
-      if (kvSize < wb.batchSize()){
+      if (kvSize < wb.batchSize()) {
         // Add to write buffer
         wb.addOrUpdate(key, keyOffset, keySize, value, valueOffset, valueSize);
         offset = wb.getId();
       } else {
         // Add single as a batch
-        offset = this.dataWriter.appendSingle(this, key, keyOffset, keySize, value, valueOffset, valueSize);
+        offset = this.dataWriter.appendSingle(this, key, keyOffset, keySize, value, valueOffset,
+          valueSize);
       }
     } else {
       try {
@@ -1029,12 +1013,10 @@ public class Segment implements Persistent {
     }
     return offset/* offset in a segment, can be negative to identify write to a write batch */;
   }
-  
+
   /**
-   * Checks max expire against given expire
-   * and set max to a new value if:
-   * a. old max value > 0
-   * b. new expire is greater than old max value
+   * Checks max expire against given expire and set max to a new value if: a. old max value > 0 b.
+   * new expire is greater than old max value
    * @param expire
    */
   private final void processExpire(long expire) {
@@ -1042,20 +1024,20 @@ public class Segment implements Persistent {
     if (max < 0) return; // do nothing
     boolean result = false;
     if (expire == 0) {
-      while(!result) {
+      while (!result) {
         max = this.info.getMaxExpireAt();
         // Signals that this block has some items w/o expiration
         result = this.info.setMaxExpireAt(max, -1);
       }
     } else if (max < expire) {
-      while(!result) {
+      while (!result) {
         max = this.info.getMaxExpireAt();
         if (max > expire) return;
         result = this.info.setMaxExpireAt(max, expire);
       }
     }
   }
-  
+
   /**
    * Checks if all items have expiration in this segments
    * @return true - yes, false - no
@@ -1063,7 +1045,7 @@ public class Segment implements Persistent {
   public boolean isAllExpireSegment() {
     return this.info.getMaxExpireAt() > 0;
   }
-  
+
   /**
    * Append new cached item to this segment
    * @param keyPtr key address
@@ -1105,8 +1087,7 @@ public class Segment implements Persistent {
         if (isSealed() || isFull()) {
           return -1;
         }
-        offset =
-            this.dataWriter.append(this, keyPtr, keySize, valuePtr, valueSize);
+        offset = this.dataWriter.append(this, keyPtr, keySize, valuePtr, valueSize);
         if (offset == -1) {
           setFull(true);
           return -1;
@@ -1136,13 +1117,14 @@ public class Segment implements Persistent {
     }
     return null;
   }
+
   /**
    * Update segment's statistics
    */
   public void updateEvictedDeleted() {
     this.info.updateEvictedDeleted(1);
   }
-  
+
   /**
    * Update expired counter and total rank
    * @param expire expiration time
@@ -1153,14 +1135,14 @@ public class Segment implements Persistent {
     }
     this.info.updateExpired();
   }
-    
+
   /**
    * Record access to this segment
    */
   public void access() {
     this.info.access();
   }
-  
+
   /**
    * Get access count to this segment
    * @return count
@@ -1168,7 +1150,7 @@ public class Segment implements Persistent {
   public long getAccessCount() {
     return this.info.getAccessCount();
   }
-  
+
   @Override
   public void save(OutputStream os) throws IOException {
 
@@ -1185,7 +1167,7 @@ public class Segment implements Persistent {
       // Write segment size
       long size = getFullDataSize();
       dos.writeLong(size);
-      
+
       int bufSize = (int) Math.min(size, 1024 * 1024);
       byte[] buffer = new byte[bufSize];
       long written = 0;
@@ -1213,7 +1195,7 @@ public class Segment implements Persistent {
       // Write segment size
       long size = getFullDataSize();
       file.writeLong(size);
-      
+
       int bufSize = (int) Math.min(size, 1024 * 1024);
       byte[] buffer = new byte[bufSize];
       long written = 0;
@@ -1234,13 +1216,13 @@ public class Segment implements Persistent {
       readUnlock();
     }
   }
-  
+
   @Override
   public void load(InputStream is) throws IOException {
     DataInputStream dis = Utils.toDataInputStream(is);
     this.info = new Info();
     this.info.load(dis);
-    
+
     if (isOffheap()) {
       long size = dis.readLong();
       // We here do not have IOEngine reference yet
@@ -1249,8 +1231,8 @@ public class Segment implements Persistent {
       int bufSize = (int) Math.min(1024 * 1024, size);
       byte[] buffer = new byte[bufSize];
       int read = 0;
-    
-      while(read < size) {
+
+      while (read < size) {
         int toRead = (int) Math.min(size - read, bufSize);
         dis.readFully(buffer, 0, toRead);
         UnsafeAccess.copy(buffer, 0, ptr + read, toRead);
@@ -1259,12 +1241,11 @@ public class Segment implements Persistent {
       this.setAddress(ptr);
     }
   }
-  
+
   public boolean isRecycling() {
     return this.inRecycling;
   }
-  
-  
+
   public void setRecycling(boolean v) {
     this.inRecycling = v;
   }

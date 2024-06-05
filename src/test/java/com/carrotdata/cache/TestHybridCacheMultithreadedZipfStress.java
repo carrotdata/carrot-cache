@@ -37,7 +37,8 @@ import com.carrotdata.cache.util.Epoch;
 import com.carrotdata.cache.util.TestUtils;
 
 public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithreadedZipfBase {
-  private static final Logger LOG = LoggerFactory.getLogger(TestHybridCacheMultithreadedZipfStress.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestHybridCacheMultithreadedZipfStress.class);
 
   int victim_segmentSize = 16 * 1024 * 1024;
 
@@ -48,7 +49,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
   int victim_scavengerInterval = 10; // seconds
 
   double victim_scavDumpBelowRatio = 0.5;
-  
+
   double victim_aqStartRatio = 0.3;
 
   boolean victim_promoteOnHit = true;
@@ -75,7 +76,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
     this.maxCacheSize = 1000L * this.segmentSize; // 16 GB in RAM
     this.epClz = SLRUEvictionPolicy.class;
     this.rsClz = MinAliveRecyclingSelector.class;
-    //this.acClz = AQBasedAdmissionController.class;
+    // this.acClz = AQBasedAdmissionController.class;
     this.aqStartRatio = 1.0;
     this.scavengerInterval = 4; // scavenger interval in sec
     this.hybridCacheInverseMode = false;
@@ -94,7 +95,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
     this.zipfAlpha = 0.9;
 
     Epoch.reset();
-    
+
   }
 
   @After
@@ -116,9 +117,8 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
 
   @Override
   protected Builder withAddedConfigurations(Builder b) {
-    b.withCacheHybridInverseMode(hybridCacheInverseMode)
-    .withCacheSpinWaitTimeOnHighPressure(20000)
-    .withSLRUInsertionPoint(6);
+    b.withCacheHybridInverseMode(hybridCacheInverseMode).withCacheSpinWaitTimeOnHighPressure(20000)
+        .withSLRUInsertionPoint(6);
     return b;
   }
 
@@ -136,19 +136,16 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
         .withScavengerRunInterval(victim_scavengerInterval)
         .withScavengerDumpEntryBelowMin(victim_scavDumpBelowRatio)
         .withCacheEvictionPolicy(victim_epClz.getName())
-        .withRecyclingSelector(victim_rsClz.getName())
-        .withCacheRootDir(rootDir)
+        .withRecyclingSelector(victim_rsClz.getName()).withCacheRootDir(rootDir)
         .withMinimumActiveDatasetRatio(victim_minActiveRatio)
         .withVictimCachePromoteOnHit(victim_promoteOnHit)
         .withVictimCachePromotionThreshold(victim_promoteThreshold)
-        .withAdmissionController(victim_acClz.getName())
-        .withCacheSpinWaitTimeOnHighPressure(10000)
-        .withScavengerNumberOfThreads(1)
-        .withAdmissionQueueStartSizeRatio(victim_aqStartRatio);
+        .withAdmissionController(victim_acClz.getName()).withCacheSpinWaitTimeOnHighPressure(10000)
+        .withScavengerNumberOfThreads(1).withAdmissionQueueStartSizeRatio(victim_aqStartRatio);
     Cache victim = builder.buildDiskCache();
     parent.setVictimCache(victim);
     parent.registerJMXMetricsSink();
-    
+
     return parent;
   }
 
@@ -159,7 +156,6 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
     this.victimCacheName = "DISK-AC-OFF";
     super.testContinuosLoadBytesRun();
   }
-
 
   @Test
   public void testLRUEvictionAndMinAliveSelectorWithAQBytesAPI() throws IOException {

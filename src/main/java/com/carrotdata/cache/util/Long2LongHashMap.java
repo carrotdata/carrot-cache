@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.util;
 
@@ -21,88 +21,84 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.LongAdder;
 
 /**
- *
- * Concurrent, lock-free hash table with open addressing and liner probing
- * TODO: timed CAS and wait to avoid potential deadlock in a very small maps  
+ * Concurrent, lock-free hash table with open addressing and liner probing TODO: timed CAS and wait
+ * to avoid potential deadlock in a very small maps
  */
 public class Long2LongHashMap {
-  
+
   static class RehashGroup {
     AtomicLongArray mainData;
     AtomicLongArray rehashData;
     AtomicInteger rehashReadOffset = new AtomicInteger();;
     volatile int rehashConfirmedOffset = 0;
   }
-  
+
   public static interface Deallocator {
     public void deallocate(long v);
   }
-  
-  private static final long RANDOM_LONG =
-      ThreadLocalRandom.current().nextLong();
+
+  private static final long RANDOM_LONG = ThreadLocalRandom.current().nextLong();
   /*
-   * Limitation value can not be equals to ERROR
-   * but in our use case values are memory pointers
-   * and they can not be negative.
+   * Limitation value can not be equals to ERROR but in our use case values are memory pointers and
+   * they can not be negative.
    */
   public final static long ERROR = Long.MIN_VALUE;
-  
+
   public final static long NULL = 0;
-  
+
   private final static long DELETED = -1;
-  
+
   private final static long LOCKED = -2;
-  
+
   /**
    * Orphaned resource deallocator
    */
   private Deallocator deallocator;
-  
+
   /*
-   *  Hash slot array (main)
+   * Hash slot array (main)
    */
-  private AtomicReference<AtomicLongArray> dataRef = 
-        new AtomicReference<AtomicLongArray>();
-  
+  private AtomicReference<AtomicLongArray> dataRef = new AtomicReference<AtomicLongArray>();
+
   /*
    * Rehashing is In Progress
    */
-  //private volatile boolean rip;
-  
+  // private volatile boolean rip;
+
   /*
-   *  4 k-v pairs ( 64 bytes)
+   * 4 k-v pairs ( 64 bytes)
    */
   private volatile int rehashChunkSize = 4;
-  
+
   /*
    * Rehash check mask (reverse probability)
    */
   private int rcmask = 0xff;
-  
+
   /**
    * Rehashing group
    */
-  private AtomicReference<RehashGroup> rehashGroup = 
-      new AtomicReference<RehashGroup>();
+  private AtomicReference<RehashGroup> rehashGroup = new AtomicReference<RehashGroup>();
   /**
    * If true - do not hash keys
    */
   private final boolean keysHashed;
-  
+
   /**
    * Keeps track of alive objects
    */
   private LongAdder alive = new LongAdder();
-  
+
   /**
-   *  Keeps track of delete tombstones
+   * Keeps track of delete tombstones
    */
   private LongAdder tombstones = new LongAdder();
-   
+
   /**
    * Used as an exclusive object during rehashing start
    */
   private AtomicReference<Thread> rehashStarter = new AtomicReference<Thread>();
+
   /**
    * Constructor
    * @param initialCapacity initial number of k-v pairs
@@ -110,24 +106,26 @@ public class Long2LongHashMap {
   public Long2LongHashMap(int initialCapacity) {
     this(initialCapacity, false);
   }
-  
+
   public volatile boolean trace = false;
+
   /**
    * Constructor
-   * @param initialCapacity initial number of k-v 
+   * @param initialCapacity initial number of k-v
    * @param keyHashed do hash keys
    */
   public Long2LongHashMap(int initialCapacity, boolean keyHashed) {
     long size = Utils.nextPow2(2L * initialCapacity);
     if (size >= Integer.MAX_VALUE) {
-      throw new IllegalArgumentException("Requested initial capacity after adjusting to the next power of 2 value is too big");
+      throw new IllegalArgumentException(
+          "Requested initial capacity after adjusting to the next power of 2 value is too big");
     }
- 
+
     this.dataRef.set(new AtomicLongArray((int) size));
     this.keysHashed = keyHashed;
     updateRehashCheckMask();
   }
-  
+
   private void updateRehashCheckMask() {
     int n = dataRef.get().length() / 2;
     if (n < (1 << 16)) {
@@ -136,23 +134,23 @@ public class Long2LongHashMap {
       rcmask = 0xffff;
     }
   }
-  
+
   /**
-   *  Get total number of alive objects (k-v pairs) 
+   * Get total number of alive objects (k-v pairs)
    * @return number of alive objects
    */
   public long size() {
     return alive.longValue();
   }
-  
+
   /**
-   * Get total number of delete tombstones 
+   * Get total number of delete tombstones
    * @return number of delete tombstones
    */
   public long totalTombstoneObjects() {
     return tombstones.longValue();
   }
-  
+
   /**
    * Size of a map (capacity)
    * @return
@@ -160,7 +158,7 @@ public class Long2LongHashMap {
   public long capacity() {
     return dataRef.get().length();
   }
-  
+
   /**
    * Is map re-hashing is in progress
    * @return true or false
@@ -168,7 +166,7 @@ public class Long2LongHashMap {
   public boolean isRehashingInProgress() {
     return this.rehashGroup.get() != null;
   }
-  
+
   /**
    * Set resource deallocator
    * @param deallocator deallocator
@@ -176,6 +174,7 @@ public class Long2LongHashMap {
   public void setDeallocator(Deallocator d) {
     this.deallocator = d;
   }
+
   /**
    * Get deallocator
    * @return deallocator
@@ -183,7 +182,7 @@ public class Long2LongHashMap {
   public Deallocator getDeallocator() {
     return this.deallocator;
   }
-  
+
   /**
    * Put key - value
    * @param key key
@@ -221,40 +220,38 @@ public class Long2LongHashMap {
     }
     return put(dataRef.get(), key, value);
   }
-  
+
   /**
    * Put key - value for a given storage
-   * 
    * @param data storage
    * @param key key
    * @param value value
    * @return previous value for a key or NULL
    */
   private long put(AtomicLongArray data, long key, long value) {
-   
+
     if (key == NULL || key == DELETED || key == LOCKED) {
       key = RANDOM_LONG - key;
     }
-    final long hash = keysHashed? key: Utils.squirrel3(key);
+    final long hash = keysHashed ? key : Utils.squirrel3(key);
     final int mask = (int) (data.length() - 1) & 0xfffffffe;
     int index = (int) (hash & mask);
     long oldKey = NULL; // missing key
     long oldValue = NULL;
-    
+
     /*
-     * We start our probing run with the index='index'
-     * We have to lock it before starting search for a 
-     * cell for the key='key', locking initial index guarantees that
-     * no other read/write/delete operation with the same key will be possible in 
-     * parallel with this one, thus preventing race condition with duplicate keys
-     * Locking start index serializes read/write/delete operations for the key
-     * 
+     * We start our probing run with the index='index' We have to lock it before starting search for
+     * a cell for the key='key', locking initial index guarantees that no other read/write/delete
+     * operation with the same key will be possible in parallel with this one, thus preventing race
+     * condition with duplicate keys Locking start index serializes read/write/delete operations for
+     * the key
      */
     long startIndexKey;
     final int startIndex = index;
-    while(true) {    
-      while ((startIndexKey = data.get(startIndex)) == LOCKED); 
-      if (data.compareAndSet(startIndex,  startIndexKey, LOCKED)) {
+    while (true) {
+      while ((startIndexKey = data.get(startIndex)) == LOCKED)
+        ;
+      if (data.compareAndSet(startIndex, startIndexKey, LOCKED)) {
         break;
       }
     }
@@ -263,7 +260,7 @@ public class Long2LongHashMap {
     if (oldKey == DELETED || oldKey == NULL) {
       data.set(index + 1, value);
       // Unlock index with new key
-      data.set(index,  key);
+      data.set(index, key);
       // Update counters
       alive.increment();
       if (oldKey == DELETED) {
@@ -273,7 +270,7 @@ public class Long2LongHashMap {
     } else if (oldKey == key) {
       data.set(index + 1, value);
       // Unlock index with new key
-      data.set(index,  key);
+      data.set(index, key);
       // No counters update
       return oldValue;
     }
@@ -281,20 +278,18 @@ public class Long2LongHashMap {
     // startIndex is locked
     index = (startIndex + 2) & mask;
     try {
-      outer:
-      while (true) {      
+      outer: while (true) {
         while ((oldKey = data.get(index)) != NULL) {
           if (key == oldKey || oldKey == DELETED) {
             // We break if found the same key or deleted or empty
             break;
           } else if (oldKey == LOCKED) {
             // We can not pass over LOCKED
-            // Two options: busy wait until unlocked or 
+            // Two options: busy wait until unlocked or
             // start again from the beginning
-            while ((oldKey = data.get(index)) == LOCKED);
-            if (oldKey == key || 
-                  oldKey == DELETED || 
-                    oldKey == NULL) {
+            while ((oldKey = data.get(index)) == LOCKED)
+              ;
+            if (oldKey == key || oldKey == DELETED || oldKey == NULL) {
               break;
             }
           }
@@ -305,8 +300,9 @@ public class Long2LongHashMap {
         if (oldKey == key) {
           // Loop until compareAndSet succeed (index could be LOCKED)
           // When unlocked oldKey will be restored, so eventually
-          // this operation will succeed 
-          while(!data.compareAndSet(index, oldKey, key));
+          // this operation will succeed
+          while (!data.compareAndSet(index, oldKey, key))
+            ;
           oldValue = data.getAndSet(index + 1, value);
           break;
         }
@@ -314,7 +310,7 @@ public class Long2LongHashMap {
         // But it could be locked at this point of execution
         // If it was locked by 'put' we have to move on,
         // but if it was locked by 'delete' we have to wait
-        // until its unlocked, because 'delete' will restore 
+        // until its unlocked, because 'delete' will restore
         // previous key, which is either NULL or DELETED
         long waitKey;
         while (!data.compareAndSet(index, oldKey, key)) {
@@ -337,11 +333,11 @@ public class Long2LongHashMap {
       }
       return oldValue;
     } finally {
-      // Now unlock start index 
+      // Now unlock start index
       data.set(startIndex, startIndexKey);
     }
   }
-  
+
   /**
    * Put if absent (used internally during map rehashing)
    * @param data data array storage
@@ -350,29 +346,28 @@ public class Long2LongHashMap {
    * @return true on success, false otherwise
    */
   private boolean add(AtomicLongArray data, long key, long value) {
-      
+
     if (key == NULL || key == DELETED || key == LOCKED) {
       key = RANDOM_LONG - key;
     }
-    final long hash = keysHashed? key: Utils.squirrel3(key);
+    final long hash = keysHashed ? key : Utils.squirrel3(key);
     final int mask = (int) (data.length() - 1) & 0xfffffffe;
     int index = (int) (hash & mask);
     long oldKey = NULL; // missing key
-    
+
     /*
-     * We start our probing run with the index='index'
-     * We have to lock it before starting search for a 
-     * cell for the key='key', locking initial index guarantees that
-     * no other read/write/delete operation with the same key will be possible in 
-     * parallel with this one, thus preventing race condition with duplicate keys
-     * Locking start index serializes read/write/delete operations for the key
-     * 
+     * We start our probing run with the index='index' We have to lock it before starting search for
+     * a cell for the key='key', locking initial index guarantees that no other read/write/delete
+     * operation with the same key will be possible in parallel with this one, thus preventing race
+     * condition with duplicate keys Locking start index serializes read/write/delete operations for
+     * the key
      */
     long startIndexKey;
     final int startIndex = index;
-    while(true) {    
-      while ((startIndexKey = data.get(startIndex)) == LOCKED); 
-      if (data.compareAndSet(startIndex,  startIndexKey,  LOCKED)) {
+    while (true) {
+      while ((startIndexKey = data.get(startIndex)) == LOCKED)
+        ;
+      if (data.compareAndSet(startIndex, startIndexKey, LOCKED)) {
         break;
       }
     }
@@ -395,20 +390,18 @@ public class Long2LongHashMap {
     // startIndex is locked
     index = (startIndex + 2) & mask;
     try {
-      outer:
-      while (true) {      
+      outer: while (true) {
         while ((oldKey = data.get(index)) != NULL) {
           if (key == oldKey || oldKey == DELETED) {
             // We break if found the same key or deleted or empty
             break;
           } else if (oldKey == LOCKED) {
             // We can not pass over LOCKED
-            // Two options: busy wait until unlocked or 
+            // Two options: busy wait until unlocked or
             // start again from the beginning
-            while ((oldKey = data.get(index)) == LOCKED);
-            if (oldKey == key || 
-                  oldKey == DELETED || 
-                    oldKey == NULL) {
+            while ((oldKey = data.get(index)) == LOCKED)
+              ;
+            if (oldKey == key || oldKey == DELETED || oldKey == NULL) {
               break;
             }
           }
@@ -417,14 +410,14 @@ public class Long2LongHashMap {
         }
         // Here oldKey == key OR NULL OR DELETED
         if (oldKey == key) {
-         // Key exists
-         return false;
+          // Key exists
+          return false;
         }
         // Now we have oldKey either NULL or DELETED
         // But it could be locked at this point of execution
         // If it was locked by 'put' we have to move on,
         // but if it was locked by 'delete' we have to wait
-        // until its unlocked, because 'delete' will restore 
+        // until its unlocked, because 'delete' will restore
         // previous key, which is either NULL or DELETED
         long waitKey = 0;
         while (!data.compareAndSet(index, oldKey, key)) {
@@ -443,7 +436,7 @@ public class Long2LongHashMap {
       }
       return true;
     } finally {
-      // Now unlock start index 
+      // Now unlock start index
       data.set(startIndex, startIndexKey);
     }
   }
@@ -469,7 +462,7 @@ public class Long2LongHashMap {
     // rehashRef data returns NULL
     return get(dataRef.get(), key);
   }
-  
+
   /**
    * Get value by key
    * @param key key
@@ -489,7 +482,8 @@ public class Long2LongHashMap {
      * the same key can run in parallel - we lock start index
      */
     while (true) {
-      while ((startIndexKey = data.get(startIndex)) == LOCKED);
+      while ((startIndexKey = data.get(startIndex)) == LOCKED)
+        ;
       if (data.compareAndSet(startIndex, startIndexKey, LOCKED)) {
         break;
       }
@@ -512,7 +506,8 @@ public class Long2LongHashMap {
           // because we do not know the key of this cell
           // therefore we either start from beginning one more time
           // or busy wait on this cell - the latter one
-          while ((found = data.get(index)) == LOCKED);
+          while ((found = data.get(index)) == LOCKED)
+            ;
           if (found == key) {
             break;
           }
@@ -556,7 +551,7 @@ public class Long2LongHashMap {
     if (rg != null) {
       nextRehashingRun();
       // if rip == false - we got correct value
-      // if rip == true, possibly stale 
+      // if rip == true, possibly stale
       long value = delete(dataRef.get(), key);
       AtomicLongArray data = rg.rehashData;// rehashRef.get();
       if (data != null) {
@@ -567,7 +562,7 @@ public class Long2LongHashMap {
         // This is the latest value of key
         if (val != NULL && value != NULL) {
           alive.increment();
-          //tombstones.decrement();
+          // tombstones.decrement();
           if (deallocator != null) {
             deallocator.deallocate(value);
           }
@@ -584,7 +579,7 @@ public class Long2LongHashMap {
         long val = delete(dd, key);
         if (val != NULL && value != NULL) {
           alive.increment();
-          //tombstones.decrement();
+          // tombstones.decrement();
           if (deallocator != null) {
             deallocator.deallocate(value);
           }
@@ -602,15 +597,15 @@ public class Long2LongHashMap {
     }
     return delete(dataRef.get(), key);
   }
-  
+
   /**
    * Deletes key and returns the deleted value or NULL
    * @param key key to delete
    * @return value or NULL
    */
-  
+
   private long delete(final AtomicLongArray data, long key) {
-    
+
     boolean isMainArray = data == dataRef.get();
     RehashGroup rg = null;
     long rehashReadOffset = Long.MIN_VALUE;
@@ -620,7 +615,7 @@ public class Long2LongHashMap {
         rehashReadOffset = rg.rehashReadOffset.get();
       }
     }
-    
+
     if (key == NULL || key == DELETED || key == LOCKED) {
       key = RANDOM_LONG - key;
     }
@@ -636,7 +631,8 @@ public class Long2LongHashMap {
      * the same key can run in parallel
      */
     while (true) {
-      while ((startIndexKey = data.get(startIndex)) == LOCKED);
+      while ((startIndexKey = data.get(startIndex)) == LOCKED)
+        ;
       if (data.compareAndSet(startIndex, startIndexKey, LOCKED)) {
         break;
       }
@@ -660,7 +656,8 @@ public class Long2LongHashMap {
         if (key == oldKey) {
           break;
         } else if (oldKey == LOCKED) {
-          while ((oldKey = data.get(index)) == LOCKED);
+          while ((oldKey = data.get(index)) == LOCKED)
+            ;
           if (oldKey == key) {
             break;
           }
@@ -677,13 +674,14 @@ public class Long2LongHashMap {
         oldValue = data.getAndSet(index + 1, NULL);
         // This cell can be locked now, busy loop until
         // operation succeeds
-        while (!data.compareAndSet(index, oldKey, DELETED));
+        while (!data.compareAndSet(index, oldKey, DELETED))
+          ;
         // Update counters
         alive.decrement();
         if (!(isMainArray && rehashReadOffset > index)) {
           // Rehashing in progress and this tombstone will be cleared by rehashing later
           tombstones.increment();
-        }      
+        }
       }
       return oldValue;
     } finally {
@@ -693,9 +691,8 @@ public class Long2LongHashMap {
   }
 
   /**
-   * Checks probabilistically if we have to start rehashing
-   * TODO: start rehashing in a separate thread
-   * to avoid latency spikes
+   * Checks probabilistically if we have to start rehashing TODO: start rehashing in a separate
+   * thread to avoid latency spikes
    */
   private void maybeStartRehashing() {
     if (rehashGroup.get() != null) {
@@ -744,7 +741,7 @@ public class Long2LongHashMap {
     rg.rehashData = rehashRef;
     rehashGroup.set(rg);
   }
-  
+
   /**
    * Finalize rehashing
    */
@@ -756,7 +753,7 @@ public class Long2LongHashMap {
     rehashGroup.set(null);
     rehashStarter.set(null);
   }
-  
+
   /**
    * Rehashes next chunk of a main array
    */
@@ -769,14 +766,13 @@ public class Long2LongHashMap {
     AtomicLongArray data = rg.mainData;
     final int len = data.length();
     int startOff = rehashReadOffset.getAndAdd(rehashChunkSize * 2);
-    if(startOff >= len) {
+    if (startOff >= len) {
       // Rehashing is complete already
       return;
     }
     AtomicLongArray rehashData = rg.rehashData;
     int chunkSize = Math.min(len - startOff, rehashChunkSize * 2);
-    outer:
-    for (int i = startOff; i < startOff + chunkSize; i += 2) {
+    outer: for (int i = startOff; i < startOff + chunkSize; i += 2) {
       long key = data.get(i);
       if (key == NULL || key == DELETED) {
         if (key == DELETED) {
@@ -786,7 +782,8 @@ public class Long2LongHashMap {
       }
       if (key == LOCKED) {
         // Wait until unlocked
-        while((key = data.get(i)) == LOCKED);
+        while ((key = data.get(i)) == LOCKED)
+          ;
       }
       if (key == NULL || key == DELETED) {
         // Special attention to DELETED
@@ -796,16 +793,16 @@ public class Long2LongHashMap {
         }
         continue;
       }
- 
+
       // Lock this index - locking prevents race condition with possible deletes
-      while(!data.compareAndSet(i, key, LOCKED)) {
+      while (!data.compareAndSet(i, key, LOCKED)) {
         long read = data.get(i);
         if (read == DELETED) {
           tombstones.decrement();
-          continue  outer;
+          continue outer;
         }
       }
-      // Add  key-value (new version may exists in rehash storage and we 
+      // Add key-value (new version may exists in rehash storage and we
       // do not want to overwrite it)
       long value = data.get(i + 1);
       boolean result = add(rehashData, key, value);
@@ -816,23 +813,24 @@ public class Long2LongHashMap {
         alive.decrement();
       } else {
         // set value to NULL
-        data.set(i + 1,  NULL);
+        data.set(i + 1, NULL);
       }
       // Unlock
       data.set(i, key);
     }
     // Wait until all previous runs (in other threads) are complete
-    while(rg.rehashConfirmedOffset != startOff);    
+    while (rg.rehashConfirmedOffset != startOff)
+      ;
     // Now increment confirmed rehash offset
     rg.rehashConfirmedOffset += chunkSize;
 
     if (rg.rehashConfirmedOffset == len) {
-      // This thread was the last one and it will finalize 
+      // This thread was the last one and it will finalize
       // the map rehashing
       finishRehashing();
     }
   }
-  
+
   /**
    * Used for testing only
    */
@@ -845,7 +843,7 @@ public class Long2LongHashMap {
       dispose(dataRef.get());
     }
   }
-  
+
   private void dispose(AtomicLongArray data) {
     if (deallocator == null) {
       return;
@@ -855,9 +853,10 @@ public class Long2LongHashMap {
       deallocator.deallocate(value);
     }
   }
-  
+
   @SuppressWarnings("unused")
-  private boolean cas(AtomicLongArray array, int index, long expValue, long newValue, long timeout) {
+  private boolean cas(AtomicLongArray array, int index, long expValue, long newValue,
+      long timeout) {
     long start = System.nanoTime();
     while (!array.compareAndSet(index, expValue, newValue)) {
       if (System.nanoTime() - start > timeout) {
@@ -866,7 +865,7 @@ public class Long2LongHashMap {
     }
     return true;
   }
-  
+
   @SuppressWarnings("unused")
   private long waitUntil(AtomicLongArray array, int index, long value, long timeout) {
     long v = 0;
@@ -878,17 +877,17 @@ public class Long2LongHashMap {
     }
     return v;
   }
-  
+
   public long search(long key) {
     AtomicLongArray data = dataRef.get();
     int len = data.length();
     final int mask = (int) (data.length() - 1) & 0xfffffffe;
     int index = (int) (key & mask);
-    for(int i = index; i < len; i+=2) {
+    for (int i = index; i < len; i += 2) {
       long k = data.get(i);
       if (k == key) {
         return data.get(i + 1);
-      } 
+      }
     }
     return -1;
   }

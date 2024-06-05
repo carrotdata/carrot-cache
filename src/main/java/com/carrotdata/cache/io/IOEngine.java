@@ -1,19 +1,12 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
+ * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
+ * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ * for the specific language governing permissions and limitations under the License.
  */
 package com.carrotdata.cache.io;
 
@@ -48,8 +41,8 @@ import com.carrotdata.cache.util.Utils;
 
 /**
  * IOEngine base class
- *
- * <p>This class is responsible for storing and retrieving cached data, and keeping statistics
+ * <p>
+ * This class is responsible for storing and retrieving cached data, and keeping statistics
  * information for all data segments. All data is stored in segments Each segment has a size which
  * is configurable Total number of segments is defined by a maximum cache size and segment size.
  * Data can be stored in RAM (off-heap) and on disk (SSD)
@@ -64,7 +57,7 @@ public abstract class IOEngine implements Persistent {
   public static int NOT_FOUND = -1;
 
   public static int READ_ERROR = -2;
-  
+
   public static enum IOEngineEvent {
     DATA_SIZE_CHANGED; // size of a data changed
   }
@@ -76,7 +69,7 @@ public abstract class IOEngine implements Persistent {
   /* Parent cache name */
   protected final String cacheName;
 
-  /* Segment size (bytes)*/
+  /* Segment size (bytes) */
   protected final long segmentSize;
 
   /* Number of segments */
@@ -97,45 +90,45 @@ public abstract class IOEngine implements Persistent {
   /* Total allocated storage size (in bytes) */
   protected AtomicLong storageAllocated = new AtomicLong();
 
-  /* Total storage used size in bytes (uncompressed)*/
+  /* Total storage used size in bytes (uncompressed) */
   protected AtomicLong rawDataSize = new AtomicLong();
 
-  /* Total storage used size in bytes (compressed)*/
+  /* Total storage used size in bytes (compressed) */
   protected AtomicLong storageUsed = new AtomicLong();
-  
-  /* Upsert operation - update existing one*/
+
+  /* Upsert operation - update existing one */
   protected AtomicLong totalUpdates = new AtomicLong();
-  
+
   /* New inserts */
   protected AtomicLong totalInserts = new AtomicLong();
-  
+
   /* Total number of delete operations */
   protected AtomicLong totalDeletes = new AtomicLong();
-  
+
   /* Total read operations (gets) */
-  protected AtomicLong totalReads  = new AtomicLong();
- 
+  protected AtomicLong totalReads = new AtomicLong();
+
   /* Total failed reads */
   protected AtomicLong totalFailedReads = new AtomicLong();
-  
-  /* Total duration in ns of all read operations*/
+
+  /* Total duration in ns of all read operations */
   protected AtomicLong totalIOReadDuration = new AtomicLong();
-  
+
   /*
    * RAM buffers accumulates incoming PUT's before submitting them to an IOEngine
    */
 
   protected Segment[] ramBuffers;
 
-  /* Keeps tracks of all segments*/
+  /* Keeps tracks of all segments */
   protected Segment[] dataSegments;
 
   /* Memory index */
   protected MemoryIndex index;
 
-  /* Memory buffer pool*/
+  /* Memory buffer pool */
   protected MemoryBufferPool memoryBufferPool;
-  
+
   /* Cached data directory name */
   protected String dataDir;
 
@@ -155,17 +148,16 @@ public abstract class IOEngine implements Persistent {
   int maxEmbeddedSize;
 
   List<Scavenger.Listener> scavengerListeners = new LinkedList<>();
-  
+
   /**
-   * Write batches for writers which supports batching of write operations
-   * (optimized compressed batch writer)
+   * Write batches for writers which supports batching of write operations (optimized compressed
+   * batch writer)
    */
   WriteBatches writeBatches;
-  
+
   /**
    * Initialize engine for a given cache
-   *
-   * @param cache cache 
+   * @param cache cache
    * @return new engine
    */
   public static IOEngine getEngineForCache(Cache cache) {
@@ -187,7 +179,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get engine for cache
-   *
    * @param type cache type
    * @param cache cache itself
    * @return engine
@@ -203,7 +194,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Constructor
-   *
    * @param cacheName cache name
    */
   public IOEngine(String cacheName) {
@@ -239,7 +229,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Constructor
-   *
    * @param conf cache configuration
    */
   public IOEngine(CacheConfig conf) {
@@ -252,7 +241,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get allocated storage size
-   *
    * @return size
    */
   public long getStorageAllocated() {
@@ -261,7 +249,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get storage used (uncompressed size)
-   *
    * @return size
    */
   public long getRawDataSize() {
@@ -276,10 +263,9 @@ public abstract class IOEngine implements Persistent {
 
     return this.storageUsed.get();
   }
-  
+
   /**
    * Get storage allocation as a ratio of a maximum storage size
-   *
    * @return ratio (0. - 1.)
    */
   public double getStorageAllocatedRatio() {
@@ -288,7 +274,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Report allocation
-   *
    * @param value allocation value
    * @return new storage allocation value
    */
@@ -303,7 +288,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Report usage
-   *
    * @param value usage value
    * @return new storage usage value
    */
@@ -313,17 +297,15 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Report actual usage (compressed or raw if compression not enabled)
-   *
    * @param value usage value
    * @return new storage usage value
    */
   public long reportStorageUsed(long value) {
     return this.storageUsed.addAndGet(value);
   }
-  
+
   /**
    * Get cache name
-   *
    * @return cache name
    */
   public String getCacheName() {
@@ -332,7 +314,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Enables - disables eviction
-   *
    * @param b
    */
   public void setEvictionEnabled(boolean b) {
@@ -341,15 +322,14 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Is eviction enabled
-   *
    * @return true or false
    */
   public boolean isEvictionEnabled() {
     return this.index.isEvictionEnabled();
   }
+
   /**
    * Sets engine listener
-   *
    * @param al listener
    */
   public void setListener(Listener al) {
@@ -358,7 +338,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get engine listener
-   *
    * @return engine listener
    */
   public Listener getListener() {
@@ -367,7 +346,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get memory index
-   *
    * @return memory index
    */
   public MemoryIndex getMemoryIndex() {
@@ -376,7 +354,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get segment default size
-   *
    * @return segment default size
    */
   public long getSegmentSize() {
@@ -385,7 +362,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get number of segments
-   *
    * @return number of segments
    */
   public int getNumberOfSegments() {
@@ -394,7 +370,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get number of ranks
-   *
    * @return number of ranks
    */
   public int getNumberOfRanks() {
@@ -408,7 +383,7 @@ public abstract class IOEngine implements Persistent {
   public long getTotalUpdates() {
     return this.totalUpdates.get();
   }
-  
+
   /**
    * Get total inserts
    * @return total inserts
@@ -416,7 +391,7 @@ public abstract class IOEngine implements Persistent {
   public long getTotalInserts() {
     return this.totalInserts.get();
   }
-  
+
   /**
    * Get total deletes
    * @return total deletes
@@ -424,7 +399,7 @@ public abstract class IOEngine implements Persistent {
   public long getTotalDeletes() {
     return this.totalDeletes.get();
   }
-  
+
   /**
    * Get total IO read duration
    * @return duration of all read operations so far in ns
@@ -432,7 +407,7 @@ public abstract class IOEngine implements Persistent {
   public long getTotalIOReadDuration() {
     return this.totalIOReadDuration.get();
   }
-  
+
   /**
    * Get total number of read operations
    * @return total number of reads
@@ -440,7 +415,7 @@ public abstract class IOEngine implements Persistent {
   public long getTotalReads() {
     return this.totalReads.get();
   }
-  
+
   /**
    * Get total number of failed read operations
    * @return total number of failed reads
@@ -448,10 +423,9 @@ public abstract class IOEngine implements Persistent {
   public long getTotalFailedReads() {
     return this.totalFailedReads.get();
   }
-  
+
   /**
    * Get segment by segment id
-   *
    * @param sid segment id
    * @return segment
    */
@@ -462,7 +436,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get key-value into a given byte buffer
-   *
    * @param keyPtr key address
    * @param keySize size of a key
    * @param buffer buffer
@@ -501,11 +474,15 @@ public abstract class IOEngine implements Persistent {
         if (offset < -1) {
           // Check write buffers
           if (this.writeBatches == null) {
-            throw new RuntimeException("Corrupted index, returns negative offset, but write batches are disbled: off=" + offset);
+            throw new RuntimeException(
+                "Corrupted index, returns negative offset, but write batches are disbled: off="
+                    + offset);
           }
           WriteBatch wb = this.writeBatches.getWriteBatch((int) offset);
           if (wb == null) {
-            throw new RuntimeException("Corrupted index, returns negative offset, but write batch was not found: off=" + offset);
+            throw new RuntimeException(
+                "Corrupted index, returns negative offset, but write batch was not found: off="
+                    + offset);
           }
           int size = wb.get(keyPtr, keySize, buffer, bufOffset);
           if (size >= 0) {
@@ -583,10 +560,9 @@ public abstract class IOEngine implements Persistent {
       UnsafeAccess.free(buf);
     }
   }
-  
+
   /**
    * Get value range into a given byte buffer
-   *
    * @param keyPtr key address
    * @param keySize size of a key
    * @param rangeStart range start
@@ -596,9 +572,8 @@ public abstract class IOEngine implements Persistent {
    * @return length of an item or -1
    * @throws IOException
    */
-  public long getRange(long keyPtr, int keySize, int rangeStart, int rangeSize, boolean hit, 
-       byte[] buffer, int bufOffset)
-      throws IOException {
+  public long getRange(long keyPtr, int keySize, int rangeStart, int rangeSize, boolean hit,
+      byte[] buffer, int bufOffset) throws IOException {
     IndexFormat format = this.index.getIndexFormat();
     // TODO: embedded entry case
     int entrySize = format.indexEntrySize();
@@ -606,7 +581,7 @@ public abstract class IOEngine implements Persistent {
     try {
 
       long result = index.find(keyPtr, keySize, hit, buf, entrySize);
-      
+
       if (result < 0) {
         return NOT_FOUND;
       } else if (result > entrySize) {
@@ -651,7 +626,7 @@ public abstract class IOEngine implements Persistent {
         if (s == null || !s.isValid()) {
           return NOT_FOUND;
         }
-        
+
         try {
           s.readLock();
           int id = this.index.getSegmentId(keyPtr, keySize);
@@ -663,8 +638,8 @@ public abstract class IOEngine implements Persistent {
             return getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
           }
           // Read the data
-          int res = getRange(sid, offset, keyValueSize, keyPtr, keySize, 
-            rangeStart, rangeSize, buffer, bufOffset);
+          int res = getRange(sid, offset, keyValueSize, keyPtr, keySize, rangeStart, rangeSize,
+            buffer, bufOffset);
           access(s, res, hit);
           return res;
         } finally {
@@ -675,9 +650,9 @@ public abstract class IOEngine implements Persistent {
       UnsafeAccess.free(buf);
     }
   }
+
   /**
    * Get item into a given byte buffer
-   *
    * @param key key buffer
    * @param keyOffset offset
    * @param keySize size of a key
@@ -718,11 +693,15 @@ public abstract class IOEngine implements Persistent {
         if (offset < -1) {
           // Check write buffers
           if (this.writeBatches == null) {
-            throw new RuntimeException("Corrupted index, returns negative offset, but write batches are disbled: off=" + offset);
+            throw new RuntimeException(
+                "Corrupted index, returns negative offset, but write batches are disbled: off="
+                    + offset);
           }
           WriteBatch wb = this.writeBatches.getWriteBatch((int) offset);
           if (wb == null) {
-            throw new RuntimeException("Corrupted index, returns negative offset, but write batch was not found: off=" + offset);
+            throw new RuntimeException(
+                "Corrupted index, returns negative offset, but write batch was not found: off="
+                    + offset);
           }
           int size = wb.get(key, keyOffset, keySize, buffer, bufOffset);
           if (size >= 0) {
@@ -764,7 +743,7 @@ public abstract class IOEngine implements Persistent {
         if (s == null || !s.isValid()) {
           return NOT_FOUND;
         }
-        
+
         // Make up to 3 attempts
         int maxAttempts = 3;
         int attempt = 0;
@@ -785,7 +764,7 @@ public abstract class IOEngine implements Persistent {
             res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer, bufOffset);
             if (res >= 0) {
               access(s, res, hit);
-            } else  if (res == IOEngine.READ_ERROR) {
+            } else if (res == IOEngine.READ_ERROR) {
               // next attempt
               continue;
             }
@@ -806,7 +785,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get value range into a given byte buffer
-   *
    * @param key key buffer
    * @param keyOffset offset
    * @param keySize size of a key
@@ -817,9 +795,8 @@ public abstract class IOEngine implements Persistent {
    * @return length of a range or -1
    * @throws IOException
    */
-  public long getRange(byte[] key, int keyOffset, int keySize, int rangeStart, int rangeSize, 
-      boolean hit, byte[] buffer, int bufOffset)
-      throws IOException {
+  public long getRange(byte[] key, int keyOffset, int keySize, int rangeStart, int rangeSize,
+      boolean hit, byte[] buffer, int bufOffset) throws IOException {
 
     IndexFormat format = this.index.getIndexFormat();
     // TODO: embedded entry case
@@ -841,7 +818,7 @@ public abstract class IOEngine implements Persistent {
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
 
-      //TODO: getRange does not make sense for embedded data
+      // TODO: getRange does not make sense for embedded data
       boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
       if (dataEmbedded) {
         // For index formats which supports embedding
@@ -872,7 +849,7 @@ public abstract class IOEngine implements Persistent {
         if (s == null || !s.isValid()) {
           return NOT_FOUND;
         }
-        
+
         try {
           s.readLock();
           // Check if scavenger removed this object or moved it to another segment
@@ -885,7 +862,8 @@ public abstract class IOEngine implements Persistent {
             return getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
           }
           // Read the data
-          int res = getRange(sid, offset, keyValueSize, key, keyOffset, keySize, rangeStart, rangeSize,  buffer, bufOffset);
+          int res = getRange(sid, offset, keyValueSize, key, keyOffset, keySize, rangeStart,
+            rangeSize, buffer, bufOffset);
           access(s, res, hit);
           return res;
         } finally {
@@ -904,10 +882,9 @@ public abstract class IOEngine implements Persistent {
       }
     }
   }
-  
+
   /**
    * Get item into a given byte buffer
-   *
    * @param keyPtr key address
    * @param keySize size of a key
    * @param hit
@@ -919,7 +896,7 @@ public abstract class IOEngine implements Persistent {
     IndexFormat format = this.index.getIndexFormat();
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
-    //int slot = 0;
+    // int slot = 0;
     try {
       long offset = 0;
       do {
@@ -944,11 +921,15 @@ public abstract class IOEngine implements Persistent {
         if (offset < -1) {
           // Check write buffers
           if (this.writeBatches == null) {
-            throw new RuntimeException("Corrupted index, returns negative offset, but write batches are disbled: off=" + offset);
+            throw new RuntimeException(
+                "Corrupted index, returns negative offset, but write batches are disbled: off="
+                    + offset);
           }
           WriteBatch wb = this.writeBatches.getWriteBatch((int) offset);
           if (wb == null) {
-            throw new RuntimeException("Corrupted index, returns negative offset, but write batch was not found: off=" + offset);
+            throw new RuntimeException(
+                "Corrupted index, returns negative offset, but write batch was not found: off="
+                    + offset);
           }
           int size = wb.get(keyPtr, keySize, buffer);
           if (size >= 0) {
@@ -1026,13 +1007,12 @@ public abstract class IOEngine implements Persistent {
       return NOT_FOUND;
     } finally {
       UnsafeAccess.free(buf);
-     // this.index.unlock(slot);
+      // this.index.unlock(slot);
     }
   }
 
   /**
    * Get value range into a given byte buffer
-   *
    * @param keyPtr key address
    * @param keySize size of a key
    * @param rangeStart range start
@@ -1042,17 +1022,17 @@ public abstract class IOEngine implements Persistent {
    * @return length of an item or -1
    * @throws IOException
    */
-  public long getRange(long keyPtr, int keySize, int rangeStart, int rangeSize, boolean hit, 
-       ByteBuffer buffer) throws IOException {
+  public long getRange(long keyPtr, int keySize, int rangeStart, int rangeSize, boolean hit,
+      ByteBuffer buffer) throws IOException {
     IndexFormat format = this.index.getIndexFormat();
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     try {
       // TODO: double locking?
-      // Index locking  that segment will not be recycled
+      // Index locking that segment will not be recycled
       //
       long result = index.find(keyPtr, keySize, true, buf, entrySize);
- 
+
       if (result < 0) {
         return NOT_FOUND;
       } else if (result > entrySize) {
@@ -1097,7 +1077,7 @@ public abstract class IOEngine implements Persistent {
         if (s == null || !s.isValid()) {
           return NOT_FOUND;
         }
-        
+
         try {
           s.readLock();
           // Check if scavenger removed this object or moved it to another segment
@@ -1110,7 +1090,8 @@ public abstract class IOEngine implements Persistent {
             return getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer);
           }
           // Read the data
-          int res = getRange(sid, offset, keyValueSize, keyPtr, keySize, rangeStart, rangeSize, buffer);
+          int res =
+              getRange(sid, offset, keyValueSize, keyPtr, keySize, rangeStart, rangeSize, buffer);
           access(s, res, hit);
           return res;
         } finally {
@@ -1122,10 +1103,8 @@ public abstract class IOEngine implements Persistent {
     }
   }
 
-  
   /**
    * Get item into a given byte buffer
-   *
    * @param key key buffer
    * @param keyOffset offset
    * @param keySize size of a key
@@ -1164,11 +1143,15 @@ public abstract class IOEngine implements Persistent {
         if (offset < -1) {
           // Check write buffers
           if (this.writeBatches == null) {
-            throw new RuntimeException("Corrupted index, returns negative offset, but write batches are disbled: off=" + offset);
+            throw new RuntimeException(
+                "Corrupted index, returns negative offset, but write batches are disbled: off="
+                    + offset);
           }
           WriteBatch wb = this.writeBatches.getWriteBatch((int) offset);
           if (wb == null) {
-            throw new RuntimeException("Corrupted index, returns negative offset, but write batch was not found: off=" + offset);
+            throw new RuntimeException(
+                "Corrupted index, returns negative offset, but write batch was not found: off="
+                    + offset);
           }
           int size = wb.get(key, keyOffset, keySize, buffer);
           if (size >= 0) {
@@ -1204,7 +1187,7 @@ public abstract class IOEngine implements Persistent {
         return keyValueSize;
       } else {
         // Cached item offset in a data segment
-        //long offset = format.getOffset(buf);
+        // long offset = format.getOffset(buf);
         // segment id
         int sid = (int) format.getSegmentId(buf);
         // Read the data
@@ -1230,7 +1213,7 @@ public abstract class IOEngine implements Persistent {
             }
             // Read the data
             res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer);
-            if (res >=0) {
+            if (res >= 0) {
               access(s, res, hit);
             } else if (res == READ_ERROR) {
               continue;
@@ -1252,7 +1235,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get item into a given byte buffer
-   *
    * @param key key buffer
    * @param keyOffset offset
    * @param keySize size of a key
@@ -1263,9 +1245,8 @@ public abstract class IOEngine implements Persistent {
    * @return length of an item or -1
    * @throws IOException
    */
-  public long getRange(byte[] key, int keyOffset, int keySize, 
-      int rangeStart, int rangeSize, boolean hit, ByteBuffer buffer)
-      throws IOException {
+  public long getRange(byte[] key, int keyOffset, int keySize, int rangeStart, int rangeSize,
+      boolean hit, ByteBuffer buffer) throws IOException {
 
     IndexFormat format = this.index.getIndexFormat();
     int entrySize = format.indexEntrySize();
@@ -1326,11 +1307,11 @@ public abstract class IOEngine implements Persistent {
           }
           if (id != sid) {
             s.readUnlock();
-            return getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit,  buffer);
+            return getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer);
           }
           // Read the data
-          int res = getRange(sid, offset, keyValueSize, key, keyOffset, keySize, 
-            rangeStart, rangeSize, buffer);
+          int res = getRange(sid, offset, keyValueSize, key, keyOffset, keySize, rangeStart,
+            rangeSize, buffer);
           access(s, res, hit);
           return res;
         } finally {
@@ -1341,10 +1322,9 @@ public abstract class IOEngine implements Persistent {
       UnsafeAccess.free(buf);
     }
   }
-  
+
   /**
    * Get cached item
-   *
    * @param id data segment id to read from
    * @param offset data segment offset
    * @param size size of an item in bytes
@@ -1355,16 +1335,8 @@ public abstract class IOEngine implements Persistent {
    * @param bufOffset offset
    * @return size of a K-V pair or -1 (if not found)
    */
-  private int get(
-      int id,
-      long offset,
-      int size,
-      byte[] key,
-      int keyOffset,
-      int keySize,
-      byte[] buffer,
-      int bufOffset)
-      throws IOException {
+  private int get(int id, long offset, int size, byte[] key, int keyOffset, int keySize,
+      byte[] buffer, int bufOffset) throws IOException {
     if (buffer == null || size > 0 && (buffer.length - bufOffset) < size) {
       throw new IllegalArgumentException();
     }
@@ -1374,7 +1346,7 @@ public abstract class IOEngine implements Persistent {
       return result;
     }
     if (result == READ_ERROR) {
-      //this.totalFailedReads.incrementAndGet();
+      // this.totalFailedReads.incrementAndGet();
       return result;
     }
     if (!isOffheap()) {
@@ -1386,7 +1358,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get cached item range
-   *
    * @param id data segment id to read from
    * @param offset data segment offset
    * @param size size of an item in bytes
@@ -1406,23 +1377,23 @@ public abstract class IOEngine implements Persistent {
     }
     this.totalReads.incrementAndGet();
 
-    int result = getRangeFromRAMBuffers(sid, offset, keyValueSize, key, keyOffset, keySize, 
+    int result = getRangeFromRAMBuffers(sid, offset, keyValueSize, key, keyOffset, keySize,
       rangeStart, rangeSize, buffer, bufOffset);
     if (result >= 0) {
       return result;
     }
-    if(result == READ_ERROR) {
+    if (result == READ_ERROR) {
       this.totalFailedReads.incrementAndGet();
     }
     if (!isOffheap()) {
-      return getRangeInternal(sid, offset, keyValueSize, key, keyOffset, keySize, rangeStart, rangeSize, buffer, bufOffset);
+      return getRangeInternal(sid, offset, keyValueSize, key, keyOffset, keySize, rangeStart,
+        rangeSize, buffer, bufOffset);
     }
     return NOT_FOUND;
   }
-  
+
   /**
-   * Get cached item 
-   *
+   * Get cached item
    * @param id data segment id to read from
    * @param offset data segment offset
    * @param size size of an item in bytes
@@ -1432,9 +1403,8 @@ public abstract class IOEngine implements Persistent {
    * @param bufOffset offset
    * @return size of a K-V pair or -1 (if not found)
    */
-  private int get(
-      int id, long offset, int size, long keyPtr, int keySize, byte[] buffer, int bufOffset)
-      throws IOException {
+  private int get(int id, long offset, int size, long keyPtr, int keySize, byte[] buffer,
+      int bufOffset) throws IOException {
     if (buffer == null || size > 0 && (buffer.length - bufOffset) < size) {
       throw new IllegalArgumentException();
     }
@@ -1444,8 +1414,8 @@ public abstract class IOEngine implements Persistent {
     if (result >= 0) {
       return result;
     }
-    if(result == READ_ERROR) {
-      //this.totalFailedReads.incrementAndGet();
+    if (result == READ_ERROR) {
+      // this.totalFailedReads.incrementAndGet();
       return result;
     }
     if (!isOffheap()) {
@@ -1456,7 +1426,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get cached item range
-   *
    * @param id data segment id to read from
    * @param offset data segment offset
    * @param size size of an item in bytes
@@ -1468,32 +1437,30 @@ public abstract class IOEngine implements Persistent {
    * @param bufOffset offset
    * @return size of a K-V pair or -1 (if not found)
    */
-  private int getRange(
-      int id, long offset, int size, long keyPtr, int keySize, int rangeStart, 
-      int rangeSize, byte[] buffer, int bufOffset)
-      throws IOException {
+  private int getRange(int id, long offset, int size, long keyPtr, int keySize, int rangeStart,
+      int rangeSize, byte[] buffer, int bufOffset) throws IOException {
     if (buffer == null) {
       throw new IllegalArgumentException("buffer is null");
     }
     this.totalReads.incrementAndGet();
 
-    int result = getRangeFromRAMBuffers(id, offset, size, keyPtr, keySize, rangeStart, 
-      rangeSize, buffer, bufOffset);
+    int result = getRangeFromRAMBuffers(id, offset, size, keyPtr, keySize, rangeStart, rangeSize,
+      buffer, bufOffset);
     if (result >= 0) {
       return result;
     }
-    if(result == READ_ERROR) {
+    if (result == READ_ERROR) {
       this.totalFailedReads.incrementAndGet();
     }
     if (!isOffheap()) {
-      return getRangeInternal(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer, bufOffset);
+      return getRangeInternal(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer,
+        bufOffset);
     }
     return NOT_FOUND;
   }
-  
+
   /**
    * Try to get data from RAM buffers
-   *
    * @param id segment's id
    * @param offset offset in a segment (0 - based)
    * @param size size of an cached item (can be negative - unknown)
@@ -1503,15 +1470,8 @@ public abstract class IOEngine implements Persistent {
    * @param buffer buffer to load data to
    * @return size of a K-V pair or -1 (if not found)
    */
-  private int getFromRAMBuffers(
-      int sid,
-      long offset,
-      int size,
-      byte[] key,
-      int keyOffset,
-      int keySize,
-      byte[] buffer,
-      int bufOffset) {
+  private int getFromRAMBuffers(int sid, long offset, int size, byte[] key, int keyOffset,
+      int keySize, byte[] buffer, int bufOffset) {
     Segment s = getSegmentById(sid);
     try {
       if (s != null) {
@@ -1522,8 +1482,8 @@ public abstract class IOEngine implements Persistent {
         }
         // OK it is in memory
         try {
-          return this.memoryDataReader.read(
-              this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset);
+          return this.memoryDataReader.read(this, key, keyOffset, keySize, sid, offset, size,
+            buffer, bufOffset);
         } catch (IOException e) {
           // never happens
           return READ_ERROR;
@@ -1537,10 +1497,8 @@ public abstract class IOEngine implements Persistent {
     return NOT_FOUND;
   }
 
- 
   /**
    * Try to get data from RAM buffers
-   *
    * @param id segment's id
    * @param offset offset in a segment (0 - based)
    * @param size size of an cached item (can be negative - unknown)
@@ -1550,17 +1508,8 @@ public abstract class IOEngine implements Persistent {
    * @param buffer buffer to load data to
    * @return size of a K-V pair or -1 (if not found)
    */
-  private int getRangeFromRAMBuffers(
-      int sid,
-      long offset,
-      int size,
-      byte[] key,
-      int keyOffset,
-      int keySize,
-      int rangeStart,
-      int rangeSize,
-      byte[] buffer,
-      int bufOffset) {
+  private int getRangeFromRAMBuffers(int sid, long offset, int size, byte[] key, int keyOffset,
+      int keySize, int rangeStart, int rangeSize, byte[] buffer, int bufOffset) {
     Segment s = getSegmentById(sid);
     try {
       if (s != null) {
@@ -1571,8 +1520,8 @@ public abstract class IOEngine implements Persistent {
         }
         // OK it is in memory
         try {
-           return this.memoryDataReader.readValueRange(
-              this, key, keyOffset, keySize, sid, offset, size, buffer, bufOffset, rangeStart, rangeSize);
+          return this.memoryDataReader.readValueRange(this, key, keyOffset, keySize, sid, offset,
+            size, buffer, bufOffset, rangeStart, rangeSize);
         } catch (IOException e) {
           // never happens
           return READ_ERROR;
@@ -1585,10 +1534,9 @@ public abstract class IOEngine implements Persistent {
     }
     return NOT_FOUND;
   }
-  
+
   /**
    * Try to get data from RAM buffers
-   *
    * @param id segment's id
    * @param offset offset in a segment (0 - based)
    * @param size size of an cached item (can be negative - unknown)
@@ -1597,48 +1545,7 @@ public abstract class IOEngine implements Persistent {
    * @param buffer buffer to load data to
    * @return size of a K-V pair or -1 (if not found)
    */
-  private int getFromRAMBuffers(
-      int sid, long offset, int size, long keyPtr, int keySize, byte[] buffer, int bufOffset) {
-    Segment s = getSegmentById(sid);
-    try {
-      if (s != null) {
-        s.readLock();
-        // now check s again
-        if (!s.isOffheap()) {
-          return NOT_FOUND;
-        }
-        // OK it is in memory
-        try {
-          return this.memoryDataReader.read(
-              this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
-        } catch (IOException e) {
-          // never happens
-          return READ_ERROR;
-        }
-      }
-    } finally {
-      if (s != null) {
-        s.readUnlock();
-      }
-    }
-    return NOT_FOUND;
-  }
-  
-  /**
-   * Try to get data from RAM buffers
-   *
-   * @param id segment's id
-   * @param offset offset in a segment (0 - based)
-   * @param size size of an cached item (can be negative - unknown)
-   * @param keyPtr key address
-   * @param keySize key size
-   * @param rangeStart range start
-   * @param rangeSize,
-   * @param buffer buffer to load data to
-   * @return size of a K-V pair or -1 (if not found)
-   */
-  private int getRangeFromRAMBuffers(
-      int sid, long offset, int size, long keyPtr, int keySize, int rangeStart, int rangeSize, 
+  private int getFromRAMBuffers(int sid, long offset, int size, long keyPtr, int keySize,
       byte[] buffer, int bufOffset) {
     Segment s = getSegmentById(sid);
     try {
@@ -1650,46 +1557,8 @@ public abstract class IOEngine implements Persistent {
         }
         // OK it is in memory
         try {
-          return this.memoryDataReader.readValueRange(
-              this, keyPtr, keySize, sid, offset, size, buffer, bufOffset, rangeStart, rangeSize);
-        } catch (IOException e) {
-          // never happens
-          return READ_ERROR;
-        }
-      }
-    } finally {
-      if (s != null) {
-        s.readUnlock();
-      }
-    }
-    return NOT_FOUND;
-  }
-  /**
-   * Try to get data from RAM buffers
-   *
-   * @param id segment's id
-   * @param offset offset in a segment (0 - based)
-   * @param size size of an cached item
-   * @param key key buffer
-   * @param keyOffset key offset
-   * @param keySize key size
-   * @param buffer buffer to load data to
-   * @return full size required or -1
-   */
-  private int getFromRAMBuffers(
-      int sid, long offset, int size, byte[] key, int keyOffset, int keySize, ByteBuffer buffer) {
-    Segment s = getSegmentById(sid);
-    try {
-      if (s != null) {
-        s.readLock();
-        // now check s again
-        if (!s.isOffheap()) {
-          return NOT_FOUND;
-        }
-        // OK it is in memory
-        try {
-          return this.memoryDataReader.read(
-              this, key, keyOffset, keySize, sid, offset, size, buffer);
+          return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer,
+            bufOffset);
         } catch (IOException e) {
           // never happens
           return READ_ERROR;
@@ -1705,7 +1574,83 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Try to get data from RAM buffers
-   *
+   * @param id segment's id
+   * @param offset offset in a segment (0 - based)
+   * @param size size of an cached item (can be negative - unknown)
+   * @param keyPtr key address
+   * @param keySize key size
+   * @param rangeStart range start
+   * @param rangeSize,
+   * @param buffer buffer to load data to
+   * @return size of a K-V pair or -1 (if not found)
+   */
+  private int getRangeFromRAMBuffers(int sid, long offset, int size, long keyPtr, int keySize,
+      int rangeStart, int rangeSize, byte[] buffer, int bufOffset) {
+    Segment s = getSegmentById(sid);
+    try {
+      if (s != null) {
+        s.readLock();
+        // now check s again
+        if (!s.isOffheap()) {
+          return NOT_FOUND;
+        }
+        // OK it is in memory
+        try {
+          return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, offset, size,
+            buffer, bufOffset, rangeStart, rangeSize);
+        } catch (IOException e) {
+          // never happens
+          return READ_ERROR;
+        }
+      }
+    } finally {
+      if (s != null) {
+        s.readUnlock();
+      }
+    }
+    return NOT_FOUND;
+  }
+
+  /**
+   * Try to get data from RAM buffers
+   * @param id segment's id
+   * @param offset offset in a segment (0 - based)
+   * @param size size of an cached item
+   * @param key key buffer
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @param buffer buffer to load data to
+   * @return full size required or -1
+   */
+  private int getFromRAMBuffers(int sid, long offset, int size, byte[] key, int keyOffset,
+      int keySize, ByteBuffer buffer) {
+    Segment s = getSegmentById(sid);
+    try {
+      if (s != null) {
+        s.readLock();
+        // now check s again
+        if (!s.isOffheap()) {
+          return NOT_FOUND;
+        }
+        // OK it is in memory
+        try {
+          return this.memoryDataReader.read(this, key, keyOffset, keySize, sid, offset, size,
+            buffer);
+        } catch (IOException e) {
+          // never happens
+          return READ_ERROR;
+        }
+      }
+    } finally {
+      if (s != null) {
+        s.readUnlock();
+      }
+    }
+    return NOT_FOUND;
+  }
+
+  /**
+   * Try to get data from RAM buffers
    * @param id segment's id
    * @param offset offset in a segment (0 - based)
    * @param size size of an cached item
@@ -1717,9 +1662,8 @@ public abstract class IOEngine implements Persistent {
    * @param buffer buffer to load data to
    * @return full size required or -1
    */
-  private int getRangeFromRAMBuffers(
-      int sid, long offset, int size, byte[] key, int keyOffset, int keySize, 
-      int rangeStart, int rangeSize, ByteBuffer buffer) {
+  private int getRangeFromRAMBuffers(int sid, long offset, int size, byte[] key, int keyOffset,
+      int keySize, int rangeStart, int rangeSize, ByteBuffer buffer) {
     Segment s = getSegmentById(sid);
     try {
       if (s != null) {
@@ -1730,8 +1674,8 @@ public abstract class IOEngine implements Persistent {
         }
         // OK it is in memory
         try {
-          return this.memoryDataReader.readValueRange(
-              this, key, keyOffset, keySize, sid, offset, size, buffer, rangeStart, rangeSize);
+          return this.memoryDataReader.readValueRange(this, key, keyOffset, keySize, sid, offset,
+            size, buffer, rangeStart, rangeSize);
         } catch (IOException e) {
           // never happens
           return READ_ERROR;
@@ -1745,10 +1689,8 @@ public abstract class IOEngine implements Persistent {
     return NOT_FOUND;
   }
 
-  
   /**
    * Try to get data from RAM buffers
-   *
    * @param id segment's id
    * @param offset offset in a segment (0 - based)
    * @param size size of an cached item
@@ -1757,8 +1699,8 @@ public abstract class IOEngine implements Persistent {
    * @param buffer buffer to load data to
    * @return full size required or -1
    */
-  private int getFromRAMBuffers(
-      int sid, long offset, int size, long keyPtr, int keySize, ByteBuffer buffer) {
+  private int getFromRAMBuffers(int sid, long offset, int size, long keyPtr, int keySize,
+      ByteBuffer buffer) {
     Segment s = getSegmentById(sid);
     try {
       if (s != null) {
@@ -1785,7 +1727,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Try to get data from RAM buffers
-   *
    * @param id segment's id
    * @param offset offset in a segment (0 - based)
    * @param size size of an cached item
@@ -1796,8 +1737,7 @@ public abstract class IOEngine implements Persistent {
    * @param buffer buffer to load data to
    * @return full size required or -1
    */
-  private int getRangeFromRAMBuffers(
-      int sid, long offset, int size, long keyPtr, int keySize, 
+  private int getRangeFromRAMBuffers(int sid, long offset, int size, long keyPtr, int keySize,
       int rangeStart, int rangeSize, ByteBuffer buffer) {
     Segment s = getSegmentById(sid);
     try {
@@ -1809,8 +1749,8 @@ public abstract class IOEngine implements Persistent {
         }
         // OK it is in memory
         try {
-          return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, 
-            offset, size, buffer, rangeStart, rangeSize);
+          return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, offset, size,
+            buffer, rangeStart, rangeSize);
         } catch (IOException e) {
           // never happens
           return READ_ERROR;
@@ -1823,10 +1763,9 @@ public abstract class IOEngine implements Persistent {
     }
     return NOT_FOUND;
   }
-  
+
   /**
    * Get cached item from underlying IOEngine implementation
-   *
    * @param id segment id
    * @param offset offset in a segment
    * @param size size of an item
@@ -1838,20 +1777,11 @@ public abstract class IOEngine implements Persistent {
    * @return full size required or -1
    * @throws IOException
    */
-  protected abstract int getInternal(
-      int id,
-      long offset,
-      int size,
-      byte[] key,
-      int keyOffset,
-      int keySize,
-      byte[] buffer,
-      int bufOffset)
-      throws IOException;
+  protected abstract int getInternal(int id, long offset, int size, byte[] key, int keyOffset,
+      int keySize, byte[] buffer, int bufOffset) throws IOException;
 
   /**
    * Get cached item from underlying IOEngine implementation
-   *
    * @param id segment id
    * @param offset offset in a segment
    * @param size size of an item
@@ -1862,13 +1792,11 @@ public abstract class IOEngine implements Persistent {
    * @return full size required or -1
    * @throws IOException
    */
-  protected abstract int getInternal(
-      int id, long offset, int size, long keyPtr, int keySize, byte[] buffer, int bufOffset)
-      throws IOException;
+  protected abstract int getInternal(int id, long offset, int size, long keyPtr, int keySize,
+      byte[] buffer, int bufOffset) throws IOException;
 
   /**
    * Get cached item from underlying IOEngine implementation
-   *
    * @param id segment id
    * @param offset offset in a segment
    * @param size size of an item
@@ -1879,13 +1807,11 @@ public abstract class IOEngine implements Persistent {
    * @return full size required or -1
    * @throws IOException
    */
-  protected abstract int getInternal(
-      int id, long offset, int size, byte[] key, int keyOffset, int keySize, ByteBuffer buffer)
-      throws IOException;
+  protected abstract int getInternal(int id, long offset, int size, byte[] key, int keyOffset,
+      int keySize, ByteBuffer buffer) throws IOException;
 
   /**
    * Get cached item from underlying IOEngine implementation
-   *
    * @param id segment id
    * @param offset offset in a segment
    * @param size size of an item
@@ -1895,14 +1821,11 @@ public abstract class IOEngine implements Persistent {
    * @return full size required or -1
    * @throws IOException
    */
-  protected abstract int getInternal(
-      int id, long offset, int size, long keyPtr, int keySize, ByteBuffer buffer)
-      throws IOException;
-  
- 
+  protected abstract int getInternal(int id, long offset, int size, long keyPtr, int keySize,
+      ByteBuffer buffer) throws IOException;
+
   /**
    * Get cached item from underlying IOEngine implementation
-   *
    * @param id segment id
    * @param offset offset in a segment
    * @param size size of an item
@@ -1916,22 +1839,11 @@ public abstract class IOEngine implements Persistent {
    * @return full size required or -1
    * @throws IOException
    */
-  protected abstract int getRangeInternal(
-      int id,
-      long offset,
-      int size,
-      byte[] key,
-      int keyOffset,
-      int keySize,
-      int rangeStart,
-      int rangeSize,
-      byte[] buffer,
-      int bufOffset)
-      throws IOException;
+  protected abstract int getRangeInternal(int id, long offset, int size, byte[] key, int keyOffset,
+      int keySize, int rangeStart, int rangeSize, byte[] buffer, int bufOffset) throws IOException;
 
   /**
    * Get cached item range from underlying IOEngine implementation
-   *
    * @param id segment id
    * @param offset offset in a segment
    * @param size size of an item
@@ -1944,14 +1856,11 @@ public abstract class IOEngine implements Persistent {
    * @return full size required or -1
    * @throws IOException
    */
-  protected abstract int getRangeInternal(
-      int id, long offset, int size, long keyPtr, int keySize, int rangeStart, int rangeSize, 
-      byte[] buffer, int bufOffset)
-      throws IOException;
+  protected abstract int getRangeInternal(int id, long offset, int size, long keyPtr, int keySize,
+      int rangeStart, int rangeSize, byte[] buffer, int bufOffset) throws IOException;
 
   /**
    * Get cached item range from underlying IOEngine implementation
-   *
    * @param id segment id
    * @param offset offset in a segment
    * @param size size of an item
@@ -1964,14 +1873,11 @@ public abstract class IOEngine implements Persistent {
    * @return full size required or -1
    * @throws IOException
    */
-  protected abstract int getRangeInternal(
-      int id, long offset, int size, byte[] key, int keyOffset, int keySize, int rangeStart, 
-      int rangeSize, ByteBuffer buffer)
-      throws IOException;
+  protected abstract int getRangeInternal(int id, long offset, int size, byte[] key, int keyOffset,
+      int keySize, int rangeStart, int rangeSize, ByteBuffer buffer) throws IOException;
 
   /**
    * Get cached item range from underlying IOEngine implementation
-   *
    * @param id segment id
    * @param offset offset in a segment
    * @param size size of an item
@@ -1983,14 +1889,11 @@ public abstract class IOEngine implements Persistent {
    * @return full size required or -1
    * @throws IOException
    */
-  protected abstract int getRangeInternal(
-      int id, long offset, int size, long keyPtr, int keySize, int rangeStart, int rangeSize,  ByteBuffer buffer)
-      throws IOException;
-  
-  
+  protected abstract int getRangeInternal(int id, long offset, int size, long keyPtr, int keySize,
+      int rangeStart, int rangeSize, ByteBuffer buffer) throws IOException;
+
   /**
    * Get cached item
-   *
    * @param id data segment id to read from
    * @param offset data segment offset
    * @param size size of an item in bytes
@@ -2000,9 +1903,8 @@ public abstract class IOEngine implements Persistent {
    * @param buffer byte buffer to load data to
    * @return full size required or -1
    */
-  private int get(
-      int id, long offset, int size, byte[] key, int keyOffset, int keySize, ByteBuffer buffer)
-      throws IOException {
+  private int get(int id, long offset, int size, byte[] key, int keyOffset, int keySize,
+      ByteBuffer buffer) throws IOException {
     if (buffer == null || buffer.remaining() < size) {
       throw new IllegalArgumentException();
     }
@@ -2013,7 +1915,7 @@ public abstract class IOEngine implements Persistent {
       return result;
     }
     if (result == READ_ERROR) {
-      //this.totalFailedReads.incrementAndGet();
+      // this.totalFailedReads.incrementAndGet();
       return result;
     }
     if (!isOffheap()) {
@@ -2024,7 +1926,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get cached item range
-   *
    * @param id data segment id to read from
    * @param offset data segment offset
    * @param size size of an item in bytes
@@ -2036,16 +1937,15 @@ public abstract class IOEngine implements Persistent {
    * @param buffer byte buffer to load data to
    * @return full size required or -1
    */
-  private int getRange(
-      int id, long offset, int size, byte[] key, int keyOffset, int keySize, 
-      int rangeStart, int rangeSize, ByteBuffer buffer)
-      throws IOException {
+  private int getRange(int id, long offset, int size, byte[] key, int keyOffset, int keySize,
+      int rangeStart, int rangeSize, ByteBuffer buffer) throws IOException {
     if (buffer == null) {
       throw new IllegalArgumentException("buffer is null");
     }
     this.totalReads.incrementAndGet();
 
-    int result = getRangeFromRAMBuffers(id, offset, size, key, keyOffset, keySize, rangeStart, rangeSize, buffer);
+    int result = getRangeFromRAMBuffers(id, offset, size, key, keyOffset, keySize, rangeStart,
+      rangeSize, buffer);
     if (result >= 0) {
       return result;
     }
@@ -2053,14 +1953,14 @@ public abstract class IOEngine implements Persistent {
       this.totalFailedReads.incrementAndGet();
     }
     if (!isOffheap()) {
-      return getRangeInternal(id, offset, size, key, keyOffset, keySize, rangeStart, rangeSize, buffer);
+      return getRangeInternal(id, offset, size, key, keyOffset, keySize, rangeStart, rangeSize,
+        buffer);
     }
     return NOT_FOUND;
   }
-  
+
   /**
    * Get cached item
-   *
    * @param id data segment id to read from
    * @param offset data segment offset
    * @param size size of an item in bytes
@@ -2080,7 +1980,7 @@ public abstract class IOEngine implements Persistent {
       return result;
     }
     if (result == READ_ERROR) {
-      //this.totalFailedReads.incrementAndGet();
+      // this.totalFailedReads.incrementAndGet();
       return result;
     }
     if (!isOffheap()) {
@@ -2091,22 +1991,21 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get cached item range
-   *
    * @param id data segment id to read from
    * @param offset data segment offset
    * @param size size of an item in bytes
    * @param buffer byte buffer to load data to
    * @return true - on success, false - otherwise
    */
-  private int getRange(int id, long offset, int size, long keyPtr, int keySize, 
-      int rangeStart, int rangeSize, ByteBuffer buffer)
-      throws IOException {
+  private int getRange(int id, long offset, int size, long keyPtr, int keySize, int rangeStart,
+      int rangeSize, ByteBuffer buffer) throws IOException {
     if (buffer == null) {
       throw new IllegalArgumentException("buffer is null");
     }
     this.totalReads.incrementAndGet();
 
-    int result = getRangeFromRAMBuffers(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer);
+    int result =
+        getRangeFromRAMBuffers(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer);
 
     if (result >= 0) {
       return result;
@@ -2119,9 +2018,9 @@ public abstract class IOEngine implements Persistent {
     }
     return NOT_FOUND;
   }
+
   /**
    * Save data segment
-   *
    * @param data data segment
    */
   public void save(Segment data) throws IOException {
@@ -2150,15 +2049,14 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * IOEngine subclass can override this method
-   *
    * @param data data segment
    * @throws IOException
    */
-  protected void saveInternal(Segment data) throws IOException {}
+  protected void saveInternal(Segment data) throws IOException {
+  }
 
   /**
    * Get maximum storage size (depends on IOEngine)
-   *
    * @return maximum storage size
    */
   public long getMaximumStorageSize() {
@@ -2167,7 +2065,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Creates segment scanner
-   *
    * @param s segment
    * @return segment scanner
    * @throws IOException
@@ -2176,34 +2073,33 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Release id after segment recycling
-   *
-   * @param seg data segment 
+   * @param seg data segment
    */
   public void disposeDataSegment(Segment seg) {
-    //FIXME: does not work for compressed data
-    //long dataSize = seg.getInfo().getSegmentDataSize();
+    // FIXME: does not work for compressed data
+    // long dataSize = seg.getInfo().getSegmentDataSize();
     try {
       seg.writeLock();
       if (seg.isOffheap()) {
         boolean res = this.memoryBufferPool.offer(seg.getAddress());
-        if(res) {
+        if (res) {
           seg.setAddress(0);
         }
       }
       seg.dispose();
       dataSegments[seg.getId()] = null;
       reportAllocation(-this.segmentSize);
-      //FIXME: must update actual usage (compressed)
+      // FIXME: must update actual usage (compressed)
       // usage uncompressed was updated in Scavenger
-      //reportUsage(-dataSize);
+      // reportUsage(-dataSize);
     } finally {
       seg.setRecycling(false);
       seg.writeUnlock();
     }
   }
+
   /**
    * Update statistics for a segment with a given id for eviction, deletion
-   *
    * @param id segment id
    * @param expire expiration time (can be -1)
    */
@@ -2219,7 +2115,7 @@ public abstract class IOEngine implements Persistent {
       s.updateExpired(expire);
     }
   }
-  
+
   /**
    * Get recycling selector
    * @return
@@ -2227,9 +2123,9 @@ public abstract class IOEngine implements Persistent {
   public RecyclingSelector getRecyclingSelector() {
     return this.recyclingSelector;
   }
+
   /**
    * Get best segment for recycling MUST be sealed TODO: need synchronized?
-   *
    * @return segment
    */
   public synchronized Segment getSegmentForRecycling() {
@@ -2242,7 +2138,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Scans and finds available id for a new data segment
-   *
    * @return id (or -1)
    */
   protected final int getAvailableId() {
@@ -2262,7 +2157,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Delete key from a cache
-   *
    * @param key key buffer
    * @param off key offset
    * @param size key size
@@ -2280,7 +2174,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Delete key from a cache
-   *
    * @param keyPtr key address
    * @param size key size
    * @return true on success, false otherwise
@@ -2297,7 +2190,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Put key-value into a cache
-   *
    * @param key key buffer
    * @param value value buffer
    * @param expire expiration time
@@ -2310,7 +2202,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Put key-value into a cache with a rank
-   *
    * @param key key buffer
    * @param value value buffer
    * @param expire expiration time
@@ -2324,7 +2215,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Put key-value into a cache
-   *
    * @param key key buffer
    * @param keyOff key offset
    * @param keyLength key length
@@ -2335,21 +2225,13 @@ public abstract class IOEngine implements Persistent {
    * @return true on success , false otherwise
    * @throws IOException
    */
-  public boolean put(
-      byte[] key,
-      int keyOff,
-      int keyLength,
-      byte[] value,
-      int valueOff,
-      int valueLength,
-      long expire)
-      throws IOException {
+  public boolean put(byte[] key, int keyOff, int keyLength, byte[] value, int valueOff,
+      int valueLength, long expire) throws IOException {
     return put(key, keyOff, keyLength, value, valueOff, valueLength, expire, this.defaultRank);
   }
-  
+
   /**
    * Put key-value into a cache
-   *
    * @param key key buffer
    * @param keyOff key offset
    * @param keyLength key length
@@ -2361,22 +2243,15 @@ public abstract class IOEngine implements Persistent {
    * @return true on success, false - otherwise
    * @throws IOException
    */
-  public boolean put(
-      byte[] key,
-      int keyOff,
-      int keyLength,
-      byte[] value,
-      int valueOff,
-      int valueLength,
-      long expire,
-      int rank)
-      throws IOException {
+  public boolean put(byte[] key, int keyOff, int keyLength, byte[] value, int valueOff,
+      int valueLength, long expire, int rank) throws IOException {
     int groupRank = rank;
-    return put(key, keyOff, keyLength, value, valueOff, valueLength, expire, rank, groupRank, false);
+    return put(key, keyOff, keyLength, value, valueOff, valueLength, expire, rank, groupRank,
+      false);
   }
+
   /**
-   * Put key-value into a cache 
-   *
+   * Put key-value into a cache
    * @param key key buffer
    * @param keyOff key offset
    * @param keyLength key length
@@ -2389,19 +2264,9 @@ public abstract class IOEngine implements Persistent {
    * @return true on success, false - otherwise
    * @throws IOException
    */
-  
-  public boolean put(
-      byte[] key,
-      int keyOff,
-      int keyLength,
-      byte[] value,
-      int valueOff,
-      int valueLength,
-      long expire,
-      int rank,
-      int groupRank,
-      boolean scavenger)
-      throws IOException {
+
+  public boolean put(byte[] key, int keyOff, int keyLength, byte[] value, int valueOff,
+      int valueLength, long expire, int rank, int groupRank, boolean scavenger) throws IOException {
     checkRank(rank);
     checkRank(groupRank);
 
@@ -2416,8 +2281,8 @@ public abstract class IOEngine implements Persistent {
     long offset = s.append(key, keyOff, keyLength, value, valueOff, valueLength, expire);
 
     if (offset == -1) {
-      if(!s.isSealed()) {
-        //FIXME: is it sync call
+      if (!s.isSealed()) {
+        // FIXME: is it sync call
         save(s); // removes segment from RAM buffers
       }
       s = getRAMSegmentByRank(groupRank);
@@ -2430,29 +2295,19 @@ public abstract class IOEngine implements Persistent {
     }
     int kvSize = Utils.kvSize(keyLength, valueLength);
     reportRawDataSize(kvSize);
-    //reportStorageUsed(kvSize);
-    MutationResult result = this.index.insertWithRank(
-        key,
-        keyOff,
-        keyLength,
-        value,
-        valueOff,
-        valueLength,
-        (short) s.getId(),
-        (int) offset,
-        rank,
-        expire);
+    // reportStorageUsed(kvSize);
+    MutationResult result = this.index.insertWithRank(key, keyOff, keyLength, value, valueOff,
+      valueLength, (short) s.getId(), (int) offset, rank, expire);
     if (result == MutationResult.INSERTED) {
       this.totalInserts.incrementAndGet();
     } else if (result == MutationResult.UPDATED && !scavenger) {
-      this.totalUpdates.incrementAndGet(); 
+      this.totalUpdates.incrementAndGet();
     }
     return true;
   }
 
   /**
-   * Put key-value into a cache 
-   *
+   * Put key-value into a cache
    * @param keyPtr key address
    * @param keyLength key length
    * @param valuePtr value address
@@ -2466,10 +2321,9 @@ public abstract class IOEngine implements Persistent {
 
     return put(keyPtr, keyLength, valuePtr, valueLength, expire, this.defaultRank);
   }
-  
+
   /**
    * Put key-value into a cache with a rank
-   *
    * @param keyPtr key address
    * @param keyLength key length
    * @param valuePtr value address
@@ -2478,15 +2332,14 @@ public abstract class IOEngine implements Persistent {
    * @param rank rank of a cache item
    * @throws IOException
    */
-  public boolean put(
-      long keyPtr, int keyLength, long valuePtr, int valueLength, 
-      long expire, int rank) throws IOException {
+  public boolean put(long keyPtr, int keyLength, long valuePtr, int valueLength, long expire,
+      int rank) throws IOException {
     int groupRank = rank;
     return put(keyPtr, keyLength, valuePtr, valueLength, expire, rank, groupRank, false);
   }
+
   /**
    * Put key-value into a cache with a rank and group rank
-   *
    * @param keyPtr key address
    * @param keyLength key length
    * @param valuePtr value address
@@ -2496,10 +2349,8 @@ public abstract class IOEngine implements Persistent {
    * @param groupRank group rank
    * @throws IOException
    */
-  public boolean put(
-      long keyPtr, int keyLength, long valuePtr, int valueLength, 
-      long expire, int rank, int groupRank, boolean scavenger)
-      throws IOException {
+  public boolean put(long keyPtr, int keyLength, long valuePtr, int valueLength, long expire,
+      int rank, int groupRank, boolean scavenger) throws IOException {
     checkRank(rank);
     checkRank(groupRank);
     Segment s = getRAMSegmentByRank(groupRank);
@@ -2509,8 +2360,8 @@ public abstract class IOEngine implements Persistent {
       return false;
     }
     long offset = s.append(keyPtr, keyLength, valuePtr, valueLength, expire);
-    if (offset== -1) {
-      if(!s.isSealed()) {
+    if (offset == -1) {
+      if (!s.isSealed()) {
         save(s); // removes segment from RAM buffers
       }
       s = getRAMSegmentByRank(groupRank);
@@ -2524,20 +2375,20 @@ public abstract class IOEngine implements Persistent {
 
     int kvSize = Utils.kvSize(keyLength, valueLength);
     reportRawDataSize(kvSize);
-    //reportStorageUsed(kvSize);
-    
-    MutationResult result = this.index.insertWithRank(
-        keyPtr, keyLength, valuePtr, valueLength, (short) s.getId(), (int) offset, rank, expire);
+    // reportStorageUsed(kvSize);
+
+    MutationResult result = this.index.insertWithRank(keyPtr, keyLength, valuePtr, valueLength,
+      (short) s.getId(), (int) offset, rank, expire);
     if (result == MutationResult.INSERTED) {
       this.totalInserts.incrementAndGet();
     } else if (result == MutationResult.UPDATED && !scavenger) {
-      this.totalUpdates.incrementAndGet(); 
+      this.totalUpdates.incrementAndGet();
     }
     return true;
   }
 
   protected ReentrantLock ramBufferLock = new ReentrantLock();
-  
+
   /**
    * FIXME: the source of thread contention
    * @param rank
@@ -2608,7 +2459,7 @@ public abstract class IOEngine implements Persistent {
     dos.writeLong(this.totalIOReadDuration.get());
     dos.writeLong(this.totalReads.get());
     dos.writeLong(this.totalFailedReads.get());
-    // Codec 
+    // Codec
     CodecFactory.getInstance().saveCodecForCache(cacheName, dos);
     if (this.writeBatches != null) {
       this.writeBatches.save(dos);
@@ -2656,7 +2507,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get data segment file name
-   *
    * @param id data segment id
    * @return file name
    */
@@ -2685,7 +2535,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Number of cached items currently in the cache
-   *
    * @return number
    */
   public long size() {
@@ -2701,7 +2550,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Get total data size
-   *
    * @return data size
    */
   public long dataSize() {
@@ -2716,8 +2564,7 @@ public abstract class IOEngine implements Persistent {
   }
 
   /**
-   * Get number of active cached items (still accessible)
-   * FIXME: optimize, check hot path calls
+   * Get number of active cached items (still accessible) FIXME: optimize, check hot path calls
    * @return number
    */
   public long activeSize() {
@@ -2733,7 +2580,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Active size ratio
-   *
    * @return active size ratio
    */
   public double activeSizeRatio() {
@@ -2745,7 +2591,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Active data size (estimate)
-   *
    * @return active data size
    */
   public long activeDataSize() {
@@ -2760,7 +2605,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Called by Scavenger
-   *
    * @param s segment to recycle
    */
   public void startRecycling(Segment s) {
@@ -2771,7 +2615,6 @@ public abstract class IOEngine implements Persistent {
 
   /**
    * Called by Scavenger
-   *
    * @param s segment to recycle
    */
   public void finishRecycling(Segment s) {
@@ -2779,12 +2622,12 @@ public abstract class IOEngine implements Persistent {
       l.finishSegment(s);
     }
   }
-  
+
   public void shutdown() {
     // do nothing, delegate to subclass
     this.memoryBufferPool.shutdown();
   }
-  
+
   public Segment[] getDataSegmentsSorted() {
     Arrays.sort(dataSegments, new Comparator<Segment>() {
       @Override
@@ -2792,13 +2635,13 @@ public abstract class IOEngine implements Persistent {
         if (o1 == null && o2 == null) return 0;
         if (o1 == null) return -1;
         if (o2 == null) return 1;
-        
+
         return (int) (o1.getInfo().getCreationTime() - o2.getInfo().getCreationTime());
-      }      
+      }
     });
     return this.dataSegments;
   }
-  
+
   /**
    * Get write batches
    * @return write batches
@@ -2806,7 +2649,7 @@ public abstract class IOEngine implements Persistent {
   WriteBatches getWriteBatches() {
     return this.writeBatches;
   }
-  
-  protected abstract boolean isOffheap() ;
+
+  protected abstract boolean isOffheap();
 
 }

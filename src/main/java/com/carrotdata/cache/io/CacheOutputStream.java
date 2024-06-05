@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.io;
 
@@ -22,48 +22,48 @@ import com.carrotdata.cache.util.ObjectPool;
 import com.carrotdata.cache.util.Utils;
 
 public class CacheOutputStream extends OutputStream {
-  
+
   /** Buffer to write data to */
   byte[] buffer;
-  
-  /** Current offset in the buffer*/
+
+  /** Current offset in the buffer */
   int bufferOffset;
-  
-  /** Absolute position of a buffer start in the stream*/  
+
+  /** Absolute position of a buffer start in the stream */
   long bufferPos;
-  
+
   /** Key */
   byte[] keyBase;
-  
+
   /** Parent cache */
   Cache parent;
-  
-  /** Page size - buffer size*/
+
+  /** Page size - buffer size */
   int pageSize;
-  
+
   /** Expiration for the stream */
   long expire;
-  
+
   /** Buffer pool */
   static ObjectPool<byte[]> pool;
-  
+
   /** Stream is closed */
   boolean closed = false;
-  
+
   /** Ignore flush() and close() */
   boolean ignoreFC = false;
-  
+
   /**
-   * Constructor 
+   * Constructor
    * @param parent cache
    * @param key stream key
-   * @param expire 
+   * @param expire
    */
-  public CacheOutputStream(Cache parent, byte[] key, int off, int len,  long expire) {
+  public CacheOutputStream(Cache parent, byte[] key, int off, int len, long expire) {
     this.parent = parent;
     int poolSize = parent.getCacheConfig().getIOStoragePoolSize(parent.getName());
     if (pool == null) {
-      synchronized(ObjectPool.class) {
+      synchronized (ObjectPool.class) {
         if (pool == null) {
           pool = new ObjectPool<byte[]>(poolSize);
         }
@@ -79,15 +79,15 @@ public class CacheOutputStream extends OutputStream {
     System.arraycopy(key, off, keyBase, 0, len);
     keyBase = getKey(bufferPos);
   }
-  
+
   /**
-   * Set ignore regular flush and close 
+   * Set ignore regular flush and close
    * @param b
    */
   public void setIgnoreFlushAndClose(boolean b) {
     this.ignoreFC = b;
   }
-  
+
   /**
    * Get ignore set and close
    * @return current setting
@@ -95,7 +95,7 @@ public class CacheOutputStream extends OutputStream {
   public boolean getIgnoreFlushAndClose() {
     return this.ignoreFC;
   }
-  
+
   private byte[] getKey(long offset) {
     int size = this.keyBase.length;
     offset = offset / pageSize * pageSize;
@@ -112,7 +112,7 @@ public class CacheOutputStream extends OutputStream {
     checkClosed();
     if (bufferOffset >= buffer.length) {
       nextPage();
-    } 
+    }
     buffer[bufferOffset++] = (byte) (b & 0xff);
   }
 
@@ -124,7 +124,7 @@ public class CacheOutputStream extends OutputStream {
     bufferPos += pageSize; // must be page size
     bufferOffset = 0;
   }
-  
+
   @Override
   public void write(byte[] b) throws IOException {
     write(b, 0, b.length);
@@ -134,9 +134,9 @@ public class CacheOutputStream extends OutputStream {
   public void write(byte[] b, int off, int len) throws IOException {
     checkClosed();
     int written = 0;
-    while(written < len) {
+    while (written < len) {
       int avail = buffer.length - bufferOffset;
-      int toWrite = Math.min(avail,  len - written);
+      int toWrite = Math.min(avail, len - written);
       System.arraycopy(b, off + written, buffer, bufferOffset, toWrite);
       bufferOffset += toWrite;
       written += toWrite;
@@ -172,7 +172,7 @@ public class CacheOutputStream extends OutputStream {
     pool.offer(buffer);
     this.closed = true;
   }
-  
+
   private void checkClosed() throws IOException {
     if (closed) {
       throw new IOException("Stream is closed");

@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.io;
 
@@ -26,23 +26,21 @@ import com.carrotdata.cache.util.Utils;
 
 public class WriteBatches implements Persistent {
   /**
-   * One instance per IOEngine
-   * 
-   * Keeps one write batch per thread per segment rank
-   * Integer id is a the key, which composed from thread id (lower 16 bits)
-   * and from segment's rank (also 16 bits). There is a limited amount of ranks
-   * default is 8, can be more but definitely not 64K 
+   * One instance per IOEngine Keeps one write batch per thread per segment rank Integer id is a the
+   * key, which composed from thread id (lower 16 bits) and from segment's rank (also 16 bits).
+   * There is a limited amount of ranks default is 8, can be more but definitely not 64K
    */
-  private ConcurrentHashMap<Integer, WriteBatch> wbMap = new ConcurrentHashMap<Integer, WriteBatch>();
-  
+  private ConcurrentHashMap<Integer, WriteBatch> wbMap =
+      new ConcurrentHashMap<Integer, WriteBatch>();
+
   private DataWriter writer;
-  
-  WriteBatches(DataWriter writer){
+
+  WriteBatches(DataWriter writer) {
     this.writer = writer;
   }
+
   /**
-   * This method is thread -safe, because
-   * write batch can not be shared between threads by design
+   * This method is thread -safe, because write batch can not be shared between threads by design
    * @param id write batch integer id.
    * @return write batch
    */
@@ -55,14 +53,14 @@ public class WriteBatches implements Persistent {
     }
     return wb;
   }
-  
+
   void dispose() {
-    for(WriteBatch wb: wbMap.values()) {
+    for (WriteBatch wb : wbMap.values()) {
       wb.dispose();
     }
     wbMap.clear();
   }
-  
+
   /**
    * Number of write batch objects
    * @return size
@@ -70,18 +68,18 @@ public class WriteBatches implements Persistent {
   public int size() {
     return wbMap.size();
   }
-  
+
   @Override
   public void save(OutputStream os) throws IOException {
     DataOutputStream dos = Utils.toDataOutputStream(os);
     int size = wbMap.size();
     dos.writeInt(size);
-    for(Integer key: wbMap.keySet()) {
+    for (Integer key : wbMap.keySet()) {
       WriteBatch wb = wbMap.get(key);
       wb.save(dos);
     }
   }
-  
+
   @Override
   public void load(InputStream is) throws IOException {
     DataInputStream dis = Utils.toDataInputStream(is);
@@ -92,6 +90,5 @@ public class WriteBatches implements Persistent {
       wbMap.put(wb.getId(), wb);
     }
   }
-  
-  
+
 }

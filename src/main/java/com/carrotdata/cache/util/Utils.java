@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.util;
 
@@ -22,7 +22,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.Random;
-
 
 import sun.misc.Unsafe;
 
@@ -38,18 +37,19 @@ public class Utils {
   public static final int SIZEOF_BYTE = 1;
 
   public static final int BITS_PER_BYTE = 8;
-  
+
   public static int javaVersion = getJavaVersion();
 
   static Class<Thread> clz = Thread.class;
   static Method onSpinWait;
-  
+
   static {
     try {
       onSpinWait = clz.getDeclaredMethod("onSpinWait");
-    } catch (NoSuchMethodException | SecurityException e) {      
+    } catch (NoSuchMethodException | SecurityException e) {
     }
   }
+
   /**
    * Returns true if x1 is less than x2, when both values are treated as unsigned long. <br>
    * Both values are passed as is read by Unsafe. When platform is Little Endian, have <br>
@@ -91,15 +91,16 @@ public class Utils {
   }
 
   /**
-   * Lexicographically compares byte buffer and array 
+   * Lexicographically compares byte buffer and array
    * @param buffer byte buffer
    * @param len length
    * @param buffer2 array
    * @param bufOffset2 offset
    * @param len2 length
-   * @return  0 if equal, &lt; 0 if left is less than right, etc.
+   * @return 0 if equal, &lt; 0 if left is less than right, etc.
    */
-  public static int compareTo(ByteBuffer buffer, int len, byte[] buffer2, int bufOffset2, int len2) {
+  public static int compareTo(ByteBuffer buffer, int len, byte[] buffer2, int bufOffset2,
+      int len2) {
     int off = buffer.position();
     if (buffer.hasArray()) {
       byte[] arr = buffer.array();
@@ -109,16 +110,16 @@ public class Utils {
       return -compareTo(buffer2, bufOffset2, len2, address + off, len);
     }
   }
-  
+
   /**
-   * Lexicographically compares byte buffer and memory 
+   * Lexicographically compares byte buffer and memory
    * @param buffer byte buffer
    * @param len length
    * @param ptr memory address
    * @param len2 length
-   * @return  0 if equal, &lt; 0 if left is less than right, etc.
+   * @return 0 if equal, &lt; 0 if left is less than right, etc.
    */
-  public static int compareTo(ByteBuffer buffer, int len, long ptr,  int len2) {
+  public static int compareTo(ByteBuffer buffer, int len, long ptr, int len2) {
     int off = buffer.position();
     if (buffer.hasArray()) {
       byte[] arr = buffer.array();
@@ -128,10 +129,9 @@ public class Utils {
       return compareTo(address + off, len, ptr, len2);
     }
   }
-  
+
   /**
    * Lexicographically compare two arrays.
-   *
    * @param buffer1 left operand
    * @param buffer2 right operand
    * @param offset1 Where to start comparing in the left buffer
@@ -140,8 +140,8 @@ public class Utils {
    * @param length2 How much to compare from the right buffer
    * @return 0 if equal, &lt; 0 if left is less than right, etc.
    */
-  public static int compareTo(
-      final byte[] buffer1, final int offset1, final int length1, final byte[] buffer2, final int offset2, final int length2) {
+  public static int compareTo(final byte[] buffer1, final int offset1, final int length1,
+      final byte[] buffer2, final int offset2, final int length2) {
 
     Unsafe theUnsafe = UnsafeAccess.theUnsafe;
     // Short circuit equal case
@@ -198,7 +198,6 @@ public class Utils {
 
   /**
    * Lexicographically compare two arrays on equality
-   *
    * @param buffer1 left operand
    * @param buffer2 right operand
    * @param offset1 Where to start comparing in the left buffer
@@ -207,9 +206,9 @@ public class Utils {
    * @param length2 How much to compare from the right buffer
    * @return true if equal, false - otherwise
    */
-  public static boolean equals(
-      final byte[] buffer1, final int offset1, final int length1, final byte[] buffer2, final int offset2, final int length2) {
-    
+  public static boolean equals(final byte[] buffer1, final int offset1, final int length1,
+      final byte[] buffer2, final int offset2, final int length2) {
+
     if (length1 != length2) {
       return false;
     }
@@ -218,10 +217,9 @@ public class Utils {
     }
     return compareTo(buffer1, offset1, length1, buffer2, offset2, length2) == 0;
   }
-  
+
   /**
    * Lexicographically compare array and native memory.
-   *
    * @param buffer1 left operand
    * @param address right operand - native
    * @param offset1 Where to start comparing in the left buffer
@@ -229,7 +227,8 @@ public class Utils {
    * @param length2 How much to compare from the right buffer
    * @return 0 if equal, &lt; 0 if left is less than right, etc.
    */
-  public static int compareTo(final byte[] buffer1, final int offset1, final int length1, final long address, final int length2) {
+  public static int compareTo(final byte[] buffer1, final int offset1, final int length1,
+      final long address, final int length2) {
 
     if (UnsafeAccess.isMallocDebugEnabled()) {
       UnsafeAccess.mallocStats.checkAllocation(address, length2);
@@ -282,9 +281,9 @@ public class Utils {
     }
     return length1 - length2;
   }
+
   /**
    * Lexicographically compare array and native memory on equality
-   *
    * @param buffer1 left operand
    * @param address right operand - native
    * @param offset1 Where to start comparing in the left buffer
@@ -292,7 +291,8 @@ public class Utils {
    * @param length2 How much to compare from the right buffer
    * @return true if equals, false - otherwise.
    */
-  public static boolean equals(final byte[] buffer1, final int offset1, final int length1, final long address, final int length2) {
+  public static boolean equals(final byte[] buffer1, final int offset1, final int length1,
+      final long address, final int length2) {
     if (length1 != length2) {
       return false;
     }
@@ -301,18 +301,18 @@ public class Utils {
     }
     return compareTo(buffer1, offset1, length1, address, length2) == 0;
   }
-  
+
   /**
    * Lexicographically compare two native memory pointers.
-   *
    * @param address1 first pointer
    * @param length1 length
    * @param address2 second pointer
    * @param length2 length
    * @return 0 if equal,&lt; 0 if left is less than right, etc.
    */
-  public static int compareTo(final long address1, final int length1, final long address2, final int length2) {
-    if(UnsafeAccess.isMallocDebugEnabled()) {
+  public static int compareTo(final long address1, final int length1, final long address2,
+      final int length2) {
+    if (UnsafeAccess.isMallocDebugEnabled()) {
       UnsafeAccess.mallocStats.checkAllocation(address1, length1);
       UnsafeAccess.mallocStats.checkAllocation(address2, length2);
     }
@@ -364,22 +364,22 @@ public class Utils {
     }
     return length1 - length2;
   }
-  
+
   /**
-   * Lexicographically compare two native memory pointers
-   * on equality
-   *
+   * Lexicographically compare two native memory pointers on equality
    * @param address1 first pointer
    * @param length1 length
    * @param address2 second pointer
    * @param length2 length
    * @return true if equals, false otherwise
-   */ 
-  public static boolean equals(final long address1, final int length1, final long address2, final int length2) {
+   */
+  public static boolean equals(final long address1, final int length1, final long address2,
+      final int length2) {
     if (length1 != length2) {
       return false;
     }
-    if (UnsafeAccess.toByte(address1 + length1 - 1) != UnsafeAccess.toByte(address2 + length2 - 1)) {
+    if (UnsafeAccess.toByte(address1 + length1 - 1) != UnsafeAccess
+        .toByte(address2 + length2 - 1)) {
       return false;
     }
     return compareTo(address1, length1, address2, length2) == 0;
@@ -387,7 +387,6 @@ public class Utils {
 
   /**
    * TODO: THIS METHOD IS UNSAFE??? CHECK IT Read unsigned VarInt
-   *
    * @param ptr address to read from
    * @return int value
    */
@@ -433,7 +432,7 @@ public class Utils {
     v4 &= 0x7f;
     return v1 + (v2 << 7) + (v3 << 14) + (v4 << 21);
   }
-  
+
   /**
    * Read unsigned VarInt from a byte buffer
    * @param buf byte buffer
@@ -457,12 +456,10 @@ public class Utils {
     v4 &= 0x7f;
     return v1 + (v2 << 7) + (v3 << 14) + (v4 << 21);
   }
-  
+
   /**
-   * Returns size of unsigned variable integer in bytes
-   * The maximum positive value is 256M
-   * To support large values we need to change read/write code
-   * 
+   * Returns size of unsigned variable integer in bytes The maximum positive value is 256M To
+   * support large values we need to change read/write code
    * @param value
    * @return size in bytes
    */
@@ -483,9 +480,9 @@ public class Utils {
   static final int v2 = 1 << 14;
   static final int v3 = 1 << 21;
   static final int v4 = 1 << 28;
+
   /**
    * Writes unsigned variable integer
-   *
    * @param ptr address to write to
    * @param value
    * @return number of bytes written
@@ -514,10 +511,8 @@ public class Utils {
     return 0;
   }
 
-
   /**
    * Murmur3hash implementation with native pointer.
-   *
    * @param ptr the address of memory
    * @param len the length of memory
    * @param seed the seed
@@ -576,7 +571,6 @@ public class Utils {
 
   /**
    * Murmur3hash implementation.
-   *
    * @param buf byte buffer
    * @param off offset
    * @param len length
@@ -633,11 +627,8 @@ public class Utils {
     return h;
   }
 
-
-
   /**
    * Hash 8 bytes hash
-   *
    * @param buf buffer
    * @param off offset
    * @param len length
@@ -649,7 +640,6 @@ public class Utils {
 
   /**
    * Hash 8 bytes hash
-   *
    * @param ptr pointer
    * @param len length
    * @return hash number as a long
@@ -658,8 +648,6 @@ public class Utils {
     return hash64(ptr, len, 6754);
   }
 
-
-
   // Constants for 128-bit variant
   private static final long C1 = 0x87c37b91114253d5L;
   private static final long C2 = 0x4cf5ad432745937fL;
@@ -667,59 +655,8 @@ public class Utils {
   private static final int R2 = 27;
   private static final int M = 5;
   private static final int N1 = 0x52dce729;
-  
+
   public static long hash64(final byte[] data, final int offset, final int length, final int seed) {
-      // ************
-      // Note: This fails to apply masking using 0xffffffffL to the seed.
-      // ************
-      long hash = seed;
-      final int nblocks = length >> 3;
-
-      // body
-      for (int i = 0; i < nblocks; i++) {
-          final int index = offset + (i << 3);
-          long k = getLittleEndianLong(data, index);
-
-          // mix functions
-          k *= C1;
-          k = Long.rotateLeft(k, R1);
-          k *= C2;
-          hash ^= k;
-          hash = Long.rotateLeft(hash, R2) * M + N1;
-      }
-
-      // tail
-      long k1 = 0;
-      final int index = offset + (nblocks << 3);
-      switch (offset + length - index) {
-      case 7:
-          k1 ^= ((long) data[index + 6] & 0xff) << 48;
-      case 6:
-          k1 ^= ((long) data[index + 5] & 0xff) << 40;
-      case 5:
-          k1 ^= ((long) data[index + 4] & 0xff) << 32;
-      case 4:
-          k1 ^= ((long) data[index + 3] & 0xff) << 24;
-      case 3:
-          k1 ^= ((long) data[index + 2] & 0xff) << 16;
-      case 2:
-          k1 ^= ((long) data[index + 1] & 0xff) << 8;
-      case 1:
-          k1 ^= ((long) data[index] & 0xff);
-          k1 *= C1;
-          k1 = Long.rotateLeft(k1, R1);
-          k1 *= C2;
-          hash ^= k1;
-      }
-
-      // finalization
-      hash ^= length;
-      hash = fmix64(hash);
-
-      return hash;
-  }
-  
-  public static long hash64(final long data, final int length, final int seed) {
     // ************
     // Note: This fails to apply masking using 0xffffffffL to the seed.
     // ************
@@ -728,35 +665,35 @@ public class Utils {
 
     // body
     for (int i = 0; i < nblocks; i++) {
-        final int index = (i << 3);
-        long k = UnsafeAccess.toLong(data + index);
-        k = Long.reverseBytes(k);
-        // mix functions
-        k *= C1;
-        k = Long.rotateLeft(k, R1);
-        k *= C2;
-        hash ^= k;
-        hash = Long.rotateLeft(hash, R2) * M + N1;
+      final int index = offset + (i << 3);
+      long k = getLittleEndianLong(data, index);
+
+      // mix functions
+      k *= C1;
+      k = Long.rotateLeft(k, R1);
+      k *= C2;
+      hash ^= k;
+      hash = Long.rotateLeft(hash, R2) * M + N1;
     }
 
     // tail
     long k1 = 0;
-    final int index =  (nblocks << 3);
-    switch (length - index) {
-    case 7:
-        k1 ^= ((long) UnsafeAccess.toByte(data + index + 6) & 0xff) << 48;
-    case 6:
-        k1 ^= ((long) UnsafeAccess.toByte(data + index + 5) & 0xff) << 40;
-    case 5:
-        k1 ^= ((long) UnsafeAccess.toByte(data + index + 4) & 0xff) << 32;
-    case 4:
-        k1 ^= ((long) UnsafeAccess.toByte(data + index + 3) & 0xff) << 24;
-    case 3:
-        k1 ^= ((long) UnsafeAccess.toByte(data + index + 2) & 0xff) << 16;
-    case 2:
-        k1 ^= ((long) UnsafeAccess.toByte(data + index + 1) & 0xff) << 8;
-    case 1:
-        k1 ^= ((long) UnsafeAccess.toByte(data + index ) & 0xff);
+    final int index = offset + (nblocks << 3);
+    switch (offset + length - index) {
+      case 7:
+        k1 ^= ((long) data[index + 6] & 0xff) << 48;
+      case 6:
+        k1 ^= ((long) data[index + 5] & 0xff) << 40;
+      case 5:
+        k1 ^= ((long) data[index + 4] & 0xff) << 32;
+      case 4:
+        k1 ^= ((long) data[index + 3] & 0xff) << 24;
+      case 3:
+        k1 ^= ((long) data[index + 2] & 0xff) << 16;
+      case 2:
+        k1 ^= ((long) data[index + 1] & 0xff) << 8;
+      case 1:
+        k1 ^= ((long) data[index] & 0xff);
         k1 *= C1;
         k1 = Long.rotateLeft(k1, R1);
         k1 *= C2;
@@ -768,43 +705,88 @@ public class Utils {
     hash = fmix64(hash);
 
     return hash;
-}
-  
+  }
+
+  public static long hash64(final long data, final int length, final int seed) {
+    // ************
+    // Note: This fails to apply masking using 0xffffffffL to the seed.
+    // ************
+    long hash = seed;
+    final int nblocks = length >> 3;
+
+    // body
+    for (int i = 0; i < nblocks; i++) {
+      final int index = (i << 3);
+      long k = UnsafeAccess.toLong(data + index);
+      k = Long.reverseBytes(k);
+      // mix functions
+      k *= C1;
+      k = Long.rotateLeft(k, R1);
+      k *= C2;
+      hash ^= k;
+      hash = Long.rotateLeft(hash, R2) * M + N1;
+    }
+
+    // tail
+    long k1 = 0;
+    final int index = (nblocks << 3);
+    switch (length - index) {
+      case 7:
+        k1 ^= ((long) UnsafeAccess.toByte(data + index + 6) & 0xff) << 48;
+      case 6:
+        k1 ^= ((long) UnsafeAccess.toByte(data + index + 5) & 0xff) << 40;
+      case 5:
+        k1 ^= ((long) UnsafeAccess.toByte(data + index + 4) & 0xff) << 32;
+      case 4:
+        k1 ^= ((long) UnsafeAccess.toByte(data + index + 3) & 0xff) << 24;
+      case 3:
+        k1 ^= ((long) UnsafeAccess.toByte(data + index + 2) & 0xff) << 16;
+      case 2:
+        k1 ^= ((long) UnsafeAccess.toByte(data + index + 1) & 0xff) << 8;
+      case 1:
+        k1 ^= ((long) UnsafeAccess.toByte(data + index) & 0xff);
+        k1 *= C1;
+        k1 = Long.rotateLeft(k1, R1);
+        k1 *= C2;
+        hash ^= k1;
+    }
+
+    // finalization
+    hash ^= length;
+    hash = fmix64(hash);
+
+    return hash;
+  }
+
   /**
    * Gets the little-endian long from 8 bytes starting at the specified index.
-   *
    * @param data The data
    * @param index The index
    * @return The little-endian long
    */
   public static long getLittleEndianLong(final byte[] data, final int index) {
-      return (((long) data[index    ] & 0xff)      ) |
-             (((long) data[index + 1] & 0xff) <<  8) |
-             (((long) data[index + 2] & 0xff) << 16) |
-             (((long) data[index + 3] & 0xff) << 24) |
-             (((long) data[index + 4] & 0xff) << 32) |
-             (((long) data[index + 5] & 0xff) << 40) |
-             (((long) data[index + 6] & 0xff) << 48) |
-             (((long) data[index + 7] & 0xff) << 56);
+    return (((long) data[index] & 0xff)) | (((long) data[index + 1] & 0xff) << 8)
+        | (((long) data[index + 2] & 0xff) << 16) | (((long) data[index + 3] & 0xff) << 24)
+        | (((long) data[index + 4] & 0xff) << 32) | (((long) data[index + 5] & 0xff) << 40)
+        | (((long) data[index + 6] & 0xff) << 48) | (((long) data[index + 7] & 0xff) << 56);
   }
 
   /**
    * Performs the final avalanche mix step of the 64-bit hash function {@code MurmurHash3_x64_128}.
-   *
    * @param hash The current hash
    * @return The final hash
    */
   private static long fmix64(long hash) {
-      hash ^= (hash >>> 33);
-      hash *= 0xff51afd7ed558ccdL;
-      hash ^= (hash >>> 33);
-      hash *= 0xc4ceb9fe1a85ec53L;
-      hash ^= (hash >>> 33);
-      return hash;
+    hash ^= (hash >>> 33);
+    hash *= 0xff51afd7ed558ccdL;
+    hash ^= (hash >>> 33);
+    hash *= 0xc4ceb9fe1a85ec53L;
+    hash ^= (hash >>> 33);
+    return hash;
   }
+
   /**
    * Read memory as byte array
-   *
    * @param ptr address
    * @param size size of a memory
    * @return byte array
@@ -820,10 +802,9 @@ public class Utils {
     UnsafeAccess.copy(ptr, buf, 0, size);
     return toHex(buf);
   }
-  
-  private static final char[] HEX_CHARS = {
-      '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
-    };
+
+  private static final char[] HEX_CHARS =
+      { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
   /** Convert a byte range into a hex string */
   public static String toHex(byte[] b, int offset, int length) {
@@ -847,9 +828,9 @@ public class Utils {
     UnsafeAccess.copy(ptr, bytes, 0, size);
     return toHex(bytes);
   }
+
   /**
    * Generates random alphanumeric string
-   *
    * @param r random generator
    * @param size size of a string to generate
    * @return string
@@ -865,10 +846,8 @@ public class Utils {
     return sb.toString();
   }
 
- 
   /**
    * Fills memory area with random data
-   *
    * @param ptr pointer
    * @param size size of a memory area
    */
@@ -879,7 +858,6 @@ public class Utils {
     UnsafeAccess.copy(arr, size, ptr, size);
   }
 
- 
   public static String toString(double d, int afterDecimalPoint) {
     String s = Double.toString(d);
     int index = s.indexOf('.');
@@ -896,18 +874,15 @@ public class Utils {
     }
     return s;
   }
-  
-  /** 
-   * 
+
+  /**
    * The total size of a K-V pair in the storage
-   *
    **/
   public static int kvSize(int keySize, int valSize) {
     return keySize + valSize + Utils.sizeUVInt(valSize) + Utils.sizeUVInt(keySize);
   }
-  
-  /** 
-   * 
+
+  /**
    * The total size of a K-V pair by address
    * @param ptr address of serialized k-v
    **/
@@ -919,9 +894,8 @@ public class Utils {
     int vSizeSize = sizeUVInt(vSize);
     return kSize + vSize + kSizeSize + vSizeSize;
   }
-  
-  /** 
-   * 
+
+  /**
    * The total size of a K-V pair by address
    * @param ptr address of serialized k-v
    **/
@@ -932,7 +906,7 @@ public class Utils {
     int vSize = readUVInt(ptr);
     return vSize;
   }
-  
+
   /**
    * Safe version (no overflow)
    * @param keySize
@@ -942,29 +916,31 @@ public class Utils {
   public static long kvSizeL(int keySize, int valSize) {
     return (long) keySize + valSize + Utils.sizeUVInt(valSize) + Utils.sizeUVInt(keySize);
   }
+
   /**
    * Get value offset in serialized key-value record
    * @param keySize key size
    * @param valSize value size
    * @return value offset
    */
-  public static int valueOffset(int keySize, int  valSize) {
+  public static int valueOffset(int keySize, int valSize) {
     return sizeUVInt(keySize) + sizeUVInt(valSize) + keySize;
   }
-  
+
   /**
    * Get value size from raw value size (value size + value length representation)
-   * @param rawSize 
+   * @param rawSize
    * @return value size
    */
   public static int getValueSizeFromRawSize(int rawSize) {
     for (int i = 1; i <= 6; i++) {
-      if ((Utils.sizeUVInt(rawSize - i) + rawSize - i)  == rawSize) {
+      if ((Utils.sizeUVInt(rawSize - i) + rawSize - i) == rawSize) {
         return rawSize - i;
       }
     }
     return -1;
   }
+
   /**
    * Converts output stream to data output stream
    * @param os output stream
@@ -976,7 +952,7 @@ public class Utils {
     }
     return new DataOutputStream(os);
   }
-  
+
   /**
    * Converts input stream to data input stream
    * @param is input stream
@@ -998,10 +974,9 @@ public class Utils {
   public static int requiredSize(int keyLength, int valueLength) {
     return sizeUVInt(keyLength) + sizeUVInt(valueLength) + keyLength + valueLength;
   }
-  
+
   /**
    * Reads item size from a memory address
-   * 
    * @param ptr memory address
    * @return size
    */
@@ -1012,10 +987,9 @@ public class Utils {
     int vSizeSize = Utils.sizeUVInt(vSize);
     return kSize + kSizeSize + vSize + vSizeSize;
   }
-  
+
   /**
    * Reads item size from a data page
-   * 
    * @param page data page
    * @param off offset
    * @return size
@@ -1027,11 +1001,9 @@ public class Utils {
     int vSizeSize = Utils.sizeUVInt(vSize);
     return kSize + kSizeSize + vSize + vSizeSize;
   }
-  
- 
+
   /**
-   * Get item key size 
-   * 
+   * Get item key size
    * @param ptr memory address
    * @return key size
    */
@@ -1039,10 +1011,9 @@ public class Utils {
     int kSize = Utils.readUVInt(ptr);
     return kSize;
   }
-  
+
   /**
-   * Get item key size 
-   * 
+   * Get item key size
    * @param buffer byte buffer
    * @return key size
    */
@@ -1050,10 +1021,9 @@ public class Utils {
     int kSize = Utils.readUVInt(buffer);
     return kSize;
   }
-  
+
   /**
-   * Get item key size 
-   * 
+   * Get item key size
    * @param buf buffer
    * @param offset offset in the buffer
    * @return key size
@@ -1062,10 +1032,9 @@ public class Utils {
     int kSize = Utils.readUVInt(buf, offset);
     return kSize;
   }
-  
+
   /**
-   * Get item key offset 
-   * 
+   * Get item key offset
    * @param ptr memory address
    * @return key offset
    */
@@ -1076,10 +1045,9 @@ public class Utils {
     int vSizeSize = Utils.sizeUVInt(vSize);
     return kSizeSize + vSizeSize;
   }
-  
+
   /**
-   * Get item key offset 
-   * 
+   * Get item key offset
    * @param page data page
    * @param off offset in a page
    * @return key offset
@@ -1091,10 +1059,9 @@ public class Utils {
     int vSizeSize = Utils.sizeUVInt(vSize);
     return kSizeSize + vSizeSize;
   }
-  
+
   /**
    * Reads item size from a byte buffer
-   * 
    * @param buffer byte buffer
    * @return size
    */
@@ -1108,10 +1075,9 @@ public class Utils {
     buffer.position(pos);
     return kSize + kSizeSize + vSize + vSizeSize;
   }
-  
+
   /**
    * Reads key offset from a byte buffer
-   * 
    * @param buffer byte buffer
    * @return offset
    */
@@ -1125,10 +1091,9 @@ public class Utils {
     buffer.position(pos);
     return kSizeSize + vSizeSize;
   }
-  
+
   /**
    * Reads value offset from a byte buffer
-   * 
    * @param buffer byte buffer
    * @return value offset
    */
@@ -1140,13 +1105,12 @@ public class Utils {
     int vSize = Utils.readUVInt(buffer);
     int vSizeSize = Utils.sizeUVInt(vSize);
     buffer.position(pos);
-    
+
     return kSizeSize + vSizeSize + kSize;
   }
-  
+
   /**
    * Reads value offset from a byte array
-   * 
    * @param buffer byte array
    * @param off array offset
    * @return value offset
@@ -1156,13 +1120,12 @@ public class Utils {
     int kSizeSize = Utils.sizeUVInt(kSize);
     off += kSizeSize;
     int vSize = Utils.readUVInt(buffer, off);
-    int vSizeSize = Utils.sizeUVInt(vSize);    
+    int vSizeSize = Utils.sizeUVInt(vSize);
     return kSizeSize + vSizeSize + kSize;
   }
-  
+
   /**
    * Reads value offset from a memory address
-   * 
    * @param ptr memory address
    * @return value offset
    */
@@ -1171,13 +1134,12 @@ public class Utils {
     int kSizeSize = Utils.sizeUVInt(kSize);
     ptr += kSizeSize;
     int vSize = Utils.readUVInt(ptr);
-    int vSizeSize = Utils.sizeUVInt(vSize);    
+    int vSizeSize = Utils.sizeUVInt(vSize);
     return kSizeSize + vSizeSize + kSize;
   }
-  
+
   /**
    * Reads value size from a byte array
-   * 
    * @param buffer byte array
    * @param off array offset
    * @return value size
@@ -1188,10 +1150,9 @@ public class Utils {
     int vSize = Utils.readUVInt(buffer, off + kSizeSize);
     return vSize;
   }
-  
+
   /**
    * Reads value size from a memory address
-   * 
    * @param ptr memory address
    * @return value size
    */
@@ -1201,10 +1162,9 @@ public class Utils {
     int vSize = Utils.readUVInt(ptr + kSizeSize);
     return vSize;
   }
-  
+
   /**
    * Reads value size from a byte buffer
-   * 
    * @param buffer byte buffer
    * @return size
    */
@@ -1217,7 +1177,7 @@ public class Utils {
     buffer.position(pos);
     return vSize;
   }
-  
+
   public static int extractValue(ByteBuffer buffer) {
     int pos = buffer.position();
     int kSize = Utils.readUVInt(buffer);
@@ -1239,7 +1199,7 @@ public class Utils {
     }
     return vSize;
   }
-  
+
   public static int extractValueRange(ByteBuffer buffer, int rangeStart, int rangeSize) {
     int pos = buffer.position();
     int kSize = Utils.readUVInt(buffer);
@@ -1261,273 +1221,266 @@ public class Utils {
     }
     return rangeSize;
   }
-  
+
   public static int extractValue(byte[] buffer, int off) {
     int pos = off;
     int kSize = Utils.readUVInt(buffer, pos);
     int kSizeSize = Utils.sizeUVInt(kSize);
     pos += kSizeSize;
     int vSize = Utils.readUVInt(buffer, pos);
-    int vSizeSize = Utils.sizeUVInt(vSize);   
+    int vSizeSize = Utils.sizeUVInt(vSize);
     int toMove = kSizeSize + vSizeSize + kSize;
     System.arraycopy(buffer, off + toMove, buffer, off, vSize);
     return vSize;
   }
-  
+
   public static int extractValue(long buffer) {
     int pos = 0;
     int kSize = Utils.readUVInt(buffer + pos);
     int kSizeSize = Utils.sizeUVInt(kSize);
     pos += kSizeSize;
     int vSize = Utils.readUVInt(buffer + pos);
-    int vSizeSize = Utils.sizeUVInt(vSize);   
+    int vSizeSize = Utils.sizeUVInt(vSize);
     int toMove = kSizeSize + vSizeSize + kSize;
     UnsafeAccess.copy(buffer + toMove, buffer, vSize);
     return vSize;
   }
-  
+
   public static int extractValueRange(byte[] buffer, int off, int rangeStart, int rangeSize) {
     int pos = off;
     int kSize = Utils.readUVInt(buffer, pos);
     int kSizeSize = Utils.sizeUVInt(kSize);
     pos += kSizeSize;
     int vSize = Utils.readUVInt(buffer, pos);
-    int vSizeSize = Utils.sizeUVInt(vSize);   
+    int vSizeSize = Utils.sizeUVInt(vSize);
     int toMove = kSizeSize + vSizeSize + kSize + rangeStart;
     System.arraycopy(buffer, off + toMove, buffer, off, rangeSize);
     return rangeSize;
   }
-  
+
   public static int getJavaVersion() {
     String version = System.getProperty("java.version");
-    if(version.startsWith("1.")) {
-        version = version.substring(2, 3);
+    if (version.startsWith("1.")) {
+      version = version.substring(2, 3);
     } else {
-        int dot = version.indexOf(".");
-        if(dot != -1) { version = version.substring(0, dot); }
-    } return Integer.parseInt(version);
+      int dot = version.indexOf(".");
+      if (dot != -1) {
+        version = version.substring(0, dot);
+      }
+    }
+    return Integer.parseInt(version);
   }
-  
-  
+
   public static void onSpinWait(long waitNs) {
-    
+
     long start = System.nanoTime();
-    
-    while(System.nanoTime() - start < waitNs) {
+
+    while (System.nanoTime() - start < waitNs) {
       if (onSpinWait != null) {
         try {
           onSpinWait.invoke(null);
         } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
           e.printStackTrace();
         }
-      } 
+      }
     }
   }
-  
+
   public static long strToLong(byte[] buf, int off, int len) {
     long v = 0;
     int sign = 1;
     if (buf[off] == (byte) '-') {
       sign = -1;
-      off++; len--;
+      off++;
+      len--;
     }
     for (int i = off; i < off + len; i++) {
       int d = buf[i] - (byte) '0';
       if (d < 0 || d > 9) {
         throw new NumberFormatException();
       }
-      v = v * 10 + d; 
+      v = v * 10 + d;
     }
     return sign * v;
   }
-  
-  
+
   public static int longToStr(byte[] buf, int off, long value) {
     int numDigits = 0;
     int sign = Long.signum(value);
     long v = sign * value;
-    do { numDigits++; v /= 10; } while (v > 0);
-    if (buf.length - off < numDigits + (sign < 0? 1: 0)) {
+    do {
+      numDigits++;
+      v /= 10;
+    } while (v > 0);
+    if (buf.length - off < numDigits + (sign < 0 ? 1 : 0)) {
       throw new ArrayIndexOutOfBoundsException(numDigits);
     }
-    
+
     if (sign < 0) {
       buf[off++] = (byte) '-';
     }
     value = sign * value;
     for (int i = 0; i < numDigits; i++) {
-      int d = (int)(value % 10);
-      buf[off + numDigits - 1 - i] = (byte)(d + '0');
+      int d = (int) (value % 10);
+      buf[off + numDigits - 1 - i] = (byte) (d + '0');
       value /= 10;
     }
-    return numDigits + (sign < 0? 1: 0);
+    return numDigits + (sign < 0 ? 1 : 0);
   }
-  
+
   public static long strToLongDirect(long ptr, int len) {
     long v = 0;
     int sign = 1;
     if (UnsafeAccess.toByte(ptr) == (byte) '-') {
       sign = -1;
-      ptr++; len--;
+      ptr++;
+      len--;
     }
     for (int i = 0; i < len; i++) {
       int d = UnsafeAccess.toByte(ptr + i) - (byte) '0';
       if (d < 0 || d > 9) {
         throw new NumberFormatException();
       }
-      v = v * 10 + d; 
+      v = v * 10 + d;
     }
     return sign * v;
   }
-  
-  
+
   public static int longToStrDirect(long ptr, int avail, long value) {
     int numDigits = 0;
     int sign = Long.signum(value);
     long v = sign * value;
-    do { numDigits++; v /= 10; } while (v > 0);
-    if (avail < numDigits + + (sign < 0? 1: 0)) {
+    do {
+      numDigits++;
+      v /= 10;
+    } while (v > 0);
+    if (avail < numDigits + +(sign < 0 ? 1 : 0)) {
       throw new ArrayIndexOutOfBoundsException(numDigits);
     }
-    
+
     if (sign < 0) {
       UnsafeAccess.putByte(ptr++, (byte) '-');
     }
     value = sign * value;
     for (int i = 0; i < numDigits; i++) {
-      int d = (int)(value % 10);
-      UnsafeAccess.putByte(ptr + numDigits - 1 - i, (byte)(d + '0'));
+      int d = (int) (value % 10);
+      UnsafeAccess.putByte(ptr + numDigits - 1 - i, (byte) (d + '0'));
       value /= 10;
     }
-    return numDigits + (sign < 0? 1: 0);
+    return numDigits + (sign < 0 ? 1 : 0);
   }
-  
+
   // TODO tests
   public static int sizeAsStr(long value) {
     int numDigits = 0;
     int sign = Long.signum(value);
     long v = sign * value;
-    do { numDigits++; v /= 10; } while (v > 0);
+    do {
+      numDigits++;
+      v /= 10;
+    } while (v > 0);
     if (sign < 0) numDigits++;
     return numDigits;
   }
-  
+
   /**
    * Next power of 2 which is greater or equals to x
    * @param x number
-   * @return power of two, o -f x == 0 , negative if result larger than Long.MAX_VALUE 
+   * @return power of two, o -f x == 0 , negative if result larger than Long.MAX_VALUE
    */
-  public static long nextPow2 (long x) {
+  public static long nextPow2(long x) {
     long v = Long.highestOneBit(x);
-    return v == x? v : v << 1;
+    return v == x ? v : v << 1;
   }
-  
+
   /**
-   *  credits: Agrona project
-   * Generate a hash for an int value.
-   *
+   * credits: Agrona project Generate a hash for an int value.
    * @param value to be hashed.
    * @return the hashed value.
    */
-  public static int hash(final int value)
-  {
-      int x = value;
+  public static int hash(final int value) {
+    int x = value;
 
-      x = ((x >>> 16) ^ x) * 0x119de1f3;
-      x = ((x >>> 16) ^ x) * 0x119de1f3;
-      x = (x >>> 16) ^ x;
+    x = ((x >>> 16) ^ x) * 0x119de1f3;
+    x = ((x >>> 16) ^ x) * 0x119de1f3;
+    x = (x >>> 16) ^ x;
 
-      return x;
+    return x;
   }
 
   /**
-   * credits: Agrona project
-   * Generate a hash for a long value.
-   *
+   * credits: Agrona project Generate a hash for a long value.
    * @param value to be hashed.
    * @return the hashed value.
    */
-  public static int hash(final long value)
-  {
-      long x = value;
+  public static int hash(final long value) {
+    long x = value;
 
-      x = (x ^ (x >>> 30)) * 0xbf58476d1ce4e5b9L;
-      x = (x ^ (x >>> 27)) * 0x94d049bb133111ebL;
-      x = x ^ (x >>> 31);
+    x = (x ^ (x >>> 30)) * 0xbf58476d1ce4e5b9L;
+    x = (x ^ (x >>> 27)) * 0x94d049bb133111ebL;
+    x = x ^ (x >>> 31);
 
-      return (int)x ^ (int)(x >>> 32);
+    return (int) x ^ (int) (x >>> 32);
   }
 
   /**
-   * credits: Agrona project
-   * Generate a hash for an int value and apply mask to get remainder.
-   *
+   * credits: Agrona project Generate a hash for an int value and apply mask to get remainder.
    * @param value to be hashed.
-   * @param mask  mask to be applied that must be a power of 2 - 1.
+   * @param mask mask to be applied that must be a power of 2 - 1.
    * @return the hash of the value.
    */
-  public static int hash(final int value, final int mask)
-  {
-      return hash(value) & mask;
+  public static int hash(final int value, final int mask) {
+    return hash(value) & mask;
   }
 
   /**
-   * credits: Agrona project
-   * Generate a hash for an object and apply mask to get a remainder.
-   *
+   * credits: Agrona project Generate a hash for an object and apply mask to get a remainder.
    * @param value to be hashed.
-   * @param mask  mask to be applied that must be a power of 2 - 1.
+   * @param mask mask to be applied that must be a power of 2 - 1.
    * @return the hash of the value.
    */
-  public static int hash(final Object value, final int mask)
-  {
-      return hash(value.hashCode()) & mask;
+  public static int hash(final Object value, final int mask) {
+    return hash(value.hashCode()) & mask;
   }
 
   /**
    * Generate a hash for a long value and apply mask to get a remainder.
-   *
    * @param value to be hashed.
-   * @param mask  mask to be applied that must be a power of 2 - 1.
+   * @param mask mask to be applied that must be a power of 2 - 1.
    * @return the hash of the value.
    */
-  public static int hash(final long value, final int mask)
-  {
-      return hash(value) & mask;
+  public static int hash(final long value, final int mask) {
+    return hash(value) & mask;
   }
 
   /**
-   * credits: Agrona project
-   * Generate an even hash for an int value and apply mask to get a remainder that will be even.
-   *
+   * credits: Agrona project Generate an even hash for an int value and apply mask to get a
+   * remainder that will be even.
    * @param value to be hashed.
-   * @param mask  mask to be applied that must be a power of 2 - 1.
+   * @param mask mask to be applied that must be a power of 2 - 1.
    * @return the hash of the value which is always even.
    */
-  public static int evenHash(final int value, final int mask)
-  {
-      final int hash = hash(value);
-      final int evenHash = (hash << 1) - (hash << 8);
+  public static int evenHash(final int value, final int mask) {
+    final int hash = hash(value);
+    final int evenHash = (hash << 1) - (hash << 8);
 
-      return evenHash & mask;
+    return evenHash & mask;
   }
 
   /**
-   * credits: Agrona project
-   * Generate an even hash for a long value and apply mask to get a remainder that will be even.
-   *
+   * credits: Agrona project Generate an even hash for a long value and apply mask to get a
+   * remainder that will be even.
    * @param value to be hashed.
-   * @param mask  mask to be applied that must be a power of 2 - 1.
+   * @param mask mask to be applied that must be a power of 2 - 1.
    * @return the hash of the value which is always even.
    */
-  public static int evenHash(final long value, final int mask)
-  {
-      final int hash = hash(value);
-      final int evenHash = (hash << 1) - (hash << 8);
+  public static int evenHash(final long value, final int mask) {
+    final int hash = hash(value);
+    final int evenHash = (hash << 1) - (hash << 8);
 
-      return evenHash & mask;
+    return evenHash & mask;
   }
-  
+
   public static long squirrel3(long at) {
     long BIT_NOISE1 = 0x9E3779B185EBCA87L;
     long BIT_NOISE2 = 0xC2B2AE3D27D4EB4FL;
@@ -1539,5 +1492,5 @@ public class Utils {
     at *= BIT_NOISE3;
     at ^= (at >> 8);
     return at;
-}
+  }
 }

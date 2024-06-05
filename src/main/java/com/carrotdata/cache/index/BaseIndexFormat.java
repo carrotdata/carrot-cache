@@ -1,19 +1,12 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable
+ * law or agreed to in writing, software distributed under the License is distributed on an "AS IS"
+ * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ * for the specific language governing permissions and limitations under the License.
  */
 package com.carrotdata.cache.index;
 
@@ -21,23 +14,18 @@ import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
 /**
- * 
- * Index format for main queue (cache)
- * It does not support expiration
- * 
+ * Index format for main queue (cache) It does not support expiration
  */
 public class BaseIndexFormat extends AbstractIndexFormat {
   /*
-   * MQ Index item is 20 bytes:
-   * 8 bytes - hashed key value
-   * 4 bytes - total item size (key + value)
-   * 8 bytes - location in the storage - information 
+   * MQ Index item is 20 bytes: 8 bytes - hashed key value 4 bytes - total item size (key + value) 8
+   * bytes - location in the storage - information
    */
 
   public BaseIndexFormat() {
     super();
   }
-  
+
   @Override
   public final boolean equals(long ptr, long hash) {
     return UnsafeAccess.toLong(ptr) == hash;
@@ -52,7 +40,7 @@ public class BaseIndexFormat extends AbstractIndexFormat {
   public final int fullEntrySize(long ptr) {
     return Utils.SIZEOF_LONG + 3 * Utils.SIZEOF_INT;
   }
-  
+
   @Override
   public final long advance(long current) {
     return current + Utils.SIZEOF_LONG + 3 * Utils.SIZEOF_INT;
@@ -67,7 +55,7 @@ public class BaseIndexFormat extends AbstractIndexFormat {
   public final int getSegmentId(long buffer) {
     int ref = UnsafeAccess.toInt(buffer + Utils.SIZEOF_INT + Utils.SIZEOF_LONG);
     // Segment id (low 2 bytes of a first 4 bytes )
-    return  ref  & 0xffff;    
+    return ref & 0xffff;
   }
 
   @Override
@@ -78,9 +66,9 @@ public class BaseIndexFormat extends AbstractIndexFormat {
 
   @Override
   public final int getEmbeddedOffset() {
-    return Utils.SIZEOF_LONG + Utils.SIZEOF_INT; 
+    return Utils.SIZEOF_LONG + Utils.SIZEOF_INT;
   }
-  
+
   @Override
   public final long getExpire(long ibPtr, long buffer) {
     // Does not support expiration
@@ -96,7 +84,7 @@ public class BaseIndexFormat extends AbstractIndexFormat {
   public final int getHitCount(long buffer) {
     int ref = UnsafeAccess.toInt(buffer + Utils.SIZEOF_INT + Utils.SIZEOF_LONG);
     // Segment id (low 2 bytes of a first 4 bytes )
-    return  ref >>> 31;   
+    return ref >>> 31;
   }
 
   @Override
@@ -113,20 +101,9 @@ public class BaseIndexFormat extends AbstractIndexFormat {
   }
 
   @Override
-  public final void writeIndex(
-      long ibPtr,
-      long ptr,
-      byte[] key,
-      int keyOffset,
-      int keySize,
-      byte[] value,
-      int valueOffset,
-      int valueSize,
-      int sid,
-      int dataOffset,
-      int dataSize,
-      long expire /* not supported here*/) 
-  {
+  public final void writeIndex(long ibPtr, long ptr, byte[] key, int keyOffset, int keySize,
+      byte[] value, int valueOffset, int valueSize, int sid, int dataOffset, int dataSize,
+      long expire /* not supported here */) {
     long hash = Utils.hash64(key, keyOffset, keySize);
     UnsafeAccess.putLong(ptr + this.hashOffset, hash);
     UnsafeAccess.putInt(ptr + this.sizeOffset, dataSize);
@@ -135,18 +112,8 @@ public class BaseIndexFormat extends AbstractIndexFormat {
   }
 
   @Override
-  public final void writeIndex(
-      long ibPtr,
-      long ptr,
-      long keyPtr,
-      int keySize,
-      long valuePtr,
-      int valueSize,
-      int sid,
-      int dataOffset,
-      int dataSize,
-      long expire) 
-  {
+  public final void writeIndex(long ibPtr, long ptr, long keyPtr, int keySize, long valuePtr,
+      int valueSize, int sid, int dataOffset, int dataSize, long expire) {
     long hash = Utils.hash64(keyPtr, keySize);
     UnsafeAccess.putLong(ptr + this.hashOffset, hash);
     UnsafeAccess.putInt(ptr + this.sizeOffset, dataSize);
@@ -166,7 +133,7 @@ public class BaseIndexFormat extends AbstractIndexFormat {
 
   @Override
   public int dataOffsetOffset() {
-    return 2 * Utils.SIZEOF_LONG ;
+    return 2 * Utils.SIZEOF_LONG;
   }
 
   @Override
@@ -182,6 +149,6 @@ public class BaseIndexFormat extends AbstractIndexFormat {
   @Override
   public final void updateIndex(long ptr, int sid, int dataOffset) {
     UnsafeAccess.putInt(ptr + this.sidOffset, sid);
-    UnsafeAccess.putInt(ptr + this.dataOffsetOffset, dataOffset);    
+    UnsafeAccess.putInt(ptr + this.dataOffsetOffset, dataOffset);
   }
 }

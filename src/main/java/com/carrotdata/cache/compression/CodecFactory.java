@@ -4,13 +4,13 @@
  * copyright ownership. The ASF licenses this file to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
  * copy of the License at
- *
- * <p>http://www.apache.org/licenses/LICENSE-2.0
- *
- * <p>Unless required by applicable law or agreed to in writing, software distributed under the
- * License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
- * express or implied. See the License for the specific language governing permissions and
- * limitations under the License.
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package com.carrotdata.cache.compression;
 
@@ -28,24 +28,24 @@ import com.carrotdata.cache.util.CacheConfig;
 public class CodecFactory {
   /* Logger */
   private static final Logger LOG = LoggerFactory.getLogger(CodecFactory.class);
-  
+
   /* Factory instance */
   private static CodecFactory factory = new CodecFactory();
-  
+
   /* Maps cache name to codec */
-  private ConcurrentHashMap<String, CompressionCodec> codecs = 
-      new ConcurrentHashMap<>();
-  
-  private CodecFactory() {}
-  
+  private ConcurrentHashMap<String, CompressionCodec> codecs = new ConcurrentHashMap<>();
+
+  private CodecFactory() {
+  }
+
   public static CodecFactory getInstance() {
     return factory;
   }
-  
+
   public void clear() {
     codecs.clear();
   }
-  
+
   /**
    * Get compression codec for cache
    * @param cacheName cache name
@@ -55,16 +55,16 @@ public class CodecFactory {
     CompressionCodec codec = codecs.get(cacheName);
     return codec;
   }
-  
+
   /**
    * Initializes codec for cache (called by Cache instance)
    * @param cacheName cache name
    * @param is input stream to read codec data from
-   * @throws IOException 
+   * @throws IOException
    */
   public boolean initCompressionCodecForCache(String cacheName, InputStream is) throws IOException {
     // This method is called during cache instance initialization
-    CacheConfig config = CacheConfig.getInstance(); 
+    CacheConfig config = CacheConfig.getInstance();
     boolean enabled = config.isCacheCompressionEnabled(cacheName);
     if (!enabled) {
       return false;
@@ -84,7 +84,7 @@ public class CodecFactory {
     }
     CompressionCodec codec = type.newCodec();
     codec.init(cacheName);
-    if(is != null) {
+    if (is != null) {
       codec.load(is);
     }
     codecs.put(cacheName, codec);
@@ -99,7 +99,7 @@ public class CodecFactory {
     codec.save(os);
     return true;
   }
-  
+
   private Type getCodecType(String sType) {
     if (sType.equalsIgnoreCase(Type.ZSTD.name())) {
       return Type.ZSTD;
