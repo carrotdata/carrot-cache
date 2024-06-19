@@ -2716,17 +2716,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       }
       this.shutdownInProgress = true;
     }
-    boolean systemShutdown = false;
-
-    try {
-      // Remove shutdown hook
-      Runtime.getRuntime().removeShutdownHook(shutDownHook);
-    } catch (IllegalStateException e) {
-      systemShutdown = true;
-    }
     // Disable writes/reads
     shutdownStatusMsg =
-        String.format("Shutting down cache %s save data=%s", cacheName, saveOnShutdown);
+        String.format("Shutting down cache '%s', save data=%s", cacheName, saveOnShutdown);
     LOG.info(shutdownStatusMsg);
     long size = getStorageUsedActual();
     size += this.engine.getMemoryIndex().getAllocatedMemory();
@@ -2745,10 +2737,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     long end = System.currentTimeMillis();
     if (saveOnShutdown) {
-      shutdownStatusMsg +=
-          String.format("Cache %s saved %d bytes in %d ms", cacheName, size, (end - start));
-      LOG.info(shutdownStatusMsg);
+      shutdownStatusMsg =
+          String.format("\nCache %s saved %d bytes in %d ms\nShutdown complete", cacheName, size, (end - start));
+    } else {
+      shutdownStatusMsg += "\nShutdown complete";
     }
+    LOG.info(shutdownStatusMsg);
+
     return size;
   }
 
