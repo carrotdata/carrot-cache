@@ -55,7 +55,7 @@ public class AQBasedExpirationAwareAdmissionController extends ExpirationAwareAd
     String cacheName = cache.getName();
     this.aqMinRatio = config.getAdmissionQueueMinSizeRatio(cacheName);
     this.aqMaxRatio = config.getAdmissionQueueMaxSizeRatio(cacheName);
-    this.aqCurrentRatio = config.getAdmissionQueueMaxSizeRatio(cacheName);
+    this.aqCurrentRatio = config.getAdmissionQueueStartSizeRatio(cacheName);
     int steps = config.getThrougputControllerNumberOfAdjustmentSteps(cacheName);
     this.adjStep = (this.aqMaxRatio - this.aqMinRatio) / steps;
   }

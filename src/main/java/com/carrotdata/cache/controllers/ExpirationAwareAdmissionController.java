@@ -20,15 +20,21 @@ import com.carrotdata.cache.Cache;
 import com.carrotdata.cache.util.CacheConfig;
 
 /**
- * This admission controller can be used for RAM - based caches only. It accepts all items, it does
- * not control write throughput, the only thing it does - it adjusts item ranks according to its
- * TTL. The lower TTL - the lower rank of an item is going to be. It adjusts expiration time in a
- * such way that for every bin (rank) all admitted items must have the same relative expiration time
- * to guarantee property of monotonicity: 1. All cached items in the same bin have the same relative
- * expiration time 2. If two data segments: S1 and S2 have the same rank (bin) and t1 is S! creation
- * time, t2 - S2 creation time, then: 2.1 if t2 &gt; t1 and S2 is all-expired-items segment, then S1
- * is also - all-expired-items segment 2.2 if S1 is not all-expired-items segment, then S2 is full
- * (no expired items at all) The controller MUST decrease expiration time only. One exclusion is
+ * This admission controller can be used for RAM - based caches only (?). 
+ * It accepts all items, it does not control write throughput, the only thing it does - 
+ * it adjusts item ranks according to its TTL. The lower TTL - the lower rank of 
+ * an item is going to be. It adjusts expiration time in a such way that for every bin (rank) 
+ * all admitted items must have the same relative expiration time to guarantee property 
+ * of monotonicity: 
+ * 1. All cached items in the same bin have the same relative
+ * expiration time 
+ * 2. If two data segments: S1 and S2 have the same rank (bin) and t1 is S1 creation
+ * time, t2 - S2 creation time, then: 
+ *    2.1 if t2 &gt; t1 and S2 is all-expired-items segment, then S2 is also - 
+ *      all-expired-items segment 
+ *    2.2 if S1 is not all-expired-items segment, 
+ *      then S2 is full (no expired items at all) 
+ * The controller MUST decrease expiration time only. One exclusion is
  * when expiration time is less than minimum supported by the system. In a such case the system
  * assigns the minimum supported expiration time and MUST log warning message. For items w/o
  * expiration the maximum supported expiration time MUST be assigned But this is not recommended.

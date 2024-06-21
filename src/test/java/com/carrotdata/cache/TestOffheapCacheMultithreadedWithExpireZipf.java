@@ -12,37 +12,60 @@
 package com.carrotdata.cache;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Random;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.junit.runners.Parameterized.Parameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.carrotdata.cache.controllers.AQBasedExpirationAwareAdmissionController;
+import com.carrotdata.cache.controllers.AdmissionController;
 import com.carrotdata.cache.controllers.LRCRecyclingSelector;
 import com.carrotdata.cache.controllers.MinAliveRecyclingSelector;
 import com.carrotdata.cache.eviction.LRUEvictionPolicy;
 import com.carrotdata.cache.eviction.SLRUEvictionPolicy;
 import com.carrotdata.cache.index.CompactBaseWithExpireIndexFormat;
 
+@RunWith(Parameterized.class)
 public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultithreadedZipfBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestOffheapCacheMultithreadedWithExpireZipf.class);
-
+  @Parameters
+  public static Collection<Object[]> data() {
+      return Arrays.asList(new Object[][] {     
+               { AQBasedExpirationAwareAdmissionController.class, true }, 
+               { AQBasedExpirationAwareAdmissionController.class, false }/*, 
+               // Below work worse for some reasons.  
+               { ExpirationAwareAdmissionController.class, true }, 
+               { ExpirationAwareAdmissionController.class, false }  */
+         });
+  }
+  
   protected int binStartValue = 1;
 
   protected double binMultiplier = 2.0;
 
   protected int numberOfBins = 10; // number of ranks
 
-  protected int[] expArray = new int[] { 2, 2, 2, 2, 500, 500, 500, 1000, 1000, 1000, 1000, 1000 };
+  protected int[] expArray = new int[] {2, 2, 2, 2, 10, 10, 10, 10, 100, 100, 100, 500, 500, 500, 1000, 1000, 1000, 1000, 1000 };
 
-  Random r;
+  protected Random r;
+  
+  protected double acMaxRatio = 0.35;
 
+  public TestOffheapCacheMultithreadedWithExpireZipf(Class<? extends AdmissionController> ac, Boolean offheap) {
+    this.acClz = ac;
+    this.offheap = offheap;
+  }
+  
   @Before
   public void setUp() {
-    this.offheap = true;
     this.segmentSize = 4 * 1024 * 1024;
     this.maxCacheSize = 100 * this.segmentSize;
     this.binStartValue = 1;
@@ -51,9 +74,8 @@ public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultit
     this.numThreads = 1;
     this.numRecords = 1000000;
     this.numIterations = 10 * this.numRecords;
-    this.scavDumpBelowRatio = 0.2;
+    this.scavDumpBelowRatio = 0.1;
     this.minActiveRatio = 0.0;
-    this.acClz = AQBasedExpirationAwareAdmissionController.class;
     r = new Random();
   }
 
@@ -61,7 +83,9 @@ public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultit
   protected Builder withAddedConfigurations(Builder b) {
     b = b.withExpireStartBinValue(binStartValue).withExpireBinMultiplier(binMultiplier)
         .withNumberOfPopularityRanks(numberOfBins)
-        .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName());
+        .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName())
+        .withAdmissionQueueStartSizeRatio(acMaxRatio)
+        .withSLRUInsertionPoint(7);
     return b;
   }
 
