@@ -146,7 +146,8 @@ public class CompressedBlockDataWriter implements DataWriter {
     if (compressedSize == 0) {
       LOG.error("compressed size=0");
       Thread.dumpStack();
-      System.exit(-1);
+      throw new RuntimeException();
+      //System.exit(-1);
     }
     UnsafeAccess.putInt(addr + DICT_VER_OFFSET, dictVersion);
     UnsafeAccess.putInt(addr + COMP_SIZE_OFFSET, compressedSize);

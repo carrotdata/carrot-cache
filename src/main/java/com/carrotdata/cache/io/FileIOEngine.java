@@ -83,7 +83,7 @@ public class FileIOEngine extends IOEngine {
       int keepAliveTime = 60; // hard-coded
       // This is actually unbounded queue (LinkedBlockingQueue w/o parameters)
       // and bounded thread pool - only coreThreads is maximum, maximum number of threads is ignored
-      taskQueue = new LinkedBlockingQueue<>();
+      taskQueue = new LinkedBlockingQueue<>(ioStoragePoolSize);
       unboundedThreadPool = new ThreadPoolExecutor(ioStoragePoolSize, Integer.MAX_VALUE,
           keepAliveTime, TimeUnit.SECONDS, taskQueue);
     } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
@@ -98,7 +98,8 @@ public class FileIOEngine extends IOEngine {
    * @throws FileNotFoundException
    */
   protected void saveInternal(Segment data) throws IOException {
-    Runnable r = () -> {
+    //FIXME: async write
+    //Runnable r = () -> {
       int id = data.getId();
       try {
         // WRITE_LOCK
@@ -126,14 +127,15 @@ public class FileIOEngine extends IOEngine {
         data.setAddress(0);
         data.seal();
         UnsafeAccess.free(ptr);
+        
       } catch (IOException e) {
         LOG.error("saveInternal segmentId=" + data.getId() + " s=" + data, e);
       } finally {
         data.writeUnlock();
         activeSaveTasks.decrementAndGet();
       }
-    };
-    submitTask(r);
+    //};
+    //submitTask(r);
   }
 
   private void submitTask(Runnable r) {

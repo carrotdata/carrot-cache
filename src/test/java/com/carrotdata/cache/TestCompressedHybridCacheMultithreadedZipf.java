@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import org.junit.After;
+import org.junit.BeforeClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +30,9 @@ import com.carrotdata.cache.controllers.RecyclingSelector;
 import com.carrotdata.cache.eviction.EvictionPolicy;
 import com.carrotdata.cache.eviction.FIFOEvictionPolicy;
 import com.carrotdata.cache.eviction.LRUEvictionPolicy;
+import com.carrotdata.cache.eviction.SLRUEvictionPolicy;
 import com.carrotdata.cache.util.TestUtils;
+import com.carrotdata.cache.util.UnsafeAccess;
 
 public class TestCompressedHybridCacheMultithreadedZipf
     extends TestCompressedOffheapCacheMultithreadedZipf {
@@ -54,12 +57,18 @@ public class TestCompressedHybridCacheMultithreadedZipf
 
   protected Class<? extends AdmissionController> victim_acClz = BaseAdmissionController.class;
 
+  
+  @BeforeClass
+  public static void start() {
+    System.setProperty("MALLOC_DEBUG", "true");
+  }
+  
   @Override
   public void setUp() throws IOException, URISyntaxException {
     super.setUp();
     // Parent cache
     this.offheap = true;
-    this.numRecords = 4000000;
+    this.numRecords = 1000000;
     this.numIterations = this.numRecords;
     this.numThreads = 4;
     this.minActiveRatio = 0.9;
@@ -76,7 +85,7 @@ public class TestCompressedHybridCacheMultithreadedZipf
     this.victim_scavDumpBelowRatio = 1.0;
     this.victim_scavengerInterval = 10;
     this.victim_promoteOnHit = true;
-    this.victim_epClz = LRUEvictionPolicy.class;
+    this.victim_epClz = SLRUEvictionPolicy.class;
     this.victim_rsClz = MinAliveRecyclingSelector.class;
     this.victim_acClz = BaseAdmissionController.class;
 

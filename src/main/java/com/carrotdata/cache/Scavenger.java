@@ -19,6 +19,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.text.DateFormat;
+import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -99,6 +101,8 @@ public class Scavenger implements Runnable {
 
     /** Total bytes expired */
     AtomicLong totalBytesExpired = new AtomicLong();
+    
+    AtomicLong totalSegmentsScanned = new AtomicLong();
 
     double dumpBelowRatioMin;
 
@@ -229,6 +233,7 @@ public class Scavenger implements Runnable {
       dos.writeDouble(dumpBelowRatio);
       dos.writeDouble(adjStep);
       dos.writeDouble(stopRatio);
+      dos.writeLong(totalSegmentsScanned.get());
     }
 
     @Override
@@ -252,6 +257,7 @@ public class Scavenger implements Runnable {
       dumpBelowRatio = dis.readDouble();
       adjStep = dis.readDouble();
       stopRatio = dis.readDouble();
+      totalSegmentsScanned.set(dis.readLong());
     }
   }
 
@@ -335,9 +341,10 @@ public class Scavenger implements Runnable {
     for (Map.Entry<String, Stats> entry : statsMap.entrySet()) {
       String name = entry.getKey();
       Stats stats = entry.getValue();
-      LOG.info("Scavenger [{}]: runs={} scanned={} freed={} written back={} empty segments={}",
+      LOG.info("Scavenger [{}]: runs={} scanned={} freed={} written back={} empty segments={}, items scanned={} items freed={}",
         name, stats.getTotalRuns(), stats.getTotalBytesScanned(), stats.getTotalBytesFreed(),
-        stats.getTotalBytesScanned() - stats.getTotalBytesFreed(), stats.getTotalEmptySegments());
+        stats.getTotalBytesScanned() - stats.getTotalBytesFreed(), stats.getTotalEmptySegments(), 
+        stats.getTotalItemsScanned(), stats.getTotalItemsFreed());
     }
   }
 
@@ -403,7 +410,6 @@ public class Scavenger implements Runnable {
       stopRatio = stats.stopRatio;
     }
     this.maxSegmentsBeforeStallDetected = getScavengerMaxSegmentsBeforeStall();
-    stats.totalRuns.incrementAndGet();
 
   }
 
@@ -446,7 +452,7 @@ public class Scavenger implements Runnable {
   public void run() {
     long runStart = System.currentTimeMillis();
     IOEngine engine = this.cache.getEngine();
-    // DateFormat format = DateFormat.getDateTimeInstance();
+    DateFormat format = DateFormat.getDateTimeInstance();
     Segment s = null;
     try {
       AtomicInteger numInstances = numInstancesMap.get(cache.getName());
@@ -455,9 +461,9 @@ public class Scavenger implements Runnable {
         // numInstances.decrementAndGet();
         return;
       }
-      // LOG.debug(
-      // "scavenger [{}] started at {} allocated storage={} maximum storage={}", cache.getName(),
-      // format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
+//       LOG.debug(
+//       "Scavenger [{}] started at {} allocated storage={} maximum storage={}, raw data size={}", cache.getName(),
+//       format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize(), engine.getRawDataSize());
 
       boolean finished = false;
 
@@ -475,12 +481,15 @@ public class Scavenger implements Runnable {
           s.setRecycling(false);
           break;
         }
+        if (segmentsProcessed == 0) {
+          stats.totalRuns.incrementAndGet();
+        }
         // TODO: make it more smarter, calculate maxSegmentsBeforeStallDetected using maximum number
         // of segments
         // and other current cache configuration values
         if (segmentsProcessed >= maxSegmentsBeforeStallDetected) {
           // This should never happen if eviction is disabled
-          dumpBelowRatio = dumpBelowRatioMax;// improve scavenger's performance - dump everything
+          dumpBelowRatio = dumpBelowRatioMax > dumpBelowRatio? dumpBelowRatioMax: dumpBelowRatio;// improve scavenger's performance - dump everything
           beforeStallDetected = false;
         }
         engine.startRecycling(s);
@@ -506,7 +515,6 @@ public class Scavenger implements Runnable {
             s == null ? -1 : s.getId(), s == null ? null : Boolean.toString(s.isOffheap()),
             s == null ? null : Boolean.toString(s.isSealed()));
           LOG.error("Error:", e);
-          e.printStackTrace();
           return;
         }
         // Update admission controller statistics
@@ -523,9 +531,9 @@ public class Scavenger implements Runnable {
     long runEnd = System.currentTimeMillis();
     // Update stats
     stats.totalRunTimes.addAndGet(runEnd - runStart);
-    // LOG.debug(
-    // "scavenger [{}] finished at {} allocated storage={} maximum storage=%{}", cache.getName(),
-    // format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize());
+//    LOG.debug(
+//    "Scavenger [{}] finished at {} allocated storage={} maximum storage={} rawDataSize={}, total seg scanned={}", cache.getName(),
+//    format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize(), engine.getRawDataSize(), stats.totalSegmentsScanned.get());
 
   }
 
@@ -577,6 +585,7 @@ public class Scavenger implements Runnable {
     } else {
       result = cleanSegmentInternal(s);
     }
+    stats.totalSegmentsScanned.incrementAndGet();
     this.cache.getEngine().reportRawDataSize(-uncompressedDataSize);
     this.cache.getEngine().reportStorageUsed(-dataSize);
     return result;

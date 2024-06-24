@@ -90,11 +90,14 @@ public abstract class TestScavengerBase extends IOTestBase {
         .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
         .withEvictionDisabledMode(true);
 
+    Cache cache = null;
     if (offheap) {
-      return builder.buildMemoryCache();
+      cache = builder.buildMemoryCache();
     } else {
-      return builder.buildDiskCache();
+      cache = builder.buildDiskCache();
     }
+    cache.disableScavengers();
+    return cache;
   }
 
   @Override

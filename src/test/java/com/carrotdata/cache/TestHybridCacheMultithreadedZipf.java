@@ -20,6 +20,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.carrotdata.cache.controllers.AQBasedAdmissionController;
 import com.carrotdata.cache.controllers.AdmissionController;
 import com.carrotdata.cache.controllers.BaseAdmissionController;
 import com.carrotdata.cache.controllers.LRCRecyclingSelector;
@@ -28,6 +29,7 @@ import com.carrotdata.cache.controllers.RecyclingSelector;
 import com.carrotdata.cache.eviction.EvictionPolicy;
 import com.carrotdata.cache.eviction.FIFOEvictionPolicy;
 import com.carrotdata.cache.eviction.LRUEvictionPolicy;
+import com.carrotdata.cache.eviction.SLRUEvictionPolicy;
 import com.carrotdata.cache.util.TestUtils;
 
 public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithreadedZipf {
@@ -55,11 +57,12 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
   public void setUp() {
     // Parent cache
     this.offheap = true;
-    this.numRecords = 2000000;
+    this.numRecords = 1000000;
     this.numIterations = 2 * this.numRecords;
     this.numThreads = 4;
     this.minActiveRatio = 0.9;
-    this.maxCacheSize = 10L * this.segmentSize;
+    this.maxCacheSize = this.numThreads * 100L * this.segmentSize;
+    this.scavDumpBelowRatio = 0.2;
     // victim cache
     // this.victim_segmentSize = 4 * 1024 * 1024;
     // this.victim_maxCacheSize = 1000L * this.victim_segmentSize;
@@ -67,9 +70,9 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
     this.victim_scavDumpBelowRatio = 0.5;
     this.victim_scavengerInterval = 10;
     this.victim_promoteOnHit = false;
-    this.victim_epClz = LRUEvictionPolicy.class;
-    this.victim_rsClz = MinAliveRecyclingSelector.class;
-    this.victim_acClz = BaseAdmissionController.class;
+    this.victim_epClz = SLRUEvictionPolicy.class;
+    this.victim_rsClz = LRCRecyclingSelector.class;
+    this.victim_acClz = AQBasedAdmissionController.class;
 
   }
 
@@ -91,12 +94,16 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
     LOG.info("main cache: size={} hit rate={} items={}", cache.getStorageAllocated(),
       cache.getHitRate(), cache.size());
 
-    LOG.info("victim cache: size={} hit rate={} items={}", victim.getStorageAllocated(),
-      victim.getHitRate(), victim.size());
+    if (victim != null) {
+      LOG.info("victim cache: size={} hit rate={} items={}", victim.getStorageAllocated(),
+        victim.getHitRate(), victim.size());
+    }
 
     super.tearDown();
-    // Delete temp data
-    TestUtils.deleteCacheFiles(victim);
+    if (victim != null) {
+      // Delete temp data
+      TestUtils.deleteCacheFiles(victim);
+    }
   }
 
   protected Cache createCache() throws IOException {

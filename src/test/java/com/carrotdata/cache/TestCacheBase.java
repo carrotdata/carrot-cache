@@ -94,11 +94,14 @@ public abstract class TestCacheBase extends IOTestBase {
     if (maxKeyValueSize > 0) {
       builder.withMaximumKeyValueSize(maxKeyValueSize);
     }
+    Cache c = null;
     if (offheap) {
-      return builder.buildMemoryCache();
+      c = builder.buildMemoryCache();
     } else {
-      return builder.buildDiskCache();
+      c = builder.buildDiskCache();
     }
+    c.disableScavengers();
+    return c;
   }
 
   @Override

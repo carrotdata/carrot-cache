@@ -133,8 +133,8 @@ public final class CompressedBlockFileSegmentScanner implements SegmentScanner {
         segment.getSegmentDataSize(), this.prefetch.getFileOffset(), this.blockSize, compSize,
         dictId, currentIndex, segment.getTotalItems());
       Thread.dumpStack();
-      // throw new RuntimeException();
-      System.exit(-1);
+      throw new RuntimeException();
+      //System.exit(-1);
     }
     // Advance segment offset
     this.prefetch.advance(compSize + COMP_META_SIZE);

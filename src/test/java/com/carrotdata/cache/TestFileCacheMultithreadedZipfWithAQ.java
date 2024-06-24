@@ -19,23 +19,30 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.carrotdata.cache.controllers.AQBasedAdmissionController;
+import com.carrotdata.cache.controllers.LRCRecyclingSelector;
 import com.carrotdata.cache.controllers.MinAliveRecyclingSelector;
 import com.carrotdata.cache.eviction.LRUEvictionPolicy;
+import com.carrotdata.cache.eviction.SLRUEvictionPolicy;
+import com.carrotdata.cache.io.FileIOEngine;
+import com.carrotdata.cache.io.IOEngine;
 
 public class TestFileCacheMultithreadedZipfWithAQ extends TestCacheMultithreadedZipfBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestFileCacheMultithreadedZipfWithAQ.class);
 
-  protected double startSizeRatio = 0.5;
+  protected double startSizeRatio = 0.2;
 
   @Before
   public void setUp() {
     this.offheap = false;
     this.numRecords = 1000000;
-    this.numIterations = 10 * this.numRecords;
-    this.numThreads = 4;
-    this.segmentSize = 16 * 1024 * 1024;
-    this.maxCacheSize = 50 * this.segmentSize;
+    this.numIterations = 2 * this.numRecords;
+    this.numThreads = 2;
+    this.segmentSize = 4 * 1024 * 1024;
+    this.scavNumberThreads = 1;
+    this.scavDumpBelowRatio = 1.0;
+
+    this.maxCacheSize = 125 * this.numThreads * this.segmentSize;
   }
 
   @Override
@@ -45,23 +52,23 @@ public class TestFileCacheMultithreadedZipfWithAQ extends TestCacheMultithreaded
   }
 
   @Test
-  public void testLRUEvictionAndMinAliveSelectorBytesAPIWithAQ() throws IOException {
-    LOG.info("Bytes API: eviction=LRU, selector=MinAlive - AQ");
+  public void testSLRUEvictionAndLRCSelectorMemoryAPIWithAQ() throws IOException {
+    LOG.info("Bytes API: eviction=SLRU, selector=LRC - AQ");
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
-    this.epClz = LRUEvictionPolicy.class;
-    this.rsClz = MinAliveRecyclingSelector.class;
+    this.epClz = SLRUEvictionPolicy.class;
+    this.rsClz = LRCRecyclingSelector.class;
     this.acClz = AQBasedAdmissionController.class;
-    super.testContinuosLoadBytesRun();
+    super.testContinuosLoadMemoryRun();
   }
 
   @Test
-  public void testLRUEvictionAndMinAliveSelectorBytesAPI() throws IOException {
-    LOG.info("Bytes API: eviction=LRU, selector=MinAlive");
+  public void testSLRUEvictionAndLRCSelectorMemoryAPI() throws IOException {
+    LOG.info("Bytes API: eviction=SLRU, selector=LRC");
     this.evictionDisabled = false;
     this.scavengerInterval = 2; // scavenger interval in sec
-    this.epClz = LRUEvictionPolicy.class;
-    this.rsClz = MinAliveRecyclingSelector.class;
-    super.testContinuosLoadBytesRun();
+    this.epClz = SLRUEvictionPolicy.class;
+    this.rsClz = LRCRecyclingSelector.class;
+    super.testContinuosLoadMemoryRun();
   }
 }

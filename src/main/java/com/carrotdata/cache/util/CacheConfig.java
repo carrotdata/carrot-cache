@@ -351,7 +351,7 @@ public class CacheConfig {
 
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
 
-  public static final long DEFAULT_CACHE_MAXIMUM_SIZE = 0; // Unlimited
+  public static final long DEFAULT_CACHE_MAXIMUM_SIZE = 1_073_741_824; // 1GB
 
   public static final double DEFAULT_SCAVENGER_START_RUN_RATIO = 0.99;
 
@@ -492,7 +492,7 @@ public class CacheConfig {
   public final static double DEFAULT_CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO = 0.0;
 
   /** Default IO pool size */
-  public final static int DEFAULT_CACHE_IO_STORAGE_POOL_SIZE = 4;
+  public final static int DEFAULT_CACHE_IO_STORAGE_POOL_SIZE = 8;
 
   /** Default cache disabled mode */
   public final static boolean DEFAULT_CACHE_EVICTION_DISABLED_MODE = false;
@@ -657,15 +657,6 @@ public class CacheConfig {
     }
     dis.close();
     return new CacheConfig(props);
-  }
-
-  /**
-   * Check if it is C2 property name
-   * @param name property name
-   * @return true or false
-   */
-  public static boolean isCarrotPropertyName(String name) {
-    return name.indexOf("") >= 0;
   }
 
   // Instance
@@ -2709,9 +2700,9 @@ public class CacheConfig {
 
   public void sanityCheck(String cacheName) {
     long maxSize = getCacheMaximumSize(cacheName);
-    if (maxSize > 0 && maxSize < 100 * 1024 * 1024) {
-      // Minimum 100MB
-      maxSize = 100 * 1024 * 1024;
+    if (maxSize > 0 && maxSize < 200 * 1024 * 1024) {
+      // Minimum 200MB
+      maxSize = 200 * 1024 * 1024;
     }
 
     long segmentSize = getCacheSegmentSize(cacheName);
@@ -2721,8 +2712,9 @@ public class CacheConfig {
       setCacheSegmentSize(cacheName, segmentSize);
     }
     int num = (int) (maxSize / segmentSize);
-    if (num < 100) {
-      segmentSize = maxSize / (100 * (1024 * 1024)) * 1024 * 1024;
+    if (num < 200) {
+      segmentSize = maxSize / (200 * (1024 * 1024)) * 1024 * 1024;
+      setCacheSegmentSize(cacheName, segmentSize);
     }
 
     int avgKVSize = getEstimatedAvgKeyValueSize(cacheName);

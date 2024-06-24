@@ -21,7 +21,9 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
@@ -2038,6 +2040,7 @@ public abstract class IOEngine implements Persistent {
       // Call IOEngine - specific (FileIOEngine overrides it)
       // Can be costly - executed in a separate thread
       saveInternal(data);
+      
       // seal only after we materialize segment in a file system
       // Notify listener
       if (this.aListener != null) {
@@ -2141,13 +2144,15 @@ public abstract class IOEngine implements Persistent {
    * Scans and finds available id for a new data segment
    * @return id (or -1)
    */
+  
+  
   protected final int getAvailableId() {
-    for (int i = 0; i < dataSegments.length; i++) {
-      if (dataSegments[i] == null) {
-        return i;
+      for (int i = 0; i < dataSegments.length; i++) {
+        if (dataSegments[i] == null) {
+          return i;
+        }
       }
-    }
-    return NOT_FOUND; // not found
+      return NOT_FOUND; // not found
   }
 
   private void checkId(int id) {
@@ -2358,6 +2363,7 @@ public abstract class IOEngine implements Persistent {
     if (s == null) {
       // We silently ignore PUT operation due to lack of resources
       // TODO: update stats
+      //LOG.error("1 no segments available");
       return false;
     }
     long offset = s.append(keyPtr, keyLength, valuePtr, valueLength, expire);
@@ -2369,6 +2375,7 @@ public abstract class IOEngine implements Persistent {
       if (s == null) {
         // We silently ignore PUT operation due to lack of resources
         // TODO: update stats
+        //LOG.error("2 no segments available");
         return false;
       }
       offset = s.append(keyPtr, keyLength, valuePtr, valueLength, expire);

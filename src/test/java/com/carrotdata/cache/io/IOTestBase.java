@@ -443,7 +443,7 @@ public abstract class IOTestBase {
     int failed = 0;
     /* DEBUG */ LOG.info("Verify =" + num);
     for (int i = 0; i < num; i++) {
-      // *DEBUG*/ LOG.info(i);
+      ///*DEBUG*/ LOG.info("i={}", i);
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);

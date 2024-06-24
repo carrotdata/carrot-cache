@@ -405,8 +405,9 @@ public class CompressedBlockMemoryDataReader implements DataReader {
             + s.getSegmentDataSize() + " valid=" + s.isValid(),
           e);
         Thread.dumpStack();
-        System.exit(-1);
-        ;
+        throw new RuntimeException(e);
+        //System.exit(-1);
+        
         // throw new RuntimeException();
       }
       if (addr < 0) {

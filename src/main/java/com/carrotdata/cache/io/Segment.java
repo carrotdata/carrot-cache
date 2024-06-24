@@ -592,7 +592,8 @@ public class Segment implements Persistent {
     if (this.sip) {
       LOG.error("FATAL in dispose");
       Thread.dumpStack();
-      System.exit(-1);
+      throw new RuntimeException();
+      //System.exit(-1);
     }
     if (!this.valid) return;
     if (isOffheap()) {
@@ -768,7 +769,8 @@ public class Segment implements Persistent {
     if (this.sip) {
       LOG.error("Set address={}", ptr);
       Thread.dumpStack();
-      System.exit(-1);
+      throw new RuntimeException();
+      //System.exit(-1);
     }
     this.address = ptr;
   }
@@ -1190,7 +1192,8 @@ public class Segment implements Persistent {
       if (this.sip) {
         LOG.error("save sip = true");
         Thread.dumpStack();
-        System.exit(-1);
+        throw new RuntimeException();
+        //System.exit(-1);
       }
       this.sip = true;
       // Write segment size

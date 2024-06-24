@@ -27,6 +27,7 @@ import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.LockSupport;
 
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
@@ -193,6 +194,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   int scavengerNoThreads;
 
+  /*
+   *  For testing only
+   */
+  boolean scavengerDisabled = false;
+  
   /**
    * Constructor to use when loading cache from a storage set cache name after that
    */
@@ -356,15 +362,21 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     r.removeShutdownHook(shutDownHook);
   }
 
+  public void disableScavengers() {
+    this.scavDisabled = true;
+  }
+  
+  
   void startScavengers() {
+    if (this.scavDisabled) {
+      return;
+    }
     if (Scavenger.getActiveThreadsCount(this.cacheName) < this.scavengerNoThreads) {
-      synchronized (this) {
-        // Check again
-        while (Scavenger.getActiveThreadsCount(this.cacheName) < this.scavengerNoThreads) {
-          Scavenger scavenger = new Scavenger(this);
-          scavenger.start();
-        }
-      }
+      //synchronized (this) {
+        Scavenger scavenger = new Scavenger(this);
+        scavenger.start();
+        LockSupport.parkNanos(50000);
+      //}
     }
   }
 
@@ -715,6 +727,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return;
     }
     Utils.onSpinWait(this.spinWaitTimeNs);
+    //LOG.info("park nano, storageUsed={} scav stop={}", storageUsed, this.scavengerStopMemoryRatio);
+    //LockSupport.parkNanos(50000);
   }
 
   public boolean put(long keyPtr, int keySize, long valPtr, int valSize, long expire, int rank,
@@ -805,7 +819,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     // Check rank
     checkRank(rank);
     checkRank(groupRank);
-    if (!shouldAdmitToMainQueue(keyPtr, keySize, valSize, force)) {
+    if (!scavenger && !shouldAdmitToMainQueue(keyPtr, keySize, valSize, force)) {
       return false;
     }
     spinWaitOnHighPressure(scavenger);
@@ -818,10 +832,27 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     expire = adjustExpirationTime(expire);
     // Add to the cache
     boolean result = false;
-    result = engine.put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank, scavenger);
-    if (result) {
-      reportThroughputController(Utils.kvSize(keySize, valSize));
-    }
+    boolean scavStarted = false;
+    long start = System.currentTimeMillis();
+    do  { 
+      result = engine.put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank,
+        scavenger);
+      if (scavenger) {
+        //FIXME: why does Scavenger fail?
+        break;
+      } else if (result) {
+        reportThroughputController(Utils.kvSize(keySize, valSize));
+        this.totalWrites.incrementAndGet();
+        this.totalWritesSize.addAndGet(Utils.kvSize(keySize, valSize));
+        break;
+      } else if (!scavStarted){
+        startScavengers();
+        scavStarted = true;
+      } else {
+        Utils.onSpinWait(this.spinWaitTimeNs);
+      }
+    } while (!result && System.currentTimeMillis() - start <= this.waitOnPutTimeMs);
+    
     return result;
   }
 
@@ -934,10 +965,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   private boolean storageIsFull(int keySize, int valueSize) {
     // OK, eviction is disabled
     // check used and maximum storage size
-    // FIXME: calculating of storageusedActual can be costly
     long used = this.engine.getStorageUsed();
+    long room = this.engine.getSegmentSize() * (this.scavengerNoThreads + 1) + 1;
     int size = Utils.kvSize(keySize, valueSize);
-    return used + size > this.maximumCacheSize;
+    return used + size > this.maximumCacheSize - room;
   }
 
   private boolean isGreaterThanMaxSize(int keySize, int valueSize) {
@@ -980,12 +1011,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         return false;
       }
     }
-    if (!shouldAdmitToMainQueue(key, keyOffset, keySize, valSize, force)) {
+    if (!scavenger && !shouldAdmitToMainQueue(key, keyOffset, keySize, valSize, force)) {
       return false;
     }
     spinWaitOnHighPressure(scavenger);
-    this.totalWrites.incrementAndGet();
-    this.totalWritesSize.addAndGet(Utils.kvSize(keySize, valSize));
+
     // Check rank
     checkRank(rank);
     checkRank(groupRank);
@@ -994,11 +1024,27 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     expire = adjustExpirationTime(expire);
     // Add to the cache
     boolean result = false;
-    result = engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, groupRank,
-      scavenger);
-    if (result) {
-      reportThroughputController(Utils.kvSize(keySize, valSize));
-    }
+    boolean scavStarted = false;
+    long start = System.currentTimeMillis();
+    do  { 
+      result = engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, groupRank,
+        scavenger);
+      if (scavenger) {
+        //FIXME: why does Scavenger fail?
+        break;
+      } else if (result) {
+        reportThroughputController(Utils.kvSize(keySize, valSize));
+        this.totalWrites.incrementAndGet();
+        this.totalWritesSize.addAndGet(Utils.kvSize(keySize, valSize));
+        break;
+      } else if (!scavStarted){
+        startScavengers();
+        scavStarted = true;
+      } else {
+        Utils.onSpinWait(this.spinWaitTimeNs);
+      }
+    } while (!result && System.currentTimeMillis() - start <= this.waitOnPutTimeMs);
+    
     return result;
   }
 
@@ -2588,11 +2634,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     LOG.info("Cache saved in {}ms", endTime - startTime);
   }
 
-  public void disableScavengers() {
-    this.scavDisabled = true;
-
-  }
-
   /**
    * Load cache data and meta-data from a file system
    * @throws IOException
@@ -2659,9 +2700,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     double compRatio = (double) getRawDataSize() / getStorageAllocated();
     double compRatioReal = (double) getRawDataSize() / getStorageUsedActual();
     LOG.info(
-      "Cache[{}]: storage size={} data size={} comp ratio={} comp real={} items={} hit rate={}, gets={}, failed gets={}, puts={}, bytes written={}",
+      "Cache[{}]: storage size={} data size={} comp ratio={} comp real={} items={}"+
+    " hit rate={}, gets={}, failed gets={}, puts={}, rejected puts={} bytes written={}",
       this.cacheName, getStorageAllocated(), getRawDataSize(), compRatio, compRatioReal, size(),
-      getHitRate(), getTotalGets(), getTotalFailedGets(), getTotalWrites(), getTotalWritesSize());
+      getHitRate(), getTotalGets(), getTotalFailedGets(), getTotalWrites(), getTotalRejectedWrites(), getTotalWritesSize());
     if (this.victimCache != null) {
       this.victimCache.printStats();
     }

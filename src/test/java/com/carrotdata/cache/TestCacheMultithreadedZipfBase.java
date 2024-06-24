@@ -92,7 +92,7 @@ public abstract class TestCacheMultithreadedZipfBase {
 
   protected String victimCacheName = "victim";
 
-  protected int slruInsertionPoint = 6;
+  protected int slruInsertionPoint = 7;
 
   protected long spinOnWaitTime;
 
@@ -122,7 +122,7 @@ public abstract class TestCacheMultithreadedZipfBase {
 
     builder.withCacheDataSegmentSize(segmentSize).withCacheMaximumSize(maxCacheSize)
         .withScavengerRunInterval(scavengerInterval)
-        .withScavengerDumpEntryBelowMax(scavDumpBelowRatio).withCacheEvictionPolicy(epClz.getName())
+        .withScavengerDumpEntryBelowMin(scavDumpBelowRatio).withCacheEvictionPolicy(epClz.getName())
         .withRecyclingSelector(rsClz.getName()).withCacheRootDir(rootDir)
         .withMinimumActiveDatasetRatio(minActiveRatio).withEvictionDisabledMode(evictionDisabled)
         .withAdmissionQueueStartSizeRatio(aqStartRatio).withAdmissionController(acClz.getName())
@@ -193,6 +193,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   protected void runBytesStreamZipf(int total) throws IOException {
     int loaded = 0;
     int hits = 0;
+    int failed = 0;
     int kvSize = safeBufferSize();
     byte[] buffer = new byte[kvSize];
     ZipfDistribution dist = new ZipfDistribution(this.numRecords, this.zipfAlpha);
@@ -204,6 +205,8 @@ public abstract class TestCacheMultithreadedZipfBase {
         hits++;
       } else if (loadBytesStream(n)) {
         loaded++;
+      } else {
+        failed++;
       }
       long end = System.nanoTime();
       perc.add(end - start);
@@ -212,8 +215,8 @@ public abstract class TestCacheMultithreadedZipfBase {
           (float) cache.getOverallHitRate());
       }
     }
-    LOG.info("{} - hit={} loaded={}", Thread.currentThread().getName(), (float) hits / total,
-      loaded);
+    LOG.info("{} - hit={} loaded={} failed={}", Thread.currentThread().getName(), (float) hits / total,
+      loaded, failed);
     LOG.info("Thread={} latency: min={}ns max={}ns p50={}ns p90={}ns p99={}ns p999={}ns p9999={}ns",
       Thread.currentThread().getName(), perc.min(), perc.max(), perc.value(0.5), perc.value(0.9),
       perc.value(0.99), perc.value(0.999), perc.value(0.9999));
@@ -222,6 +225,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   protected void runMemoryStreamZipf(int total) throws IOException {
     int loaded = 0;
     int hits = 0;
+    int failed = 0;
     int kvSize = safeBufferSize();
     ByteBuffer buffer = ByteBuffer.allocate(kvSize);
 
@@ -235,6 +239,8 @@ public abstract class TestCacheMultithreadedZipfBase {
         hits++;
       } else if (loadMemoryStream(n)) {
         loaded++;
+      } else {
+        failed++;
       }
       long end = System.nanoTime();
       perc.add(end - start);
@@ -244,15 +250,16 @@ public abstract class TestCacheMultithreadedZipfBase {
           (float) cache.getOverallHitRate());
       }
     }
-    LOG.info("{} - hit={} loaded={}", Thread.currentThread().getName(), (float) hits / total,
-      loaded);
+    LOG.info("{} - hit={} loaded={} failed to load={}", Thread.currentThread().getName(), (float) hits / total,
+      loaded, failed);
     LOG.info("Thread={} latency: min={}ns max={}ns p50={}ns p90={}ns p99={}ns p999={}ns p9999={}ns",
       Thread.currentThread().getName(), perc.min(), perc.max(), perc.value(0.5), perc.value(0.9),
       perc.value(0.99), perc.value(0.999), perc.value(0.9999));
   }
 
   protected boolean loadBytesStream(int n) throws IOException {
-    Random r = new Random(testStartTime + n);
+    long id = Thread.currentThread().getId();
+    Random r = new Random(testStartTime + n + id * Integer.MAX_VALUE);
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);
     byte[] key = TestUtils.randomBytes(keySize, r);
@@ -265,8 +272,8 @@ public abstract class TestCacheMultithreadedZipfBase {
 
   protected boolean verifyBytesStream(int n, byte[] buffer) throws IOException {
 
-    Random r = new Random(testStartTime + n);
-
+    long id = Thread.currentThread().getId();
+    Random r = new Random(testStartTime + n + id * Integer.MAX_VALUE);
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);
     byte[] key = TestUtils.randomBytes(keySize, r);
@@ -288,14 +295,15 @@ public abstract class TestCacheMultithreadedZipfBase {
       assertTrue(Utils.compareTo(buffer, off, kSize, key, 0, keySize) == 0);
 
     } catch (AssertionError e) {
+      e.printStackTrace();
       return false;
     }
     return true;
   }
 
   protected boolean loadMemoryStream(int n) throws IOException {
-    Random r = new Random(testStartTime + n);
-
+    long id = Thread.currentThread().getId();
+    Random r = new Random(testStartTime + n + id * Integer.MAX_VALUE);
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);
     long keyPtr = TestUtils.randomMemory(keySize, r);
@@ -309,8 +317,8 @@ public abstract class TestCacheMultithreadedZipfBase {
 
   protected boolean verifyMemoryStream(int n, ByteBuffer buffer) throws IOException {
 
-    Random r = new Random(testStartTime + n);
-
+    long id = Thread.currentThread().getId();
+    Random r = new Random(testStartTime + n + id * Integer.MAX_VALUE);
     int keySize = nextKeySize(r);
     int valueSize = nextValueSize(r);
     long keyPtr = TestUtils.randomMemory(keySize, r);
