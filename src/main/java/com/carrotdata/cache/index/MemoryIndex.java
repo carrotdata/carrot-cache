@@ -128,8 +128,6 @@ public final class MemoryIndex implements Persistent {
       192 /* 12K */, 224 /* 14K */, 256 /* 16K */
   };
 
-  private static ThreadLocal<Long> membuffer = new ThreadLocal<Long>();
-
   /**
    * Get maximum index block size
    * @return maximum index block size
@@ -222,12 +220,6 @@ public final class MemoryIndex implements Persistent {
   /* Counter for total expired - evicted balance */
   private AtomicLong expiredEvictedBalance = new AtomicLong();
 
-  /* Thread Local Memory buffer size */
-  private int memBufferSize;
-
-  /* Thread local storage enabled */
-  private boolean tlsEnabled = true;
-
   public MemoryIndex() {
     this.cacheConfig = CacheConfig.getInstance();
     initLocks();
@@ -295,35 +287,11 @@ public final class MemoryIndex implements Persistent {
   }
 
   private long getMemoryBuffer(int size) {
-    if (!this.tlsEnabled) {
-      return UnsafeAccess.mallocZeroed(size);
-    }
-    Long addr = membuffer.get();
-    if (addr == null) {
-      if (this.engine != null) {
-        String cacheName = this.engine.getCacheName();
-        CacheConfig conf = CacheConfig.getInstance();
-        if (conf.isIndexDataEmbeddedSupported(cacheName)) {
-          this.memBufferSize = conf.getIndexDataEmbeddedSize(cacheName) + 4;
-        } else {
-          this.memBufferSize = this.indexFormat.indexEntrySize();
-        }
-      } else {
-        this.memBufferSize = 256; // for testing
-      }
-      long ptr = UnsafeAccess.malloc(this.memBufferSize);
-      membuffer.set(ptr);
-      addr = membuffer.get();
-    }
-    long ptr = addr.longValue();
-    UnsafeAccess.setMemory(ptr, this.memBufferSize, (byte) 0);
-    return addr.longValue();
+    return UnsafeAccess.mallocZeroed(size);
   }
 
   private void freeMemoryBuffer(long ptr) {
-    if (!this.tlsEnabled) {
-      UnsafeAccess.free(ptr);
-    }
+    UnsafeAccess.free(ptr);
   }
 
   /**
@@ -578,7 +546,6 @@ public final class MemoryIndex implements Persistent {
     this.allocatedMemory.addAndGet(size * index_base.length);
     ref_index_base.set(index_base);
     initLocks();
-    this.tlsEnabled = this.cacheConfig.isCacheTLSSupported(this.cacheName);
   }
 
   private void initLocks() {
