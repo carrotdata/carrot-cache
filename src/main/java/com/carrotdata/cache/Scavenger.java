@@ -639,6 +639,7 @@ public class Scavenger implements Runnable {
         Result res = result.getResult();
         int rank = result.getRank();
         long expire = result.getExpire();
+        int hitCount = result.hitCount();
         scanned++;
         switch (res) {
 
@@ -668,7 +669,7 @@ public class Scavenger implements Runnable {
         // In case of OK resubmit back to the cache, in case of DELETED and victim cache is not null
         // submit to victim cache
         // sanity check
-        if (c != null && (res == Result.OK || res == Result.DELETED)) {
+        if (c != null && (res == Result.OK || (res == Result.DELETED && hitCount > 0))) {
           // Put value back into the cache or victim cache - it has high popularity
           if (isDirect) {
             c.put(keyPtr, keySize, valuePtr, valSize, expire, rank, groupRank, true, true);

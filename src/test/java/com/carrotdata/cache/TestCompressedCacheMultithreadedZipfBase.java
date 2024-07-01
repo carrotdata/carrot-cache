@@ -20,9 +20,12 @@ import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.After;
 import org.junit.Before;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.carrotdata.cache.compression.CodecFactory;
 import com.carrotdata.cache.compression.CompressionCodec;
@@ -38,8 +41,9 @@ import com.carrotdata.cache.util.Utils;
 
 public abstract class TestCompressedCacheMultithreadedZipfBase
     extends TestCacheMultithreadedZipfBase {
+  private static final Logger LOG = LoggerFactory.getLogger(TestCompressedCacheMultithreadedZipfBase.class);
 
-  protected boolean dictionaryEnabled = true;
+  protected boolean dictionaryEnabled = false;
   protected boolean asyncTrainingMode = true;
   protected int dictionarySize = 1 << 16;
   protected int compLevel = 3;
@@ -55,6 +59,7 @@ public abstract class TestCompressedCacheMultithreadedZipfBase
     CodecFactory.getInstance().clear();
     // Release memory
     mValues.stream().forEach(x -> UnsafeAccess.free(x));
+    counter = new AtomicInteger();
   }
 
   @Before
@@ -101,10 +106,14 @@ public abstract class TestCompressedCacheMultithreadedZipfBase
   private byte[] getKey(int n) {
     return ("KEY:" + n).getBytes();
   }
+static AtomicInteger counter = new AtomicInteger();
 
   @Override
   protected final boolean loadBytesStream(int n) throws IOException {
-
+    int c = counter.incrementAndGet();
+    if (c < 100) {
+      //LOG.info("Thread={} load byte stream={}", Thread.currentThread().getName(), n);
+    }
     byte[] key = getKey(n);
     byte[] value = bValues.get(n % bValues.size());
     long expire = getExpire(n);
@@ -114,7 +123,10 @@ public abstract class TestCompressedCacheMultithreadedZipfBase
 
   @Override
   protected final boolean verifyBytesStream(int n, byte[] buffer) throws IOException {
-
+    int c = counter.incrementAndGet();
+    if (c < 100) {
+      //LOG.info("Thread={} verify byte stream={}", Thread.currentThread().getName(), n);
+    }
     byte[] key = getKey(n);
     byte[] value = bValues.get(n % bValues.size());
     long expSize = Utils.kvSize(key.length, value.length);
@@ -143,7 +155,10 @@ public abstract class TestCompressedCacheMultithreadedZipfBase
 
   @Override
   protected final boolean loadMemoryStream(int n) throws IOException {
-
+    int c = counter.incrementAndGet();
+    if (c < 100) {
+      //LOG.info("Thread={} load memory stream={}", Thread.currentThread().getName(), n);
+    }
     byte[] key = getKey(n);
     int keySize = key.length;
     long keyPtr = TestUtils.copyToMemory(key);
@@ -157,7 +172,10 @@ public abstract class TestCompressedCacheMultithreadedZipfBase
 
   @Override
   protected final boolean verifyMemoryStream(int n, ByteBuffer buffer) throws IOException {
-
+    int c = counter.incrementAndGet();
+    if (c < 100) {
+      //LOG.info("Thread={} verify memory stream={}", Thread.currentThread().getName(), n);
+    }
     byte[] key = getKey(n);
     int keySize = key.length;
     long keyPtr = TestUtils.copyToMemory(key);

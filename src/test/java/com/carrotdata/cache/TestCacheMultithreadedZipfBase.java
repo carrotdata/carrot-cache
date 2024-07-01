@@ -20,6 +20,7 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.junit.After;
@@ -114,6 +115,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   }
 
   protected Cache createCache() throws IOException {
+    LOG.info("Before CC");
     String cacheName = parentCacheName;
     // Data directory
     Path rootDirPath = Files.createTempDirectory(null);
@@ -133,11 +135,14 @@ public abstract class TestCacheMultithreadedZipfBase {
         .withPromotionController(pcController.getName())
         .withPromotionQueueStartSizeRatio(pqStartRatio);
     builder = withAddedConfigurations(builder);
+    Cache c = null;
     if (offheap) {
-      return builder.buildMemoryCache();
+      c = builder.buildMemoryCache();
     } else {
-      return builder.buildDiskCache();
+      c = builder.buildDiskCache();
     }
+    LOG.info("After CC");
+    return c;
   }
 
   /**
@@ -256,8 +261,9 @@ public abstract class TestCacheMultithreadedZipfBase {
       Thread.currentThread().getName(), perc.min(), perc.max(), perc.value(0.5), perc.value(0.9),
       perc.value(0.99), perc.value(0.999), perc.value(0.9999));
   }
-
+  
   protected boolean loadBytesStream(int n) throws IOException {
+
     long id = Thread.currentThread().getId();
     Random r = new Random(testStartTime + n + id * Integer.MAX_VALUE);
     int keySize = nextKeySize(r);
@@ -302,6 +308,7 @@ public abstract class TestCacheMultithreadedZipfBase {
   }
 
   protected boolean loadMemoryStream(int n) throws IOException {
+
     long id = Thread.currentThread().getId();
     Random r = new Random(testStartTime + n + id * Integer.MAX_VALUE);
     int keySize = nextKeySize(r);

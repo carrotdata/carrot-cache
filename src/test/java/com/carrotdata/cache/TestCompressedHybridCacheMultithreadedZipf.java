@@ -60,7 +60,7 @@ public class TestCompressedHybridCacheMultithreadedZipf
   
   @BeforeClass
   public static void start() {
-    System.setProperty("MALLOC_DEBUG", "true");
+    //System.setProperty("MALLOC_DEBUG", "true");
   }
   
   @Override
@@ -124,7 +124,10 @@ public class TestCompressedHybridCacheMultithreadedZipf
         .withVictimCachePromoteOnHit(victim_promoteOnHit)
         .withAdmissionController(victim_acClz.getName());
 
+    LOG.info("Victim start");
     Cache victim = builder.buildDiskCache();
+    LOG.info("Victim finished");
+
     parent.setVictimCache(victim);
 
     return parent;

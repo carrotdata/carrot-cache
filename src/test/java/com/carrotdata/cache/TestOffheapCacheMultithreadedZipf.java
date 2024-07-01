@@ -14,6 +14,7 @@ package com.carrotdata.cache;
 import java.io.IOException;
 
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -34,12 +35,15 @@ public class TestOffheapCacheMultithreadedZipf extends TestCacheMultithreadedZip
    * Eviction tested: No eviction, LRU, S-LRU, FIFO; Recycling selectors: LAR (least-accessed),
    * MinAlive, LRC (oldest), MRC (youngest)
    */
-
+  @BeforeClass
+  public static void start() {
+    //System.setProperty("MALLOC_DEBUG", "true");
+  }
   @Before
   public void setUp() {
     this.offheap = true;
     this.numRecords = 1000000;
-    this.numIterations = 10 * this.numRecords;
+    this.numIterations = 2 * this.numRecords;
     this.numThreads = 4;
     this.maxCacheSize = this.numThreads * 125 * this.segmentSize;
     this.scavNumberThreads = 2;

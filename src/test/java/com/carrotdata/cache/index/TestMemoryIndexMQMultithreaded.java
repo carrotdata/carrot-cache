@@ -115,7 +115,8 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
       int offset = (int) format.getOffset(buf);
       int size = (int) format.getKeyValueSize(buf);
       if (sids[i] != sid || offsets[i] != offset || lengths[i] != size) {
-        continue;
+        
+        failed++; continue;
       }
       // assertEquals(sids[i], sid);
       // assertEquals(offsets[i], offset);
@@ -212,7 +213,7 @@ public class TestMemoryIndexMQMultithreaded extends TestMemoryIndexMultithreaded
       int offset = (int) format.getOffset(buf);
       int size = (int) format.getKeyValueSize(buf);
       if (sids[i] != sid || offsets[i] != offset || lengths[i] != size) {
-        continue;
+        failed++; continue;
       }
       // assertEquals(sids[i], sid);
       // assertEquals(offsets[i], offset);

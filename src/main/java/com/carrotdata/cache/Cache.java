@@ -26,6 +26,7 @@ import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
@@ -367,16 +368,17 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   
-  void startScavengers() {
+  void startScavengers(boolean wait) {
+   
     if (this.scavDisabled) {
       return;
     }
     if (Scavenger.getActiveThreadsCount(this.cacheName) < this.scavengerNoThreads) {
-      //synchronized (this) {
         Scavenger scavenger = new Scavenger(this);
         scavenger.start();
-        LockSupport.parkNanos(50000);
-      //}
+        if (wait) {
+          LockSupport.parkNanos(50000);
+        }
     }
   }
 
@@ -450,6 +452,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.promotionController == null) {
       return;
     }
+    LOG.info("Before Started Promotion Controller [{}]", this.admissionController.getClass().getName());
+
     this.promotionController.setCache(this);
     LOG.info("Started Promotion Controller [{}]", this.admissionController.getClass().getName());
 
@@ -806,7 +810,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         // Start scavengers if not running
         // FIXME: Bad, very bad, can stuck
         if (!scavStarted) {
-          startScavengers();
+          startScavengers(true);
           scavStarted = true;
         }
         Utils.onSpinWait(this.spinWaitTimeNs);
@@ -838,7 +842,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       result = engine.put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank,
         scavenger);
       if (scavenger) {
-        //FIXME: why does Scavenger fail?
+        //Check scavengers if put failed - its victim cache
+        if (!result) {
+          startScavengers(false);
+        }
         break;
       } else if (result) {
         reportThroughputController(Utils.kvSize(keySize, valSize));
@@ -846,7 +853,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         this.totalWritesSize.addAndGet(Utils.kvSize(keySize, valSize));
         break;
       } else if (!scavStarted){
-        startScavengers();
+        startScavengers(true);
         scavStarted = true;
       } else {
         Utils.onSpinWait(this.spinWaitTimeNs);
@@ -968,6 +975,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     long used = this.engine.getStorageUsed();
     long room = this.engine.getSegmentSize() * (this.scavengerNoThreads + 1) + 1;
     int size = Utils.kvSize(keySize, valueSize);
+    if (!this.cacheName.equals("default")) {
+      ThreadLocalRandom r = ThreadLocalRandom.current();
+      if (r.nextDouble() < 0.00001) {
+        LOG.info(" stoarge is full, cache={} used={} max={} room ={}", 
+          this.cacheName, used,this.maximumCacheSize, room );
+      }
+    }
     return used + size > this.maximumCacheSize - room;
   }
 
@@ -1000,7 +1014,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         // Start scavengers if not running
         // FIXME: Bad, very bad, can stuck
         if (!scavStarted) {
-          startScavengers();
+          startScavengers(true);
           scavStarted = true;
         }
         Utils.onSpinWait(this.spinWaitTimeNs);
@@ -1030,7 +1044,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       result = engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, groupRank,
         scavenger);
       if (scavenger) {
-        //FIXME: why does Scavenger fail?
+        //Scavenger failed - its parent's scavenger 
+        // check scavengers for victim cache
+        if (!result) {
+          startScavengers(false);
+        }
         break;
       } else if (result) {
         reportThroughputController(Utils.kvSize(keySize, valSize));
@@ -1038,7 +1056,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         this.totalWritesSize.addAndGet(Utils.kvSize(keySize, valSize));
         break;
       } else if (!scavStarted){
-        startScavengers();
+        startScavengers(true);
         scavStarted = true;
       } else {
         Utils.onSpinWait(this.spinWaitTimeNs);

@@ -45,7 +45,7 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
 
   double victim_scavDumpBelowRatio = 0.5;
 
-  boolean victim_promoteOnHit = true;
+  boolean victim_promoteOnHit = false;
 
   protected Class<? extends EvictionPolicy> victim_epClz = FIFOEvictionPolicy.class;
 
@@ -57,22 +57,22 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
   public void setUp() {
     // Parent cache
     this.offheap = true;
-    this.numRecords = 1000000;
+    this.numRecords = 2000000;
     this.numIterations = 2 * this.numRecords;
     this.numThreads = 4;
     this.minActiveRatio = 0.9;
-    this.maxCacheSize = this.numThreads * 100L * this.segmentSize;
+    this.maxCacheSize = this.numThreads * 125L * this.segmentSize;
     this.scavDumpBelowRatio = 0.2;
     // victim cache
-    // this.victim_segmentSize = 4 * 1024 * 1024;
-    // this.victim_maxCacheSize = 1000L * this.victim_segmentSize;
+    this.victim_segmentSize = 4 * 1024 * 1024;
+    this.victim_maxCacheSize = this.numThreads * 25L * this.victim_segmentSize;
     this.victim_minActiveRatio = 0.5;
     this.victim_scavDumpBelowRatio = 0.5;
     this.victim_scavengerInterval = 10;
     this.victim_promoteOnHit = false;
     this.victim_epClz = SLRUEvictionPolicy.class;
     this.victim_rsClz = LRCRecyclingSelector.class;
-    this.victim_acClz = AQBasedAdmissionController.class;
+    //this.victim_acClz = AQBasedAdmissionController.class;
 
   }
 
@@ -88,6 +88,19 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
     super.testContinuosLoadMemoryRun();
   }
 
+  @Test
+  public void testSLRUEvictionAndLRCSelectorMemoryAPI() throws IOException {
+    LOG.info("Memory API: eviction=SLRU, selector=LRC");
+
+    this.evictionDisabled = false;
+    this.scavengerInterval = 2; // scavenger interval in sec
+    this.epClz = SLRUEvictionPolicy.class;
+    this.rsClz = LRCRecyclingSelector.class;
+    // this.scavDumpBelowRatio = 1.0;
+    super.testContinuosLoadMemoryRun();
+  }
+
+  
   @After
   public void tearDown() throws IOException {
     Cache victim = cache.getVictimCache();

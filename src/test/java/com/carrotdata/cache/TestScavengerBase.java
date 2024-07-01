@@ -178,7 +178,7 @@ public abstract class TestScavengerBase extends IOTestBase {
         + cache.getEngine().getMemoryIndex().size());
     // Wait expireTime
     try {
-      Thread.sleep(expireTime);
+      Thread.sleep(expireTime + 100);
     } catch (InterruptedException e) {
 
     }

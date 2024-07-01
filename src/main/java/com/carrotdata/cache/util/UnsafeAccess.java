@@ -273,7 +273,8 @@ public final class UnsafeAccess {
         LOG.error(Thread.currentThread().getName() + ": Memory corruption: address={} size={}",
           address, size);
         Thread.dumpStack();
-        throw new RuntimeException();
+        //throw new RuntimeException();
+        System.exit(-1);
       }
     }
 
