@@ -68,12 +68,15 @@ public final class MemoryIndex implements Persistent {
     private Result result;
 
     private int rank;
+    
+    private int hitCount;
 
-    long expire;
+    private long expire;
 
-    public ResultWithRankAndExpire setResultRankExpire(Result result, int rank, long expire) {
+    public ResultWithRankAndExpire setResultRankExpire(Result result, int rank, int hitCount, long expire) {
       this.result = result;
       this.rank = rank;
+      this.hitCount = hitCount;
       return this;
     }
 
@@ -87,6 +90,10 @@ public final class MemoryIndex implements Persistent {
 
     public long getExpire() {
       return this.expire;
+    }
+    
+    public int hitCount() {
+      return this.hitCount;
     }
   }
 
@@ -1494,7 +1501,7 @@ public final class MemoryIndex implements Persistent {
     long $ptr = ptr + this.indexBlockHeaderSize;
     int count = 0;
 
-    result = result.setResultRankExpire(Result.NOT_FOUND, 0, 0);
+    result = result.setResultRankExpire(Result.NOT_FOUND, 0, 0, 0);
 
     this.indexFormat.begin(ptr, true); // force scan
     try {
@@ -1514,10 +1521,11 @@ public final class MemoryIndex implements Persistent {
           long expire = this.indexFormat.getExpire(ptr, $ptr);
           long current = System.currentTimeMillis();
           int rank = this.evictionPolicy.getRankForIndex(this.numRanks, count, numEntries);
-
+          int hitCount = this.indexFormat.getHitCount($ptr);
+          
           if (expire > 0 && current > expire) {
             // For expired items rank does not matter
-            result.setResultRankExpire(Result.EXPIRED, rank, expire);
+            result.setResultRankExpire(Result.EXPIRED, rank, hitCount, expire);
             // update total expired counter
             this.expiredEvictedBalance.incrementAndGet();
           } else {
@@ -1525,9 +1533,9 @@ public final class MemoryIndex implements Persistent {
             double popularity = ((double) (numEntries - count)) / numEntries;
             if (popularity <= dumpBelowRatio) {
               // Delete item as having low popularity
-              result.setResultRankExpire(Result.DELETED, rank, expire);
+              result.setResultRankExpire(Result.DELETED, rank,hitCount, expire);
             } else {
-              result.setResultRankExpire(Result.OK, rank, expire);
+              result.setResultRankExpire(Result.OK, rank, hitCount, expire);
             }
           }
           // if (result.getResult() == Result.DELETED && this.evictionListener != null) {
