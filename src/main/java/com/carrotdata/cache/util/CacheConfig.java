@@ -346,6 +346,7 @@ public class CacheConfig {
 
   public final static String CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY =
       "cache.memory-buffer-pool-max-size";
+  public final static String CACHE_PROACTIVE_EXPIRATION_FACTOR_KEY = "cache.proactive-expiration-factor";
 
   /** Defaults section */
 
@@ -581,8 +582,10 @@ public class CacheConfig {
   /* Default maximum size of memory buffer pool */
 
   public final static int DEFAULT_CACHE_MEMORY_BUFFER_POOL_MAX_SIZE =
-      DEFAULT_CACHE_POPULARITY_NUMBER_RANKS;
+      DEFAULT_CACHE_POPULARITY_NUMBER_RANKS / 2;
 
+  public final static double DEFAULT_CACHE_PROACTIVE_EXPIRATION_FACTOR = 0.25;
+  
   static CacheConfig instance;
 
   public static CacheConfig getInstance() {
@@ -2698,6 +2701,30 @@ public class CacheConfig {
       Integer.toString(size));
   }
 
+  /**
+   * Gets cache pro-active expiration factor
+   * @param cacheName cache name
+   * @return factor
+   */
+  public double getCacheProactiveExpirationFactor(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_PROACTIVE_EXPIRATION_FACTOR_KEY);
+    if (value != null) {
+      return Double.parseDouble(value);
+    }
+    return (double) getDoubleProperty(CACHE_PROACTIVE_EXPIRATION_FACTOR_KEY,
+      DEFAULT_CACHE_PROACTIVE_EXPIRATION_FACTOR);
+  }
+
+  /**
+   * Sets cache pro-active expiration factor
+   * @param cacheName cache name
+   * @param factor expiration check factor (probability to check on get operation)
+   */
+  public void setCacheProactiveExpirationFactor(String cacheName, double factor) {
+    props.setProperty(cacheName + "." + CACHE_PROACTIVE_EXPIRATION_FACTOR_KEY,
+      Double.toString(factor));
+  }
+  
   public void sanityCheck(String cacheName) {
     long maxSize = getCacheMaximumSize(cacheName);
     if (maxSize > 0 && maxSize < 200 * 1024 * 1024) {

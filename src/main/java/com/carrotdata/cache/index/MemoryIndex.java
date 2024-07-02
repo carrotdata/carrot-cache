@@ -226,6 +226,9 @@ public final class MemoryIndex implements Persistent {
 
   /* Counter for total expired - evicted balance */
   private AtomicLong expiredEvictedBalance = new AtomicLong();
+  
+  /* Expiration check probability */
+  private double expCheckProb;
 
   public MemoryIndex() {
     this.cacheConfig = CacheConfig.getInstance();
@@ -540,6 +543,7 @@ public final class MemoryIndex implements Persistent {
   /** Index initializer */
   private void init() {
     this.numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
+    this.expCheckProb = this.cacheConfig.getCacheProactiveExpirationFactor(this.cacheName);
     int startNumberOfSlots = 1 << cacheConfig.getStartIndexNumberOfSlotsPower(this.cacheName);
     // TODO: must be positive
     long[] index_base = new long[startNumberOfSlots];
@@ -1269,7 +1273,7 @@ public final class MemoryIndex implements Persistent {
           // 2. if expire supported == true, we do not have to scan the whole block
           // till the end every time - must be something probabilistic, say 1 in 4
           // should be made configurable?
-          if (!expireSupported || r.nextDouble() < 0.75) {
+          if (!expireSupported || r.nextDouble() < 1 - this.expCheckProb) {
             break;
           }
         }
