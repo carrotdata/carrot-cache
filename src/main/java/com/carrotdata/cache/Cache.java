@@ -26,7 +26,6 @@ import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
@@ -975,13 +974,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     long used = this.engine.getStorageUsed();
     long room = this.engine.getSegmentSize() * (this.scavengerNoThreads + 1) + 1;
     int size = Utils.kvSize(keySize, valueSize);
-    if (!this.cacheName.equals("default")) {
-      ThreadLocalRandom r = ThreadLocalRandom.current();
-      if (r.nextDouble() < 0.00001) {
-        LOG.info(" stoarge is full, cache={} used={} max={} room ={}", 
-          this.cacheName, used,this.maximumCacheSize, room );
-      }
-    }
     return used + size > this.maximumCacheSize - room;
   }
 

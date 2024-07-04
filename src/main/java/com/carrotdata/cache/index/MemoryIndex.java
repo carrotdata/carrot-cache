@@ -2444,6 +2444,7 @@ public final class MemoryIndex implements Persistent {
     if (ptr == 0) {
       LOG.error("FATAL rehashSlot ptr == 0");
       Thread.dumpStack();
+      System.exit(-1);
     }
 
     int numEntries = numEntries(ptr);

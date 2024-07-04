@@ -522,7 +522,8 @@ public class Scavenger implements Runnable {
         segmentsProcessed++;
       }
     } catch (Exception e) {
-      /* DEBUG */e.printStackTrace();
+      LOG.error("May be FATAL", e);
+      //TODO 
     } finally {
       AtomicInteger numInstances = numInstancesMap.get(cache.getName());
       numInstances.decrementAndGet();
