@@ -490,7 +490,7 @@ public class CacheConfig {
   public static final double DEFAULT_CACHE_EXPIRATION_MULTIPLIER_VALUE = 2;
 
   /** Default minimum active data set ratio */
-  public final static double DEFAULT_CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO = 0.0;
+  public final static double DEFAULT_CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO = 0.9;
 
   /** Default IO pool size */
   public final static int DEFAULT_CACHE_IO_STORAGE_POOL_SIZE = 8;

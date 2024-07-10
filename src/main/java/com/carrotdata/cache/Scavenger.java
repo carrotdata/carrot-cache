@@ -113,6 +113,8 @@ public class Scavenger implements Runnable {
     double adjStep;
 
     double stopRatio;
+    
+    double minActiveRatio;
 
     Stats(String cacheName) {
       this.cacheName = cacheName;
@@ -122,6 +124,7 @@ public class Scavenger implements Runnable {
       dumpBelowRatioMax = conf.getScavengerDumpEntryBelowMin(cacheName);
       adjStep = conf.getScavengerDumpEntryBelowAdjStep(cacheName);
       stopRatio = conf.getScavengerStopMemoryRatio(cacheName);
+      minActiveRatio = conf.getMinimumActiveDatasetRatio(cacheName);
     }
 
     /**
@@ -234,6 +237,7 @@ public class Scavenger implements Runnable {
       dos.writeDouble(adjStep);
       dos.writeDouble(stopRatio);
       dos.writeLong(totalSegmentsScanned.get());
+      dos.writeDouble(minActiveRatio);
     }
 
     @Override
@@ -258,6 +262,7 @@ public class Scavenger implements Runnable {
       adjStep = dis.readDouble();
       stopRatio = dis.readDouble();
       totalSegmentsScanned.set(dis.readLong());
+      minActiveRatio = dis.readDouble();
     }
   }
 
@@ -367,6 +372,8 @@ public class Scavenger implements Runnable {
   private double adjStep = 0.05;
 
   private double stopRatio;
+  
+  private double minActiveRatio;
 
   private static Map<String, AtomicInteger> numInstancesMap =
       new ConcurrentHashMap<String, AtomicInteger>();
@@ -397,17 +404,20 @@ public class Scavenger implements Runnable {
       dumpBelowRatioMax = this.config.getScavengerDumpEntryBelowMax(cacheName);
       adjStep = this.config.getScavengerDumpEntryBelowAdjStep(cacheName);
       stopRatio = this.config.getScavengerStopMemoryRatio(cacheName);
+      minActiveRatio = this.config.getMinimumActiveDatasetRatio(cacheName);
       stats.dumpBelowRatio = dumpBelowRatio;
       stats.dumpBelowRatioMin = dumpBelowRatioMin;
       stats.dumpBelowRatioMax = dumpBelowRatioMax;
       stats.adjStep = adjStep;
       stats.stopRatio = stopRatio;
+      stats.minActiveRatio = minActiveRatio;
     } else {
       dumpBelowRatio = stats.dumpBelowRatio;
       dumpBelowRatioMin = stats.dumpBelowRatioMin;
       dumpBelowRatioMax = stats.dumpBelowRatioMax;
       adjStep = stats.adjStep;
       stopRatio = stats.stopRatio;
+      minActiveRatio = stats.minActiveRatio;
     }
     this.maxSegmentsBeforeStallDetected = getScavengerMaxSegmentsBeforeStall();
 
@@ -461,9 +471,9 @@ public class Scavenger implements Runnable {
         // numInstances.decrementAndGet();
         return;
       }
-//       LOG.debug(
-//       "Scavenger [{}] started at {} allocated storage={} maximum storage={}, raw data size={}", cache.getName(),
-//       format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize(), engine.getRawDataSize());
+       LOG.trace(
+       "Scavenger [{}] started at {} allocated storage={} maximum storage={}, raw data size={}", cache.getName(),
+       format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize(), engine.getRawDataSize());
 
       boolean finished = false;
 
@@ -532,9 +542,9 @@ public class Scavenger implements Runnable {
     long runEnd = System.currentTimeMillis();
     // Update stats
     stats.totalRunTimes.addAndGet(runEnd - runStart);
-//    LOG.debug(
-//    "Scavenger [{}] finished at {} allocated storage={} maximum storage={} rawDataSize={}, total seg scanned={}", cache.getName(),
-//    format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize(), engine.getRawDataSize(), stats.totalSegmentsScanned.get());
+    LOG.trace(
+    "Scavenger [{}] finished at {} allocated storage={} maximum storage={} rawDataSize={}, total seg scanned={}", cache.getName(),
+    format.format(new Date()), engine.getStorageAllocated(), engine.getMaximumStorageSize(), engine.getRawDataSize(), stats.totalSegmentsScanned.get());
 
   }
 
@@ -552,7 +562,7 @@ public class Scavenger implements Runnable {
     }
 
     double usage = engine.getStorageAllocatedRatio();
-    // double activeRatio = engine.activeSizeRatio();
+    double activeRatio = engine.activeSizeRatio();
     // if (!evictionDisabledMode) {
     // if (sratio >= minActiveRatio) {
     // cleanDeletedOnly = false;
@@ -562,7 +572,7 @@ public class Scavenger implements Runnable {
     // cleanDeletedOnly = cleanDeletedOnly && usage < stopRatio;
     // }
 
-    return /* activeRatio >= minActiveRatio && */usage < stopRatio;
+    return activeRatio >= minActiveRatio && usage < stopRatio;
   }
 
   private boolean cleanSegment(Segment s) throws IOException {
