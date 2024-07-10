@@ -2764,7 +2764,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
     synchronized (this) {
       if (this.shutdownInProgress) {
-        throw new IOException("Shutdown is in progress");
+        LOG.warn("Shutdown is already in progress");
+        return -1;
       }
       this.shutdownInProgress = true;
     }
