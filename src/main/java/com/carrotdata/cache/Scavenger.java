@@ -353,7 +353,7 @@ public class Scavenger implements Runnable {
     }
   }
 
-  public final static String NAME = "occ-scavenger";
+  public final static String NAME = "cc-scavenger";
 
   private Stats stats;
 

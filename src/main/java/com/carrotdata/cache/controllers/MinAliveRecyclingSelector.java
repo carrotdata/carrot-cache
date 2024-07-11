@@ -27,35 +27,37 @@ public class MinAliveRecyclingSelector implements RecyclingSelector {
     // TODO Make it configurable
     double minRatio = 0.99;// little hack
     long minCreationTime = Long.MAX_VALUE;
+    Segment ss = null;
+    while (true) {
+      for (int i = 0; i < segments.length; i++) {
+        Segment s = segments[i];
+        if (s == null || !s.isSealed() || s.isRecycling()) {
+          continue;
+        }
+        Segment.Info info = s.getInfo();
 
-    for (int i = 0; i < segments.length; i++) {
-      Segment s = segments[i];
-      if (s == null || !s.isSealed() || s.isRecycling()) {
-        continue;
+        long maxExpire = info.getMaxExpireAt();
+        if (maxExpire > 0 && System.currentTimeMillis() > maxExpire) {
+          // All expired
+          return s;
+        }
+        int active = info.getTotalActiveItems();
+        int total = info.getTotalItems();
+        double r = (double) active / total;
+        if (r < minRatio) {
+          minRatio = r;
+          selection1 = s;
+        }
+        long creationTime = info.getCreationTime();
+        if (creationTime < minCreationTime) {
+          minCreationTime = creationTime;
+          selection2 = s;
+        }
       }
-      Segment.Info info = s.getInfo();
-
-      long maxExpire = info.getMaxExpireAt();
-      if (maxExpire > 0 && System.currentTimeMillis() > maxExpire) {
-        // All expired
-        return s;
+      ss = selection1 != null ? selection1 : selection2;
+      if (ss == null || (ss != null && ss.setRecycling(true))) {
+        break;
       }
-      int active = info.getTotalActiveItems();
-      int total = info.getTotalItems();
-      double r = (double) active / total;
-      if (r < minRatio) {
-        minRatio = r;
-        selection1 = s;
-      }
-      long creationTime = info.getCreationTime();
-      if (creationTime < minCreationTime) {
-        minCreationTime = creationTime;
-        selection2 = s;
-      }
-    }
-    Segment ss = selection1 != null ? selection1 : selection2;
-    if (ss != null) {
-      ss.setRecycling(true);
     }
     return ss;
   }

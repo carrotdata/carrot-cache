@@ -26,33 +26,35 @@ public class PopularityBasedRecyclingSelector implements RecyclingSelector {
     Segment selection = null;
     long minCounts = Long.MAX_VALUE;
     long timeWindow = 0; // seconds
-    for (int i = 0; i < segments.length; i++) {
-      Segment s = segments[i];
-      if (s == null || !s.isSealed() || s.isRecycling()) {
-        continue;
+    while (true) {
+      for (int i = 0; i < segments.length; i++) {
+        Segment s = segments[i];
+        if (s == null || !s.isSealed() || s.isRecycling()) {
+          continue;
+        }
+        Segment.Info info = s.getInfo();
+        if (timeWindow == 0) {
+          // timeWindow = s.getCounter().windowSize();
+        }
+        long maxExpireAt = info.getMaxExpireAt();
+        long currentTime = System.currentTimeMillis();
+        if (info.getTotalActiveItems() == 0 || (maxExpireAt > 0 && maxExpireAt < currentTime)) {
+          return s;
+        }
+        long time = info.getCreationTime();
+        if (System.currentTimeMillis() - time < timeWindow) {
+          // Skip most fresh segments whose age is less than timeWindow
+          continue;
+        }
+        long count = 0;// s.getCounter().count();
+        if (count < minCounts) {
+          minCounts = count;
+          selection = s;
+        }
       }
-      Segment.Info info = s.getInfo();
-      if (timeWindow == 0) {
-        // timeWindow = s.getCounter().windowSize();
+      if (selection == null || (selection != null && selection.setRecycling(true))) {
+        break;
       }
-      long maxExpireAt = info.getMaxExpireAt();
-      long currentTime = System.currentTimeMillis();
-      if (info.getTotalActiveItems() == 0 || (maxExpireAt > 0 && maxExpireAt < currentTime)) {
-        return s;
-      }
-      long time = info.getCreationTime();
-      if (System.currentTimeMillis() - time < timeWindow) {
-        // Skip most fresh segments whose age is less than timeWindow
-        continue;
-      }
-      long count = 0;// s.getCounter().count();
-      if (count < minCounts) {
-        minCounts = count;
-        selection = s;
-      }
-    }
-    if (selection != null) {
-      selection.setRecycling(true);
     }
     return selection;
   }

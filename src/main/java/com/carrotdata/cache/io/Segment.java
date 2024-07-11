@@ -1250,7 +1250,11 @@ public class Segment implements Persistent {
     return this.inRecycling;
   }
 
-  public void setRecycling(boolean v) {
+  public synchronized boolean setRecycling(boolean v) {
+    if (v && this.inRecycling) {
+      return false;
+    }
     this.inRecycling = v;
+    return true;
   }
 }

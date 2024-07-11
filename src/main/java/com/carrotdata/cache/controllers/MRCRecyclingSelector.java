@@ -25,25 +25,27 @@ public class MRCRecyclingSelector implements RecyclingSelector {
   public Segment selectForRecycling(Segment[] segments) {
     Segment selection = null;
     long maxCreationTime = Long.MIN_VALUE;
-    for (int i = 0; i < segments.length; i++) {
-      Segment s = segments[i];
-      if (s == null || !s.isSealed() || s.isRecycling()) {
-        continue;
+    while (true) {
+      for (int i = 0; i < segments.length; i++) {
+        Segment s = segments[i];
+        if (s == null || !s.isSealed() || s.isRecycling()) {
+          continue;
+        }
+        Segment.Info info = s.getInfo();
+        long maxExpireAt = info.getMaxExpireAt();
+        long currentTime = System.currentTimeMillis();
+        if (info.getTotalActiveItems() == 0 || (maxExpireAt > 0 && maxExpireAt < currentTime)) {
+          return s;
+        }
+        long time = info.getCreationTime();
+        if (time > maxCreationTime) {
+          maxCreationTime = time;
+          selection = s;
+        }
       }
-      Segment.Info info = s.getInfo();
-      long maxExpireAt = info.getMaxExpireAt();
-      long currentTime = System.currentTimeMillis();
-      if (info.getTotalActiveItems() == 0 || (maxExpireAt > 0 && maxExpireAt < currentTime)) {
-        return s;
+      if (selection == null || (selection != null && selection.setRecycling(true))) {
+        break;
       }
-      long time = info.getCreationTime();
-      if (time > maxCreationTime) {
-        maxCreationTime = time;
-        selection = s;
-      }
-    }
-    if (selection != null) {
-      selection.setRecycling(true);
     }
     return selection;
   }

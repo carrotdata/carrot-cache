@@ -21,43 +21,39 @@ public class LeastAccessedRecyclingSelector implements RecyclingSelector {
   public LeastAccessedRecyclingSelector() {
   }
 
-  @SuppressWarnings("unused")
+  //@SuppressWarnings("unused")
   @Override
   public Segment selectForRecycling(Segment[] segments) {
     Segment selection = null;
     long minAccess = Long.MAX_VALUE;
-    int nulls = 0;
-    int notSealed = 0;
+    while (true) {
+      for (int i = 0; i < segments.length; i++) {
+        Segment s = segments[i];
+        if (s == null) {
+          continue;
+        }
+        if (!s.isSealed()) {
+          continue;
+        }
+        if (s.isRecycling()) {
+          continue;
+        }
 
-    for (int i = 0; i < segments.length; i++) {
-      Segment s = segments[i];
-      if (s == null) {
-        nulls++;
-        continue;
+        Segment.Info info = s.getInfo();
+        long maxExpireAt = info.getMaxExpireAt();
+        long currentTime = System.currentTimeMillis();
+        if (info.getTotalActiveItems() == 0 || (maxExpireAt > 0 && maxExpireAt < currentTime)) {
+          return s;
+        }
+        long n = info.getAccessCount();
+        if (n < minAccess) {
+          minAccess = n;
+          selection = s;
+        }
       }
-      if (!s.isSealed()) {
-        notSealed++;
-        continue;
+      if (selection == null || (selection != null && selection.setRecycling(true))) {
+        break;
       }
-
-      if (s.isRecycling()) {
-        continue;
-      }
-
-      Segment.Info info = s.getInfo();
-      long maxExpireAt = info.getMaxExpireAt();
-      long currentTime = System.currentTimeMillis();
-      if (info.getTotalActiveItems() == 0 || (maxExpireAt > 0 && maxExpireAt < currentTime)) {
-        return s;
-      }
-      long n = info.getAccessCount();
-      if (n < minAccess) {
-        minAccess = n;
-        selection = s;
-      }
-    }
-    if (selection != null) {
-      selection.setRecycling(true);
     }
     return selection;
   }
