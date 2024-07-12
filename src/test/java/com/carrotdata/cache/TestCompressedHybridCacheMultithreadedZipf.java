@@ -35,7 +35,7 @@ import com.carrotdata.cache.util.TestUtils;
 import com.carrotdata.cache.util.UnsafeAccess;
 
 public class TestCompressedHybridCacheMultithreadedZipf
-    extends TestCompressedOffheapCacheMultithreadedZipf {
+    extends TestCompressedMemoryCacheMultithreadedZipf {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestCompressedHybridCacheMultithreadedZipf.class);
 
@@ -67,7 +67,7 @@ public class TestCompressedHybridCacheMultithreadedZipf
   public void setUp() throws IOException, URISyntaxException {
     super.setUp();
     // Parent cache
-    this.offheap = true;
+    this.memory = true;
     this.numRecords = 1000000;
     this.numIterations = this.numRecords;
     this.numThreads = 4;

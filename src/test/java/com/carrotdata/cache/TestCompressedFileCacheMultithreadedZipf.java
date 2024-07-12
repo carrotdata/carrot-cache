@@ -15,12 +15,12 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 
 public class TestCompressedFileCacheMultithreadedZipf
-    extends TestCompressedOffheapCacheMultithreadedZipf {
+    extends TestCompressedMemoryCacheMultithreadedZipf {
 
   @Override
   public void setUp() throws IOException, URISyntaxException {
     super.setUp();
-    this.offheap = false;
+    this.memory = false;
     this.numRecords = 1000000;
     this.numThreads = 4;
     this.minActiveRatio = 0.1;

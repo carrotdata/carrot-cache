@@ -18,12 +18,12 @@ import org.junit.Before;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TestFileCacheGetRangeAPI extends TestOffheapCacheGetRangeAPI {
+public class TestFileCacheGetRangeAPI extends TestMemoryCacheGetRangeAPI {
   private static final Logger LOG = LoggerFactory.getLogger(TestFileCacheGetRangeAPI.class);
 
   @Before
   public void setUp() throws IOException {
-    this.offheap = false;
+    this.memory = false;
     cache = createCache();
     this.numRecords = 100000;
     this.r = new Random();

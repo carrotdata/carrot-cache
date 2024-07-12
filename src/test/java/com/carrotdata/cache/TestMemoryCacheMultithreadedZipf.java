@@ -27,9 +27,9 @@ import com.carrotdata.cache.controllers.MinAliveRecyclingSelector;
 import com.carrotdata.cache.eviction.LRUEvictionPolicy;
 import com.carrotdata.cache.eviction.SLRUEvictionPolicy;
 
-public class TestOffheapCacheMultithreadedZipf extends TestCacheMultithreadedZipfBase {
+public class TestMemoryCacheMultithreadedZipf extends TestCacheMultithreadedZipfBase {
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestOffheapCacheMultithreadedZipf.class);
+      LoggerFactory.getLogger(TestMemoryCacheMultithreadedZipf.class);
 
   /**
    * Eviction tested: No eviction, LRU, S-LRU, FIFO; Recycling selectors: LAR (least-accessed),
@@ -41,7 +41,7 @@ public class TestOffheapCacheMultithreadedZipf extends TestCacheMultithreadedZip
   }
   @Before
   public void setUp() {
-    this.offheap = true;
+    this.memory = true;
     this.numRecords = 1000000;
     this.numIterations = 2 * this.numRecords;
     this.numThreads = 4;

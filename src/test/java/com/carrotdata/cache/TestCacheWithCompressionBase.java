@@ -82,7 +82,7 @@ public abstract class TestCacheWithCompressionBase extends TestCacheBase {
     if (maxKeyValueSize > 0) {
       builder.withMaximumKeyValueSize(maxKeyValueSize);
     }
-    if (offheap) {
+    if (memory) {
       return builder.buildMemoryCache();
     } else {
       return builder.buildDiskCache();

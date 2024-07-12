@@ -16,7 +16,7 @@ import java.net.URISyntaxException;
 
 import com.carrotdata.cache.util.CacheConfig;
 
-public class TestFileIOEngineWithCompression extends TestOffheapIOEngineWithCompression {
+public class TestFileIOEngineWithCompression extends TestMemoryIOEngineWithCompression {
 
   @Override
   protected IOEngine getEngine(CacheConfig conf) {

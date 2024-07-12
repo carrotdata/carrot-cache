@@ -9,17 +9,24 @@
  * <p>You should have received a copy of the Server Side Public License along with this program. If not, see
  * <http://www.mongodb.com/licensing/server-side-public-license>.
  */
+
 package com.carrotdata.cache;
 
 import java.io.IOException;
+import java.net.URISyntaxException;
 
 import org.junit.Before;
 
-public class TestOffheapCache extends TestCacheBase {
+public class TestCompressedMemoryCacheMultithreaded extends TestCompressedCacheMultithreadedBase {
 
   @Before
-  public void setUp() throws IOException {
+  public void setUp() throws IOException, URISyntaxException {
     super.setUp();
-    this.offheap = true;
+    this.numRecords = 1_000_000;
+    this.numThreads = 8;
+    this.memory = true;
+    this.segmentSize = 64_000_000;
+    this.maxCacheSize = 1000L * this.segmentSize;
+    this.cache = createCache();
   }
 }

@@ -18,11 +18,11 @@ import org.junit.Test;
 import com.carrotdata.cache.controllers.AQBasedAdmissionController;
 import com.carrotdata.cache.eviction.SLRUEvictionPolicy;
 
-public class TestOffheapCacheMultithreadedZipfStress extends TestOffheapCacheMultithreadedZipf {
+public class TestMemoryCacheMultithreadedZipfStress extends TestMemoryCacheMultithreadedZipf {
 
   @Override
   public void setUp() {
-    this.offheap = true;
+    this.memory = true;
     this.numRecords = 10000000;
     this.numThreads = 4;
     this.segmentSize = 13 * 1024 * 1024;

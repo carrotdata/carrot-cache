@@ -13,20 +13,20 @@
 package com.carrotdata.cache;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 
 import org.junit.Before;
 
-public class TestCompressedOffheapCacheMultithreaded extends TestCompressedCacheMultithreadedBase {
+public class TestMemoryCacheMultithreadedStream extends TestCacheMultithreadedStreamBase {
 
   @Before
-  public void setUp() throws IOException, URISyntaxException {
-    super.setUp();
-    this.numRecords = 1_000_000;
-    this.numThreads = 8;
-    this.offheap = true;
-    this.segmentSize = 64_000_000;
+  public void setUp() throws IOException {
+    this.numRecords = 1000000;
+    this.numThreads = 4;
+    this.scavDumpBelowRatio = 0.1;
+    this.segmentSize = 4 * 1024 * 1024;
+    // 4GB GB
     this.maxCacheSize = 1000L * this.segmentSize;
-    this.cache = createCache();
+    this.memory = true;
   }
+
 }

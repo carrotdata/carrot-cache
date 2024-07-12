@@ -38,8 +38,8 @@ import com.carrotdata.cache.util.TestUtils;
 import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
-public class TestOffheapCacheGetAPI {
-  private static final Logger LOG = LoggerFactory.getLogger(TestOffheapCacheGetAPI.class);
+public class TestMemoryCacheGetAPI {
+  private static final Logger LOG = LoggerFactory.getLogger(TestMemoryCacheGetAPI.class);
 
   int blockSize = 4096;
   int numRecords = 10;
@@ -53,7 +53,7 @@ public class TestOffheapCacheGetAPI {
   long[] mValues;
   long[] expires;
 
-  boolean offheap = true;
+  boolean memory = true;
   Cache cache;
   int segmentSize = 8 * 1024 * 1024;
   long maxCacheSize = 100L * segmentSize;
@@ -67,7 +67,7 @@ public class TestOffheapCacheGetAPI {
 
   @Before
   public void setUp() throws IOException {
-    this.offheap = true;
+    this.memory = true;
     this.numRecords = 100000;
     this.r = new Random();
     long seed = System.currentTimeMillis();
@@ -106,7 +106,7 @@ public class TestOffheapCacheGetAPI {
         .withCacheTLSInitialBufferSize(tlsInitialBufferSize).withStartIndexNumberOfSlotsPower(16)
         .withExpireSupport(ExpireSupportUnixTime.class.getName());
 
-    if (offheap) {
+    if (memory) {
       return builder.buildMemoryCache();
     } else {
       return builder.buildDiskCache();

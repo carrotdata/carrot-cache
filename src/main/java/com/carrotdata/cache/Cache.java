@@ -50,7 +50,7 @@ import com.carrotdata.cache.io.CompressedBlockMemoryDataReader;
 import com.carrotdata.cache.io.FileIOEngine;
 import com.carrotdata.cache.io.IOEngine;
 import com.carrotdata.cache.io.IOEngine.IOEngineEvent;
-import com.carrotdata.cache.io.OffheapIOEngine;
+import com.carrotdata.cache.io.MemoryIOEngine;
 import com.carrotdata.cache.io.Segment;
 import com.carrotdata.cache.io.SegmentScanner;
 import com.carrotdata.cache.jmx.CacheJMXSink;
@@ -227,7 +227,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.engine = IOEngine.getEngineForCache(this);
     // set engine listener
     this.engine.setListener(this);
-    this.type = engine instanceof OffheapIOEngine ? Type.MEMORY : Type.DISK;
+    this.type = engine instanceof MemoryIOEngine ? Type.MEMORY : Type.DISK;
     initAll();
   }
 
@@ -248,7 +248,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.engine = IOEngine.getEngineForCache(this);
     // set engine listener
     this.engine.setListener(this);
-    this.type = engine instanceof OffheapIOEngine ? Type.MEMORY : Type.DISK;
+    this.type = engine instanceof MemoryIOEngine ? Type.MEMORY : Type.DISK;
     initAll();
   }
 
@@ -261,7 +261,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.engine = engine;
     // set engine listener
     this.engine.setListener(this);
-    this.type = engine instanceof OffheapIOEngine ? Type.MEMORY : Type.DISK;
+    this.type = engine instanceof MemoryIOEngine ? Type.MEMORY : Type.DISK;
   }
 
   private void initFromConfiguration() {
@@ -336,7 +336,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   private void initAllDuringLoad() throws IOException {
     initFromConfiguration();
-    this.engine = this.type == Type.MEMORY ? new OffheapIOEngine(this.cacheName)
+    this.engine = this.type == Type.MEMORY ? new MemoryIOEngine(this.cacheName)
         : new FileIOEngine(this.cacheName);
     // set engine listener
     this.engine.setListener(this);
@@ -499,7 +499,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @return cache type
    */
   public Type getCacheType() {
-    if (this.engine instanceof OffheapIOEngine) {
+    if (this.engine instanceof MemoryIOEngine) {
       return Type.MEMORY;
     } else {
       return Type.DISK;
@@ -2346,7 +2346,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     // TODO : check segment
     try {
       s.readLock();
-      if (s.isOffheap()) {
+      if (s.isMemory()) {
         long ptr = s.getAddress();
         ptr += offset;
         int keySize = Utils.readUVInt(ptr);

@@ -51,7 +51,7 @@ public abstract class TestCompressedCacheMultithreadedBase {
   protected int dictionarySize = 1 << 16;
   protected int compLevel = 3;
 
-  protected boolean offheap = false;
+  protected boolean memory = false;
   protected int numRecords;
   protected int numThreads = 1;
 
@@ -83,7 +83,7 @@ public abstract class TestCompressedCacheMultithreadedBase {
 
   @Before
   public void setUp() throws IOException, URISyntaxException {
-    this.offheap = true;
+    this.memory = true;
     this.numRecords = 10000000;
     this.numThreads = 4;
     this.maxCacheSize = 1000 * this.segmentSize;
@@ -130,7 +130,7 @@ public abstract class TestCompressedCacheMultithreadedBase {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
-    if (offheap) {
+    if (memory) {
       return b.buildMemoryCache();
     } else {
       return b.buildDiskCache();

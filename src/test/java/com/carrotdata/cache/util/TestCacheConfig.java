@@ -29,7 +29,7 @@ public class TestCacheConfig {
 
     CacheConfig conf = CacheConfig.getInstance("./src/test/resources/conf/test.conf");
     Properties props = conf.getProperties();
-    assertEquals(68, props.size());
+    assertEquals(71, props.size());
     props.forEach((x, y) -> LOG.info(x + "=" + y));
   }
 }

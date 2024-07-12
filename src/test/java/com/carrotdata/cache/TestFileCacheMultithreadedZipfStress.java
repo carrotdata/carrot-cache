@@ -11,13 +11,13 @@
  */
 package com.carrotdata.cache;
 
-public class TestFileCacheMultithreadedZipfStress extends TestOffheapCacheMultithreadedZipf {
+public class TestFileCacheMultithreadedZipfStress extends TestMemoryCacheMultithreadedZipf {
 
   protected double startSizeRatio = 0.5;
 
   public void setUp() {
     super.setUp();
-    this.offheap = false;
+    this.memory = false;
     this.numRecords = 10000000;
     this.numIterations = 10 * this.numRecords;
     this.numThreads = 4;

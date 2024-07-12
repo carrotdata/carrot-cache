@@ -20,6 +20,6 @@ public class TestScavengerMemoryCache extends TestScavengerBase {
   @Before
   public void setUp() throws IOException {
     super.setUp();
-    this.offheap = true;
+    this.memory = true;
   }
 }

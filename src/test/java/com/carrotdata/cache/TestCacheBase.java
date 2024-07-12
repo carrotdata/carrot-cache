@@ -38,7 +38,7 @@ import com.carrotdata.cache.util.TestUtils;
 public abstract class TestCacheBase extends IOTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheBase.class);
 
-  boolean offheap = true;
+  boolean memory = true;
   Cache cache;
   int segmentSize = 4 * 1024 * 1024;
   long maxCacheSize = 100L * segmentSize;
@@ -95,7 +95,7 @@ public abstract class TestCacheBase extends IOTestBase {
       builder.withMaximumKeyValueSize(maxKeyValueSize);
     }
     Cache c = null;
-    if (offheap) {
+    if (memory) {
       c = builder.buildMemoryCache();
     } else {
       c = builder.buildDiskCache();

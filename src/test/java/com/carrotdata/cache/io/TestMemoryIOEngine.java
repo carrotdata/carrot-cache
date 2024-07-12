@@ -26,10 +26,10 @@ import org.slf4j.LoggerFactory;
 
 import com.carrotdata.cache.util.CacheConfig;
 
-public class TestOffheapIOEngine extends IOTestBase {
-  private static final Logger LOG = LoggerFactory.getLogger(TestOffheapIOEngine.class);
+public class TestMemoryIOEngine extends IOTestBase {
+  private static final Logger LOG = LoggerFactory.getLogger(TestMemoryIOEngine.class);
 
-  OffheapIOEngine engine;
+  MemoryIOEngine engine;
   long cacheSize;
 
   @Before
@@ -136,7 +136,7 @@ public class TestOffheapIOEngine extends IOTestBase {
     CacheConfig conf = CacheConfig.getInstance();
     conf.setCacheSegmentSize("default", segmentSize);
     conf.setCacheMaximumSize("default", cacheSize);
-    this.engine = new OffheapIOEngine(conf);
+    this.engine = new MemoryIOEngine(conf);
   }
 
 }

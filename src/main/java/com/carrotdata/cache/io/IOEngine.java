@@ -187,8 +187,8 @@ public abstract class IOEngine implements Persistent {
    * @return engine
    */
   protected static IOEngine engineFor(String type, Cache cache) {
-    if (type.equals("offheap")) {
-      return new OffheapIOEngine(cache.getName());
+    if (type.equals("memory")) {
+      return new MemoryIOEngine(cache.getName());
     } else if (type.equals("file")) {
       return new FileIOEngine(cache.getName());
     }
@@ -1352,7 +1352,7 @@ public abstract class IOEngine implements Persistent {
       // this.totalFailedReads.incrementAndGet();
       return result;
     }
-    if (!isOffheap()) {
+    if (!isMemory()) {
       return getInternal(id, offset, size, key, keyOffset, keySize, buffer, bufOffset);
     } else {
       return NOT_FOUND;
@@ -1388,7 +1388,7 @@ public abstract class IOEngine implements Persistent {
     if (result == READ_ERROR) {
       this.totalFailedReads.incrementAndGet();
     }
-    if (!isOffheap()) {
+    if (!isMemory()) {
       return getRangeInternal(sid, offset, keyValueSize, key, keyOffset, keySize, rangeStart,
         rangeSize, buffer, bufOffset);
     }
@@ -1421,7 +1421,7 @@ public abstract class IOEngine implements Persistent {
       // this.totalFailedReads.incrementAndGet();
       return result;
     }
-    if (!isOffheap()) {
+    if (!isMemory()) {
       return getInternal(id, offset, size, keyPtr, keySize, buffer, bufOffset);
     }
     return NOT_FOUND;
@@ -1455,7 +1455,7 @@ public abstract class IOEngine implements Persistent {
     if (result == READ_ERROR) {
       this.totalFailedReads.incrementAndGet();
     }
-    if (!isOffheap()) {
+    if (!isMemory()) {
       return getRangeInternal(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer,
         bufOffset);
     }
@@ -1480,7 +1480,7 @@ public abstract class IOEngine implements Persistent {
       if (s != null) {
         s.readLock();
         // now check s again
-        if (!s.isOffheap()) {
+        if (!s.isMemory()) {
           return NOT_FOUND;
         }
         // OK it is in memory
@@ -1518,7 +1518,7 @@ public abstract class IOEngine implements Persistent {
       if (s != null) {
         s.readLock();
         // now check s again
-        if (!s.isOffheap()) {
+        if (!s.isMemory()) {
           return NOT_FOUND;
         }
         // OK it is in memory
@@ -1555,7 +1555,7 @@ public abstract class IOEngine implements Persistent {
       if (s != null) {
         s.readLock();
         // now check s again
-        if (!s.isOffheap()) {
+        if (!s.isMemory()) {
           return NOT_FOUND;
         }
         // OK it is in memory
@@ -1594,7 +1594,7 @@ public abstract class IOEngine implements Persistent {
       if (s != null) {
         s.readLock();
         // now check s again
-        if (!s.isOffheap()) {
+        if (!s.isMemory()) {
           return NOT_FOUND;
         }
         // OK it is in memory
@@ -1632,7 +1632,7 @@ public abstract class IOEngine implements Persistent {
       if (s != null) {
         s.readLock();
         // now check s again
-        if (!s.isOffheap()) {
+        if (!s.isMemory()) {
           return NOT_FOUND;
         }
         // OK it is in memory
@@ -1672,7 +1672,7 @@ public abstract class IOEngine implements Persistent {
       if (s != null) {
         s.readLock();
         // now check s again
-        if (!s.isOffheap()) {
+        if (!s.isMemory()) {
           return NOT_FOUND;
         }
         // OK it is in memory
@@ -1709,7 +1709,7 @@ public abstract class IOEngine implements Persistent {
       if (s != null) {
         s.readLock();
         // now check s again
-        if (!s.isOffheap()) {
+        if (!s.isMemory()) {
           return NOT_FOUND;
         }
         // OK it is in memory
@@ -1747,7 +1747,7 @@ public abstract class IOEngine implements Persistent {
       if (s != null) {
         s.readLock();
         // now check s again
-        if (!s.isOffheap()) {
+        if (!s.isMemory()) {
           return NOT_FOUND;
         }
         // OK it is in memory
@@ -1921,7 +1921,7 @@ public abstract class IOEngine implements Persistent {
       // this.totalFailedReads.incrementAndGet();
       return result;
     }
-    if (!isOffheap()) {
+    if (!isMemory()) {
       return getInternal(id, offset, size, key, keyOffset, keySize, buffer);
     }
     return NOT_FOUND;
@@ -1955,7 +1955,7 @@ public abstract class IOEngine implements Persistent {
     if (result == READ_ERROR) {
       this.totalFailedReads.incrementAndGet();
     }
-    if (!isOffheap()) {
+    if (!isMemory()) {
       return getRangeInternal(id, offset, size, key, keyOffset, keySize, rangeStart, rangeSize,
         buffer);
     }
@@ -1986,7 +1986,7 @@ public abstract class IOEngine implements Persistent {
       // this.totalFailedReads.incrementAndGet();
       return result;
     }
-    if (!isOffheap()) {
+    if (!isMemory()) {
       return getInternal(id, offset, size, keyPtr, keySize, buffer);
     }
     return NOT_FOUND;
@@ -2016,7 +2016,7 @@ public abstract class IOEngine implements Persistent {
     if (result == READ_ERROR) {
       this.totalFailedReads.incrementAndGet();
     }
-    if (!isOffheap()) {
+    if (!isMemory()) {
       return getRangeInternal(id, offset, size, keyPtr, keySize, rangeStart, rangeSize, buffer);
     }
     return NOT_FOUND;
@@ -2084,7 +2084,7 @@ public abstract class IOEngine implements Persistent {
     // long dataSize = seg.getInfo().getSegmentDataSize();
     try {
       seg.writeLock();
-      if (seg.isOffheap()) {
+      if (seg.isMemory()) {
         boolean res = this.memoryBufferPool.offer(seg.getAddress());
         if (res) {
           seg.setAddress(0);
@@ -2658,6 +2658,6 @@ public abstract class IOEngine implements Persistent {
     return this.writeBatches;
   }
 
-  protected abstract boolean isOffheap();
+  protected abstract boolean isMemory();
 
 }

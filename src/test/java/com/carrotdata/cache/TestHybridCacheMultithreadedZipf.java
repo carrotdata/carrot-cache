@@ -32,7 +32,7 @@ import com.carrotdata.cache.eviction.LRUEvictionPolicy;
 import com.carrotdata.cache.eviction.SLRUEvictionPolicy;
 import com.carrotdata.cache.util.TestUtils;
 
-public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithreadedZipf {
+public class TestHybridCacheMultithreadedZipf extends TestMemoryCacheMultithreadedZipf {
   private static final Logger LOG = LoggerFactory.getLogger(TestHybridCacheMultithreadedZipf.class);
 
   int victim_segmentSize = 16 * 1024 * 1024;
@@ -56,7 +56,7 @@ public class TestHybridCacheMultithreadedZipf extends TestOffheapCacheMultithrea
   @Override
   public void setUp() {
     // Parent cache
-    this.offheap = true;
+    this.memory = true;
     this.numRecords = 2000000;
     this.numIterations = 2 * this.numRecords;
     this.numThreads = 4;

@@ -20,6 +20,6 @@ public class TestFileCache extends TestCacheBase {
   @Before
   public void setUp() throws IOException {
     super.setUp();
-    this.offheap = false;
+    this.memory = false;
   }
 }

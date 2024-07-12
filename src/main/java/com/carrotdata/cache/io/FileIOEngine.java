@@ -121,7 +121,7 @@ public class FileIOEngine extends IOEngine {
         // LOCK AGAIN
         data.writeLock();
         // Release segment
-        data.setOffheap(false);
+        data.setMemory(false);
         // release memory buffer
         long ptr = data.getAddress();
         data.setAddress(0);
@@ -152,7 +152,7 @@ public class FileIOEngine extends IOEngine {
       return NOT_FOUND;
     }
 
-    if (s.isOffheap()) {
+    if (s.isMemory()) {
       return this.memoryDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer,
         bufOffset);
     } else {
@@ -174,7 +174,7 @@ public class FileIOEngine extends IOEngine {
       return NOT_FOUND;
     }
 
-    if (s.isOffheap()) {
+    if (s.isMemory()) {
       return this.memoryDataReader.readValueRange(this, key, keyOffset, keySize, sid, offset, size,
         buffer, bufOffset, rangeStart, rangeSize);
     } else {
@@ -195,7 +195,7 @@ public class FileIOEngine extends IOEngine {
       return NOT_FOUND;
     }
 
-    if (s.isOffheap()) {
+    if (s.isMemory()) {
       return this.memoryDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
     } else {
       long start = System.nanoTime();
@@ -215,7 +215,7 @@ public class FileIOEngine extends IOEngine {
       return NOT_FOUND;
     }
 
-    if (s.isOffheap()) {
+    if (s.isMemory()) {
       return this.memoryDataReader.readValueRange(this, key, keyOffset, keySize, sid, offset, size,
         buffer, rangeStart, rangeSize);
     } else {
@@ -236,7 +236,7 @@ public class FileIOEngine extends IOEngine {
       return NOT_FOUND;
     }
 
-    if (s.isOffheap()) {
+    if (s.isMemory()) {
       return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer,
         bufOffset);
     } else {
@@ -257,7 +257,7 @@ public class FileIOEngine extends IOEngine {
       return NOT_FOUND;
     }
 
-    if (s.isOffheap()) {
+    if (s.isMemory()) {
       return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, offset, size, buffer,
         bufOffset, rangeStart, rangeSize);
     } else {
@@ -278,7 +278,7 @@ public class FileIOEngine extends IOEngine {
       return NOT_FOUND;
     }
 
-    if (s.isOffheap()) {
+    if (s.isMemory()) {
       return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer);
     } else {
       long start = System.nanoTime();
@@ -297,7 +297,7 @@ public class FileIOEngine extends IOEngine {
       return NOT_FOUND;
     }
 
-    if (s.isOffheap()) {
+    if (s.isMemory()) {
       return this.memoryDataReader.readValueRange(this, keyPtr, keySize, sid, offset, size, buffer,
         rangeStart, rangeSize);
     } else {
@@ -403,7 +403,7 @@ public class FileIOEngine extends IOEngine {
       Path p = getPathForDataSegment(s.getId());
       RandomAccessFile file = new RandomAccessFile(p.toFile(), "rw");
       s.save(file);
-      s.setOffheap(false);
+      s.setMemory(false);
 
     }
   }
@@ -463,7 +463,7 @@ public class FileIOEngine extends IOEngine {
   }
 
   @Override
-  protected boolean isOffheap() {
+  protected boolean isMemory() {
     return false;
   }
 }

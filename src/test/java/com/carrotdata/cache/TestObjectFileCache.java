@@ -19,6 +19,6 @@ public class TestObjectFileCache extends TestObjectCacheBase {
 
   @Before
   public void setUp() throws IOException {
-    this.offheap = false;
+    this.memory = false;
   }
 }

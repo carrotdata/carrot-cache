@@ -33,8 +33,8 @@ import com.carrotdata.cache.util.TestUtils;
 import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
-public class TestOffheapCacheGetRangeAPI {
-  private static final Logger LOG = LoggerFactory.getLogger(TestOffheapCacheGetRangeAPI.class);
+public class TestMemoryCacheGetRangeAPI {
+  private static final Logger LOG = LoggerFactory.getLogger(TestMemoryCacheGetRangeAPI.class);
 
   int blockSize = 4096;
   int numRecords = 10;
@@ -48,7 +48,7 @@ public class TestOffheapCacheGetRangeAPI {
   long[] mValues;
   long[] expires;
 
-  boolean offheap = true;
+  boolean memory = true;
   Cache cache;
   int segmentSize = 4 * 1024 * 1024;
   long maxCacheSize = 100L * segmentSize;
@@ -59,7 +59,7 @@ public class TestOffheapCacheGetRangeAPI {
 
   @Before
   public void setUp() throws IOException {
-    this.offheap = true;
+    this.memory = true;
     cache = createCache();
     this.numRecords = 100000;
     this.r = new Random();
@@ -86,7 +86,7 @@ public class TestOffheapCacheGetRangeAPI {
         .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
         .withRecyclingSelector(MinAliveRecyclingSelector.class.getName()).withCacheRootDir(rootDir)
         .withEvictionDisabledMode(true).withMinimumActiveDatasetRatio(minActiveRatio);
-    if (offheap) {
+    if (memory) {
       return builder.buildMemoryCache();
     } else {
       return builder.buildDiskCache();

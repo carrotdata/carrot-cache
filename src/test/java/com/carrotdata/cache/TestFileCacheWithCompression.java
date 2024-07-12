@@ -18,6 +18,6 @@ public class TestFileCacheWithCompression extends TestCacheWithCompressionBase {
   @Override
   public void setUp() throws IOException {
     super.setUp();
-    this.offheap = false;
+    this.memory = false;
   }
 }

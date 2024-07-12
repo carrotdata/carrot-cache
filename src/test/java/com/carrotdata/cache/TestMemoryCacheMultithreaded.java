@@ -10,31 +10,22 @@
  * <http://www.mongodb.com/licensing/server-side-public-license>.
  */
 
-package com.carrotdata.cache.io;
+package com.carrotdata.cache;
 
 import java.io.IOException;
 
-import com.carrotdata.cache.util.CacheConfig;
+import org.junit.Before;
 
-public class TestOffheapIOEngineMultithreaded extends TestIOEngineMultithreadedBase {
+public class TestMemoryCacheMultithreaded extends TestCacheMultithreadedBase {
 
-  @Override
+  @Before
   public void setUp() throws IOException {
-    super.setUp();
-    this.numRecords = 1000000;
+    this.numRecords = 1_000_000;
     this.numThreads = 4;
+    this.memory = true;
+    this.segmentSize = 64_000_000;
+    this.maxCacheSize = 1000L * this.segmentSize;
+    this.evictionDisabled = true;
+    this.cache = createCache();
   }
-
-  @Override
-  protected IOEngine getIOEngine() throws IOException {
-    int segmentSize = 16 * 1024 * 1024;
-    long cacheSize = 200L * segmentSize;
-    CacheConfig conf = CacheConfig.getInstance();
-    conf.setCacheSegmentSize("default", segmentSize);
-    conf.setCacheMaximumSize("default", cacheSize);
-    conf.setCacheTLSSupported("default", true);
-    this.engine = new OffheapIOEngine(conf);
-    return this.engine;
-  }
-
 }

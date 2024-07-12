@@ -28,9 +28,9 @@ import org.slf4j.LoggerFactory;
 import com.carrotdata.cache.compression.zstd.ZstdCompressionCodec;
 import com.carrotdata.cache.util.CacheConfig;
 
-public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase {
+public class TestMemoryIOEngineWithCompression extends IOCompressionTestBase {
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestOffheapIOEngineWithCompression.class);
+      LoggerFactory.getLogger(TestMemoryIOEngineWithCompression.class);
 
   @Before
   public void setUp() {
@@ -300,7 +300,7 @@ public class TestOffheapIOEngineWithCompression extends IOCompressionTestBase {
   protected IOEngine getEngine(CacheConfig conf) {
     conf.setDataWriter(cacheName, CompressedBlockDataWriter.class.getName());
     conf.setMemoryDataReader(cacheName, CompressedBlockMemoryDataReader.class.getName());
-    return new OffheapIOEngine(conf);
+    return new MemoryIOEngine(conf);
   }
 
 }

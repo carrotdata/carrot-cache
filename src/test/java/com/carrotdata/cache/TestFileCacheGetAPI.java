@@ -16,11 +16,11 @@ import java.util.Random;
 
 import org.junit.Before;
 
-public class TestFileCacheGetAPI extends TestOffheapCacheGetAPI {
+public class TestFileCacheGetAPI extends TestMemoryCacheGetAPI {
 
   @Before
   public void setUp() throws IOException {
-    this.offheap = false;
+    this.memory = false;
     this.numRecords = 100000;
     this.r = new Random();
   }

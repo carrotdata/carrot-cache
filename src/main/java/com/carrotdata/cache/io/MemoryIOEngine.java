@@ -19,17 +19,17 @@ import org.slf4j.LoggerFactory;
 
 import com.carrotdata.cache.util.CacheConfig;
 
-public class OffheapIOEngine extends IOEngine {
+public class MemoryIOEngine extends IOEngine {
 
   /** Logger */
   @SuppressWarnings("unused")
-  private static final Logger LOG = LoggerFactory.getLogger(OffheapIOEngine.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MemoryIOEngine.class);
 
-  public OffheapIOEngine(String cacheName) {
+  public MemoryIOEngine(String cacheName) {
     super(cacheName);
   }
 
-  public OffheapIOEngine(CacheConfig conf) {
+  public MemoryIOEngine(CacheConfig conf) {
     super(conf);
   }
 
@@ -138,7 +138,7 @@ public class OffheapIOEngine extends IOEngine {
   }
 
   @Override
-  protected boolean isOffheap() {
+  protected boolean isMemory() {
     return true;
   }
 }

@@ -22,7 +22,7 @@ public class TestFileCacheMultithreaded extends TestCacheMultithreadedBase {
   public void setUp() throws IOException {
     this.numRecords = 42000;
     this.numThreads = 4;
-    this.offheap = false;
+    this.memory = false;
     this.evictionDisabled = true;
     this.cache = createCache();
   }

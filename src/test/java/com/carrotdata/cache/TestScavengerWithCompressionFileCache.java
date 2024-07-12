@@ -20,6 +20,6 @@ public class TestScavengerWithCompressionFileCache extends TestScavengerWithComp
   @Before
   public void setUp() throws IOException {
     super.setUp();
-    this.offheap = false;
+    this.memory = false;
   }
 }

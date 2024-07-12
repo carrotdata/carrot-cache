@@ -64,7 +64,7 @@ public abstract class TestCompressedCacheMultithreadedZipfBase
 
   @Before
   public void setUp() throws IOException, URISyntaxException {
-    this.offheap = true;
+    this.memory = true;
     this.numRecords = 1000000;
     this.numIterations = this.numRecords;
     this.numThreads = 4;

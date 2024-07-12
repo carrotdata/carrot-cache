@@ -25,7 +25,7 @@ public class TestFileCacheMultithreadedStream extends TestCacheMultithreadedStre
     this.scavDumpBelowRatio = 0.1;
     this.segmentSize = 4 * 1024 * 1024;
     this.maxCacheSize = 1000L * this.segmentSize;
-    this.offheap = false;
+    this.memory = false;
   }
 
 }

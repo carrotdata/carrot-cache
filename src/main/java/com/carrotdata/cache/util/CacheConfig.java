@@ -69,11 +69,11 @@ public class CacheConfig {
   /** By default we have only one cache */
   public final static String DEFAULT_CACHES_NAME_LIST = "cache.types"; // only one cache
 
-  /** Caches types ('offheap', 'file' only supported), comma-separated */
+  /** Caches types ('memory', 'file' only supported), comma-separated */
   public final static String CACHES_TYPES_LIST_KEY = "cache.types.list";
 
-  /** By default cache type is offheap */
-  public final static String DEFAULT_CACHES_TYPES_LIST = "offheap";
+  /** By default cache type is memory */
+  public final static String DEFAULT_CACHES_TYPES_LIST = "memory";
 
   /**
    * Cache victim name. If cache name is C1, then to lookup for its victim name we must request

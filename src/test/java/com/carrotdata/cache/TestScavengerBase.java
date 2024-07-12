@@ -39,7 +39,7 @@ import com.carrotdata.cache.util.UnsafeAccess;
 public abstract class TestScavengerBase extends IOTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestScavengerBase.class);
 
-  boolean offheap = true;
+  boolean memory = true;
   boolean randomData = false;
 
   Cache cache;
@@ -91,7 +91,7 @@ public abstract class TestScavengerBase extends IOTestBase {
         .withEvictionDisabledMode(true);
 
     Cache cache = null;
-    if (offheap) {
+    if (memory) {
       cache = builder.buildMemoryCache();
     } else {
       cache = builder.buildDiskCache();

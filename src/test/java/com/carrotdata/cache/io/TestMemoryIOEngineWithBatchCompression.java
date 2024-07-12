@@ -18,7 +18,7 @@ import java.util.List;
 import com.carrotdata.cache.util.CacheConfig;
 import com.carrotdata.cache.util.TestUtils;
 
-public class TestOffheapIOEngineWithBatchCompression extends TestOffheapIOEngineWithCompression {
+public class TestMemoryIOEngineWithBatchCompression extends TestMemoryIOEngineWithCompression {
 
   @Override
   public void setUp() {
@@ -30,7 +30,7 @@ public class TestOffheapIOEngineWithBatchCompression extends TestOffheapIOEngine
   protected IOEngine getEngine(CacheConfig conf) {
     conf.setDataWriter(cacheName, CompressedBlockBatchDataWriter.class.getName());
     conf.setMemoryDataReader(cacheName, CompressedBlockMemoryDataReader.class.getName());
-    return new OffheapIOEngine(conf);
+    return new MemoryIOEngine(conf);
   }
 
   protected void prepareGithubData(int numRecords) throws URISyntaxException, IOException {

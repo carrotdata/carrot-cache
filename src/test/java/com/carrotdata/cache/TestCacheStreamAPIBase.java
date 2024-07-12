@@ -38,7 +38,7 @@ import com.carrotdata.cache.util.Utils;
 public abstract class TestCacheStreamAPIBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheStreamAPIBase.class);
 
-  boolean offheap = true;
+  boolean memory = true;
   Cache cache;
   int segmentSize = 4 * 1024 * 1024;
   long maxCacheSize = 100L * segmentSize;
@@ -77,7 +77,7 @@ public abstract class TestCacheStreamAPIBase {
         .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
         .withCacheStreamingSupportBufferSize(1 << 19).withEvictionDisabledMode(true);
 
-    if (offheap) {
+    if (memory) {
       return builder.buildMemoryCache();
     } else {
       return builder.buildDiskCache();

@@ -64,7 +64,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
   @Before
   public void setUp() {
     // Parent cache
-    this.offheap = true;
+    this.memory = true;
     this.numRecords = 10000000;
     this.numIterations = 10 * this.numRecords;
     this.numThreads = 4;

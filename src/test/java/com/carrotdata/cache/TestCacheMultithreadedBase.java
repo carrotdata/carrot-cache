@@ -27,7 +27,7 @@ public abstract class TestCacheMultithreadedBase extends TestIOMultithreadedBase
 
   protected Cache cache;
 
-  protected boolean offheap = true;
+  protected boolean memory = true;
 
   protected boolean evictionDisabled = false;
 
@@ -69,7 +69,7 @@ public abstract class TestCacheMultithreadedBase extends TestIOMultithreadedBase
         .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
         .withEvictionDisabledMode(evictionDisabled).withTLSSupported(false);
 
-    if (offheap) {
+    if (memory) {
       return builder.buildMemoryCache();
     } else {
       return builder.buildDiskCache();

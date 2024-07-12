@@ -31,7 +31,7 @@ public class TestFileCacheMultithreadedBigValues extends TestCacheMultithreadedZ
 
   @Before
   public void setUp() {
-    this.offheap = false;
+    this.memory = false;
     this.numRecords = 10000;
     this.numIterations = 10 * this.numRecords;
     this.numThreads = 1;

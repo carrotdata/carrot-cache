@@ -74,7 +74,7 @@ public abstract class TestScavengerWithCompressionBase extends TestScavengerBase
         .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
         .withCacheStreamingSupportBufferSize(1 << 19).withEvictionDisabledMode(true);
 
-    if (offheap) {
+    if (memory) {
       return builder.buildMemoryCache();
     } else {
       return builder.buildDiskCache();

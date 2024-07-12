@@ -39,7 +39,7 @@ import com.carrotdata.cache.util.Utils;
 public abstract class TestObjectCacheBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestObjectCacheBase.class);
 
-  boolean offheap = true;
+  boolean memory = true;
   ObjectCache cache;
   int segmentSize = 4 * 1024 * 1024;
   long maxCacheSize = 100L * segmentSize;
@@ -79,7 +79,7 @@ public abstract class TestObjectCacheBase {
         .withCacheStreamingSupportBufferSize(1 << 19).withEvictionDisabledMode(true)
         .withCacheSaveOnShutdown(true);
 
-    if (offheap) {
+    if (memory) {
       return builder.buildObjectMemoryCache();
     } else {
       return builder.buildObjectDiskCache();

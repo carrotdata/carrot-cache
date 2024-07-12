@@ -100,10 +100,10 @@ public class Segment implements Persistent {
     private AtomicLong blockOffset = new AtomicLong(0);
 
     /*
-     * Is this segment off-heap. Every segment starts as offheap, but FileIOEngine it will be
+     * Is this segment off-heap. Every segment starts as memory, but FileIOEngine it will be
      * converted to a file
      */
-    private volatile boolean offheap;
+    private volatile boolean memory;
 
     /* Tracks maximum item expiration time - absolute in ms since 01-01-1970 Jan 1st 12am */
     private AtomicLong maxExpireAt = new AtomicLong(0);
@@ -136,16 +136,16 @@ public class Segment implements Persistent {
      * Is this segment off-heap
      * @return true or false
      */
-    public boolean isOffheap() {
-      return this.offheap;
+    public boolean isMemory() {
+      return this.memory;
     }
 
     /**
      * Set off-heap
      * @param b true or false
      */
-    public void setOffheap(boolean b) {
-      this.offheap = b;
+    public void setMemory(boolean b) {
+      this.memory = b;
     }
 
     /**
@@ -456,7 +456,7 @@ public class Segment implements Persistent {
       // Total evicted and deleted (not expired)
       dos.writeInt(getNumberEvictedDeletedItems());
       // Off-heap
-      dos.writeBoolean(isOffheap());
+      dos.writeBoolean(isMemory());
       // Block data size
       dos.writeLong(this.blockDataSize.get());
       // Block offset
@@ -480,7 +480,7 @@ public class Segment implements Persistent {
       this.totalExpectedToExpireItems.set(dis.readInt());
       this.totalExpiredItems.set(dis.readInt());
       this.totalEvictedItems.set(dis.readInt());
-      this.offheap = dis.readBoolean();
+      this.memory = dis.readBoolean();
       this.blockDataSize.set(dis.readLong());
       this.blockOffset.set(dis.readLong());
       this.counter = new RollingWindowCounter();
@@ -553,7 +553,7 @@ public class Segment implements Persistent {
     this.size = size;
     this.info = new Info(id, rank, System.currentTimeMillis());
     this.info.setSegmentSize(size);
-    setOffheap(true);
+    setMemory(true);
   }
 
   public void init(String cacheName) {
@@ -596,7 +596,7 @@ public class Segment implements Persistent {
       //System.exit(-1);
     }
     if (!this.valid) return;
-    if (isOffheap()) {
+    if (isMemory()) {
       if (this.address != 0) {
         UnsafeAccess.free(this.address);
         this.address = 0;
@@ -631,16 +631,16 @@ public class Segment implements Persistent {
    * Is this segment off-heap
    * @return true or false
    */
-  public boolean isOffheap() {
-    return this.info.isOffheap();
+  public boolean isMemory() {
+    return this.info.isMemory();
   }
 
   /**
    * Set off-heap
    * @param b true or false
    */
-  public void setOffheap(boolean b) {
-    this.info.setOffheap(b);
+  public void setMemory(boolean b) {
+    this.info.setMemory(b);
   }
 
   /**
@@ -1164,7 +1164,7 @@ public class Segment implements Persistent {
       seal();
       // Save info
       this.info.save(dos);
-      if (!isOffheap()) {
+      if (!isMemory()) {
         return;
       }
       // Write segment size
@@ -1227,7 +1227,7 @@ public class Segment implements Persistent {
     this.info = new Info();
     this.info.load(dis);
 
-    if (isOffheap()) {
+    if (isMemory()) {
       long size = dis.readLong();
       // We here do not have IOEngine reference yet
       // therefore we allocate memory directly

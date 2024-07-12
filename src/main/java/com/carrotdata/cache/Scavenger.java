@@ -521,8 +521,8 @@ public class Scavenger implements Runnable {
           engine.disposeDataSegment(s);
 
         } catch (IOException e) {
-          LOG.error("Cache : {} segment id={} offheap ={} sealed={}", cache.getName(),
-            s == null ? -1 : s.getId(), s == null ? null : Boolean.toString(s.isOffheap()),
+          LOG.error("Cache : {} segment id={} memory ={} sealed={}", cache.getName(),
+            s == null ? -1 : s.getId(), s == null ? null : Boolean.toString(s.isMemory()),
             s == null ? null : Boolean.toString(s.isSealed()));
           LOG.error("Error:", e);
           return;

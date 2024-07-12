@@ -36,9 +36,9 @@ import com.carrotdata.cache.eviction.SLRUEvictionPolicy;
 import com.carrotdata.cache.index.CompactBaseWithExpireIndexFormat;
 
 @RunWith(Parameterized.class)
-public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultithreadedZipfBase {
+public class TestMemoryCacheMultithreadedWithExpireZipf extends TestCacheMultithreadedZipfBase {
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestOffheapCacheMultithreadedWithExpireZipf.class);
+      LoggerFactory.getLogger(TestMemoryCacheMultithreadedWithExpireZipf.class);
   @Parameters
   public static Collection<Object[]> data() {
       return Arrays.asList(new Object[][] {     
@@ -63,9 +63,9 @@ public class TestOffheapCacheMultithreadedWithExpireZipf extends TestCacheMultit
   
   protected double acMaxRatio = 0.35;
 
-  public TestOffheapCacheMultithreadedWithExpireZipf(Class<? extends AdmissionController> ac, Boolean offheap) {
+  public TestMemoryCacheMultithreadedWithExpireZipf(Class<? extends AdmissionController> ac, Boolean memory) {
     this.acClz = ac;
-    this.offheap = offheap;
+    this.memory = memory;
   }
   
   @Before

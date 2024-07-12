@@ -50,7 +50,7 @@ public class BlockMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
 
-    if (!s.isOffheap()) {
+    if (!s.isMemory()) {
       return IOEngine.NOT_FOUND;
     }
     long dataSize = getFullDataSize(s, blockSize);
@@ -88,7 +88,7 @@ public class BlockMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
 
-    if (!s.isOffheap()) {
+    if (!s.isMemory()) {
       return IOEngine.NOT_FOUND;
     }
     long dataSize = getFullDataSize(s, blockSize);
@@ -128,7 +128,7 @@ public class BlockMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
 
-    if (!s.isOffheap()) {
+    if (!s.isMemory()) {
       return IOEngine.NOT_FOUND;
     }
     long dataSize = getFullDataSize(s, blockSize);
@@ -166,7 +166,7 @@ public class BlockMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
 
-    if (!s.isOffheap()) {
+    if (!s.isMemory()) {
       return IOEngine.NOT_FOUND;
     }
     long dataSize = getFullDataSize(s, blockSize);

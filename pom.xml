@@ -84,10 +84,10 @@
                     <reuseForks>false</reuseForks>
                     <excludes>
                         <exclude>**/TestFileCacheMultithreadedStress.java</exclude>
-                        <exclude>**/TestOffheapCacheMultithreadedStress.java</exclude>
+                        <exclude>**/TestMemoryCacheMultithreadedStress.java</exclude>
                         <exclude>**/TestMemoryIndexMQMultithreadedStress.java</exclude>
 			<exclude>**/TestMemoryIndexAQMultithreadedStress.java</exclude> 
-                        <exclude>**/TestOffheapCacheMultithreadedZipfStress.java</exclude>
+                        <exclude>**/TestMemoryCacheMultithreadedZipfStress.java</exclude>
 		 	<exclude>**/TestFileCacheMultithreadedZipfStress.java</exclude>
                         <exclude>**/TestHybridCacheMultithreadedZipfStress.java</exclude>
 		    </excludes>

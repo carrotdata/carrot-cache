@@ -13,12 +13,13 @@ package com.carrotdata.cache;
 
 import java.io.IOException;
 
-public class TestOffheapCacheWithCompression extends TestCacheWithCompressionBase {
+import org.junit.Before;
 
-  @Override
+public class TestMemoryCache extends TestCacheBase {
+
+  @Before
   public void setUp() throws IOException {
     super.setUp();
-    this.offheap = true;
-    // this.asyncTrainingMode = true;
+    this.memory = true;
   }
 }

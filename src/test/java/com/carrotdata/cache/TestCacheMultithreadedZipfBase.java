@@ -45,7 +45,7 @@ public abstract class TestCacheMultithreadedZipfBase {
 
   protected Cache cache;
 
-  protected boolean offheap = true;
+  protected boolean memory = true;
 
   protected boolean evictionDisabled = false;
 
@@ -136,7 +136,7 @@ public abstract class TestCacheMultithreadedZipfBase {
         .withPromotionQueueStartSizeRatio(pqStartRatio);
     builder = withAddedConfigurations(builder);
     Cache c = null;
-    if (offheap) {
+    if (memory) {
       c = builder.buildMemoryCache();
     } else {
       c = builder.buildDiskCache();

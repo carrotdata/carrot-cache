@@ -33,7 +33,7 @@ import com.carrotdata.cache.util.TestUtils;
 
 public class TestLoadingObjectCache {
 
-  boolean offheap = true;
+  boolean memory = true;
   ObjectCache cache;
   int segmentSize = 4 * 1024 * 1024;
   long maxCacheSize = 100L * segmentSize;
@@ -72,7 +72,7 @@ public class TestLoadingObjectCache {
         .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName())
         .withCacheRootDir(rootDir);
 
-    if (offheap) {
+    if (memory) {
       return builder.buildObjectMemoryCache();
     } else {
       return builder.buildObjectDiskCache();

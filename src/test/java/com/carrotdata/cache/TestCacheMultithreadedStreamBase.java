@@ -39,7 +39,7 @@ public abstract class TestCacheMultithreadedStreamBase {
 
   protected Cache cache;
 
-  protected boolean offheap = true;
+  protected boolean memory = true;
 
   protected boolean evictionDisabled = false;
 
@@ -93,7 +93,7 @@ public abstract class TestCacheMultithreadedStreamBase {
         .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
         .withEvictionDisabledMode(evictionDisabled);
 
-    if (offheap) {
+    if (memory) {
       return builder.buildMemoryCache();
     } else {
       return builder.buildDiskCache();

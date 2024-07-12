@@ -16,7 +16,7 @@ import java.io.IOException;
 import com.carrotdata.cache.compression.CompressionCodec;
 import com.carrotdata.cache.io.FileIOEngine;
 import com.carrotdata.cache.io.IOEngine;
-import com.carrotdata.cache.io.OffheapIOEngine;
+import com.carrotdata.cache.io.MemoryIOEngine;
 import com.carrotdata.cache.util.CacheConfig;
 
 public class Builder {
@@ -46,7 +46,7 @@ public class Builder {
    */
   public Cache buildMemoryCache() throws IOException {
     this.conf.sanityCheck(cacheName);
-    this.engine = new OffheapIOEngine(this.cacheName);
+    this.engine = new MemoryIOEngine(this.cacheName);
     return build();
   }
 
@@ -68,7 +68,7 @@ public class Builder {
    */
   public ObjectCache buildObjectMemoryCache() throws IOException {
     this.conf.sanityCheck(cacheName);
-    this.engine = new OffheapIOEngine(this.cacheName);
+    this.engine = new MemoryIOEngine(this.cacheName);
     Cache c = build();
     return new ObjectCache(c);
   }

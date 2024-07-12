@@ -9,24 +9,16 @@
  * <p>You should have received a copy of the Server Side Public License along with this program. If not, see
  * <http://www.mongodb.com/licensing/server-side-public-license>.
  */
-
 package com.carrotdata.cache;
 
 import java.io.IOException;
 
 import org.junit.Before;
 
-public class TestOffheapCacheMultithreadedStream extends TestCacheMultithreadedStreamBase {
-
+public class TestMemoryCacheStreamAPI extends TestCacheStreamAPIBase {
   @Before
   public void setUp() throws IOException {
-    this.numRecords = 1000000;
-    this.numThreads = 4;
-    this.scavDumpBelowRatio = 0.1;
-    this.segmentSize = 4 * 1024 * 1024;
-    // 4GB GB
-    this.maxCacheSize = 1000L * this.segmentSize;
-    this.offheap = true;
+    super.setUp();
+    this.memory = true;
   }
-
 }

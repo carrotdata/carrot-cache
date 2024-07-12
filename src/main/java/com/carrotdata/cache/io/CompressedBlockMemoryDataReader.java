@@ -90,7 +90,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
 
-    if (!s.isOffheap()) {
+    if (!s.isMemory()) {
       return IOEngine.NOT_FOUND;
     }
     long ptr = s.getAddress();
@@ -179,7 +179,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
 
-    if (!s.isOffheap()) {
+    if (!s.isMemory()) {
       return IOEngine.NOT_FOUND;
     }
     long ptr = s.getAddress();
@@ -264,7 +264,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
 
-    if (!s.isOffheap()) {
+    if (!s.isMemory()) {
       return IOEngine.NOT_FOUND;
     }
     long ptr = s.getAddress();
@@ -348,7 +348,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
 
-    if (!s.isOffheap()) {
+    if (!s.isMemory()) {
       return IOEngine.NOT_FOUND;
     }
     long ptr = s.getAddress();
@@ -450,7 +450,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
 
-    if (!s.isOffheap()) {
+    if (!s.isMemory()) {
       return IOEngine.NOT_FOUND;
     }
     long ptr = s.getAddress();
@@ -566,7 +566,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
 
-    if (!s.isOffheap()) {
+    if (!s.isMemory()) {
       return IOEngine.NOT_FOUND;
     }
     long ptr = s.getAddress();
@@ -664,7 +664,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
 
-    if (!s.isOffheap()) {
+    if (!s.isMemory()) {
       return IOEngine.NOT_FOUND;
     }
     long ptr = s.getAddress();
@@ -778,7 +778,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
 
-    if (!s.isOffheap()) {
+    if (!s.isMemory()) {
       return IOEngine.NOT_FOUND;
     }
     long ptr = s.getAddress();
