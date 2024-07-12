@@ -257,6 +257,22 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.conf = conf;
   }
 
+  /**
+   * Is memory cache
+   * @return true or false
+   */
+  public boolean isMemoryCache() {
+    return this.type == Type.MEMORY;
+  }
+  
+  /**
+   * Is disk cache
+   * @return true or falsew
+   */
+  public boolean isDiskCache() {
+    return this.type == Type.DISK;
+  }
+  
   void setIOEngine(IOEngine engine) {
     this.engine = engine;
     // set engine listener

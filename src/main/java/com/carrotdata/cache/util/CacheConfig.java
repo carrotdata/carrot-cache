@@ -2758,12 +2758,13 @@ public class CacheConfig {
     }
 
     long segmentSize = getCacheSegmentSize(cacheName);
-    // Minimum number of segments is 100
+    // Minimum segment size is 1MB
     if (segmentSize < 1024 * 1024) {
       segmentSize = 1024 * 1024;
       setCacheSegmentSize(cacheName, segmentSize);
     }
     int num = (int) (maxSize / segmentSize);
+    // Minimum number of segments is 200
     if (num < 200) {
       segmentSize = maxSize / (200 * (1024 * 1024)) * 1024 * 1024;
       setCacheSegmentSize(cacheName, segmentSize);
