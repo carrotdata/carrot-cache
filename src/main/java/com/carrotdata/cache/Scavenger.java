@@ -378,6 +378,9 @@ public class Scavenger implements Runnable {
 
   private static Map<String, AtomicInteger> numInstancesMap =
       new ConcurrentHashMap<String, AtomicInteger>();
+  
+  private static Map<String, AtomicInteger> vacuumCleanersMap =
+      new ConcurrentHashMap<String, AtomicInteger>();
 
   private static int maxInstances = 1; // TODO: make it configurable
 
@@ -389,6 +392,8 @@ public class Scavenger implements Runnable {
   private long maxSegmentsBeforeStallDetected;
 
   private boolean diskCache = false;
+  
+  private boolean vacuumMode = false;
   
   public Scavenger(Cache cache) {
     // super(NAME + rollingId.getAndIncrement());
@@ -426,13 +431,33 @@ public class Scavenger implements Runnable {
     this.maxSegmentsBeforeStallDetected = getScavengerMaxSegmentsBeforeStall();
     if (this.diskCache) {
       // disable excessive scans for disk - based caches
-      //TODO: vacuum mode
       minActiveRatio = 0; 
     }
   }
-
+  
+  /**
+   * Set vacuum mode (used for file based caches)
+   * @param b mode
+   */
+  public void setVacuumMode(boolean b) {
+    this.vacuumMode = b;
+    // restore minActiveRatio for disk cache if in vacuum mode
+    if (this.vacuumMode && this.diskCache) {
+      this.minActiveRatio = stats.minActiveRatio;
+    }
+  }
+  
+  /**
+   * Is scavenger in vacuum mode
+   * @return mode
+   */
+  public boolean isVacuumMode() {
+    return this.vacuumMode;
+  }
+  
   public static void registerCache(String cacheName) {
     numInstancesMap.put(cacheName, new AtomicInteger());
+    vacuumCleanersMap.put(cacheName, new AtomicInteger());
     initPoolForCacheName(cacheName);
   }
 
@@ -472,17 +497,27 @@ public class Scavenger implements Runnable {
     IOEngine engine = this.cache.getEngine();
     DateFormat format = DateFormat.getDateTimeInstance();
     Segment s = null;
+    boolean rejected = false;
     try {
       AtomicInteger numInstances = numInstancesMap.get(cache.getName());
-      if (numInstances.incrementAndGet() > maxInstances) {
-        // Number of instances exceeded the maximum value
-        // numInstances.decrementAndGet();
+      if (numInstances.incrementAndGet() > maxInstances && 
+          (!this.diskCache || (this.diskCache && !this.vacuumMode))) {
+        // Number of instances exceeded the maximum value and 
+        // this is memory cache or diskCache and not in vacuum mode
+        rejected = true;
         return;
       }
+      if (this.vacuumMode) {
+        AtomicInteger vacInstances = vacuumCleanersMap.get(cache.getName());
+        if (vacInstances.incrementAndGet() > 1) {
+          rejected = true;
+          return;
+        }
+      }
       LOG.trace(
-        "Scavenger [{}] started at {} allocated storage={} maximum storage={}, raw data size={}",
+        "Scavenger [{}] started at {} allocated storage={} maximum storage={}, raw data size={} vacuum={}",
         cache.getName(), format.format(new Date()), engine.getStorageAllocated(),
-        engine.getMaximumStorageSize(), engine.getRawDataSize());
+        engine.getMaximumStorageSize(), engine.getRawDataSize(), this.vacuumMode);
 
       boolean finished = false;
 
@@ -557,16 +592,22 @@ public class Scavenger implements Runnable {
     } finally {
       AtomicInteger numInstances = numInstancesMap.get(cache.getName());
       numInstances.decrementAndGet();
+      if (this.vacuumMode) {
+        AtomicInteger vacInstances = vacuumCleanersMap.get(cache.getName());
+        vacInstances.decrementAndGet();
+      }
       this.cache.finishScavenger(this);
     }
     long runEnd = System.currentTimeMillis();
     // Update stats
     stats.totalRunTimes.addAndGet(runEnd - runStart);
-    LOG.trace(
-      "Scavenger [{}] finished at {} allocated storage={} maximum storage={} rawDataSize={}, total seg scanned={}",
-      cache.getName(), format.format(new Date()), engine.getStorageAllocated(),
-      engine.getMaximumStorageSize(), engine.getRawDataSize(), stats.totalSegmentsScanned.get());
-
+    
+    if (!rejected) {
+      LOG.trace(
+        "Scavenger [{}] finished at {} allocated storage={} maximum storage={} raw data size={}, total seg scanned={} vacuum={}",
+        cache.getName(), format.format(new Date()), engine.getStorageAllocated(),
+        engine.getMaximumStorageSize(), engine.getRawDataSize(), stats.totalSegmentsScanned.get(), this.vacuumMode);
+    }
   }
 
   private boolean shouldStopOn(Segment s) {

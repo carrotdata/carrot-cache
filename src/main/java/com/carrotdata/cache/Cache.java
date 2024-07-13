@@ -346,6 +346,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     initPromotionController();
     initThroughputController();
     startThroughputController();
+    startVacuumCleaner();
     // Set eviction listener
     // this.engine.getMemoryIndex().setEvictionListener(this);
   }
@@ -384,19 +385,24 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   
   
   void startScavengers(boolean wait) {
-   
+    startScavengers(wait, false);
+  }
+
+  void startScavengers(boolean wait, boolean vacuum) {
+    
     if (this.scavDisabled) {
       return;
     }
-    if (Scavenger.getActiveThreadsCount(this.cacheName) < this.scavengerNoThreads) {
+    if (vacuum || Scavenger.getActiveThreadsCount(this.cacheName) < this.scavengerNoThreads) {
         Scavenger scavenger = new Scavenger(this);
+        scavenger.setVacuumMode(vacuum);
         scavenger.start();
         if (wait) {
           LockSupport.parkNanos(50000);
         }
     }
   }
-
+  
   void stopScavengers() {
     Scavenger.safeShutdown(this.cacheName);
     while (Scavenger.getActiveThreadsCount(this.cacheName) > 0) {
@@ -508,6 +514,26 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     long interval = this.conf.getThroughputCheckInterval(this.cacheName);
     this.timer.scheduleAtFixedRate(task, interval, interval);
     LOG.info("Started throughput controller, interval={} sec", interval / 1000);
+  }
+  
+  private void startVacuumCleaner() {
+    TimerTask task = new TimerTask() {
+      public void run() {
+        startScavengers(false, true);
+      }
+    };
+    long interval = this.conf.getVacuumCleanerInterval(this.cacheName);
+    if (interval < 0) {
+      LOG.info("Vacuum cleaner - disabled");
+      return;
+    }
+    if (this.timer == null) {
+      this.timer = new Timer();
+    }
+    
+    this.timer.scheduleAtFixedRate(task, interval, interval);
+    LOG.info("Started vacuum cleaner, interval={} sec", interval / 1000);
+  
   }
 
   /**
@@ -2675,6 +2701,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     loadEngine();
     loadScavengerStats();
     startThroughputController();
+    startVacuumCleaner();
     long endTime = System.currentTimeMillis();
     LOG.info("Cache loaded in {}ms", endTime - startTime);
   }

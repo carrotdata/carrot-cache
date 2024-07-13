@@ -847,6 +847,16 @@ public class Builder {
   }
   
   /**
+   * With vacuum cleaner interval
+   * @param interval interval in seconds to run cleaner
+   * @return builder instance
+   */
+  public Builder withVacuumCleanerInterval(int interval) {
+    conf.setVacuumCleanerInterval(cacheName, interval);
+    return this;
+  }
+  
+  /**
    * Build cache
    * @return
    * @throws IOException

@@ -368,6 +368,7 @@ public class CacheConfig {
       "memory.buffer.pool.size.max";
   public final static String CACHE_PROACTIVE_EXPIRATION_FACTOR_KEY = "proactive.expiration.factor";
 
+  public final static String VACUUM_CLEANER_INTERVAL_SEC_KEY = "vacuum.cleaner.interval";
   /** Defaults section */
 
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
@@ -605,6 +606,8 @@ public class CacheConfig {
       DEFAULT_CACHE_POPULARITY_NUMBER_RANKS / 2;
 
   public final static double DEFAULT_CACHE_PROACTIVE_EXPIRATION_FACTOR = 0.25;
+  
+  public final static long DEFAULT_VACUUM_CLEANER_INTERVAL_SEC = -1; // disabled
   
   static CacheConfig instance;
 
@@ -1372,6 +1375,29 @@ public class CacheConfig {
     props.setProperty(cacheName + "." + THROUGHPUT_CHECK_INTERVAL_SEC_KEY, Long.toString(interval));
   }
 
+  /**
+   * Get vacuum cleaner interval for a given cache name
+   * @param cacheName cache name
+   * @return interval in ms for a given cache name
+   */
+  public long getVacuumCleanerInterval(String cacheName) {
+    String value = props.getProperty(cacheName + "." + VACUUM_CLEANER_INTERVAL_SEC_KEY);
+    if (value != null) {
+      return (int) Long.parseLong(value) * 1000;
+    }
+    return getLongProperty(VACUUM_CLEANER_INTERVAL_SEC_KEY, DEFAULT_VACUUM_CLEANER_INTERVAL_SEC)
+        * 1000;
+  }
+
+  /**
+   * Set vacuum cleaner interval for a given cache name
+   * @param cacheName cache name
+   * @param interval in sec for a given cache name
+   */
+  public void setVacuumCleanerInterval(String cacheName, int interval) {
+    props.setProperty(cacheName + "." + VACUUM_CLEANER_INTERVAL_SEC_KEY, Long.toString(interval));
+  }
+  
   /**
    * Get Scavenger run interval for a given cache name
    * @param cacheName cache name
