@@ -2515,8 +2515,8 @@ public final class MemoryIndex implements Persistent {
     setDataSize(ptr1, dataSize1);
 
     // Now we can shrink
-    rehash_index[slot0] = ptr0;// shrink(ptr0);
-    rehash_index[slot1] = ptr1;// shrink(ptr1);
+    rehash_index[slot0] = shrink(ptr0);
+    rehash_index[slot1] = shrink(ptr1);
     // Free previous index block
     // It is safe, because this index block is under write lock
     int oldBlockSize = blockSize(ptr);
