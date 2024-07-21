@@ -32,7 +32,6 @@ import com.carrotdata.cache.util.RangeTree.Range;
 
 import sun.misc.Unsafe;
 
-@SuppressWarnings({ "removal", "deprecation" })
 public final class UnsafeAccess {
 
   public final static String MALLOC_DEBUG = "MALLOC_DEBUG";
@@ -473,20 +472,18 @@ public final class UnsafeAccess {
    * @param buf direct byte buffer
    * @return address of a memory buffer or -1 (if not direct or not accessible)
    */
-  public static long address(ByteBuffer buf) {
+  public synchronized static long address(ByteBuffer buf) {
     if (!buf.isDirect()) {
       return -1;
     }
 
     try {
       if (addressMethod == null) {
-        synchronized (UnsafeAccess.class) {
           if (addressMethod == null) {
             Class<? extends ByteBuffer> B = buf.getClass();
             addressMethod = B.getDeclaredMethod("address");
             addressMethod.setAccessible(true);
           }
-        }
       }
       Object address = addressMethod.invoke(buf);
       if (address == null) return -1;
