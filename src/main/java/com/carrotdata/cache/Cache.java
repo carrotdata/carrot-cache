@@ -36,6 +36,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.carrotdata.cache.Scavenger.Stats;
+import com.carrotdata.cache.compression.CodecFactory;
+import com.carrotdata.cache.compression.CompressionCodec;
 import com.carrotdata.cache.controllers.AdmissionController;
 import com.carrotdata.cache.controllers.PromotionController;
 import com.carrotdata.cache.controllers.ThroughputController;
@@ -231,15 +233,51 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     initAll();
   }
 
-  private void preprocessConf() {
+  private void preprocessConf() throws IOException {
     boolean compEnabled = this.conf.isCacheCompressionEnabled(cacheName);
     if (compEnabled) {
       this.conf.setDataWriter(cacheName, CompressedBlockBatchDataWriter.class.getName());
       this.conf.setMemoryDataReader(cacheName, CompressedBlockMemoryDataReader.class.getName());
       this.conf.setFileDataReader(cacheName, CompressedBlockFileDataReader.class.getName());
+      this.conf.setCacheTLSSupported(cacheName, true);
+      initCodec();
     }
   }
+  
+  private void initCodec() throws IOException {
+    CodecFactory factory = CodecFactory.getInstance();
+    CompressionCodec codec = factory.getCompressionCodecForCache(cacheName);
+    if (codec == null) {
+      factory.initCompressionCodecForCache(cacheName, null);
+    }
 
+  }
+  
+  private void startStatsTask() {
+    if (System.getProperty("STATS_TASK") != null) {
+      long interval = 10000; // 10 sec
+      String strint = System.getProperty("STATS_TASK_INTERVAL");
+      if ( strint != null) {
+        try {
+          interval = Integer.parseInt(strint) * 1000;
+        } catch (NumberFormatException e) {
+          // swallow
+        }
+      }
+      if (timer == null) {
+        timer = new Timer();
+      }
+      TimerTask r = new TimerTask() {
+        @Override
+        public void run() {
+          printStats();
+          //UnsafeAccess.mallocStats.printStats(false);
+        }
+      };
+      timer.schedule(r, interval, interval);
+    }
+  }
+  
   public Cache(String name, CacheConfig conf) throws IOException {
     this.cacheName = name;
     this.conf = conf;
@@ -347,6 +385,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     initThroughputController();
     startThroughputController();
     startVacuumCleaner();
+    startStatsTask();
     // Set eviction listener
     // this.engine.getMemoryIndex().setEvictionListener(this);
   }
@@ -360,6 +399,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     initAdmissionController();
     initPromotionController();
     initThroughputController();
+    startVacuumCleaner();
+    startStatsTask();
     // this.engine.getMemoryIndex().setEvictionListener(this);
   }
 
@@ -868,9 +909,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return false;
     }
     spinWaitOnHighPressure(scavenger);
-
-    this.totalWrites.incrementAndGet();
-    this.totalWritesSize.addAndGet(Utils.kvSize(keySize, valSize));
 
     // Adjust rank taking into account item's expiration time
     groupRank = adjustGroupRank(rank, groupRank, expire);
@@ -2753,9 +2791,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     double compRatio = (double) getRawDataSize() / getStorageAllocated();
     double compRatioReal = (double) getRawDataSize() / getStorageUsedActual();
     LOG.info(
-      "Cache[{}]: storage size={} data size={} comp ratio={} comp real={} items={}"+
+      "Cache[{}]: storage size={} data size={} index size={} comp ratio={} comp real={} items={}"+
     " hit rate={}, gets={}, failed gets={}, puts={}, rejected puts={} bytes written={}",
-      this.cacheName, getStorageAllocated(), getRawDataSize(), compRatio, compRatioReal, size(),
+      this.cacheName, getStorageAllocated(), getRawDataSize(), this.engine.getMemoryIndex().getAllocatedMemory(), compRatio, compRatioReal, size(),
       getHitRate(), getTotalGets(), getTotalFailedGets(), getTotalWrites(), getTotalRejectedWrites(), getTotalWritesSize());
     if (this.victimCache != null) {
       this.victimCache.printStats();
@@ -2812,6 +2850,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       }
       this.shutdownInProgress = true;
     }
+    
+    //UnsafeAccess.mallocStats.printStats(true);
+    
     // Disable writes/reads
     shutdownStatusMsg =
         String.format("Shutting down cache '%s', save data=%s", cacheName, saveOnShutdown);
