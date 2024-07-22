@@ -152,6 +152,9 @@ public class ZstdCompressionCodec implements CompressionCodec {
   /* Is dictionary training in async mode */
   private boolean trainingAsync;
 
+  /** Are dictionaries persistent */
+  private boolean persistentDicts;
+  
   /**
    * Codec statistics
    */
@@ -273,8 +276,6 @@ public class ZstdCompressionCodec implements CompressionCodec {
     return currentCtxt;
   }
 
-  static int counter = 0;
-
   @Override
   public int decompress(long ptr, int size, byte[] buffer, int dictId) {
 
@@ -346,6 +347,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
     this.compLevel = config.getCacheCompressionLevel(cacheName);
     this.dictionaryEnabled = config.isCacheCompressionDictionaryEnabled(cacheName);
     this.trainingAsync = config.isCacheCompressionDictionaryTrainingAsync(cacheName);
+    this.persistentDicts = config.isSaveOnShutdown(cacheName);
     String dictDir = config.getCacheDictionaryDir(cacheName);
     File dir = new File(dictDir);
     this.stats = new Stats(compLevel, dictSize, Type.ZSTD);
@@ -377,6 +379,9 @@ public class ZstdCompressionCodec implements CompressionCodec {
   }
 
   private void loadDictionaries(File dir) throws IOException {
+    if (!this.persistentDicts) {
+      return;
+    }
     int maxId = 0;
     HashMap<Integer, byte[]> map = new HashMap<Integer, byte[]>();
     dictCacheMap.put(cacheName, map);
@@ -394,6 +399,9 @@ public class ZstdCompressionCodec implements CompressionCodec {
   }
 
   private void saveDictionary(int id, byte[] data) throws IOException {
+    if (!this.persistentDicts) {
+      return;
+    }
     CacheConfig config = CacheConfig.getInstance();
     String dictDir = config.getCacheDictionaryDir(cacheName);
     File dir = new File(dictDir);
