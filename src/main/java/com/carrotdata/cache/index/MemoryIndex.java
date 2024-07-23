@@ -2662,14 +2662,24 @@ public final class MemoryIndex implements Persistent {
     /* Total allocated memory */
     dos.writeLong(this.allocatedMemory.get());
     long[] table = this.ref_index_base.get();
-    byte[] buffer = new byte[getMaximumBlockSize()];
+    int bufferSize = 1024 * 1024;
+    byte[] buffer = new byte[bufferSize];
+    int bufferOffset = 0;
     for (int i = 0; i < table.length; i++) {
       long ptr = table[i];
       int size = blockSize(ptr);
-      UnsafeAccess.copy(ptr, buffer, 0, size);
-      dos.writeInt(size);
-      dos.write(buffer, 0, size);
+      if (bufferSize - bufferOffset >= size + Utils.SIZEOF_INT) {
+        UnsafeAccess.putInt(buffer, bufferOffset, size);
+        bufferOffset += Utils.SIZEOF_INT;
+        UnsafeAccess.copy(ptr, buffer, bufferOffset, size);
+        bufferOffset += size;
+      } else {
+        dos.write(buffer, 0, bufferOffset);
+        bufferOffset = 0;
+        i--;
+      }
     }
+    dos.write(buffer, 0, bufferOffset);
     dos.flush();
   }
 
