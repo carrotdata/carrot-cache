@@ -198,11 +198,21 @@ public class Memcached {
   }
 
   public Memcached() throws IOException {
-    Cache cache = fromConfig();
-    if (cache == null) {
-      throw new IOException("no cache was defined in the configuration file");
+    CacheConfig conf = CacheConfig.getInstance();
+    String[] cacheNames = conf.getCacheNames();
+    if (cacheNames == null || cacheNames.length == 0) {
+      throw new IOException("No cache(s) were defined in the configuration file");
     }
-    this.cache = cache;
+    String mainCache = cacheNames[0];
+    if (conf.isSaveOnShutdown(mainCache)) {
+      cache = Cache.loadCache(mainCache);
+    }
+    if (cache == null) {
+      cache = fromConfig();
+      if (cache == null) {
+        throw new IOException("No cache(s) were defined in the configuration file");
+      }
+    }
   }
 
   private Cache fromConfig() throws IOException {

@@ -386,8 +386,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     startThroughputController();
     startVacuumCleaner();
     startStatsTask();
-    // Set eviction listener
-    // this.engine.getMemoryIndex().setEvictionListener(this);
   }
 
   private void initAllDuringLoad() throws IOException {
@@ -399,9 +397,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     initAdmissionController();
     initPromotionController();
     initThroughputController();
-    startVacuumCleaner();
     startStatsTask();
-    // this.engine.getMemoryIndex().setEvictionListener(this);
   }
 
   /**
@@ -2850,12 +2846,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       }
       this.shutdownInProgress = true;
     }
-    
-    //UnsafeAccess.mallocStats.printStats(true);
-    
+        
     // Disable writes/reads
     shutdownStatusMsg =
-        String.format("Shutting down cache '%s', save data=%s", cacheName, saveOnShutdown);
+        String.format("Shutting down cache [%s], save data=%s", cacheName, saveOnShutdown);
     LOG.info(shutdownStatusMsg);
     long size = getStorageUsedActual();
     size += this.engine.getMemoryIndex().getAllocatedMemory();
@@ -2875,9 +2869,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     long end = System.currentTimeMillis();
     if (saveOnShutdown) {
       shutdownStatusMsg =
-          String.format("\nCache %s saved %d bytes in %d ms\nShutdown complete", cacheName, size, (end - start));
+          String.format("Cache [%s] saved %d bytes in %d ms. Shutdown complete", cacheName, size, (end - start));
     } else {
-      shutdownStatusMsg += "\nShutdown complete";
+      shutdownStatusMsg += "Shutdown complete";
     }
     LOG.info(shutdownStatusMsg);
 
@@ -2916,20 +2910,22 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     String file = CacheConfig.CACHE_SNAPSHOT_NAME;
     Path cachePath = Paths.get(snapshotDir, file);
     if (Files.notExists(cachePath)) {
-      throw new IOException(String.format("Cache snapshot file is missing in %s", p.toString()));
+      LOG.warn(String.format("Cache snapshot file is missing in %s, creating new instance", p.toString()));
+      return null;
     }
 
     file = CacheConfig.CACHE_ENGINE_SNAPSHOT_NAME;
     Path enginePath = Paths.get(snapshotDir, file);
     if (Files.notExists(enginePath)) {
-      throw new IOException(String.format("IOEngine snapshot file is missing in %s", p.toString()));
+      LOG.warn(String.format("IOEngine snapshot file is missing in %s, creating new instance", p.toString()));
+      return null;
     }
 
     file = CacheConfig.SCAVENGER_STATS_SNAPSHOT_NAME;
     Path statsPath = Paths.get(snapshotDir, file);
     if (Files.notExists(statsPath)) {
-      throw new IOException(
-          String.format("Scavenger statistics snapshot file is missing in %s", p.toString()));
+      LOG.warn(String.format("Scavenger statistics snapshot file is missing in %s", p.toString()));
+      return null;
     }
 
     // Ideally we need to check number of files at least
