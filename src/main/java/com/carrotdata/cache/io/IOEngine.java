@@ -21,9 +21,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
@@ -247,9 +245,30 @@ public abstract class IOEngine implements Persistent {
    * @return size
    */
   public long getStorageAllocated() {
-    return this.storageAllocated.get();
+    long size =  this.storageAllocated.get();
+    return size;
   }
 
+  /**
+   * Get total allocated memory, including storage, index and memory buffer pool
+   * @return size
+   */
+  public long getTotalAllocated() {
+    long size =  this.storageAllocated.get() + this.index.getAllocatedMemory();
+    if (this.memoryBufferPool != null) {
+      size += this.memoryBufferPool.getMemoryAllocated(); 
+    }
+    return size;
+  }
+  
+  /**
+   * Get memory allocated by index
+   * @return size
+   */
+  public long getIndexAllocated() {
+    return this.index.getAllocatedMemory();
+  }
+  
   /**
    * Get storage used (uncompressed size)
    * @return size
@@ -263,10 +282,21 @@ public abstract class IOEngine implements Persistent {
    * @return actual storage usage
    */
   public final long getStorageUsed() {
-
     return this.storageUsed.get();
   }
 
+  /**
+   * This method should be called when compression is enabled
+   * @return actual storage usage
+   */
+  public final long getTotalUsed() {
+    long size = this.storageUsed.get() + this.index.getAllocatedMemory();
+    if (this.memoryBufferPool != null) {
+      size += this.memoryBufferPool.getMemoryAllocated(); 
+    }
+    return size;
+  }
+  
   /**
    * Get storage allocation as a ratio of a maximum storage size
    * @return ratio (0. - 1.)
@@ -275,6 +305,14 @@ public abstract class IOEngine implements Persistent {
     return (double) this.storageAllocated.get() / this.maxStorageSize;
   }
 
+  /**
+   * Get total allocation as a ratio of a maximum storage size
+   * @return ratio (0. - 1.)
+   */
+  public double getTotalAllocatedRatio() {
+    return (double) getTotalAllocated() / this.maxStorageSize;
+  }
+  
   /**
    * Report allocation
    * @param value allocation value

@@ -627,10 +627,26 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get total allocated memory
-   * @return total allocated memory
+   * @return total allocated memory for storage
    */
   public long getStorageAllocated() {
     return this.engine.getStorageAllocated();
+  }
+
+  /**
+   * Get total allocated memory: storage + index + memory buffer pool
+   * @return total allocated memory
+   */
+  public long getTotalAllocated() {
+    return this.engine.getTotalAllocated();
+  }
+  
+  /**
+   * Get total used memory (storage + index + memory buffers) when compression is on
+   * @return used memory
+   */
+  public long getTotalUsed() {
+    return this.engine.getTotalUsed();
   }
 
   /**
@@ -666,6 +682,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return (double) getStorageUsedActual() / this.maximumCacheSize;
   }
 
+  /**
+   * Get memory used as a fraction of memory limit
+   * @return memory used fraction
+   */
+  public double getTotalAllocatedRatio() {
+    if (this.maximumCacheSize == 0) return 0;
+    return (double) getTotalAllocated() / this.maximumCacheSize;
+  }
+  
   /**
    * Get admission controller
    * @return admission controller
@@ -1047,7 +1072,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   private boolean storageIsFull(int keySize, int valueSize) {
     // OK, eviction is disabled
     // check used and maximum storage size
-    long used = this.engine.getStorageUsed();
+    long used = this.engine.getTotalUsed();
     long room = this.engine.getSegmentSize() * (this.scavengerNoThreads + 1) + 1;
     int size = Utils.kvSize(keySize, valueSize);
     return used + size > this.maximumCacheSize - room;
@@ -2784,12 +2809,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   public void printStats() {
-    double compRatio = (double) getRawDataSize() / getStorageAllocated();
+    double compRatio = (double) getRawDataSize() / getTotalAllocated();
     double compRatioReal = (double) getRawDataSize() / getStorageUsedActual();
     LOG.info(
       "Cache[{}]: storage size={} data size={} index size={} comp ratio={} comp real={} items={}"+
     " hit rate={}, gets={}, failed gets={}, puts={}, rejected puts={} bytes written={}",
-      this.cacheName, getStorageAllocated(), getRawDataSize(), this.engine.getMemoryIndex().getAllocatedMemory(), compRatio, compRatioReal, size(),
+      this.cacheName, getTotalAllocated(), getRawDataSize(), this.engine.getMemoryIndex().getAllocatedMemory(), compRatio, compRatioReal, size(),
       getHitRate(), getTotalGets(), getTotalFailedGets(), getTotalWrites(), getTotalRejectedWrites(), getTotalWritesSize());
     if (this.victimCache != null) {
       this.victimCache.printStats();

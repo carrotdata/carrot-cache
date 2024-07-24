@@ -462,7 +462,8 @@ public class Scavenger implements Runnable {
   }
 
   public static int getActiveThreadsCount(String cacheName) {
-    return numInstancesMap.get(cacheName).get();
+    AtomicInteger counter = numInstancesMap.get(cacheName);
+    return counter != null? counter.get(): 0;
   }
 
   private long getScavengerMaxSegmentsBeforeStall() {
@@ -516,7 +517,7 @@ public class Scavenger implements Runnable {
       }
       LOG.trace(
         "Scavenger [{}] started at {} allocated storage={} maximum storage={}, raw data size={} vacuum={}",
-        cache.getName(), format.format(new Date()), engine.getStorageAllocated(),
+        cache.getName(), format.format(new Date()), engine.getTotalAllocated(),
         engine.getMaximumStorageSize(), engine.getRawDataSize(), this.vacuumMode);
 
       boolean finished = false;
@@ -605,7 +606,7 @@ public class Scavenger implements Runnable {
     if (!rejected) {
       LOG.trace(
         "Scavenger [{}] finished at {} allocated storage={} maximum storage={} raw data size={}, total seg scanned={} vacuum={}",
-        cache.getName(), format.format(new Date()), engine.getStorageAllocated(),
+        cache.getName(), format.format(new Date()), engine.getTotalAllocated(),
         engine.getMaximumStorageSize(), engine.getRawDataSize(), stats.totalSegmentsScanned.get(), this.vacuumMode);
     }
   }
@@ -623,13 +624,13 @@ public class Scavenger implements Runnable {
       return false;
     }
 
-    double usage = engine.getStorageAllocatedRatio();
+    double usage = engine.getTotalAllocatedRatio();
     double activeRatio = engine.activeSizeRatio();
     return activeRatio >= minActiveRatio && usage < stopRatio;
   }
 
   private boolean isUsageHigh() {
-    return this.cache.getEngine().getStorageAllocatedRatio() > stopRatio;
+    return this.cache.getEngine().getTotalAllocatedRatio() > stopRatio;
   }
   
   private boolean cleanSegment(Segment s) throws IOException {

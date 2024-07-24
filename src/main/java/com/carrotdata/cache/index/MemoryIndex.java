@@ -505,7 +505,13 @@ public final class MemoryIndex implements Persistent {
    * @return
    */
   public long getAllocatedMemory() {
-    return this.allocatedMemory.get() + Utils.SIZEOF_LONG + ref_index_base.get().length;
+    long size = this.allocatedMemory.get() + 
+        Utils.SIZEOF_LONG * ref_index_base.get().length;
+    long[] rehash = ref_index_base_rehash.get();
+    if (rehash != null) {
+      size += Utils.SIZEOF_LONG * rehash.length;
+    }
+    return size;
   }
 
   /**

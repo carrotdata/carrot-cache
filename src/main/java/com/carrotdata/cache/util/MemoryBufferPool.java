@@ -137,6 +137,10 @@ public class MemoryBufferPool {
     return this.memoryBuffers.size();
   }
 
+  public long getMemoryAllocated() {
+    return memoryBuffers.size() * this.bufferSize;
+  }
+  
   public synchronized void shutdown() {
     if (disabled) {
       return;

@@ -14,8 +14,12 @@ package com.carrotdata.cache.util;
 
 import static org.junit.Assert.assertEquals;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.OperatingSystemMXBean;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -24,6 +28,7 @@ import java.util.List;
 import java.util.Random;
 
 import org.apache.commons.math3.distribution.ZipfDistribution;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,6 +81,26 @@ public class TestProjectUtils {
     LOG.info("{}", list.getClass());
   }
 
+  @Ignore
+  @Test
+  public void testOperatingSystemMXBean() {
+    // add --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED
+    OperatingSystemMXBean operatingSystemMXBean = ManagementFactory.getOperatingSystemMXBean();
+    for (Method method : operatingSystemMXBean.getClass().getDeclaredMethods()) {
+      method.setAccessible(true);
+      if (method.getName().startsWith("get")
+          && Modifier.isPublic(method.getModifiers())) {
+              Object value;
+          try {
+              value = method.invoke(operatingSystemMXBean);
+          } catch (Exception e) {
+              value = e;
+          } // try
+          System.out.println(method.getName() + " = " + value);
+      } // if
+    } // for
+  }
+  
   @Test
   public void testObjectArray()
       throws SecurityException, IllegalAccessException, IllegalArgumentException,
