@@ -16,6 +16,8 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Random;
 
 import org.junit.After;
@@ -946,6 +948,17 @@ public class TestMemcached {
     }
   }
 
+  @Test
+  public void testStats() {
+    List<String> stats = mc.stats();
+    Iterator<String> it = stats.iterator();
+    while(it.hasNext()) {
+      String attr = it.next();
+      String value = it.next();
+      System.out.println(attr + " " + value);
+    }
+  }
+  
   protected boolean sameExpire(long exp, long value) {
     return Math.abs(exp - value) <= 1;
   }

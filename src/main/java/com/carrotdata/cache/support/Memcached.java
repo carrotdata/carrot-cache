@@ -15,11 +15,13 @@
 package com.carrotdata.cache.support;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.carrotdata.cache.Cache;
+import com.carrotdata.cache.jmx.CacheJMXSink;
 import com.carrotdata.cache.util.CacheConfig;
 import com.carrotdata.cache.util.LockSupport;
 import com.carrotdata.cache.util.UnsafeAccess;
@@ -1248,6 +1250,15 @@ public class Memcached {
     }
   }
 
+  /**
+   * General cache statistics
+   * @return list of key-value (key1, value1, key2, value2, ...)
+   */
+  public List<String> stats() {
+    CacheJMXSink sink = new CacheJMXSink(cache);
+    return sink.asList();
+  }
+  
   /**
    * Expire operation
    * @param keyPtr key buffer

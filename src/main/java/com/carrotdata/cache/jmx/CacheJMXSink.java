@@ -297,6 +297,8 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
 
   @Override
   public long getio_avg_read_duration() {
+    long gets = gettotal_gets();
+    if (gets == 0) return 0;
     // in microseconds
     long duration = cache.getEngine().getTotalIOReadDuration() / 1000;
     return duration / gettotal_gets();
@@ -304,6 +306,8 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
 
   @Override
   public long getio_avg_read_size() {
+    long gets = gettotal_gets();
+    if (gets == 0) return 0;
     return getoverall_bytes_read() / gettotal_gets();
   }
 
@@ -380,7 +384,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   public List<String> asList() {
     List<String> list = new ArrayList<String>();
     String name = cache.getName();
-    list.add("epoch_start_time");
+    list.add(name + ":epoch_start_time");
     list.add(getepoch_start_time());
     list.add(name + ":type");
     list.add(gettype());
@@ -428,8 +432,11 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     list.add(name + ":is_hybrid");
     list.add("" + getcache_hybrid());
     
-    list.add(name + ":victim_cache_name");
-    list.add("" + getvictim_cache_name());
+    String vname = getvictim_cache_name();
+    if (vname != null) {
+      list.add(name + ":victim_cache_name");
+      list.add("" + getvictim_cache_name());
+    }
     
     list.add(name + ":gets");
     list.add("" + getcache_gets());
