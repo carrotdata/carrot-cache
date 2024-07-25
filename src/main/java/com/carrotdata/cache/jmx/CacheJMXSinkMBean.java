@@ -43,6 +43,19 @@ public interface CacheJMXSinkMBean {
    */
   long getused_size_bytes();
 
+  
+  /**
+   * Index size bytes
+   * @return index size
+   */
+  long getindex_size_bytes();
+  
+  /**
+   *  Raw data size (before compression)
+   * @return raw data size
+   */
+  long getraw_size_bytes();
+  
   /**
    * Get cache allocated size ratio
    * @return ratio
@@ -54,7 +67,31 @@ public interface CacheJMXSinkMBean {
    * @return used size ratio
    */
   double getused_size_ratio();
+  
+  /**
+   * Get cache active data set size (estimated)
+   * @return active data set size
+   */
+  long getactive_dataset_size();
 
+  /**
+   * Get active data set size ratio relative to used storage size
+   * @return active data set ration
+   */
+  double getactive_dataset_size_ratio();
+  
+  /**
+   * Get number of items in the cache
+   * @return number of items
+   */
+  long get_items();
+
+  /**
+   *  Get number of active items
+   * @return number of active items
+   */
+  long get_active_items();
+  
   /**
    * Cache total number of put operations (including victim cache)
    * @return total puts
@@ -126,18 +163,6 @@ public interface CacheJMXSinkMBean {
    * @return overall hit ratio
    */
   double getoverall_hit_ratio();
-
-  /**
-   * Get cache active data set size (estimated)
-   * @return active data set size
-   */
-  long getactive_dataset_size();
-
-  /**
-   * Get active data set size ratio relative to used storage size
-   * @return active data set ration
-   */
-  double getactive_dataset_size_ratio();
 
   /**
    * Get total bytes written (including GC)

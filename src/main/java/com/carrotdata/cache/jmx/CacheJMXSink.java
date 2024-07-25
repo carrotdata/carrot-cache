@@ -13,7 +13,9 @@ package com.carrotdata.cache.jmx;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import com.carrotdata.cache.Cache;
 import com.carrotdata.cache.Scavenger;
@@ -52,28 +54,63 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
 
   @Override
   public long getallocated_size_bytes() {
-    return cache.getStorageAllocated();
+    return cache.getTotalAllocated();
   }
-
-  @Override
-  public long getused_size_bytes() {
-    return cache.getRawDataSize();
-  }
-
+  
   @Override
   public double getallocated_size_ratio() {
     long max = cache.getMaximumCacheSize();
-    long allocd = cache.getStorageAllocated();
+    long allocd = cache.getTotalAllocated();
     return (double) allocd / max;
   }
-
+  
+  @Override
+  public long getused_size_bytes() {
+    return cache.getTotalUsed();
+  }
+  
   @Override
   public double getused_size_ratio() {
     long max = cache.getMaximumCacheSize();
-    long used = cache.getRawDataSize();
+    long used = cache.getTotalUsed();
     return (double) used / max;
   }
+  
+  /**
+   * Index size bytes
+   * @return index size
+   */
+  public long getindex_size_bytes() {
+    return this.cache.getEngine().getMemoryIndex().getAllocatedMemory();
+  }
+  
+  @Override
+  public long getraw_size_bytes() {
+    return cache.getRawDataSize();
+  }
+  
+  @Override
+  public long getactive_dataset_size() {
+    IOEngine engine = cache.getEngine();
+    return engine.activeDataSize();
+  }
 
+  @Override
+  public double getactive_dataset_size_ratio() {
+    IOEngine engine = cache.getEngine();
+    return engine.activeSizeRatio();
+  }
+  
+  @Override
+  public long get_items() {
+    return cache.size();
+  }
+
+  @Override
+  public long get_active_items() {
+    return cache.activeSize();
+  }
+  
   @Override
   public long gettotal_gets() {
     return cache.getTotalGets();
@@ -103,18 +140,6 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   @Override
   public double getoverall_hit_ratio() {
     return cache.getOverallHitRate();
-  }
-
-  @Override
-  public long getactive_dataset_size() {
-    IOEngine engine = cache.getEngine();
-    return engine.activeDataSize();
-  }
-
-  @Override
-  public double getactive_dataset_size_ratio() {
-    IOEngine engine = cache.getEngine();
-    return engine.activeSizeRatio();
   }
 
   @Override
@@ -249,6 +274,8 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
 
   @Override
   public double getoverall_avg_read_rate() {
+    //FIXME: Epoch can be loaded from saved cache
+    // we need server start time
     long overallRead = getoverall_bytes_read();
     long time = System.currentTimeMillis() - Epoch.getEpochStartTime();
     time /= 1000;
@@ -348,5 +375,150 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     long allocd = getallocated_size_bytes();
     long compressed = getcompressed_size_bytes();
     return (double) allocd / compressed;
+  }
+  
+  public List<String> asList() {
+    List<String> list = new ArrayList<String>();
+    String name = cache.getName();
+    list.add("epoch_start_time");
+    list.add(getepoch_start_time());
+    list.add(name + ":type");
+    list.add(gettype());
+    list.add(name + ":max_memory");    
+    list.add("" + getmax_size_bytes());
+    list.add(name + ":allocated_memory");
+    list.add("" + getallocated_size_bytes());
+    list.add(name + ":used_memory");
+    list.add("" + getused_size_bytes());
+    list.add(name + ":raw_data_size");
+    list.add("" + getraw_size_bytes());
+    list.add(name + ":index_size");
+    list.add("" + getindex_size_bytes());
+    list.add(name + ":allocated_size_ratio");
+    list.add("" + getallocated_size_ratio());
+    list.add(name + ":used_size_ratio");
+    list.add("" + getused_size_ratio());
+    list.add(name + ":active_dataset_size");
+    list.add("" + getactive_dataset_size());
+    list.add(name + ":active_dataset_size_ratio");
+    list.add("" + getactive_dataset_size_ratio());
+    list.add(name + ":items");
+    list.add("" + get_items());
+    
+    list.add(name + ":active_items");
+    list.add("" + get_active_items());  
+    
+    list.add(name + ":total_puts");
+    list.add("" + gettotal_puts()); 
+    
+    list.add(name + ":total_inserts");
+    list.add("" + gettotal_inserts()); 
+
+    list.add(name + ":total_updates");
+    list.add("" + gettotal_updates());
+    
+    list.add(name + ":total_deletes");
+    list.add("" + gettotal_deletes());
+
+    list.add(name + ":total_gets");
+    list.add("" + gettotal_gets());
+    list.add(name + ":total_hits");
+    list.add("" + gettotal_hits());
+    
+    list.add(name + ":is_hybrid");
+    list.add("" + getcache_hybrid());
+    
+    list.add(name + ":victim_cache_name");
+    list.add("" + getvictim_cache_name());
+    
+    list.add(name + ":gets");
+    list.add("" + getcache_gets());
+    
+    list.add(name + ":writes");
+    list.add("" + getcache_writes());
+    
+    list.add(name + ":hit_ratio");
+    list.add("" + getcache_hit_ratio());
+
+    list.add(name + ":overall_hit_ratio");
+    list.add("" + getoverall_hit_ratio());
+    
+    list.add(name + ":total_bytes_written");
+    list.add("" + gettotal_bytes_written());
+
+    list.add(name + ":avg_write_rate");
+    list.add("" + getcache_avg_write_rate());
+    
+    list.add(name + ":total_avg_write_rate");
+    list.add("" + gettotal_avg_write_rate());
+    
+    list.add(name + ":bytes_written");
+    list.add("" + getcache_bytes_written());
+        
+    list.add(name + ":bytes_read");
+    list.add("" + getcache_bytes_read());
+    
+    list.add(name + ":total_bytes_read");
+    list.add("" + getoverall_bytes_read());
+
+    list.add(name + ":avg_read_rate");
+    list.add("" + getcache_avg_read_rate());
+    
+    list.add(name + ":total_avg_read_rate");
+    list.add("" + getoverall_avg_read_rate());
+    
+    list.add(name + ":gc_bytes_written");
+    list.add("" + getgc_bytes_written());
+    
+    list.add(name + ":gc_avg_write_rate");
+    list.add("" + getgc_avg_write_rate());
+    
+    list.add(name + ":gc_number_of_runs");
+    list.add("" + getgc_number_of_runs());
+        
+    list.add(name + ":gc_bytes_scanned");
+    list.add("" + getgc_bytes_scanned());
+    
+    list.add(name + ":gc_bytes_freed");
+    list.add("" + getgc_bytes_freed());
+    
+    list.add(name + ":io_avg_read_duration");
+    list.add("" + getio_avg_read_duration());
+    
+    list.add(name + ":io_avg_read_size");
+    list.add("" + getio_avg_read_size());
+
+    /**************************************
+     * Compression
+     *************************************/
+    list.add(name + ":compression_enabled");
+    list.add("" + getcompression_enabled());
+    
+    if (getcompression_enabled()) {
+      list.add(name + ":compression_codec");
+      list.add("" + getcompression_codec());
+            
+      list.add(name + ":compression_level");
+      list.add("" + getcompression_level());
+            
+      list.add(name + ":compression_dictionary_enabled");
+      list.add("" + getcompression_dictionary_enabled());
+      
+      list.add(name + ":compression_dictionary_size");
+      list.add("" + getcompression_dictionary_size());
+            
+      list.add(name + ":compressed_size");
+      list.add("" + getcompressed_size_bytes());
+      
+      list.add(name + ":compression_block_size");
+      list.add("" + getcompression_block_size());
+      
+      list.add(name + ":compression_keys_enabled");
+      list.add("" + getcompression_keys_enabled());
+      
+      list.add(name + ":compression_ratio");
+      list.add("" + getcompression_ratio());
+    }
+    return list;
   }
 }
