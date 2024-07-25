@@ -384,8 +384,8 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   public List<String> asList() {
     List<String> list = new ArrayList<String>();
     String name = cache.getName();
-    list.add(name + ":epoch_start_time");
-    list.add(getepoch_start_time());
+    //list.add(name + ":epoch_start_time");
+    //list.add(getepoch_start_time());
     list.add(name + ":type");
     list.add(gettype());
     list.add(name + ":max_memory");    

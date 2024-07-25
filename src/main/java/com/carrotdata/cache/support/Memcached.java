@@ -1252,11 +1252,18 @@ public class Memcached {
 
   /**
    * General cache statistics
+   * TODO: works only for single and two-cache configurations 
    * @return list of key-value (key1, value1, key2, value2, ...)
    */
   public List<String> stats() {
     CacheJMXSink sink = new CacheJMXSink(cache);
-    return sink.asList();
+    List<String> result = sink.asList();
+    Cache victim = cache.getVictimCache();
+    if (victim != null) {
+      sink = new CacheJMXSink(victim);
+      result.addAll(sink.asList());
+    }
+    return result;
   }
   
   /**
