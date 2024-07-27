@@ -215,8 +215,30 @@ public class Memcached {
         throw new IOException("No cache(s) were defined in the configuration file");
       }
     }
+    logBaseConfig();
   }
 
+  private void logBaseConfig() {
+    Cache c = this.cache;
+    logCacheConf(c);
+    c = c.getVictimCache();
+    if (c != null) {
+      logCacheConf(c);
+    }
+  }
+  
+  private void logCacheConf(Cache c) {
+    LOG.info("************************************************");    
+    LOG.info("Cache name             : {}", c.getName());
+    LOG.info("Cache type             : {}", c.getCacheType());
+    LOG.info("Max memory             : {}", c.getMaximumCacheSize());
+    LOG.info("Total allocd memory    : {}", c.getTotalAllocated());
+    LOG.info("Storage allocd memory  : {}", c.getStorageAllocated());
+    LOG.info("Index allocd memory    : {}", c.getEngine().getMemoryIndex().getAllocatedMemory());
+    LOG.info("************************************************");    
+
+  }
+  
   private Cache fromConfig() throws IOException {
     CacheConfig conf = CacheConfig.getInstance();
 
