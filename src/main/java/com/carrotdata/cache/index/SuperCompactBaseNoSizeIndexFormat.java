@@ -16,16 +16,18 @@ import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
 /**
- * Index format for main queue (cache) It does not support expiration
+ * Compact index format takes only 8 bytes per cached entry: 
+ * 2 bytes: Bits 15 - 0 keep 16 bits of a hashed key 8 byte value starting with a bit L + 1,
+ * L is defined in configuration file as 'index.slots.power', default value is 10.
+ * Memory index hash table size = 2**L
+ * 2 bytes - segment id (lowest 15 bits only, bit 15 is used for 1-bit hit counter) 
+ * 4 - data offset in a segment
  */
-public class SubCompactBaseNoSizeIndexFormat extends AbstractIndexFormat {
+public class SuperCompactBaseNoSizeIndexFormat extends AbstractIndexFormat {
+
   int L; // index.slots.power from configuration
 
-  /*
-   * MQ Index item is 10 bytes: 4 bytes - hashed key value,  6 bytes
-   * - location in the storage - (2 - segment id, 4 offset in the segment)
-   */
-  public SubCompactBaseNoSizeIndexFormat() {
+  public SuperCompactBaseNoSizeIndexFormat() {
     super();
   }
 
@@ -42,20 +44,23 @@ public class SubCompactBaseNoSizeIndexFormat extends AbstractIndexFormat {
   @Override
   public final boolean equals(long ptr, long hash) {
     int off = this.hashOffset;
-    int v = UnsafeAccess.toInt(ptr + off);
-    v &= 0x7fffffff;
-    hash = (int) (hash >>> (32 - L + 1));
-    hash &= 0x7fffffff;
+    int v = UnsafeAccess.toShort(ptr + off) & 0xffff;
+    hash = ((hash >>> (64 - L - 16)) & 0xffff);
     return v == hash;
   }
 
   @Override
   public int indexEntrySize() {
-    return 10;
+    return 2 * Utils.SIZEOF_SHORT + Utils.SIZEOF_INT;
   }
 
   @Override
   public final int fullEntrySize(long ptr) {
+    return this.indexEntrySize;
+  }
+
+  @Override
+  public final int fullEntrySize(int keySize, int valueSize) {
     return this.indexEntrySize;
   }
 
@@ -65,32 +70,21 @@ public class SubCompactBaseNoSizeIndexFormat extends AbstractIndexFormat {
   }
 
   @Override
-  public final int getKeyValueSize(long buffer) {
+  public int getKeyValueSize(long buffer) {
+    // this index format does not store k-v size
     return -1;
   }
 
   @Override
   public final int getSegmentId(long buffer) {
     int off = this.sidOffset;
-    return UnsafeAccess.toShort(buffer + off) & 0xffff;
+    return UnsafeAccess.toShort(buffer + off) & 0x7fff;
   }
 
   @Override
   public final long getOffset(long buffer) {
     int off = this.dataOffsetOffset;
-    return UnsafeAccess.toInt(buffer + off) & 0xffffffff;
-  }
-
-  @Override
-  public int getEmbeddedOffset() {
-    // TODO
-    return 0;
-  }
-
-  @Override
-  public long getExpire(long ibPtr, long buffer) {
-    // Does not support expiration
-    return -1;
+    return UnsafeAccess.toInt(buffer + off);
   }
 
   @Override
@@ -98,60 +92,49 @@ public class SubCompactBaseNoSizeIndexFormat extends AbstractIndexFormat {
     return 3 * Utils.SIZEOF_SHORT;
   }
 
-  @Override
-  public final int getHitCount(long ptr) {
-    int off = this.hashOffset;
-    int ref = UnsafeAccess.toInt(ptr + off);
-    return ref >>> 31;
+  public final int getHitCount(long buffer) {
+    int off = this.sidOffset;
+    return (UnsafeAccess.toShort(buffer + off) & 0x8000) >>> 15;
   }
 
   @Override
   public final void hit(long ptr) {
-    int off = this.hashOffset;
-    int v = UnsafeAccess.toInt(ptr + off);
-    v |= 0x80000000;
-    UnsafeAccess.putInt(ptr + off, v);
+    int off = this.sidOffset;
+    int v = UnsafeAccess.toShort(ptr + off) & 0xffff;
+    v |= 0x8000;
+    UnsafeAccess.putShort(ptr + off, (short) v);
   }
 
   @Override
-  public final int fullEntrySize(int keySize, int valueSize) {
-    return this.indexEntrySize;
+  public int getEmbeddedOffset() {
+    return Utils.SIZEOF_SHORT;
   }
 
   @Override
   public final int getHashBit(long ptr, int n) {
     int off = this.hashOffset;
     // TODO:test
-    return (UnsafeAccess.toInt(ptr + off) >>> 32 - n + L - 1) & 1;
+    return ((UnsafeAccess.toShort(ptr + off) & 0xffff) >>> (16 - n + L)) & 1;
   }
 
   @Override
   public void writeIndex(long ibPtr, long ptr, byte[] key, int keyOffset, int keySize, byte[] value,
-      int valueOffset, int valueSize, int sid, int dataOffset, int dataSize,
-      long expire /* not supported here */) {
+      int valueOffset, int valueSize, int sid, int dataOffset, int dataSize, long expire) {
     long hash = Utils.hash64(key, keyOffset, keySize);
-    int $hash = (int) (hash >>> 32 - L + 1) & 0x7fffffff;
-
-    ptr += this.hashOffset;
-    UnsafeAccess.putInt(ptr, $hash);
-    ptr += Utils.SIZEOF_INT;
-    UnsafeAccess.putShort(ptr, (short) sid);
-    ptr += Utils.SIZEOF_SHORT;
-    UnsafeAccess.putInt(ptr, dataOffset);
+    short $hash = (short) (hash >>> 64 - L - 16);
+    UnsafeAccess.putShort(ptr + hashOffset(), $hash);
+    UnsafeAccess.putShort(ptr + sidOffset(), (short) sid);
+    UnsafeAccess.putInt(ptr + dataOffsetOffset(), dataOffset);
   }
 
   @Override
   public void writeIndex(long ibPtr, long ptr, long keyPtr, int keySize, long valuePtr,
       int valueSize, int sid, int dataOffset, int dataSize, long expire) {
     long hash = Utils.hash64(keyPtr, keySize);
-    int $hash = (int) (hash >>> 32 - L + 1) & 0x7fffffff;
-
-    ptr += this.hashOffset;
-    UnsafeAccess.putInt(ptr, $hash);
-    ptr += Utils.SIZEOF_INT;
-    UnsafeAccess.putShort(ptr, (short) sid);
-    ptr += Utils.SIZEOF_SHORT;
-    UnsafeAccess.putInt(ptr, dataOffset);
+    short $hash = (short) (hash >>> 64 - L - 16);
+    UnsafeAccess.putShort(ptr + hashOffset(), $hash);
+    UnsafeAccess.putShort(ptr + sidOffset(), (short) sid);
+    UnsafeAccess.putInt(ptr + dataOffsetOffset(), dataOffset);
   }
 
   /**
@@ -167,7 +150,7 @@ public class SubCompactBaseNoSizeIndexFormat extends AbstractIndexFormat {
    * @return offset
    */
   public int sidOffset() {
-    return 4;
+    return Utils.SIZEOF_SHORT;
   }
 
   /**
@@ -175,15 +158,7 @@ public class SubCompactBaseNoSizeIndexFormat extends AbstractIndexFormat {
    * @return offset
    */
   public int dataOffsetOffset() {
-    return 6;
-  }
-
-  /**
-   * Size offset
-   * @return offset
-   */
-  public int sizeOffset() {
-    return -1;
+    return 2 * Utils.SIZEOF_SHORT;
   }
 
   /**
@@ -201,10 +176,14 @@ public class SubCompactBaseNoSizeIndexFormat extends AbstractIndexFormat {
   }
 
   @Override
+  public int sizeOffset() {
+    // TODO Auto-generated method stub
+    return 0;
+  }
+
+  @Override
   public final void updateIndex(long ptr, int sid, int dataOffset) {
-    ptr += this.hashOffset + Utils.SIZEOF_INT;
-    UnsafeAccess.putShort(ptr, (short) sid);
-    ptr += Utils.SIZEOF_SHORT;
-    UnsafeAccess.putInt(ptr, dataOffset);
+    UnsafeAccess.putShort(ptr + sidOffset(), (short) (sid & 0xffff));
+    UnsafeAccess.putInt(ptr + dataOffsetOffset(), dataOffset);
   }
 }
