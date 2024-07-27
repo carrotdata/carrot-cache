@@ -67,10 +67,10 @@ public class CacheConfig {
   public final static String CACHES_NAME_LIST_KEY = "cache.names";
 
   /** By default we have only one cache */
-  public final static String DEFAULT_CACHES_NAME_LIST = "cache.types"; // only one cache
+  public final static String DEFAULT_CACHES_NAME_LIST = "cache"; // only one cache
 
   /** Caches types ('memory', 'file' only supported), comma-separated */
-  public final static String CACHES_TYPES_LIST_KEY = "cache.types.list";
+  public final static String CACHES_TYPES_LIST_KEY = "cache.types";
 
   /** By default cache type is memory */
   public final static String DEFAULT_CACHES_TYPES_LIST = "memory";
@@ -2804,6 +2804,5 @@ public class CacheConfig {
       l = (int) Math.floor(Math.log(maxItems / 100) / Math.log(2));
       setStartIndexNumberOfSlotsPower(cacheName, l);
     }
-
   }
 }
