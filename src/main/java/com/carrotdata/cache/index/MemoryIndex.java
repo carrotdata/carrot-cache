@@ -560,7 +560,7 @@ public final class MemoryIndex implements Persistent {
       UnsafeAccess.putShort(index_base[i], (short) (size));
       // Number of entries and data size are 0
     }
-    this.allocatedMemory.addAndGet(size * index_base.length);
+    this.allocatedMemory.addAndGet((long) size * index_base.length);
     ref_index_base.set(index_base);
     initLocks();
   }

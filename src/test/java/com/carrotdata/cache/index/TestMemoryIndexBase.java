@@ -80,8 +80,8 @@ public class TestMemoryIndexBase {
       values[i] = TestUtils.randomBytes(valueSize, r);
       mKeys[i] = TestUtils.randomMemory(keySize, r);
       mValues[i] = TestUtils.randomMemory(valueSize, r);
-      sids[i] = (short) r.nextInt(32000);
-      offsets[i] = nextOffset(r, 100000000);
+      sids[i] = (short) r.nextInt(4096);
+      offsets[i] = nextOffset(r, (256 << 20) - 1);
       sizes[i] = nextSize(keySize, valueSize);
       expires[i] = nextExpire();
     }

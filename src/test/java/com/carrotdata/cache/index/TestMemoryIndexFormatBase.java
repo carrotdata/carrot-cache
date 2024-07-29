@@ -67,8 +67,8 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase {
     for (int i = 0; i < numRecords; i++) {
       short expSid = sids[i];
       int expOffset = offsets[i];
-      sids[i] = (short) r.nextInt(32000);
-      offsets[i] = nextOffset(r, 100000000);
+      sids[i] = (short) r.nextInt(4096); // For index format with limited sid and offset support
+      offsets[i] = nextOffset(r, (256 << 20) - 1);
       MutationResult res =
           memoryIndex.compareAndUpdate(keys[i], 0, keySize, expSid, expOffset, sids[i], offsets[i]);
       if (res == MutationResult.UPDATED) {
@@ -108,11 +108,17 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase {
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     int verified = 0;
+    int notFound = 0;
+    int sidIncorrect = 0;
+    int offsetIncorrect = 0;
+    int sizeIncorrect = 0;
+    int expireIncorrect=0;
     for (int i = 0; i < numRecords; i++) {
       int result = (int) memoryIndex.find(keys[i], 0, keySize, hit, buf, entrySize);
       if (result > 0) {
         assertEquals(entrySize, result);
       } else {
+        notFound ++;
         continue;
       }
 
@@ -120,21 +126,26 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase {
       int offset = (int) format.getOffset(buf);
       int size = (int) format.getKeyValueSize(buf);
       if (sids[i] != sid) {
+        sidIncorrect++;
         continue;
       }
       if (offsets[i] != offset) {
+        offsetIncorrect++;
         continue;
       }
       if (sizes[i] != size) {
+        sizeIncorrect++;
         continue;
       }
       long expire = memoryIndex.getExpire(keys[i], 0, keySize);
       if (!sameExpire(expires[i], expire)) {
+        expireIncorrect++;
         continue;
       }
       verified++;
     }
     UnsafeAccess.free(buf);
+    //LOG.info("notfound={} sid ={} off={} expire={}", notFound, sidIncorrect, offsetIncorrect, expireIncorrect);
     assertEquals(expected, verified);
   }
 
@@ -253,8 +264,8 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase {
     for (int i = 0; i < numRecords; i++) {
       short expSid = sids[i];
       int expOffset = offsets[i];
-      sids[i] = (short) r.nextInt(32000);
-      offsets[i] = nextOffset(r, 100000000);
+      sids[i] = (short) r.nextInt(4096);
+      offsets[i] = nextOffset(r, (256 << 20) - 1);
       MutationResult res =
           memoryIndex.compareAndUpdate(mKeys[i], keySize, expSid, expOffset, sids[i], offsets[i]);
       if (res == MutationResult.UPDATED) {
