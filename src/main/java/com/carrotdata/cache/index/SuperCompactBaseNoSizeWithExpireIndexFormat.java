@@ -12,7 +12,7 @@
 package com.carrotdata.cache.index;
 
 /**
- * Format of an index entry (10 bytes): expire - 2 bytes ,hash - 2 bytes sid - 2 bytes, offset - 4
+ * Format of an index entry (11 bytes): expire - 2 bytes hash - 3 bytes sid - 2 bytes offset - 4
  * bytes
  */
 public final class SuperCompactBaseNoSizeWithExpireIndexFormat

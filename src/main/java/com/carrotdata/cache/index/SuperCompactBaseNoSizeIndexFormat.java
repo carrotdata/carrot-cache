@@ -16,8 +16,8 @@ import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
 /**
- * Compact index format takes only 8 bytes per cached entry: 
- * 2 bytes: Bits 15 - 0 keep 16 bits of a hashed key 8 byte value starting with a bit L + 1,
+ * Compact index format takes only 9 bytes per cached entry: 
+ * 3 bytes:  keep 24 bits of a hashed key 8 byte value starting with a bit L + 1,
  * L is defined in configuration file as 'index.slots.power', default value is 10.
  * Memory index hash table size = 2**L
  * 2 bytes - segment id (lowest 15 bits only, bit 15 is used for 1-bit hit counter) 
@@ -44,14 +44,16 @@ public class SuperCompactBaseNoSizeIndexFormat extends AbstractIndexFormat {
   @Override
   public final boolean equals(long ptr, long hash) {
     int off = this.hashOffset;
-    int v = UnsafeAccess.toShort(ptr + off) & 0xffff;
-    hash = ((hash >>> (64 - L - 16)) & 0xffff);
-    return v == hash;
+    int v1 = UnsafeAccess.toInt(ptr + off) & 0xffffffff;
+    v1 >>>= 8;
+    hash = ((hash >>> (64 - L - 24)) & 0xffffff);
+    
+    return v1 == hash;
   }
 
   @Override
   public int indexEntrySize() {
-    return 2 * Utils.SIZEOF_SHORT + Utils.SIZEOF_INT;
+    return 4 * Utils.SIZEOF_SHORT + Utils.SIZEOF_BYTE;
   }
 
   @Override
@@ -114,15 +116,15 @@ public class SuperCompactBaseNoSizeIndexFormat extends AbstractIndexFormat {
   public final int getHashBit(long ptr, int n) {
     int off = this.hashOffset;
     // TODO:test
-    return ((UnsafeAccess.toShort(ptr + off) & 0xffff) >>> (16 - n + L)) & 1;
+    return ((UnsafeAccess.toInt(ptr + off)) >>> (32 - n + L)) & 1;
   }
 
   @Override
   public void writeIndex(long ibPtr, long ptr, byte[] key, int keyOffset, int keySize, byte[] value,
       int valueOffset, int valueSize, int sid, int dataOffset, int dataSize, long expire) {
     long hash = Utils.hash64(key, keyOffset, keySize);
-    short $hash = (short) (hash >>> 64 - L - 16);
-    UnsafeAccess.putShort(ptr + hashOffset(), $hash);
+    int $hash =  (int) (hash >>> 64 - L - 32);
+    UnsafeAccess.putInt(ptr + hashOffset(), $hash);
     UnsafeAccess.putShort(ptr + sidOffset(), (short) sid);
     UnsafeAccess.putInt(ptr + dataOffsetOffset(), dataOffset);
   }
@@ -131,8 +133,8 @@ public class SuperCompactBaseNoSizeIndexFormat extends AbstractIndexFormat {
   public void writeIndex(long ibPtr, long ptr, long keyPtr, int keySize, long valuePtr,
       int valueSize, int sid, int dataOffset, int dataSize, long expire) {
     long hash = Utils.hash64(keyPtr, keySize);
-    short $hash = (short) (hash >>> 64 - L - 16);
-    UnsafeAccess.putShort(ptr + hashOffset(), $hash);
+    int $hash =  (int) (hash >>> 64 - L - 32);
+    UnsafeAccess.putInt(ptr + hashOffset(), $hash);
     UnsafeAccess.putShort(ptr + sidOffset(), (short) sid);
     UnsafeAccess.putInt(ptr + dataOffsetOffset(), dataOffset);
   }
@@ -150,7 +152,7 @@ public class SuperCompactBaseNoSizeIndexFormat extends AbstractIndexFormat {
    * @return offset
    */
   public int sidOffset() {
-    return Utils.SIZEOF_SHORT;
+    return Utils.SIZEOF_SHORT + Utils.SIZEOF_BYTE;
   }
 
   /**
@@ -158,7 +160,7 @@ public class SuperCompactBaseNoSizeIndexFormat extends AbstractIndexFormat {
    * @return offset
    */
   public int dataOffsetOffset() {
-    return 2 * Utils.SIZEOF_SHORT;
+    return 2 * Utils.SIZEOF_SHORT + Utils.SIZEOF_BYTE;
   }
 
   /**

@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
 import com.carrotdata.cache.ObjectCache;
 
 public class RangeTree {
-  private static final Logger LOG = LoggerFactory.getLogger(ObjectCache.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RangeTree.class);
 
   public static class Range implements Comparable<Range> {
     long start;
