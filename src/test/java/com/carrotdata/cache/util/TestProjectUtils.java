@@ -48,6 +48,18 @@ public class TestProjectUtils {
   }
 
   @Test
+  public void testEndianness() {
+    Random r = new Random();
+    int i1 = r.nextInt();
+    i1 &= 0xffffff00;
+    long ptr = UnsafeAccess.malloc(8);
+    UnsafeAccess.putInt(ptr, i1);
+    UnsafeAccess.putShort(ptr + 3, (short) 0);
+    int i2 = UnsafeAccess.toInt(ptr);
+    LOG.info("i1={} i2={}", i1, i2);
+  }
+  
+  @Test
   public void testReflection() {
     List<String> list = new ArrayList<>();
     list.add("test");
