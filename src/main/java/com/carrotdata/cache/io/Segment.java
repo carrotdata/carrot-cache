@@ -44,7 +44,6 @@ import com.carrotdata.cache.util.Utils;
 public class Segment implements Persistent {
 
   /** Logger */
-  @SuppressWarnings("unused")
   private static final Logger LOG = LoggerFactory.getLogger(Segment.class);
 
   public final static int META_SIZE = Utils.SIZEOF_LONG;
@@ -669,7 +668,7 @@ public class Segment implements Persistent {
    * @param incr increment
    * @return new number of entries
    */
-  private int incrNumEntries(int incr) {
+  int incrNumEntries(int incr) {
     return this.info.totalItems.addAndGet(incr);
   }
 
@@ -972,16 +971,17 @@ public class Segment implements Persistent {
     WriteBatch wb = getWriteBatch();
     long offset = 0;
     if (wb != null) {
-      if (!wb.acceptsWrite(kvSize)) {
-        // data writer MUST acquire write lock (only for copy data operation)
-        // and call setFull(true) while holding write lock
-        // reset write buffer on success
-        offset = this.dataWriter.append(this, wb);
-        if (offset == -1) {
-          return -1;
-        }
-      }
+
       if (kvSize < wb.batchSize()) {
+        if (!wb.acceptsWrite(kvSize)) {
+          // data writer MUST acquire write lock (only for copy data operation)
+          // and call setFull(true) while holding write lock
+          // reset write buffer on success
+          offset = this.dataWriter.append(this, wb);
+          if (offset == -1) {
+            return -1;
+          }
+        }
         // Add to write buffer
         wb.addOrUpdate(key, keyOffset, keySize, value, valueOffset, valueSize);
         offset = wb.getId();
@@ -1002,6 +1002,7 @@ public class Segment implements Persistent {
           setFull(true);
           return -1;
         }
+        incrNumEntries(1);
       } finally {
         writeUnlock();
       }
@@ -1010,7 +1011,7 @@ public class Segment implements Persistent {
     // Increment uncompressed data size
     this.info.incrementDataSizeUncompressed(kvSize);
     processExpire(expire);
-    incrNumEntries(1);
+    //incrNumEntries(1);
     if (expire > 0) {
       incrExpectedToExpire(1);
     }
@@ -1067,16 +1068,16 @@ public class Segment implements Persistent {
     WriteBatch wb = getWriteBatch();
     long offset = 0;
     if (wb != null) {
-      if (!wb.acceptsWrite(kvSize)) {
-        // data writer MUST acquire write lock (only for copy data operation)
-        // and call setFull(true) while holding write lock
-        // reset write buffer on success
-        offset = this.dataWriter.append(this, wb);
-        if (offset == -1) {
-          return -1;
-        }
-      }
       if (kvSize < wb.batchSize()) {
+        if (!wb.acceptsWrite(kvSize)) {
+          // data writer MUST acquire write lock (only for copy data operation)
+          // and call setFull(true) while holding write lock
+          // reset write buffer on success
+          offset = this.dataWriter.append(this, wb);
+          if (offset == -1) {
+            return -1;
+          }
+        } 
         // Append to write batch
         wb.addOrUpdate(keyPtr, keySize, valuePtr, valueSize);
         offset = wb.getId();
@@ -1095,6 +1096,7 @@ public class Segment implements Persistent {
           setFull(true);
           return -1;
         }
+        incrNumEntries(1);
       } finally {
         writeUnlock();
       }
@@ -1103,7 +1105,7 @@ public class Segment implements Persistent {
     // Increment uncompressed data size
     this.info.incrementDataSizeUncompressed(kvSize);
     processExpire(expire);
-    incrNumEntries(1);
+    //incrNumEntries(1);
     if (expire > 0) {
       incrExpectedToExpire(1);
     }

@@ -47,6 +47,11 @@ public class WriteBatch implements Persistent {
    * Write batch id. It is used as the write batch address for look up operations
    */
   private int id;
+  
+  /**
+   * Number of records in the batch
+   */
+  private volatile int n; 
 
   private ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -114,10 +119,11 @@ public class WriteBatch implements Persistent {
    * @return record offset in the batch buffer or -1 if full
    */
   int addOrUpdate(long keyPtr, int keySize, long valuePtr, int valueSize) {
+    int ret = -1;
     try {
       lock.writeLock().lock();
       if (this.position >= this.batchSize) {
-        return -1; // Its time to process write batch
+        return ret; // Its time to process write batch
       }
 
       // We have k-v size <= pageSize && position + kvSize < capacity
@@ -136,7 +142,8 @@ public class WriteBatch implements Persistent {
         this.position += keySize;
         UnsafeAccess.copy(valuePtr, this.memory + this.position, valueSize);
         this.position += valueSize;
-        return oldPosition;
+        n++;
+        return ret = oldPosition;
       } else {
         // Replace found
         int oldSize = Utils.kvSize(this.memory + off);
@@ -152,7 +159,7 @@ public class WriteBatch implements Persistent {
         off += keySize;
         UnsafeAccess.copy(valuePtr, this.memory + off, valueSize);
         this.position += newSize - oldSize;
-        return $off;
+        return ret = $off;
       }
     } finally {
       lock.writeLock().unlock();
@@ -172,10 +179,11 @@ public class WriteBatch implements Persistent {
    */
   int addOrUpdate(byte[] key, int keyOffset, int keySize, byte[] value, int valueOffset,
       int valueSize) {
+    int ret = 0;
     try {
       lock.writeLock().lock();
       if (this.position >= this.batchSize) {
-        return -1; // Its time to process write batch
+        return ret; // Its time to process write batch
       }
 
       // We have k-v size <= pageSize && position + kvSize < capacity
@@ -194,7 +202,8 @@ public class WriteBatch implements Persistent {
         this.position += keySize;
         UnsafeAccess.copy(value, valueOffset, this.memory + this.position, valueSize);
         this.position += valueSize;
-        return oldPosition;
+        n++;
+        return ret = oldPosition;
       } else {
         // Replace found
         int oldSize = Utils.kvSize(this.memory + off);
@@ -210,7 +219,7 @@ public class WriteBatch implements Persistent {
         off += keySize;
         UnsafeAccess.copy(value, valueOffset, this.memory + off, valueSize);
         this.position += newSize - oldSize;
-        return $off;
+        return ret = $off;
       }
     } finally {
       lock.writeLock().unlock();
@@ -460,6 +469,7 @@ public class WriteBatch implements Persistent {
       // Do we need this?
       lock.writeLock().lock();
       this.position = 0;
+      this.n = 0;
     } finally {
       lock.writeLock().unlock();
     }
@@ -511,6 +521,10 @@ public class WriteBatch implements Persistent {
     return (-this.id & 0xffff) - 2;
   }
 
+  int size() {
+    return n;
+  }
+  
   /**
    * Does this batch accepts writes
    * @return true if accepts, false otherwise
@@ -526,6 +540,7 @@ public class WriteBatch implements Persistent {
     dos.writeInt(this.capacity);
     dos.writeInt(this.position);
     dos.writeInt(this.id);
+    dos.writeInt(n);
     if (this.position > 0) {
       byte[] buf = new byte[this.position];
       UnsafeAccess.copy(this.memory, buf, 0, this.position);
@@ -540,6 +555,7 @@ public class WriteBatch implements Persistent {
     this.capacity = dis.readInt();
     this.position = dis.readInt();
     this.id = dis.readInt();
+    this.n = dis.readInt();
     this.memory = UnsafeAccess.mallocZeroed(this.capacity);
     if (this.position > 0) {
       byte[] buf = new byte[this.position];
