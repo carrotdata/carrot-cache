@@ -11,11 +11,11 @@
  */
 package com.carrotdata.cache.io;
 
+import static com.carrotdata.cache.compression.CompressionCodec.COMP_META_SIZE;
+
 import com.carrotdata.cache.index.MemoryIndex;
 import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
-
-import static com.carrotdata.cache.compression.CompressionCodec.COMP_META_SIZE;
 
 public class CompressedBlockBatchDataWriter extends CompressedBlockDataWriter {
 
@@ -55,10 +55,15 @@ public class CompressedBlockBatchDataWriter extends CompressedBlockDataWriter {
 
   @Override
   public long append(Segment s, WriteBatch batch) {
-    processEmptySegment(s);
     checkCodec();
     long src = batch.memory();
     int len = batch.position();
+    
+    if (len == 0) {
+      // Its not possible
+      throw new RuntimeException("write batch size is 0");
+    }
+    
     if (codec.isTrainingRequired()) {
       codec.addTrainingData(src, len);
     }
@@ -74,10 +79,12 @@ public class CompressedBlockBatchDataWriter extends CompressedBlockDataWriter {
     try {
       s.writeLock();
       if (s.isFull() || s.isSealed()) {
+        //TODO: We compressed write batch already !!! Reuse it
         return -1;
       }
       offset = s.getSegmentDataSize();
       if (s.size() - offset < compressed + COMP_META_SIZE) {
+        //TODO: We compressed write batch already !!! Reuse it
         s.setFull(true);
         return -1;
       }
@@ -91,7 +98,7 @@ public class CompressedBlockBatchDataWriter extends CompressedBlockDataWriter {
       // Update segment
       s.setSegmentDataSize(offset + compressed + COMP_META_SIZE);
       s.setCurrentBlockOffset(offset + compressed + COMP_META_SIZE);
-
+      s.incrNumEntries(batch.size());
     } finally {
       s.writeUnlock();
     }
@@ -118,8 +125,11 @@ public class CompressedBlockBatchDataWriter extends CompressedBlockDataWriter {
 
   @Override
   public long appendSingle(Segment s, long keyPtr, int keySize, long valuePtr, int valueSize) {
-    processEmptySegment(s);
     checkCodec();
+    if (codec.isTrainingRequired()) {
+      codec.addTrainingData(valuePtr, valueSize);
+      //TODO keys
+    }
     int reqSize = Utils.kvSize(keySize, valueSize);
     long dst = getBuffer(reqSize);
     // Copy k-v to dst
@@ -156,6 +166,7 @@ public class CompressedBlockBatchDataWriter extends CompressedBlockDataWriter {
       // Update segment
       s.setSegmentDataSize(offset + compressed + COMP_META_SIZE);
       s.setCurrentBlockOffset(offset + compressed + COMP_META_SIZE);
+      s.incrNumEntries(1);
       return offset;
     } finally {
       s.writeUnlock();
@@ -165,8 +176,11 @@ public class CompressedBlockBatchDataWriter extends CompressedBlockDataWriter {
   @Override
   public long appendSingle(Segment s, byte[] key, int keyOffset, int keySize, byte[] value,
       int valueOffset, int valueSize) {
-    processEmptySegment(s);
     checkCodec();
+    if (codec.isTrainingRequired()) {
+      codec.addTrainingData(value, valueOffset, valueSize);
+      //TODO keys
+    }
     int reqSize = Utils.kvSize(keySize, valueSize);
     long dst = getBuffer(reqSize);
     // Copy k-v to dst
@@ -203,6 +217,7 @@ public class CompressedBlockBatchDataWriter extends CompressedBlockDataWriter {
       // Update segment
       s.setSegmentDataSize(offset + compressed + COMP_META_SIZE);
       s.setCurrentBlockOffset(offset + compressed + COMP_META_SIZE);
+      s.incrNumEntries(1);
       return offset;
     } finally {
       s.writeUnlock();
