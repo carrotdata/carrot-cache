@@ -21,6 +21,7 @@ import com.carrotdata.cache.util.Utils;
 
 public class BaseBatchDataWriter implements DataWriter {
 
+  @SuppressWarnings("unused")
   private static final Logger LOG = LoggerFactory.getLogger(BaseBatchDataWriter.class);
 
   protected int blockSize;
@@ -76,11 +77,7 @@ public class BaseBatchDataWriter implements DataWriter {
     if (requiredSize + s.getSegmentDataSize() > s.size()) {
       return -1;
     }
-    if (s.getAddress() == 0) {
-      LOG.error("PTR=NULL sid={} dataSize={} isSealed={} isValid={} isMemory={}", s.getId(),
-        s.getSegmentDataSize(), Boolean.toString(s.isSealed()), Boolean.toString(s.isValid()),
-        Boolean.toString(s.isMemory()));
-    }
+
     long addr = s.getAddress() + s.getSegmentDataSize();
     // Key size
     Utils.writeUVInt(addr, keySize);
@@ -123,6 +120,7 @@ public class BaseBatchDataWriter implements DataWriter {
       // Update segment
       s.setSegmentDataSize(offset + len);
       s.setCurrentBlockOffset(offset + len);
+      s.incrNumEntries(batch.size());
 
     } finally {
       s.writeUnlock();
@@ -136,11 +134,11 @@ public class BaseBatchDataWriter implements DataWriter {
     final int id = batch.getId();
     while (off < len) {
       int kSize = Utils.readUVInt(src + off);
-      off += Utils.sizeUVInt(kSize);
-      int vSize = Utils.readUVInt(src + off);
-      off += Utils.sizeUVInt(vSize);
-      mi.compareAndUpdate(src + off, kSize, (short) -1, id, sid, (int) offset);
-      off += kSize + vSize;
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      int vSize = Utils.readUVInt(src + off + kSizeSize);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      mi.compareAndUpdate(src + off + kSizeSize + vSizeSize, kSize, (short) -1, id, sid, (int) offset + off);
+      off += kSize + vSize + kSizeSize + vSizeSize;
     }
     // Reset batch to accept new writes
     batch.reset();
