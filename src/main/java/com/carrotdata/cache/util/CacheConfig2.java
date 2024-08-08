@@ -11,6 +11,7 @@ import static com.carrotdata.cache.util.CacheConfigKey.*;
 public class CacheConfig2 {
 
   public static final String DEFAULT_PROPERTY = "default_cache.cfg";
+  private static final Pattern LONG_PATTERN = Pattern.compile("^-?\\d+[Ll]$");
   private static final Pattern NUMERIC_PATTERN = Pattern.compile("^\\d+$");
   private static final Pattern DOUBLE_PATTERN = Pattern.compile("^-?\\d+(\\.\\d+)?$");
 
@@ -83,18 +84,16 @@ public class CacheConfig2 {
       return Boolean.parseBoolean(value);
     }
 
+    if (isValidLong(value)) {
+      return Long.parseLong(value.substring(0, value.length() - 1));
+    }
+
     if (isValidInteger(value)) {
       return Integer.parseInt(value);
     }
 
     if (isValidDouble(value)) {
       return Double.parseDouble(value);
-    }
-
-    try {
-      return Long.parseLong(value);
-    } catch (NumberFormatException empty) {
-      // Not a long
     }
 
     return value; // Return as string if no other type matches
@@ -114,5 +113,18 @@ public class CacheConfig2 {
 
   private static boolean isValidDouble(String value) {
     return DOUBLE_PATTERN.matcher(value).matches();
+  }
+
+  private static boolean isValidLong(String value) {
+    if (!LONG_PATTERN.matcher(value).matches()) {
+      return false;
+    }
+
+    try {
+      Long.parseLong(value.substring(0, value.length() - 1));
+      return true;
+    } catch (NumberFormatException e) {
+      return false;
+    }
   }
 }
