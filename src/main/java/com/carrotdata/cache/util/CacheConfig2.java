@@ -4,17 +4,22 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.LinkedHashMap;
+import java.util.regex.Pattern;
 
 import static com.carrotdata.cache.util.CacheConfigKey.*;
 
 public class CacheConfig2 {
 
   public static final String DEFAULT_PROPERTY = "default_cache.cfg";
+  private static final Pattern NUMERIC_PATTERN = Pattern.compile("^\\d+$");
+  private static final Pattern DOUBLE_PATTERN = Pattern.compile("^-?\\d+(\\.\\d+)?$");
 
   public static void main(String[] args) {
     var cacheConfig = loadDefaultCache();
     for (var entry : cacheConfig.entrySet()) {
-      System.out.println(entry.getKey() + "=" + entry.getValue());
+      System.out.println(
+          entry.getKey().getKey() + "=" + entry.getValue() + " (" + entry.getValue().getClass()
+              .getSimpleName() + ")");
     }
     System.out.println("\nSample get properties:");
     System.out.printf("CACHES_NAME_LIST_KEY: %s\n", cacheConfig.get(CACHES_NAME_LIST_KEY));
@@ -78,16 +83,12 @@ public class CacheConfig2 {
       return Boolean.parseBoolean(value);
     }
 
-    try {
-      return Double.parseDouble(value);
-    } catch (NumberFormatException empty) {
-      // Not a long
+    if (isValidInteger(value)) {
+      return Integer.parseInt(value);
     }
 
-    try {
-      return Integer.parseInt(value);
-    } catch (NumberFormatException empty) {
-      // Not an integer
+    if (isValidDouble(value)) {
+      return Double.parseDouble(value);
     }
 
     try {
@@ -97,5 +98,21 @@ public class CacheConfig2 {
     }
 
     return value; // Return as string if no other type matches
+  }
+
+  private static boolean isValidInteger(String value) {
+    if (!NUMERIC_PATTERN.matcher(value).matches()) {
+      return false;
+    }
+    try {
+      var longValue = Long.parseLong(value);
+      return longValue >= Integer.MIN_VALUE && longValue <= Integer.MAX_VALUE;
+    } catch (NumberFormatException e) {
+      return false;
+    }
+  }
+
+  private static boolean isValidDouble(String value) {
+    return DOUBLE_PATTERN.matcher(value).matches();
   }
 }
