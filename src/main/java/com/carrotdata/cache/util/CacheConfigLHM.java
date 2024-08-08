@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 
 import static com.carrotdata.cache.util.CacheConfigKey.*;
 
-public class CacheConfig2 {
+public class CacheConfigLHM {
 
   public static final String DEFAULT_PROPERTY = "default_cache.cfg";
   private static final Pattern LONG_PATTERN = Pattern.compile("^-?\\d+[Ll]$");
@@ -31,7 +31,7 @@ public class CacheConfig2 {
   public static LinkedHashMap<CacheConfigKey, Object> loadDefaultCache() {
     var linkedProperties = new LinkedHashMap<CacheConfigKey, Object>();
 
-    try (var input = CacheConfig2.class.getClassLoader().getResourceAsStream(DEFAULT_PROPERTY)) {
+    try (var input = CacheConfigLHM.class.getClassLoader().getResourceAsStream(DEFAULT_PROPERTY)) {
       assert input != null;
       try (var reader = new BufferedReader(new InputStreamReader(input))) {
         String line;
