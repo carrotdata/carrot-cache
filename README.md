@@ -42,7 +42,7 @@ Carrot Cache binaries already support the following platforms: macOS (x86_64, aa
 
 ### Build and Install Locally `zstd-jni` Package
 
-You will find instructions here: [zstd-jni package](https://github.com/carrotdata/carrot-cache/edit/main/README.md)
+You will find instructions here: [zstd-jni package](https://github.com/carrotdata/zstd-jni)
 
 ### Build Carrot Cache
 
