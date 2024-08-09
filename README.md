@@ -212,9 +212,8 @@ UnsafeAccess.mallocStats.printStats();
 ```
 
 Happy using and testing, folks.
-
-Best regards,  
-Carrot Data, Inc.
-
 You can reach me easily at:  
 vlad@trycarrots.io
+
+Copyright (c) Carrot Data, Inc. 2024
+
