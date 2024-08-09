@@ -129,9 +129,6 @@ protected Cache createInMemoryCompressedCache(String cacheName) throws IOExcepti
     // data from memory can be saved to
     Path dataDirPath = Files.createTempDirectory(null);
     String dataDir = dataDirPath.toFile().getAbsolutePath();
-    // Snapshot directory contains saved meta information
-    Path snapshotDirPath = Files.createTempDirectory(null);
-    String snapshotDir = snapshotDirPath.toFile().getAbsolutePath();
     
     Builder builder = new Builder(cacheName);
     
