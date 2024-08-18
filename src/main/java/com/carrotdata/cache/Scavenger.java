@@ -395,13 +395,15 @@ public class Scavenger implements Runnable {
   
   private boolean vacuumMode = false;
   
+  private boolean victimEvictAll = false;
+  
   public Scavenger(Cache cache) {
-    // super(NAME + rollingId.getAndIncrement());
     this.cache = cache;
     this.diskCache = cache.isDiskCache();
     this.config = CacheConfig.getInstance();
     String cacheName = this.cache.getName();
     maxInstances = config.getScavengerNumberOfThreads(cacheName);
+    victimEvictAll = config.getVictimEvictAll(cacheName);
     // Update stats
     stats = statsMap.get(cache.getName());
 
@@ -571,7 +573,7 @@ public class Scavenger implements Runnable {
             finished = false;
           } else if (finished && highUsage) {
             finished = false;
-            dumpBelowRatio = 1.0; // dump everything
+            dumpBelowRatio = dumpBelowRatioMax > dumpBelowRatio ? dumpBelowRatioMax : dumpBelowRatio;// improve
           }
           // Dispose segment
           engine.disposeDataSegment(s);
@@ -738,7 +740,7 @@ public class Scavenger implements Runnable {
         // In case of OK resubmit back to the cache, in case of DELETED and victim cache is not null
         // submit to victim cache
         // sanity check
-        if (c != null && (res == Result.OK || (res == Result.DELETED && hitCount > 0))) {
+        if (c != null && (res == Result.OK || (res == Result.DELETED && (victimEvictAll || hitCount > 0)))) {
           // Put value back into the cache or victim cache - it has high popularity
           if (isDirect) {
             c.put(keyPtr, keySize, valuePtr, valSize, expire, rank, groupRank, true, true);
