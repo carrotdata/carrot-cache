@@ -8,7 +8,7 @@
     </appenders>
 
     <Loggers>
-        <Root level="all">
+        <Root level="debug">
             <AppenderRef ref="STDOUT"/>
         </Root>
     </Loggers>

@@ -328,22 +328,6 @@ public final class MemoryIndex implements Persistent {
   }
 
   /**
-   * Set eviction listener
-   * @param aListener
-   */
-  // public void setEvictionListener(EvictionListener aListener) {
-  // this.evictionListener = aListener;
-  // }
-
-  /**
-   * Get eviction listener
-   * @return eviction listener
-   */
-  // public EvictionListener getEvictionListener() {
-  // return this.evictionListener;
-  // }
-
-  /**
    * Set index format
    * @param format index format
    */
