@@ -131,6 +131,9 @@ public class Memcached {
 
   private static void allocBuffer(int sizeRequired) {
     byte[] b = buffer.get();
+    if (sizeRequired > 100000) {
+      LOG.error("allocBuffer:{}", sizeRequired);
+    }
     if (b.length < sizeRequired) {
       b = new byte[sizeRequired];
       buffer.set(b);
@@ -215,46 +218,67 @@ public class Memcached {
         throw new IOException("No cache(s) were defined in the configuration file");
       }
     }
+    checkStatsTask();
     logBaseConfig();
+  }
+
+  private void checkStatsTask() {
+    if (System.getProperty("STATS_TASK") != null) {
+      long interval = 100000;
+      try {
+        interval = Long.parseLong(System.getProperty("STATS_TASK_INTERVAL")) * 1000;
+      } catch (NumberFormatException e) {
+        LOG.warn("STATS_TASK_INTERVAL is not a number");
+      } catch(NullPointerException e) {
+        // swallow
+      }
+      this.cache.startStatsTask(interval);
+    }
   }
 
   private void logBaseConfig() {
     Cache c = this.cache;
     logCacheConf(c);
-    c = c.getVictimCache();
-    if (c != null) {
-      logCacheConf(c);
-    }
   }
   
   private void logCacheConf(Cache c) {
-    LOG.info("************************************************");    
-    LOG.info("Cache name             : {}", c.getName());
+    LOG.info("******************  {} ******************************", c.getName());    
     LOG.info("Cache type             : {}", c.getCacheType());
     LOG.info("Max memory             : {}", c.getMaximumCacheSize());
     LOG.info("Total allocd memory    : {}", c.getTotalAllocated());
     LOG.info("Storage allocd memory  : {}", c.getStorageAllocated());
     LOG.info("Index allocd memory    : {}", c.getEngine().getMemoryIndex().getAllocatedMemory());
-    LOG.info("************************************************");    
-
+    LOG.info("Compression enabled    : {}", c.getCacheConfig().isCacheCompressionEnabled(c.getName()));
+    LOG.info("******************************************************");    
+    Cache cc = c.getVictimCache();
+    LOG.info("Cache {}, victim is {}", c.getName(), cc);
+    if (cc != null) {
+      logCacheConf(cc);
+    }
   }
   
   private Cache fromConfig() throws IOException {
     CacheConfig conf = CacheConfig.getInstance();
 
     String[] cacheNames = conf.getCacheNames();
-    Cache cache = null;
+    Cache cache = null, mainCache = null;
     for (String name : cacheNames) {
       if (!conf.isCacheTLSSupported(name)) {
         conf.setCacheTLSSupported(name, true);
       }
       Cache c = new Cache(name);
+      LOG.info("Create cache {}, victim is {}", c.getName(), c.getVictimCache());
+
+      if (mainCache == null) {
+        mainCache = c;
+      }
       if (cache != null) {
         cache.setVictimCache(c);
+        LOG.info("Set victim cache {} -> {}", cache.getName(), c.getName());
       }
       cache = c;
     }
-    return cache;
+    return mainCache;
   }
 
   /************** Storage commands ******************/
@@ -434,6 +458,7 @@ public class Memcached {
   public OpResult add(long keyPtr, int keySize, long valuePtr, int valueSize, int flags,
       long expTime) {
     // This operation is atomic
+
     try {
       if (expTime < 0) {
         boolean result = cache.expire(keyPtr, keySize);
@@ -452,6 +477,7 @@ public class Memcached {
         return OpResult.NOT_STORED;
       }
       boolean result = cache.put(keyPtr, keySize, ptr, valueSize + Utils.SIZEOF_INT, expTime);
+
       return result ? OpResult.STORED : OpResult.ERROR;
     } catch (IOException e) {
       LOG.error("Error:", e);
@@ -876,6 +902,7 @@ public class Memcached {
     byte[] buf = buffer.get();
     try {
       long size = cache.get(keyPtr, keySize, true, buf, 0);
+
       while (size > buf.length) {
         allocBuffer((int) size);
         buf = buffer.get();
