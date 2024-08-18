@@ -19,9 +19,14 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.carrotdata.cache.Cache;
 import com.carrotdata.cache.util.Utils;
 
 public class BaseFileDataReader implements DataReader {
+  private static final Logger LOG = LoggerFactory.getLogger(BaseFileDataReader.class);
 
   private final int blockSize = 4096;
 
@@ -163,6 +168,7 @@ public class BaseFileDataReader implements DataReader {
     // FIXME: Dirty hack
     offset += Segment.META_SIZE; // add 8 bytes to
     int avail = buffer.length - bufOffset;
+
     // sanity check
     if (size < 0 && avail < 8) {
       return blockSize; // just in case
@@ -181,6 +187,7 @@ public class BaseFileDataReader implements DataReader {
       int toRead = (int) Math.min(blockSize, file.length() - offset);
       toRead = Math.min(toRead, avail);
       readFully(file, offset, buffer, bufOffset, toRead);
+      size = Utils.getItemSize(buffer, bufOffset);
       if (size > avail) {
         return size;
       }
