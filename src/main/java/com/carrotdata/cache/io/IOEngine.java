@@ -486,6 +486,7 @@ public abstract class IOEngine implements Persistent {
    */
   public long get(long keyPtr, int keySize, boolean hit, byte[] buffer, int bufOffset)
       throws IOException {
+
     IndexFormat format = this.index.getIndexFormat();
     // TODO: embedded entry case
     int entrySize = format.indexEntrySize();
@@ -528,6 +529,9 @@ public abstract class IOEngine implements Persistent {
           int size = wb.get(keyPtr, keySize, buffer, bufOffset);
           if (size >= 0) {
             return size;
+          } else {
+            // Collision: key was overriden by another key from some write buffer
+            return NOT_FOUND;
           }
         }
       } while (offset < -1);
@@ -747,6 +751,9 @@ public abstract class IOEngine implements Persistent {
           int size = wb.get(key, keyOffset, keySize, buffer, bufOffset);
           if (size >= 0) {
             return size;
+          } else {
+            // Collision: key was overriden by another key from some write buffer
+            return NOT_FOUND;
           }
         }
       } while (offset < -1); // offset -1 means NOT_FOUND, offset < -1 means item is in write batch
@@ -975,6 +982,9 @@ public abstract class IOEngine implements Persistent {
           int size = wb.get(keyPtr, keySize, buffer);
           if (size >= 0) {
             return size;
+          } else {
+            // Collision: key was overriden by another key from some write buffer
+            return NOT_FOUND;
           }
         }
       } while (offset < -1);
@@ -1197,6 +1207,9 @@ public abstract class IOEngine implements Persistent {
           int size = wb.get(key, keyOffset, keySize, buffer);
           if (size >= 0) {
             return size;
+          } else {
+            // Collision: key was overriden by another key from some write buffer
+            return NOT_FOUND;
           }
         }
       } while (offset < -1);
