@@ -2342,6 +2342,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   @SuppressWarnings("unused")
+  //TODO: remove this code  
   private boolean processPromotion(long ptr, long $ptr) {
     if (this.parentCache == null) {
       return false;
@@ -2368,6 +2369,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   @SuppressWarnings("unused")
+  //TODO: remove this
   private void processEviction(long ptr, long $ptr) {
     if (this.victimCache == null) {
       return;
