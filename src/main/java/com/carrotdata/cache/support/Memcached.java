@@ -209,8 +209,23 @@ public class Memcached {
       throw new IOException("No cache(s) were defined in the configuration file");
     }
     String mainCache = cacheNames[0];
-    if (conf.isSaveOnShutdown(mainCache)) {
-      cache = Cache.loadCache(mainCache);
+    Cache c = null;
+    if (conf.isSaveOnShutdown(mainCache)) {        
+      for (int i = 0; i < cacheNames.length; i++) {
+        Cache cc = Cache.loadCache(cacheNames[i]);
+        if (cc == null) {
+          LOG.error("Failed to load cache '{}', will initialize cache from configuration file instead.", cacheNames[i]);
+          cache = null;
+          // TODO: dispose?
+          break;
+        }
+        if (c != null) {
+          c.setVictimCache(cc);
+        } else {
+          cache = cc;
+        }
+        c = cc;
+      }
     }
     if (cache == null) {
       cache = fromConfig();
