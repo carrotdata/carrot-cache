@@ -30,6 +30,14 @@ The Carrot Cache (CC) project aims to modernize data caching and enable users to
 - **Rolling Restart** in Cluster Mode (Add-On TBI)
 - **Fast Scale Up/Down** in Cluster Mode (Add-On TBI)
 
+## Download
+
+You can download ```Carrot Cache``` Jar - file with dependencies from the latest [Releases](https://github.com/carrotdata/carrot-cache/releases) page. Supported platforms:
+- MacOS Sonoma (x86_64, aarch64)
+- Linux (amd64, aarch64, glibc 2.31+)
+
+If your platform is not supported you can build binaries from the source code.
+
 ## Building Prerequisites
 
 - Java 11+
