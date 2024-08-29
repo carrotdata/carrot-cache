@@ -42,7 +42,7 @@ Carrot Cache binaries already support the following platforms: macOS (x86_64, aa
 
 ### Build and Install Locally `zstd-jni` Package
 
-You will find instructions here: [zstd-jni package](https://github.com/carrotdata/carrot-cache/edit/main/README.md)
+You will find instructions here: [zstd-jni package](https://github.com/carrotdata/zstd-jni)
 
 ### Build Carrot Cache
 
@@ -77,7 +77,7 @@ protected Cache createInMemoryCache(String cacheName) throws IOException {
     
     builder
       .withCacheDataSegmentSize(16_777_216)  // 16MB
-      .withCacheMaximumSize(1024 * 8_589_934_592)  // 8GB 
+      .withCacheMaximumSize(8_589_934_592)  // 8GB 
       .withRecyclingSelector(MinAliveRecyclingSelector.class.getName())
       .withDataDir(dataDir)
       .withMainQueueIndexFormat(SubCompactBaseWithExpireIndexFormat.class.getName())  // This index format supports cache expiration 

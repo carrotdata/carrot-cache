@@ -195,6 +195,9 @@ public class CacheConfig {
   /** Promotion on hit from victim to main cache */
   public static final String CACHE_VICTIM_PROMOTION_ON_HIT_KEY = "victim.promotion.on.hit";
 
+  /** Evict all to victim cache. Default: false - only objects with hits > 0 */
+  public static final String VICTIM_EVICT_ALL_KEY = "victim.evict.all";
+  
   /*
    * Some file systems : ext4, xfs, APFS etc supports sparse files and so called "hole punching" -
    * discarding regions of files. We use different algorithm of compaction when file system supports
@@ -216,7 +219,8 @@ public class CacheConfig {
    * Scavenger run interval key (seconds)
    */
   public static final String SCAVENGER_RUN_INTERVAL_SEC_KEY = "scavenger.run.interval.sec";
-
+  
+  
   /*
    * Cache write throughput controller tolerance limit
    */
@@ -369,6 +373,7 @@ public class CacheConfig {
   public final static String CACHE_PROACTIVE_EXPIRATION_FACTOR_KEY = "proactive.expiration.factor";
 
   public final static String VACUUM_CLEANER_INTERVAL_SEC_KEY = "vacuum.cleaner.interval";
+  
   /** Defaults section */
 
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
@@ -457,6 +462,9 @@ public class CacheConfig {
 
   /** Default Scavenger run interval - 1 min */
   public static final long DEFAULT_SCAVENGER_RUN_INTERVAL_SEC = 60;// 1min
+  
+  /** Default Scavenger evict all to a victim cache */
+  public static final boolean DEFAULT_VICTIM_EVICT_ALL = false;// 1min
 
   /** Default throughput controller tolerance limit */
   public static final double DEFAULT_THROUGHPUT_CONTROLLER_TOLERANCE_LIMIT = 0.05;
@@ -1044,6 +1052,28 @@ public class CacheConfig {
   }
 
   /**
+   * Get evict all to victim
+   * @param cacheName cache name
+   * @return true / false
+   */
+  public boolean getVictimEvictAll(String cacheName) {
+    String value = props.getProperty(cacheName + "." + VICTIM_EVICT_ALL_KEY);
+    if (value != null) {
+      return Boolean.parseBoolean(value);
+    }
+    return getBooleanProperty(VICTIM_EVICT_ALL_KEY, DEFAULT_VICTIM_EVICT_ALL);
+  }
+
+  /**
+   * Set evict all to victim
+   * @param cacheName cache name
+   * @param v true or false
+   */
+  public void setVictimEvictAll(String cacheName, boolean v) {
+    props.setProperty(cacheName + "." + VICTIM_EVICT_ALL_KEY, Boolean.toString(v));
+  }
+
+  /**
    * Get sparse files support for a cache (only for 'file' type caches)
    * @param cacheName cache name
    * @return true / false
@@ -1064,7 +1094,7 @@ public class CacheConfig {
   public void setSparseFilesSupport(String cacheName, boolean v) {
     props.setProperty(cacheName + "." + SPARSE_FILES_SUPPORT_KEY, Boolean.toString(v));
   }
-
+  
   /**
    * Get start index size for a cache
    * @param cacheName cache name

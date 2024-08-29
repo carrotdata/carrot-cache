@@ -857,6 +857,15 @@ public class Builder {
   }
   
   /**
+   * With evict all to victim cache
+   * @param b true or false
+   * @return builder instance
+   */
+  public Builder withVictimEvictAll(boolean b) {
+    conf.setVictimEvictAll(cacheName, b);
+    return this;
+  }
+  /**
    * Build cache
    * @return
    * @throws IOException

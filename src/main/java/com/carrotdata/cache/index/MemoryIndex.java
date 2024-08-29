@@ -77,6 +77,7 @@ public final class MemoryIndex implements Persistent {
       this.result = result;
       this.rank = rank;
       this.hitCount = hitCount;
+      this.expire = expire;
       return this;
     }
 
@@ -326,22 +327,6 @@ public final class MemoryIndex implements Persistent {
       });
     }
   }
-
-  /**
-   * Set eviction listener
-   * @param aListener
-   */
-  // public void setEvictionListener(EvictionListener aListener) {
-  // this.evictionListener = aListener;
-  // }
-
-  /**
-   * Get eviction listener
-   * @return eviction listener
-   */
-  // public EvictionListener getEvictionListener() {
-  // return this.evictionListener;
-  // }
 
   /**
    * Set index format
@@ -1181,9 +1166,11 @@ public final class MemoryIndex implements Persistent {
 
     long $ptr = ptr + this.indexBlockHeaderSize;
     int count = 0;
+    final int indexMetaSize = this.indexFormat.superIndexBlockHeaderSize;
+    final int expireOffset = this.indexFormat.expireOffset;
     while (count < numEntries) {
       // Check if expired - pro-active expiration check
-      long expire = this.indexFormat.getExpire(ptr, $ptr);
+      long expire = this.indexFormat.getExpire(ptr + indexMetaSize, $ptr + expireOffset);
       if (expire > 0) {
         long current = System.currentTimeMillis();
         if (current > expire) {
@@ -1512,7 +1499,8 @@ public final class MemoryIndex implements Persistent {
     int count = 0;
 
     result = result.setResultRankExpire(Result.NOT_FOUND, 0, 0, 0);
-
+    final int indexMetaSize = this.indexFormat.superIndexBlockHeaderSize;
+    final int expireOffset = this.indexFormat.expireOffset;
     this.indexFormat.begin(ptr, true); // force scan
     try {
 
@@ -1528,7 +1516,7 @@ public final class MemoryIndex implements Persistent {
             // hash collision or newer version in write buffer return NOT_FOUND to delete item
             return result;
           }
-          long expire = this.indexFormat.getExpire(ptr, $ptr);
+          long expire = this.indexFormat.getExpire(ptr + indexMetaSize, $ptr + expireOffset);
           long current = System.currentTimeMillis();
           int rank = this.evictionPolicy.getRankForIndex(this.numRanks, count, numEntries);
           int hitCount = this.indexFormat.getHitCount($ptr);
@@ -1543,15 +1531,11 @@ public final class MemoryIndex implements Persistent {
             double popularity = ((double) (numEntries - count)) / numEntries;
             if (popularity <= dumpBelowRatio) {
               // Delete item as having low popularity
-              result.setResultRankExpire(Result.DELETED, rank,hitCount, expire);
+              result.setResultRankExpire(Result.DELETED, rank, hitCount, expire);
             } else {
               result.setResultRankExpire(Result.OK, rank, hitCount, expire);
             }
           }
-          // if (result.getResult() == Result.DELETED && this.evictionListener != null) {
-          // // Report eviction
-          // this.evictionListener.onEviction(ptr, $ptr);
-          // }
           if (result.getResult() == Result.DELETED || result.getResult() == Result.EXPIRED) {
             deleteAt(ptr, $ptr, rank, result.getResult() == Result.EXPIRED ? expire : -1);
           }
@@ -1577,10 +1561,11 @@ public final class MemoryIndex implements Persistent {
     int numEntries = numEntries(ptr);
     long $ptr = ptr + this.indexBlockHeaderSize;
     int count = 0;
-
+    final int indexMetaSize = this.indexFormat.superIndexBlockHeaderSize;
+    final int expireOffset = this.indexFormat.expireOffset;
     while (count < numEntries) {
       if (this.indexFormat.equals($ptr, hash)) {
-        return this.indexFormat.getExpire(ptr, $ptr);
+        return this.indexFormat.getExpire(ptr + indexMetaSize, $ptr + expireOffset);
       }
       count++;
       $ptr += this.indexFormat.fullEntrySize($ptr);
@@ -2349,6 +2334,8 @@ public final class MemoryIndex implements Persistent {
     boolean expired = false;
     long expire = -1;
     int numEntries = numEntries(slotPtr);
+    final int indexMetaSize = this.indexFormat.superIndexBlockHeaderSize;
+    final int expireOffset = this.indexFormat.expireOffset;
     if (numEntries == 0) {
       return;
     }
@@ -2368,7 +2355,7 @@ public final class MemoryIndex implements Persistent {
     }
     long ptr = slotPtr + offsetFor(slotPtr, toEvict);
     if (expired) {
-      expire = this.indexFormat.getExpire(slotPtr, ptr);
+      expire = this.indexFormat.getExpire(slotPtr + indexMetaSize, ptr + expireOffset);
     }
     // // report eviction
     // if (this.evictionListener != null && !expired && !isMainIndex()) {
@@ -2384,8 +2371,10 @@ public final class MemoryIndex implements Persistent {
     int numEntries = numEntries(slotPtr);
     int count = 0;
     long ptr = slotPtr + this.indexBlockHeaderSize;
+    final int indexMetaSize = this.indexFormat.superIndexBlockHeaderSize;
+    final int expireOffset = this.indexFormat.expireOffset;
     while (count < numEntries) {
-      long time = this.indexFormat.getExpire(slotPtr, ptr);
+      long time = this.indexFormat.getExpire(slotPtr + indexMetaSize, ptr + expireOffset);
       if (time > 0 && System.currentTimeMillis() > time) {
         toEvict = count;
         break;

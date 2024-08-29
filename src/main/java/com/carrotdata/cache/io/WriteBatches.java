@@ -37,7 +37,8 @@ public class WriteBatches implements Persistent {
   }
 
   /**
-   * This method is thread -safe, because write batch can not be shared between threads by design
+   * This method is thread-safe, because write batch can not be shared for write operations
+   * between threads by design
    * @param id write batch integer id.
    * @return write batch
    */
