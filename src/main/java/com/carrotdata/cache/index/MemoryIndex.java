@@ -1166,8 +1166,8 @@ public final class MemoryIndex implements Persistent {
 
     long $ptr = ptr + this.indexBlockHeaderSize;
     int count = 0;
-    final int indexMetaSize = this.indexFormat.superIndexBlockHeaderSize;
-    final int expireOffset = this.indexFormat.expireOffset;
+    final int indexMetaSize = 0;//this.indexFormat.superIndexBlockHeaderSize;
+    final int expireOffset = 0;//this.indexFormat.expireOffset;
     while (count < numEntries) {
       // Check if expired - pro-active expiration check
       long expire = this.indexFormat.getExpire(ptr + indexMetaSize, $ptr + expireOffset);
@@ -1499,8 +1499,8 @@ public final class MemoryIndex implements Persistent {
     int count = 0;
 
     result = result.setResultRankExpire(Result.NOT_FOUND, 0, 0, 0);
-    final int indexMetaSize = this.indexFormat.superIndexBlockHeaderSize;
-    final int expireOffset = this.indexFormat.expireOffset;
+    final int indexMetaSize = 0;//this.indexFormat.superIndexBlockHeaderSize;
+    final int expireOffset = 0;//this.indexFormat.expireOffset;
     this.indexFormat.begin(ptr, true); // force scan
     try {
 
@@ -1561,8 +1561,8 @@ public final class MemoryIndex implements Persistent {
     int numEntries = numEntries(ptr);
     long $ptr = ptr + this.indexBlockHeaderSize;
     int count = 0;
-    final int indexMetaSize = this.indexFormat.superIndexBlockHeaderSize;
-    final int expireOffset = this.indexFormat.expireOffset;
+    final int indexMetaSize = 0;//this.indexFormat.superIndexBlockHeaderSize;
+    final int expireOffset = 0;//this.indexFormat.expireOffset;
     while (count < numEntries) {
       if (this.indexFormat.equals($ptr, hash)) {
         return this.indexFormat.getExpire(ptr + indexMetaSize, $ptr + expireOffset);
@@ -2334,8 +2334,8 @@ public final class MemoryIndex implements Persistent {
     boolean expired = false;
     long expire = -1;
     int numEntries = numEntries(slotPtr);
-    final int indexMetaSize = this.indexFormat.superIndexBlockHeaderSize;
-    final int expireOffset = this.indexFormat.expireOffset;
+    final int indexMetaSize = 0;//this.indexFormat.superIndexBlockHeaderSize;
+    final int expireOffset = 0;//this.indexFormat.expireOffset;
     if (numEntries == 0) {
       return;
     }
@@ -2371,8 +2371,8 @@ public final class MemoryIndex implements Persistent {
     int numEntries = numEntries(slotPtr);
     int count = 0;
     long ptr = slotPtr + this.indexBlockHeaderSize;
-    final int indexMetaSize = this.indexFormat.superIndexBlockHeaderSize;
-    final int expireOffset = this.indexFormat.expireOffset;
+    final int indexMetaSize = 0;//this.indexFormat.superIndexBlockHeaderSize;
+    final int expireOffset = 0;//this.indexFormat.expireOffset;
     while (count < numEntries) {
       long time = this.indexFormat.getExpire(slotPtr + indexMetaSize, ptr + expireOffset);
       if (time > 0 && System.currentTimeMillis() > time) {
