@@ -5,7 +5,7 @@
     <artifactId>carrot-cache</artifactId>
     <packaging>jar</packaging>
     <name>Carrot Cache</name>
-    <version>0.12.1</version>
+    <version>0.12.2</version>
     <url>http://www.server.com</url>
     <build>
         <plugins>
