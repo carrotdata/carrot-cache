@@ -376,16 +376,14 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
 
   @Override
   public double getcompression_ratio() {
-    long allocd = getallocated_size_bytes();
-    long compressed = getcompressed_size_bytes();
+    long allocd = getraw_size_bytes();
+    long compressed = getallocated_size_bytes();
     return (double) allocd / compressed;
   }
   
   public List<String> asList() {
     List<String> list = new ArrayList<String>();
     String name = cache.getName();
-    //list.add(name + ":epoch_start_time");
-    //list.add(getepoch_start_time());
     list.add(name + ":type");
     list.add(gettype());
     list.add(name + ":max_memory");    
