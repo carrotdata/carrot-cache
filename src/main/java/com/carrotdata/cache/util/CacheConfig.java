@@ -668,7 +668,7 @@ public class CacheConfig {
 
   /**
    * Load configuration from an input stream
-   * @param is input stream
+   * @param file input stream
    * @return cache configuration object
    * @throws IOException
    */
@@ -745,7 +745,24 @@ public class CacheConfig {
     String value = props.getProperty(name);
     if (value == null) return defValue;
     try {
-      return Long.parseLong(value);
+      value = value.trim().toLowerCase();
+      // input string is first trimmed and converted to lowercase format
+      long multiplier = 1;
+
+      if (value.endsWith("k")) {
+        multiplier = 1024L;
+      } else if (value.endsWith("m")) {
+        multiplier = 1024L * 1024L;
+        // mega is 2 times kilo, giga is 3 times kilo, etc...
+      } else if (value.endsWith("g")) {
+        multiplier = 1024L * 1024L * 1024L;
+      } else if (value.endsWith("t")) {
+        multiplier = 1024L * 1024L * 1024L * 1024L;
+      }
+      if (multiplier > 1){
+        value = value.substring(0, value.length() - 1);
+      }
+      return Long.parseLong(value) * multiplier;
     } catch (NumberFormatException e) {
       // TODO log error
       e.printStackTrace();
@@ -2598,7 +2615,7 @@ public class CacheConfig {
   /**
    * Sets cache compression level
    * @param cacheName cache name
-   * @param compression level
+   * @param level compression level
    */
   public void setCacheCompressionLevel(String cacheName, int level) {
     props.setProperty(cacheName + "." + CACHE_COMPRESSION_LEVEL_KEY, Integer.toString(level));
