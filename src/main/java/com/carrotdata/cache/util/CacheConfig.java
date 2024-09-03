@@ -731,45 +731,58 @@ public class CacheConfig {
 
   public double getDoubleProperty(String name, double defValue) {
     String value = props.getProperty(name);
-    if (value == null) return defValue;
-    try {
-      return Double.parseDouble(value);
-    } catch (NumberFormatException e) {
-      // TODO log error
-      e.printStackTrace();
-    }
-    return defValue;
+    if (value == null) return defValue;    
+    return Double.parseDouble(value);
   }
 
   public long getLongProperty(String name, long defValue) {
     String value = props.getProperty(name);
     if (value == null) return defValue;
-    try {
-      value = value.trim().toLowerCase();
-      // input string is first trimmed and converted to lowercase format
-      long multiplier = 1;
 
-      if (value.endsWith("k")) {
-        multiplier = 1024L;
-      } else if (value.endsWith("m")) {
-        multiplier = 1024L * 1024L;
-        // mega is 2 times kilo, giga is 3 times kilo, etc...
-      } else if (value.endsWith("g")) {
-        multiplier = 1024L * 1024L * 1024L;
-      } else if (value.endsWith("t")) {
-        multiplier = 1024L * 1024L * 1024L * 1024L;
-      }
-      if (multiplier > 1){
-        value = value.substring(0, value.length() - 1);
-      }
-      return Long.parseLong(value) * multiplier;
-    } catch (NumberFormatException e) {
-      // TODO log error
-      e.printStackTrace();
+    value = value.trim().toLowerCase();
+    // input string is first trimmed and converted to lowercase format
+    long multiplier = 1;
+
+    if (value.endsWith("k")) {
+      multiplier = 1024L;
+    } else if (value.endsWith("m")) {
+      multiplier = 1024L * 1024L;
+      // mega is 2 times kilo, giga is 3 times kilo, etc...
+    } else if (value.endsWith("g")) {
+      multiplier = 1024L * 1024L * 1024L;
+    } else if (value.endsWith("t")) {
+      multiplier = 1024L * 1024L * 1024L * 1024L;
     }
-    return defValue;
+    if (multiplier > 1) {
+      value = value.substring(0, value.length() - 1);
+    }
+    return Long.parseLong(value) * multiplier;
   }
 
+  public long getLong(String value, long defValue) {
+    if (value == null) {
+      return defValue;
+    }
+    value = value.trim().toLowerCase();
+    // input string is first trimmed and converted to lowercase format
+    long multiplier = 1;
+
+    if (value.endsWith("k")) {
+      multiplier = 1024L;
+    } else if (value.endsWith("m")) {
+      multiplier = 1024L * 1024L;
+      // mega is 2 times kilo, giga is 3 times kilo, etc...
+    } else if (value.endsWith("g")) {
+      multiplier = 1024L * 1024L * 1024L;
+    } else if (value.endsWith("t")) {
+      multiplier = 1024L * 1024L * 1024L * 1024L;
+    }
+    if (multiplier > 1) {
+      value = value.substring(0, value.length() - 1);
+    }
+    return Long.parseLong(value) * multiplier;
+  }
+  
   public String getProperty(String name, String defValue) {
     String value = props.getProperty(name);
     if (value == null) return defValue;
@@ -783,13 +796,7 @@ public class CacheConfig {
   public boolean getBooleanProperty(String name, boolean defValue) {
     String value = props.getProperty(name);
     if (value == null) return defValue;
-    try {
-      return Boolean.parseBoolean(value);
-    } catch (NumberFormatException e) {
-      // TODO log error
-      e.printStackTrace();
-    }
-    return defValue;
+    return Boolean.parseBoolean(value);
   }
 
   /****************************************************************
@@ -804,7 +811,7 @@ public class CacheConfig {
   public long getCacheMaximumSize(String cacheName) {
     String value = props.getProperty(cacheName + "." + CACHE_MAXIMUM_SIZE_KEY);
     if (value != null) {
-      return Long.parseLong(value);
+      return getLong(value, DEFAULT_CACHE_MAXIMUM_SIZE);
     }
     return getLongProperty(CACHE_MAXIMUM_SIZE_KEY, DEFAULT_CACHE_MAXIMUM_SIZE);
   }
@@ -826,7 +833,7 @@ public class CacheConfig {
   public long getCacheSegmentSize(String cacheName) {
     String value = props.getProperty(cacheName + "." + CACHE_SEGMENT_SIZE_KEY);
     if (value != null) {
-      return Long.parseLong(value);
+      return getLong(value, DEFAULT_CACHE_SEGMENT_SIZE);
     }
     return getLongProperty(CACHE_SEGMENT_SIZE_KEY, DEFAULT_CACHE_SEGMENT_SIZE);
   }
@@ -1499,7 +1506,7 @@ public class CacheConfig {
   public long getCacheWriteLimit(String cacheName) {
     String value = props.getProperty(cacheName + "." + CACHE_WRITE_RATE_LIMIT_KEY);
     if (value != null) {
-      return Long.parseLong(value);
+      return getLong(value, DEFAULT_CACHE_WRITE_RATE_LIMIT);
     }
     return getLongProperty(CACHE_WRITE_RATE_LIMIT_KEY, DEFAULT_CACHE_WRITE_RATE_LIMIT);
   }
@@ -1945,7 +1952,7 @@ public class CacheConfig {
       return (int) getLongProperty(CACHE_BLOCK_WRITER_BLOCK_SIZE_KEY,
         DEFAULT_CACHE_BLOCK_WRITER_BLOCK_SIZE);
     } else {
-      return Integer.parseInt(value);
+      return (int) getLong(value, DEFAULT_CACHE_BLOCK_WRITER_BLOCK_SIZE);
     }
   }
 
@@ -1969,7 +1976,7 @@ public class CacheConfig {
       return (int) getLongProperty(FILE_PREFETCH_BUFFER_SIZE_KEY,
         DEFAULT_FILE_PREFETCH_BUFFER_SIZE);
     } else {
-      return Integer.parseInt(value);
+      return (int) getLong(value, DEFAULT_FILE_PREFETCH_BUFFER_SIZE);
     }
   }
 
@@ -2302,7 +2309,7 @@ public class CacheConfig {
       return (int) getLongProperty(CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY,
         DEFAULT_CACHE_STREAMING_SUPPORT_BUFFER_SIZE);
     } else {
-      return (int) Long.parseLong(value);
+      return (int) getLong(value, DEFAULT_CACHE_STREAMING_SUPPORT_BUFFER_SIZE);
     }
   }
 
@@ -2386,7 +2393,7 @@ public class CacheConfig {
   public int getKeyValueMaximumSize(String cacheName) {
     String value = props.getProperty(cacheName + "." + CACHE_MAX_KEY_VALUE_SIZE_KEY);
     if (value != null) {
-      return Integer.parseInt(value);
+      return (int) getLong(value, DEFAULT_CACHE_MAX_KEY_VALUE_SIZE);
     }
     return (int) getLongProperty(CACHE_MAX_KEY_VALUE_SIZE_KEY, DEFAULT_CACHE_MAX_KEY_VALUE_SIZE);
   }
@@ -2408,7 +2415,7 @@ public class CacheConfig {
   public int getObjectCacheInitialOutputBufferSize(String cacheName) {
     String value = props.getProperty(cacheName + "." + OBJECT_CACHE_INITIAL_BUFFER_SIZE_KEY);
     if (value != null) {
-      return Integer.parseInt(value);
+      return (int) getLong(value, DEFAULT_OBJECT_CACHE_INITIAL_BUFFER_SIZE);
     }
     return (int) getLongProperty(OBJECT_CACHE_INITIAL_BUFFER_SIZE_KEY,
       DEFAULT_OBJECT_CACHE_INITIAL_BUFFER_SIZE);
@@ -2432,7 +2439,7 @@ public class CacheConfig {
   public int getObjectCacheMaxOutputBufferSize(String cacheName) {
     String value = props.getProperty(cacheName + "." + OBJECT_CACHE_MAX_BUFFER_SIZE_KEY);
     if (value != null) {
-      return Integer.parseInt(value);
+      return (int) getLong(value, DEFAULT_OBJECT_CACHE_MAX_BUFFER_SIZE);
     }
     return (int) getLongProperty(OBJECT_CACHE_MAX_BUFFER_SIZE_KEY,
       DEFAULT_OBJECT_CACHE_MAX_BUFFER_SIZE);
@@ -2479,7 +2486,7 @@ public class CacheConfig {
   public int getCacheTLSInitialBufferSize(String cacheName) {
     String value = props.getProperty(cacheName + "." + CACHE_TLS_INITIAL_BUFFER_SIZE_KEY);
     if (value != null) {
-      return Integer.parseInt(value);
+      return (int) getLong(value, DEFAULT_CACHE_TLS_INITIAL_BUFFER_SIZE);
     }
     return (int) getLongProperty(CACHE_TLS_INITIAL_BUFFER_SIZE_KEY,
       DEFAULT_CACHE_TLS_INITIAL_BUFFER_SIZE);
@@ -2502,7 +2509,7 @@ public class CacheConfig {
   public int getCacheTLSMaxBufferSize(String cacheName) {
     String value = props.getProperty(cacheName + "." + CACHE_TLS_MAXIMUM_BUFFER_SIZE_KEY);
     if (value != null) {
-      return Integer.parseInt(value);
+      return (int) getLong(value, DEFAULT_CACHE_TLS_MAXIMUM_BUFFER_SIZE);
     }
     return (int) getLongProperty(CACHE_TLS_MAXIMUM_BUFFER_SIZE_KEY,
       DEFAULT_CACHE_TLS_MAXIMUM_BUFFER_SIZE);
@@ -2549,7 +2556,7 @@ public class CacheConfig {
     if (isCacheCompressionEnabled(cacheName)) {
       String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_BLOCK_SIZE_KEY);
       if (value != null) {
-        return Integer.parseInt(value);
+        return (int) getLong(value, DEFAULT_CACHE_COMPRESSION_BLOCK_SIZE);
       }
       return (int) getLongProperty(CACHE_COMPRESSION_BLOCK_SIZE_KEY,
         DEFAULT_CACHE_COMPRESSION_BLOCK_SIZE);
@@ -2576,7 +2583,7 @@ public class CacheConfig {
     if (isCacheCompressionEnabled(cacheName)) {
       String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_SIZE_KEY);
       if (value != null) {
-        return Integer.parseInt(value);
+        return (int) getLong(value, DEFAULT_CACHE_COMPRESSION_DICTIONARY_SIZE);
       }
       return (int) getLongProperty(CACHE_COMPRESSION_DICTIONARY_SIZE_KEY,
         DEFAULT_CACHE_COMPRESSION_DICTIONARY_SIZE);
@@ -2761,7 +2768,7 @@ public class CacheConfig {
   public int getEstimatedAvgKeyValueSize(String cacheName) {
     String value = props.getProperty(cacheName + "." + CACHE_ESTIMATED_AVG_KV_SIZE_KEY);
     if (value != null) {
-      return Integer.parseInt(value);
+      return (int) getLong(value, DEFAULT_ESTIMATED_AVG_KV_SIZE);
     }
     return (int) getLongProperty(CACHE_ESTIMATED_AVG_KV_SIZE_KEY, DEFAULT_ESTIMATED_AVG_KV_SIZE);
   }
