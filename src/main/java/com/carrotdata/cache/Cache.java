@@ -33,6 +33,12 @@ import java.util.concurrent.locks.LockSupport;
 import javax.management.MBeanServer;
 import javax.management.ObjectName;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.impl.Log4jContextFactory;
+import org.apache.logging.log4j.core.util.ShutdownCallbackRegistry;
+import org.apache.logging.log4j.core.util.DefaultShutdownCallbackRegistry;
+
+import org.apache.logging.log4j.spi.LoggerContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -392,10 +398,22 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * Add shutdown hook
    */
   public void addShutdownHook() {
+    disableLog4j2ShutdownHook();
     Runtime r = Runtime.getRuntime();
     r.addShutdownHook(this.shutDownHook);
   }
 
+  private void disableLog4j2ShutdownHook() {
+    final LoggerContextFactory factory = LogManager.getFactory();
+    if (factory instanceof Log4jContextFactory) {
+        LOG.info("Deregister Log4j2 shutdown hook");
+        Log4jContextFactory contextFactory = (Log4jContextFactory) factory;
+        ShutdownCallbackRegistry registry = contextFactory.getShutdownCallbackRegistry();
+        ((DefaultShutdownCallbackRegistry) registry).stop();
+        LOG.info("Deregistering Log4j2 shutdown hook done.");
+    }
+  }
+  
   /**
    * Remove shutdown hook
    */
@@ -2877,7 +2895,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       shutdownStatusMsg += "Shutdown complete";
     }
     LOG.info(shutdownStatusMsg);
-
+    if (this.saveOnShutdown) {
+      // Shutdown LogManager, flush buffered writes
+      LogManager.shutdown();
+    }
     return size;
   }
 
