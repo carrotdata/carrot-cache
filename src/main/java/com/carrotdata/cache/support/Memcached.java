@@ -264,9 +264,15 @@ public class Memcached {
     LOG.info("Storage allocd memory  : {}", c.getStorageAllocated());
     LOG.info("Index allocd memory    : {}", c.getEngine().getMemoryIndex().getAllocatedMemory());
     LOG.info("Compression enabled    : {}", c.getCacheConfig().isCacheCompressionEnabled(c.getName()));
+    if (c.getCacheConfig().isCacheCompressionEnabled(c.getName())) {
+      LOG.info("Compression codec      : {}", c.getCacheConfig().getCacheCompressionCodecType(c.getName()));
+      LOG.info("Compression level      : {}", c.getCacheConfig().getCacheCompressionLevel(c.getName()));
+    }
     LOG.info("******************************************************");    
     Cache cc = c.getVictimCache();
-    LOG.info("Cache {}, victim is {}", c.getName(), cc);
+    if (cc != null) {
+      LOG.info("Cache {}, victim is {}", c.getName(), cc);
+    }
     if (cc != null) {
       logCacheConf(cc);
     }
