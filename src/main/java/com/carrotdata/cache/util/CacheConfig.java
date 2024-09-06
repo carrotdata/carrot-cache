@@ -55,7 +55,7 @@ public class CacheConfig {
     
     @Override
     public String getProperty(String name) {
-      String v = System.getProperty(name);
+      String v = System.getenv(name);
       if (v != null) return v;
       return super.getProperty(name);
     }
