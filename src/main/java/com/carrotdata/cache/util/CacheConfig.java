@@ -41,6 +41,8 @@ import com.carrotdata.cache.io.DataWriter;
 @SuppressWarnings("deprecation")
 public class CacheConfig {
 
+  public static final String CHARS_TO_REMOVE_REGEX = "[_,]";
+
   static class EnvProperties extends Properties {
 
     private static final long serialVersionUID = 1L;
@@ -756,7 +758,7 @@ public class CacheConfig {
     if (multiplier > 1) {
       value = value.substring(0, value.length() - 1);
     }
-    return Long.parseLong(value.replaceAll("_", "")) * multiplier;
+    return Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, "")) * multiplier;
   }
 
   public long getLong(String value, long defValue) {
@@ -780,7 +782,7 @@ public class CacheConfig {
     if (multiplier > 1) {
       value = value.substring(0, value.length() - 1);
     }
-    return Long.parseLong(value.replaceAll("_", "")) * multiplier;
+    return Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, "")) * multiplier;
   }
 
   public String getProperty(String name, String defValue) {
@@ -1016,7 +1018,7 @@ public class CacheConfig {
   public int getNumberOfPopularityRanks(String cacheName) {
     String value = props.getProperty(cacheName + "." + CACHE_POPULARITY_NUMBER_RANKS_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value.replaceAll("_", ""));
+      return (int) Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
     return (int) getLongProperty(CACHE_POPULARITY_NUMBER_RANKS_KEY,
       DEFAULT_CACHE_POPULARITY_NUMBER_RANKS);
@@ -1039,7 +1041,7 @@ public class CacheConfig {
   public int getSLRUInsertionPoint(String cacheName) {
     String value = props.getProperty(cacheName + "." + SLRU_CACHE_INSERT_POINT_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value.replaceAll("_", ""));
+      return (int) Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
     return (int) getLongProperty(SLRU_CACHE_INSERT_POINT_KEY, DEFAULT_SLRU_CACHE_INSERT_POINT);
   }
@@ -1061,7 +1063,7 @@ public class CacheConfig {
   public int getSLRUNumberOfSegments(String cacheName) {
     String value = props.getProperty(cacheName + "." + SLRU_NUMBER_SEGMENTS_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value.replaceAll("_", ""));
+      return (int) Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
     return (int) getLongProperty(SLRU_NUMBER_SEGMENTS_KEY, DEFAULT_SLRU_NUMBER_SEGMENTS);
   }
@@ -1127,7 +1129,7 @@ public class CacheConfig {
   public int getStartIndexNumberOfSlotsPower(String cacheName) {
     String value = props.getProperty(cacheName + "." + START_INDEX_NUMBER_OF_SLOTS_POWER_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value.replaceAll("_", ""));
+      return (int) Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
     return (int) getLongProperty(START_INDEX_NUMBER_OF_SLOTS_POWER_KEY,
       DEFAULT_START_INDEX_NUMBER_OF_SLOTS_POWER);
@@ -1414,7 +1416,7 @@ public class CacheConfig {
   public long getThroughputCheckInterval(String cacheName) {
     String value = props.getProperty(cacheName + "." + THROUGHPUT_CHECK_INTERVAL_SEC_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value.replaceAll("_", "")) * 1000;
+      return Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, "")) * 1000;
     }
     return getLongProperty(THROUGHPUT_CHECK_INTERVAL_SEC_KEY, DEFAULT_THROUGHPUT_CHECK_INTERVAL_SEC)
         * 1000;
@@ -1437,7 +1439,7 @@ public class CacheConfig {
   public long getVacuumCleanerInterval(String cacheName) {
     String value = props.getProperty(cacheName + "." + VACUUM_CLEANER_INTERVAL_SEC_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value.replaceAll("_", "")) * 1000;
+      return Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, "")) * 1000;
     }
     return getLongProperty(VACUUM_CLEANER_INTERVAL_SEC_KEY, DEFAULT_VACUUM_CLEANER_INTERVAL_SEC)
         * 1000;
@@ -1460,7 +1462,7 @@ public class CacheConfig {
   public long getScavengerRunInterval(String cacheName) {
     String value = props.getProperty(cacheName + "." + SCAVENGER_RUN_INTERVAL_SEC_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value.replaceAll("_", "")) * 1000;
+      return Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, "")) * 1000;
     }
     return getLongProperty(SCAVENGER_RUN_INTERVAL_SEC_KEY, DEFAULT_SCAVENGER_RUN_INTERVAL_SEC);
   }
@@ -1563,7 +1565,7 @@ public class CacheConfig {
   public int getThrougputControllerNumberOfAdjustmentSteps(String cacheName) {
     String value = props.getProperty(cacheName + "." + THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value.replaceAll("_", ""));
+      return (int) Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
     return (int) getLongProperty(THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS_KEY,
       DEFAULT_THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS);
@@ -2027,7 +2029,7 @@ public class CacheConfig {
       return (int) getLongProperty(CACHE_EXPIRATION_BIN_START_VALUE_KEY,
         DEFAULT_CACHE_EXPIRATION_BIN_START_VALUE);
     } else {
-      return Integer.parseInt(value.replaceAll("_", ""));
+      return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
   }
 
@@ -2126,7 +2128,7 @@ public class CacheConfig {
       return (int) getLongProperty(CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY,
         DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_BINS);
     } else {
-      return Integer.parseInt(value.replaceAll("_", ""));
+      return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
   }
 
@@ -2150,7 +2152,7 @@ public class CacheConfig {
       return (int) getLongProperty(CACHE_ROLLING_WINDOW_COUNTER_DURATION_KEY,
         DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_DURATION);
     } else {
-      return Integer.parseInt(value.replaceAll("_", ""));
+      return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
   }
 
@@ -2176,7 +2178,7 @@ public class CacheConfig {
       return (int) getLongProperty(CACHE_IO_STORAGE_POOL_SIZE_KEY,
         DEFAULT_CACHE_IO_STORAGE_POOL_SIZE);
     } else {
-      return Integer.parseInt(value.replaceAll("_", ""));
+      return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
   }
 
@@ -2270,7 +2272,7 @@ public class CacheConfig {
     if (value == null) {
       return getLongProperty(CACHE_SPIN_WAIT_TIME_NS_KEY, DEFAULT_CACHE_SPIN_WAIT_TIME_NS);
     } else {
-      return Long.parseLong(value.replaceAll("_", ""));
+      return Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
   }
 
@@ -2349,7 +2351,7 @@ public class CacheConfig {
     if (value == null) {
       return (int) getLongProperty(SCAVENGER_NUMBER_THREADS_KEY, DEFAULT_SCAVENGER_NUMBER_THREADS);
     } else {
-      return Integer.parseInt(value.replaceAll("_", ""));
+      return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
   }
 
@@ -2373,7 +2375,7 @@ public class CacheConfig {
     if (value == null) {
       return getLongProperty(CACHE_MAX_WAIT_ON_PUT_MS_KEY, DEFAULT_CACHE_MAX_WAIT_ON_PUT_MS);
     }
-    return Long.parseLong(value.replaceAll("_", ""));
+    return Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
   }
 
   /**
@@ -2611,7 +2613,7 @@ public class CacheConfig {
     if (isCacheCompressionEnabled(cacheName)) {
       String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_LEVEL_KEY);
       if (value != null) {
-        return Integer.parseInt(value.replaceAll("_", ""));
+        return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
       }
       return (int) getLongProperty(CACHE_COMPRESSION_LEVEL_KEY, DEFAULT_CACHE_COMPRESSION_LEVEL);
     } else {
@@ -2790,7 +2792,7 @@ public class CacheConfig {
   public int getCacheMemoryBufferPoolMaximumSize(String cacheName) {
     String value = props.getProperty(cacheName + "." + CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY);
     if (value != null) {
-      return Integer.parseInt(value.replaceAll("_", ""));
+      return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
     return (int) getLongProperty(CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY,
       DEFAULT_CACHE_MEMORY_BUFFER_POOL_MAX_SIZE);
