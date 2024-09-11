@@ -218,9 +218,9 @@ Bear in mind that allocations tracking is expensive and slows down the applicati
 UnsafeAccess.mallocStats.printStats();
 ```
 
-Happy using and testing, folks.
-You can reach me easily at:  
-vlad@trycarrots.io
+
+ 
+Contact: vlad@trycarrots.io
 
 Copyright (c) Carrot Data, Inc. 2024
 
