@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2024-present Carrot Data, Inc. 
+ * Copyright (C) 2024-present Carrot Data, Inc.
  * <p>This program is free software: you can redistribute it
  * and/or modify it under the terms of the Server Side Public License, version 1, as published by
  * MongoDB, Inc.
  * <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY
  * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- * PURPOSE. See the Server Side Public License for more details. 
+ * PURPOSE. See the Server Side Public License for more details.
  * <p>You should have received a copy of the Server Side Public License along with this program. If not, see
  * <http://www.mongodb.com/licensing/server-side-public-license>.
  */
@@ -44,15 +44,15 @@ public class CacheConfig {
   static class EnvProperties extends Properties {
 
     private static final long serialVersionUID = 1L;
-    
+
     public EnvProperties() {
       super();
     }
-    
+
     public EnvProperties(Properties p) {
       super(p);
     }
-    
+
     @Override
     public String getProperty(String name) {
       String v = System.getenv(name);
@@ -60,7 +60,7 @@ public class CacheConfig {
       return super.getProperty(name);
     }
   }
-  
+
   private static final Logger LOG = LoggerFactory.getLogger(CacheConfig.class);
 
   /** List of all caches logical names, comma-separated */
@@ -155,8 +155,7 @@ public class CacheConfig {
   public static final String CACHE_POPULARITY_NUMBER_RANKS_KEY = "popularity.number.ranks";
 
   /** Keep active data set fraction above this threshold */
-  public static final String CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO_KEY =
-      "active.dataset.ratio.min";
+  public static final String CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO_KEY = "active.dataset.ratio.min";
   /** IO storage pool size */
   public static final String CACHE_IO_STORAGE_POOL_SIZE_KEY = "storage.io.pool.size";
 
@@ -187,7 +186,8 @@ public class CacheConfig {
   public static final String PROMOTION_QUEUE_MAX_SIZE_RATIO_KEY = "promotion.queue.size.ratio.max";
 
   /* Random configuration parameter for random promotion controller */
-  public static final String CACHE_RANDOM_PROMOTION_PROBABILITY_KEY = "random.promotion.probability";
+  public static final String CACHE_RANDOM_PROMOTION_PROBABILITY_KEY =
+      "random.promotion.probability";
 
   /** Cumulative average write rate limit (bytes/sec) */
   public static final String CACHE_WRITE_RATE_LIMIT_KEY = "write.avg.rate.limit";
@@ -197,7 +197,7 @@ public class CacheConfig {
 
   /** Evict all to victim cache. Default: false - only objects with hits > 0 */
   public static final String VICTIM_EVICT_ALL_KEY = "victim.evict.all";
-  
+
   /*
    * Some file systems : ext4, xfs, APFS etc supports sparse files and so called "hole punching" -
    * discarding regions of files. We use different algorithm of compaction when file system supports
@@ -219,8 +219,7 @@ public class CacheConfig {
    * Scavenger run interval key (seconds)
    */
   public static final String SCAVENGER_RUN_INTERVAL_SEC_KEY = "scavenger.run.interval.sec";
-  
-  
+
   /*
    * Cache write throughput controller tolerance limit
    */
@@ -247,8 +246,7 @@ public class CacheConfig {
   public static final String INDEX_FORMAT_MAIN_QUEUE_IMPL_KEY = "index.format.impl";
 
   /** Class name for admission queue index format implementation */
-  public static final String INDEX_FORMAT_ADMISSION_QUEUE_IMPL_KEY =
-      "index.format.aq.impl";
+  public static final String INDEX_FORMAT_ADMISSION_QUEUE_IMPL_KEY = "index.format.aq.impl";
 
   /** Class name for cache eviction policy implementation */
   public static final String CACHE_EVICTION_POLICY_IMPL_KEY = "eviction.policy.impl";
@@ -318,8 +316,7 @@ public class CacheConfig {
   public static final String CACHE_JMX_METRICS_DOMAIN_NAME_KEY = "jmx.metrics.domain.name";
 
   /* Do not expose */
-  public static final String CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY =
-      "streaming.buffer.size";
+  public static final String CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY = "streaming.buffer.size";
 
   /* Maximum wait time on put operation in ms */
   public static final String CACHE_MAX_WAIT_ON_PUT_MS_KEY = "cache.wait.put.max.ms";
@@ -328,8 +325,7 @@ public class CacheConfig {
   public static final String CACHE_MAX_KEY_VALUE_SIZE_KEY = "cache.max.kv.size";
 
   /* Object Cache initial output buffer size - not relevant for server */
-  public final static String OBJECT_CACHE_INITIAL_BUFFER_SIZE_KEY =
-      "objectcache.buffer.size.start";
+  public final static String OBJECT_CACHE_INITIAL_BUFFER_SIZE_KEY = "objectcache.buffer.size.start";
 
   /* Object Cache maximum output buffer size - not relevant for server */
   public final static String OBJECT_CACHE_MAX_BUFFER_SIZE_KEY = "objectcache.buffer.size.max";
@@ -349,8 +345,7 @@ public class CacheConfig {
 
   public final static String CACHE_COMPRESSION_BLOCK_SIZE_KEY = "compression.block.size";
 
-  public final static String CACHE_COMPRESSION_DICTIONARY_SIZE_KEY =
-      "compression.dictionary.size";
+  public final static String CACHE_COMPRESSION_DICTIONARY_SIZE_KEY = "compression.dictionary.size";
 
   public final static String CACHE_COMPRESSION_LEVEL_KEY = "compression.level";
 
@@ -368,12 +363,11 @@ public class CacheConfig {
 
   public final static String CACHE_ESTIMATED_AVG_KV_SIZE_KEY = "estimated.avg.kv.size";
 
-  public final static String CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY =
-      "memory.buffer.pool.size.max";
+  public final static String CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY = "memory.buffer.pool.size.max";
   public final static String CACHE_PROACTIVE_EXPIRATION_FACTOR_KEY = "proactive.expiration.factor";
 
   public final static String VACUUM_CLEANER_INTERVAL_SEC_KEY = "vacuum.cleaner.interval";
-  
+
   /** Defaults section */
 
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
@@ -383,7 +377,7 @@ public class CacheConfig {
   public static final double DEFAULT_SCAVENGER_START_RUN_RATIO = 0.99;
 
   public static final double DEFAULT_SCAVENGER_STOP_RUN_RATIO = 0.9; // Set it to 0 for continuous
-                                                                     // scavenger run
+  // scavenger run
 
   /**
    * During scavenger run, all expired entries as well as entries with popularity below this config
@@ -462,7 +456,7 @@ public class CacheConfig {
 
   /** Default Scavenger run interval - 1 min */
   public static final long DEFAULT_SCAVENGER_RUN_INTERVAL_SEC = 60;// 1min
-  
+
   /** Default Scavenger evict all to a victim cache */
   public static final boolean DEFAULT_VICTIM_EVICT_ALL = false;// 1min
 
@@ -553,18 +547,18 @@ public class CacheConfig {
 
   /** Default cache maximum wait time on PUT (due to full storage) in ms */
   public final static int DEFAULT_CACHE_MAX_WAIT_ON_PUT_MS = 20; // Wait up to 20ms when storage is
-                                                                 // full
+  // full
 
   /** Default value for maximum key-value size */
   public final static int DEFAULT_CACHE_MAX_KEY_VALUE_SIZE = 0; // no limit, limit is defined by
-                                                                // data segment size
+  // data segment size
 
   /** Default initial size for object cache output buffer */
   public final static int DEFAULT_OBJECT_CACHE_INITIAL_BUFFER_SIZE = 1 << 16;
 
   /** Default maximum size for object cache output buffer */
   public final static int DEFAULT_OBJECT_CACHE_MAX_BUFFER_SIZE = -1; // Unlimited; TODO change to
-                                                                     // 2GB?
+  // 2GB?
 
   /** Default Thread-Local-Storage supported */
   public final static boolean DEFAULT_CACHE_TLS_SUPPORTED = true;
@@ -614,9 +608,9 @@ public class CacheConfig {
       DEFAULT_CACHE_POPULARITY_NUMBER_RANKS / 2;
 
   public final static double DEFAULT_CACHE_PROACTIVE_EXPIRATION_FACTOR = 0.25;
-  
+
   public final static long DEFAULT_VACUUM_CLEANER_INTERVAL_SEC = -1; // disabled
-  
+
   static CacheConfig instance;
 
   public static CacheConfig getInstance() {
@@ -713,7 +707,7 @@ public class CacheConfig {
    */
   CacheConfig(Properties props) {
     this.props = new EnvProperties();
-    for (Map.Entry<Object, Object> e: props.entrySet()) {
+    for (Map.Entry<Object, Object> e : props.entrySet()) {
       String key = (String) e.getKey();
       String value = (String) e.getValue();
       this.props.setProperty(key, value);
@@ -731,7 +725,7 @@ public class CacheConfig {
 
   public double getDoubleProperty(String name, double defValue) {
     String value = props.getProperty(name);
-    if (value == null) return defValue;    
+    if (value == null) return defValue;
     return Double.parseDouble(value);
   }
 
@@ -756,7 +750,7 @@ public class CacheConfig {
     if (multiplier > 1) {
       value = value.substring(0, value.length() - 1);
     }
-    return Long.parseLong(value) * multiplier;
+    return Long.parseLong(value.replaceAll("_", "")) * multiplier;
   }
 
   public long getLong(String value, long defValue) {
@@ -780,9 +774,9 @@ public class CacheConfig {
     if (multiplier > 1) {
       value = value.substring(0, value.length() - 1);
     }
-    return Long.parseLong(value) * multiplier;
+    return Long.parseLong(value.replaceAll("_", "")) * multiplier;
   }
-  
+
   public String getProperty(String name, String defValue) {
     String value = props.getProperty(name);
     if (value == null) return defValue;
@@ -819,7 +813,7 @@ public class CacheConfig {
   /**
    * Set cache maximum size
    * @param cacheName cache name
-   * @param size maximum size in bytes
+   * @param size      maximum size in bytes
    */
   public void setCacheMaximumSize(String cacheName, long size) {
     props.setProperty(cacheName + "." + CACHE_MAXIMUM_SIZE_KEY, Long.toString(size));
@@ -841,7 +835,7 @@ public class CacheConfig {
   /**
    * Set cache segment size
    * @param cacheName cache name
-   * @param size segment size in bytes
+   * @param size      segment size in bytes
    */
   public void setCacheSegmentSize(String cacheName, long size) {
     props.setProperty(cacheName + "." + CACHE_SEGMENT_SIZE_KEY, Long.toString(size));
@@ -863,7 +857,7 @@ public class CacheConfig {
   /**
    * Set scavenger start memory ratio
    * @param cacheName cache name
-   * @param ratio memory ration relative to a maximum cache size
+   * @param ratio     memory ration relative to a maximum cache size
    */
   public void setScavengerStartMemoryRatio(String cacheName, double ratio) {
     props.setProperty(cacheName + "." + SCAVENGER_START_RUN_RATIO_KEY, Double.toString(ratio));
@@ -885,7 +879,7 @@ public class CacheConfig {
   /**
    * Set scavenger stop memory ratio
    * @param cacheName cache name
-   * @param ratio memory ration relative to a maximum cache size
+   * @param ratio     memory ration relative to a maximum cache size
    */
   public void setScavengerStopMemoryRatio(String cacheName, double ratio) {
     props.setProperty(cacheName + "." + SCAVENGER_STOP_RUN_RATIO_KEY, Double.toString(ratio));
@@ -902,13 +896,13 @@ public class CacheConfig {
       return Double.parseDouble(value);
     }
     return getDoubleProperty(SCAVENGER_DUMP_ENTRY_BELOW_STEP_KEY,
-      DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_STEP);
+        DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_STEP);
   }
 
   /**
    * Sets scavenger dump entry below adjustment step
    * @param cacheName cache name
-   * @param step entry below adjustment step
+   * @param step      entry below adjustment step
    */
   public void setScavengerDumpEntryBelowAdjStep(String cacheName, double step) {
     props.setProperty(cacheName + "." + SCAVENGER_DUMP_ENTRY_BELOW_STEP_KEY, Double.toString(step));
@@ -925,13 +919,13 @@ public class CacheConfig {
       return Double.parseDouble(value);
     }
     return getDoubleProperty(SCAVENGER_DUMP_ENTRY_BELOW_MIN_KEY,
-      DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_MIN);
+        DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_MIN);
   }
 
   /**
    * Sets scavenger dump entry below - minimum
    * @param cacheName cache name
-   * @param ratio entry below ratio start
+   * @param ratio     entry below ratio start
    */
   public void setScavengerDumpEntryBelowMin(String cacheName, double ratio) {
     props.setProperty(cacheName + "." + SCAVENGER_DUMP_ENTRY_BELOW_MIN_KEY, Double.toString(ratio));
@@ -948,13 +942,13 @@ public class CacheConfig {
       return Double.parseDouble(value);
     }
     return getDoubleProperty(SCAVENGER_DUMP_ENTRY_BELOW_MAX_KEY,
-      DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_MAX);
+        DEFAULT_SCAVENGER_DUMP_ENTRY_BELOW_MAX);
   }
 
   /**
    * Sets scavenger dump entry below - maximum
    * @param cacheName cache name
-   * @param ratio entry below ratio stop
+   * @param ratio     entry below ratio stop
    */
   public void setScavengerDumpEntryBelowMax(String cacheName, double ratio) {
     props.setProperty(cacheName + "." + SCAVENGER_DUMP_ENTRY_BELOW_MAX_KEY, Double.toString(ratio));
@@ -971,17 +965,17 @@ public class CacheConfig {
       return Double.parseDouble(value);
     }
     return getDoubleProperty(CACHE_RANDOM_ADMISSION_RATIO_START_KEY,
-      DEFAULT_CACHE_RANDOM_ADMISSION_RATIO_START);
+        DEFAULT_CACHE_RANDOM_ADMISSION_RATIO_START);
   }
 
   /**
    * Set random admission controller start ratio
    * @param cacheName cache name
-   * @param ratio start ratio
+   * @param ratio     start ratio
    */
   public void setRandomAdmissionControllerStartRatio(String cacheName, double ratio) {
     props.setProperty(cacheName + "." + CACHE_RANDOM_ADMISSION_RATIO_START_KEY,
-      Double.toString(ratio));
+        Double.toString(ratio));
   }
 
   /**
@@ -995,17 +989,17 @@ public class CacheConfig {
       return Double.parseDouble(value);
     }
     return getDoubleProperty(CACHE_RANDOM_ADMISSION_RATIO_STOP_KEY,
-      DEFAULT_CACHE_RANDOM_ADMISSION_RATIO_STOP);
+        DEFAULT_CACHE_RANDOM_ADMISSION_RATIO_STOP);
   }
 
   /**
    * Set random admission controller stop ratio
    * @param cacheName cache name
-   * @param ratio stop ratio
+   * @param ratio     stop ratio
    */
   public void setRandomAdmissionControllerStopRatio(String cacheName, double ratio) {
     props.setProperty(cacheName + "." + CACHE_RANDOM_ADMISSION_RATIO_STOP_KEY,
-      Double.toString(ratio));
+        Double.toString(ratio));
   }
 
   /**
@@ -1016,16 +1010,16 @@ public class CacheConfig {
   public int getNumberOfPopularityRanks(String cacheName) {
     String value = props.getProperty(cacheName + "." + CACHE_POPULARITY_NUMBER_RANKS_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value);
+      return (int) Long.parseLong(value.replaceAll("_", ""));
     }
     return (int) getLongProperty(CACHE_POPULARITY_NUMBER_RANKS_KEY,
-      DEFAULT_CACHE_POPULARITY_NUMBER_RANKS);
+        DEFAULT_CACHE_POPULARITY_NUMBER_RANKS);
   }
 
   /**
    * Set number of item popularity ranks for a cache
    * @param cacheName cache name
-   * @param num number of popularity ranks
+   * @param num       number of popularity ranks
    */
   public void setNumberOfPopularityRanks(String cacheName, int num) {
     props.setProperty(cacheName + "." + CACHE_POPULARITY_NUMBER_RANKS_KEY, Integer.toString(num));
@@ -1039,7 +1033,7 @@ public class CacheConfig {
   public int getSLRUInsertionPoint(String cacheName) {
     String value = props.getProperty(cacheName + "." + SLRU_CACHE_INSERT_POINT_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value);
+      return (int) Long.parseLong(value.replaceAll("_", ""));
     }
     return (int) getLongProperty(SLRU_CACHE_INSERT_POINT_KEY, DEFAULT_SLRU_CACHE_INSERT_POINT);
   }
@@ -1047,7 +1041,8 @@ public class CacheConfig {
   /**
    * Set SLRU insertion point (segment number to insert into the head of)
    * @param cacheName cache name
-   * @param n SLRU insertion point (segment number between 0 and getSLRUNumberOfSegments - 1)
+   * @param n         SLRU insertion point (segment number between 0 and getSLRUNumberOfSegments -
+   *                  1)
    */
   public void setSLRUInsertionPoint(String cacheName, int n) {
     props.setProperty(cacheName + "." + SLRU_CACHE_INSERT_POINT_KEY, Integer.toString(n));
@@ -1061,7 +1056,7 @@ public class CacheConfig {
   public int getSLRUNumberOfSegments(String cacheName) {
     String value = props.getProperty(cacheName + "." + SLRU_NUMBER_SEGMENTS_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value);
+      return (int) Long.parseLong(value.replaceAll("_", ""));
     }
     return (int) getLongProperty(SLRU_NUMBER_SEGMENTS_KEY, DEFAULT_SLRU_NUMBER_SEGMENTS);
   }
@@ -1069,7 +1064,7 @@ public class CacheConfig {
   /**
    * Set SLRU number of segments
    * @param cacheName cache name
-   * @param n SLRU number of segments
+   * @param n         SLRU number of segments
    */
   public void setSLRUNumberOfSegments(String cacheName, int n) {
     props.setProperty(cacheName + "." + SLRU_NUMBER_SEGMENTS_KEY, Integer.toString(n));
@@ -1091,7 +1086,7 @@ public class CacheConfig {
   /**
    * Set evict all to victim
    * @param cacheName cache name
-   * @param v true or false
+   * @param v         true or false
    */
   public void setVictimEvictAll(String cacheName, boolean v) {
     props.setProperty(cacheName + "." + VICTIM_EVICT_ALL_KEY, Boolean.toString(v));
@@ -1113,12 +1108,12 @@ public class CacheConfig {
   /**
    * Set sparse files support for a cache (only for 'file' type caches)
    * @param cacheName cache name
-   * @param v true or false
+   * @param v         true or false
    */
   public void setSparseFilesSupport(String cacheName, boolean v) {
     props.setProperty(cacheName + "." + SPARSE_FILES_SUPPORT_KEY, Boolean.toString(v));
   }
-  
+
   /**
    * Get start index size for a cache
    * @param cacheName cache name
@@ -1127,16 +1122,16 @@ public class CacheConfig {
   public int getStartIndexNumberOfSlotsPower(String cacheName) {
     String value = props.getProperty(cacheName + "." + START_INDEX_NUMBER_OF_SLOTS_POWER_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value);
+      return (int) Long.parseLong(value.replaceAll("_", ""));
     }
     return (int) getLongProperty(START_INDEX_NUMBER_OF_SLOTS_POWER_KEY,
-      DEFAULT_START_INDEX_NUMBER_OF_SLOTS_POWER);
+        DEFAULT_START_INDEX_NUMBER_OF_SLOTS_POWER);
   }
 
   /**
    * Set start index size for a cache
    * @param cacheName cache name
-   * @param v start index size for a given cache name
+   * @param v         start index size for a given cache name
    */
   public void setStartIndexNumberOfSlotsPower(String cacheName, int v) {
     props.setProperty(cacheName + "." + START_INDEX_NUMBER_OF_SLOTS_POWER_KEY, Integer.toString(v));
@@ -1199,7 +1194,7 @@ public class CacheConfig {
   /**
    * Set root directory location for a cache
    * @param cacheName cache name
-   * @param dir data directory name for a given cache name
+   * @param dir       data directory name for a given cache name
    */
   public void setCacheRootDir(String cacheName, String dir) {
     props.setProperty(cacheName + "." + CACHE_ROOT_DIR_PATH_KEY, dir);
@@ -1253,17 +1248,17 @@ public class CacheConfig {
       return Double.parseDouble(value);
     }
     return getDoubleProperty(ADMISSION_QUEUE_START_SIZE_RATIO_KEY,
-      DEFAULT_ADMISSION_QUEUE_START_SIZE_RATIO);
+        DEFAULT_ADMISSION_QUEUE_START_SIZE_RATIO);
   }
 
   /**
    * Set admission queue start size ratio for a given cache name
    * @param cacheName cache name
-   * @param ratio AQ start size ratio relative to the maximum cache size
+   * @param ratio     AQ start size ratio relative to the maximum cache size
    */
   public void setAdmissionQueueStartSizeRatio(String cacheName, double ratio) {
     props.setProperty(cacheName + "." + ADMISSION_QUEUE_START_SIZE_RATIO_KEY,
-      Double.toString(ratio));
+        Double.toString(ratio));
   }
 
   /**
@@ -1277,13 +1272,13 @@ public class CacheConfig {
       return Double.parseDouble(value);
     }
     return getDoubleProperty(ADMISSION_QUEUE_MIN_SIZE_RATIO_KEY,
-      DEFAULT_ADMISSION_QUEUE_MIN_SIZE_RATIO);
+        DEFAULT_ADMISSION_QUEUE_MIN_SIZE_RATIO);
   }
 
   /**
    * Set admission queue minimum size ratio for a given cache name
    * @param cacheName cache name
-   * @param ratio AQ minimum size ratio relative to the maximum cache size
+   * @param ratio     AQ minimum size ratio relative to the maximum cache size
    */
   public void setAdmissionQueueMinSizeRatio(String cacheName, double ratio) {
     props.setProperty(cacheName + "." + ADMISSION_QUEUE_MIN_SIZE_RATIO_KEY, Double.toString(ratio));
@@ -1300,13 +1295,13 @@ public class CacheConfig {
       return Double.parseDouble(value);
     }
     return getDoubleProperty(ADMISSION_QUEUE_MAX_SIZE_RATIO_KEY,
-      DEFAULT_ADMISSION_QUEUE_MAX_SIZE_RATIO);
+        DEFAULT_ADMISSION_QUEUE_MAX_SIZE_RATIO);
   }
 
   /**
    * Set admission queue maximum size ratio for a given cache name
    * @param cacheName cache name
-   * @param ratio AQ maximum size ratio relative to the maximum cache size
+   * @param ratio     AQ maximum size ratio relative to the maximum cache size
    */
   public void setAdmissionQueueMaxSizeRatio(String cacheName, double ratio) {
     props.setProperty(cacheName + "." + ADMISSION_QUEUE_MAX_SIZE_RATIO_KEY, Double.toString(ratio));
@@ -1323,17 +1318,17 @@ public class CacheConfig {
       return Double.parseDouble(value);
     }
     return getDoubleProperty(PROMOTION_QUEUE_START_SIZE_RATIO_KEY,
-      DEFAULT_PROMOTION_QUEUE_START_SIZE_RATIO);
+        DEFAULT_PROMOTION_QUEUE_START_SIZE_RATIO);
   }
 
   /**
    * Set promotion queue start size ratio for a given cache name
    * @param cacheName cache name
-   * @param ratio AQ start size ratio relative to the maximum cache size
+   * @param ratio     AQ start size ratio relative to the maximum cache size
    */
   public void setPromotionQueueStartSizeRatio(String cacheName, double ratio) {
     props.setProperty(cacheName + "." + PROMOTION_QUEUE_START_SIZE_RATIO_KEY,
-      Double.toString(ratio));
+        Double.toString(ratio));
   }
 
   /**
@@ -1347,13 +1342,13 @@ public class CacheConfig {
       return Double.parseDouble(value);
     }
     return getDoubleProperty(PROMOTION_QUEUE_MIN_SIZE_RATIO_KEY,
-      DEFAULT_PROMOTION_QUEUE_MIN_SIZE_RATIO);
+        DEFAULT_PROMOTION_QUEUE_MIN_SIZE_RATIO);
   }
 
   /**
    * Set promotion queue minimum size ratio for a given cache name
    * @param cacheName cache name
-   * @param ratio AQ minimum size ratio relative to the maximum cache size
+   * @param ratio     AQ minimum size ratio relative to the maximum cache size
    */
   public void setPromotionQueueMinSizeRatio(String cacheName, double ratio) {
     props.setProperty(cacheName + "." + PROMOTION_QUEUE_MIN_SIZE_RATIO_KEY, Double.toString(ratio));
@@ -1370,13 +1365,13 @@ public class CacheConfig {
       return Double.parseDouble(value);
     }
     return getDoubleProperty(PROMOTION_QUEUE_MAX_SIZE_RATIO_KEY,
-      DEFAULT_PROMOTION_QUEUE_MAX_SIZE_RATIO);
+        DEFAULT_PROMOTION_QUEUE_MAX_SIZE_RATIO);
   }
 
   /**
    * Set promotion queue maximum size ratio for a given cache name
    * @param cacheName cache name
-   * @param ratio AQ maximum size ratio relative to the maximum cache size
+   * @param ratio     AQ maximum size ratio relative to the maximum cache size
    */
   public void setPromotionQueueMaxSizeRatio(String cacheName, double ratio) {
     props.setProperty(cacheName + "." + PROMOTION_QUEUE_MAX_SIZE_RATIO_KEY, Double.toString(ratio));
@@ -1393,17 +1388,17 @@ public class CacheConfig {
       return Double.parseDouble(value);
     }
     return getDoubleProperty(CACHE_RANDOM_PROMOTION_PROBABILITY_KEY,
-      DEFAULT_CACHE_RANDOM_PROMOTION_PROBABILITY);
+        DEFAULT_CACHE_RANDOM_PROMOTION_PROBABILITY);
   }
 
   /**
    * Set promotion probability for a given key
-   * @param cacheName cache name
+   * @param cacheName   cache name
    * @param probability
    */
   public void setRandomPromotionProbability(String cacheName, double probability) {
     props.setProperty(cacheName + "." + PROMOTION_QUEUE_MAX_SIZE_RATIO_KEY,
-      Double.toString(probability));
+        Double.toString(probability));
   }
 
   /**
@@ -1414,16 +1409,16 @@ public class CacheConfig {
   public long getThroughputCheckInterval(String cacheName) {
     String value = props.getProperty(cacheName + "." + THROUGHPUT_CHECK_INTERVAL_SEC_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value) * 1000;
+      return (int) Long.parseLong(value.replaceAll("_", "")) * 1000;
     }
-    return getLongProperty(THROUGHPUT_CHECK_INTERVAL_SEC_KEY, DEFAULT_THROUGHPUT_CHECK_INTERVAL_SEC)
-        * 1000;
+    return getLongProperty(THROUGHPUT_CHECK_INTERVAL_SEC_KEY,
+        DEFAULT_THROUGHPUT_CHECK_INTERVAL_SEC) * 1000;
   }
 
   /**
    * Set throughput check interval for a given cache name
    * @param cacheName cache name
-   * @param interval in sec for a given cache name
+   * @param interval  in sec for a given cache name
    */
   public void setThroughputCheckInterval(String cacheName, int interval) {
     props.setProperty(cacheName + "." + THROUGHPUT_CHECK_INTERVAL_SEC_KEY, Long.toString(interval));
@@ -1437,21 +1432,21 @@ public class CacheConfig {
   public long getVacuumCleanerInterval(String cacheName) {
     String value = props.getProperty(cacheName + "." + VACUUM_CLEANER_INTERVAL_SEC_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value) * 1000;
+      return (int) Long.parseLong(value.replaceAll("_", "")) * 1000;
     }
-    return getLongProperty(VACUUM_CLEANER_INTERVAL_SEC_KEY, DEFAULT_VACUUM_CLEANER_INTERVAL_SEC)
-        * 1000;
+    return getLongProperty(VACUUM_CLEANER_INTERVAL_SEC_KEY,
+        DEFAULT_VACUUM_CLEANER_INTERVAL_SEC) * 1000;
   }
 
   /**
    * Set vacuum cleaner interval for a given cache name
    * @param cacheName cache name
-   * @param interval in sec for a given cache name
+   * @param interval  in sec for a given cache name
    */
   public void setVacuumCleanerInterval(String cacheName, int interval) {
     props.setProperty(cacheName + "." + VACUUM_CLEANER_INTERVAL_SEC_KEY, Long.toString(interval));
   }
-  
+
   /**
    * Get Scavenger run interval for a given cache name
    * @param cacheName cache name
@@ -1460,7 +1455,7 @@ public class CacheConfig {
   public long getScavengerRunInterval(String cacheName) {
     String value = props.getProperty(cacheName + "." + SCAVENGER_RUN_INTERVAL_SEC_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value);
+      return (int) Long.parseLong(value.replaceAll("_", "")) * 1000;
     }
     return getLongProperty(SCAVENGER_RUN_INTERVAL_SEC_KEY, DEFAULT_SCAVENGER_RUN_INTERVAL_SEC);
   }
@@ -1468,7 +1463,7 @@ public class CacheConfig {
   /**
    * Set Scavenger run interval for a given cache name
    * @param cacheName cache name
-   * @param interval in seconds for a given cache name
+   * @param interval  in seconds for a given cache name
    */
   public void setScavengerRunInterval(String cacheName, int interval) {
     props.setProperty(cacheName + "." + SCAVENGER_RUN_INTERVAL_SEC_KEY, Long.toString(interval));
@@ -1485,17 +1480,17 @@ public class CacheConfig {
       return Double.parseDouble(value);
     }
     return getDoubleProperty(THROUGHPUT_CONTROLLER_TOLERANCE_LIMIT_KEY,
-      DEFAULT_THROUGHPUT_CONTROLLER_TOLERANCE_LIMIT);
+        DEFAULT_THROUGHPUT_CONTROLLER_TOLERANCE_LIMIT);
   }
 
   /**
    * Set throughput controller tolerance limit for a given cache name
    * @param cacheName cache name
-   * @param limit for a given cache name
+   * @param limit     for a given cache name
    */
   public void setThroughputToleranceLimit(String cacheName, double limit) {
     props.setProperty(cacheName + "." + THROUGHPUT_CONTROLLER_TOLERANCE_LIMIT_KEY,
-      Double.toString(limit));
+        Double.toString(limit));
   }
 
   /**
@@ -1514,7 +1509,7 @@ public class CacheConfig {
   /**
    * Set cache write rate limit for a given cache name
    * @param cacheName cache name
-   * @param limit cache write rate limit for a given cache name
+   * @param limit     cache write rate limit for a given cache name
    */
   public void setCacheWriteLimit(String cacheName, long limit) {
     props.setProperty(cacheName + "." + CACHE_WRITE_RATE_LIMIT_KEY, Long.toString(limit));
@@ -1563,20 +1558,20 @@ public class CacheConfig {
   public int getThrougputControllerNumberOfAdjustmentSteps(String cacheName) {
     String value = props.getProperty(cacheName + "." + THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value);
+      return (int) Long.parseLong(value.replaceAll("_", ""));
     }
     return (int) getLongProperty(THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS_KEY,
-      DEFAULT_THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS);
+        DEFAULT_THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS);
   }
 
   /**
    * Set throughput controller number of adjustment steps for cache
    * @param cacheName cache name
-   * @param n throughput controller number of adjustment steps
+   * @param n         throughput controller number of adjustment steps
    */
   public void setThrougputControllerNumberOfAdjustmentSteps(String cacheName, int n) {
     props.setProperty(cacheName + "." + THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS_KEY,
-      Long.toString(n));
+        Long.toString(n));
   }
 
   /**
@@ -1586,13 +1581,13 @@ public class CacheConfig {
    */
   public boolean isIndexDataEmbeddedSupported(String cacheName) {
     return getBooleanProperty(cacheName + "." + INDEX_DATA_EMBEDDED_KEY,
-      DEFAULT_INDEX_DATA_EMBEDDED);
+        DEFAULT_INDEX_DATA_EMBEDDED);
   }
 
   /**
    * Set index data embedding supported
    * @param cacheName cache name
-   * @param v true or false
+   * @param v         true or false
    */
   public void setIndexDataEmbeddedSupported(String cacheName, boolean v) {
     props.setProperty(cacheName + "." + INDEX_DATA_EMBEDDED_KEY, Boolean.toString(v));
@@ -1605,13 +1600,13 @@ public class CacheConfig {
    */
   public int getIndexDataEmbeddedSize(String cacheName) {
     return (int) getLongProperty(cacheName + "." + INDEX_DATA_EMBEDDED_SIZE_KEY,
-      DEFAULT_INDEX_DATA_EMBEDDED_SIZE);
+        DEFAULT_INDEX_DATA_EMBEDDED_SIZE);
   }
 
   /**
    * Set data embedded size
    * @param cacheName cache name
-   * @param v data embedded size
+   * @param v         data embedded size
    */
   public void setIndexDataEmbeddedSize(String cacheName, int v) {
     props.setProperty(cacheName + "." + INDEX_DATA_EMBEDDED_SIZE_KEY, Integer.toString(v));
@@ -1635,8 +1630,8 @@ public class CacheConfig {
       // default implementation;
       return new AQIndexFormat();
     }
-    @SuppressWarnings("unchecked")
-    Class<IndexFormat> clz = (Class<IndexFormat>) Class.forName(value);
+    @SuppressWarnings("unchecked") Class<IndexFormat> clz =
+        (Class<IndexFormat>) Class.forName(value);
     IndexFormat instance = clz.newInstance();
     instance.setCacheName(cacheName);
     return instance;
@@ -1669,8 +1664,8 @@ public class CacheConfig {
       // default implementation;
       return new BaseIndexFormat();
     }
-    @SuppressWarnings("unchecked")
-    Class<IndexFormat> clz = (Class<IndexFormat>) Class.forName(value);
+    @SuppressWarnings("unchecked") Class<IndexFormat> clz =
+        (Class<IndexFormat>) Class.forName(value);
     IndexFormat instance = clz.newInstance();
     instance.setCacheName(cacheName);
     return instance;
@@ -1705,8 +1700,8 @@ public class CacheConfig {
       policy.setCacheName(cacheName);
       return policy;
     }
-    @SuppressWarnings("unchecked")
-    Class<EvictionPolicy> clz = (Class<EvictionPolicy>) Class.forName(value);
+    @SuppressWarnings("unchecked") Class<EvictionPolicy> clz =
+        (Class<EvictionPolicy>) Class.forName(value);
     EvictionPolicy instance = clz.newInstance();
     instance.setCacheName(cacheName);
     return instance;
@@ -1739,8 +1734,8 @@ public class CacheConfig {
       // default implementation;
       return null;
     }
-    @SuppressWarnings("unchecked")
-    Class<AdmissionController> clz = (Class<AdmissionController>) Class.forName(value);
+    @SuppressWarnings("unchecked") Class<AdmissionController> clz =
+        (Class<AdmissionController>) Class.forName(value);
     AdmissionController instance = clz.newInstance();
     return instance;
   }
@@ -1772,8 +1767,8 @@ public class CacheConfig {
       // default implementation;
       return null;
     }
-    @SuppressWarnings("unchecked")
-    Class<PromotionController> clz = (Class<PromotionController>) Class.forName(value);
+    @SuppressWarnings("unchecked") Class<PromotionController> clz =
+        (Class<PromotionController>) Class.forName(value);
     PromotionController instance = clz.newInstance();
     return instance;
   }
@@ -1805,8 +1800,8 @@ public class CacheConfig {
       // No defaults
       return null;
     }
-    @SuppressWarnings("unchecked")
-    Class<ThroughputController> clz = (Class<ThroughputController>) Class.forName(value);
+    @SuppressWarnings("unchecked") Class<ThroughputController> clz =
+        (Class<ThroughputController>) Class.forName(value);
     ThroughputController instance = clz.newInstance();
     return instance;
   }
@@ -1833,11 +1828,11 @@ public class CacheConfig {
     String value = props.getProperty(cacheName + "." + CACHE_RECYCLING_SELECTOR_IMPL_KEY);
     if (value == null) {
       value = props.getProperty(CACHE_RECYCLING_SELECTOR_IMPL_KEY,
-        DEFAULT_CACHE_RECYCLING_SELECTOR_IMPL);
+          DEFAULT_CACHE_RECYCLING_SELECTOR_IMPL);
     }
 
-    @SuppressWarnings("unchecked")
-    Class<RecyclingSelector> clz = (Class<RecyclingSelector>) Class.forName(value);
+    @SuppressWarnings("unchecked") Class<RecyclingSelector> clz =
+        (Class<RecyclingSelector>) Class.forName(value);
     RecyclingSelector instance = clz.newInstance();
     return instance;
   }
@@ -1865,8 +1860,7 @@ public class CacheConfig {
     if (value == null) {
       value = props.getProperty(CACHE_DATA_WRITER_IMPL_KEY, DEFAULT_CACHE_DATA_WRITER_IMPL);
     }
-    @SuppressWarnings("unchecked")
-    Class<DataWriter> clz = (Class<DataWriter>) Class.forName(value);
+    @SuppressWarnings("unchecked") Class<DataWriter> clz = (Class<DataWriter>) Class.forName(value);
     DataWriter instance = clz.newInstance();
     instance.init(cacheName);
     return instance;
@@ -1894,10 +1888,9 @@ public class CacheConfig {
     String value = props.getProperty(cacheName + "." + CACHE_MEMORY_DATA_READER_IMPL_KEY);
     if (value == null) {
       value = props.getProperty(CACHE_MEMORY_DATA_READER_IMPL_KEY,
-        DEFAULT_CACHE_MEMORY_DATA_READER_IMPL);
+          DEFAULT_CACHE_MEMORY_DATA_READER_IMPL);
     }
-    @SuppressWarnings("unchecked")
-    Class<DataReader> clz = (Class<DataReader>) Class.forName(value);
+    @SuppressWarnings("unchecked") Class<DataReader> clz = (Class<DataReader>) Class.forName(value);
     DataReader instance = clz.newInstance();
     instance.init(cacheName);
     return instance;
@@ -1926,8 +1919,7 @@ public class CacheConfig {
       value =
           props.getProperty(CACHE_FILE_DATA_READER_IMPL_KEY, DEFAULT_CACHE_FILE_DATA_READER_IMPL);
     }
-    @SuppressWarnings("unchecked")
-    Class<DataReader> clz = (Class<DataReader>) Class.forName(value);
+    @SuppressWarnings("unchecked") Class<DataReader> clz = (Class<DataReader>) Class.forName(value);
     DataReader instance = clz.newInstance();
     instance.init(cacheName);
     return instance;
@@ -1950,7 +1942,7 @@ public class CacheConfig {
     String value = props.getProperty(cacheName + "." + CACHE_BLOCK_WRITER_BLOCK_SIZE_KEY);
     if (value == null) {
       return (int) getLongProperty(CACHE_BLOCK_WRITER_BLOCK_SIZE_KEY,
-        DEFAULT_CACHE_BLOCK_WRITER_BLOCK_SIZE);
+          DEFAULT_CACHE_BLOCK_WRITER_BLOCK_SIZE);
     } else {
       return (int) getLong(value, DEFAULT_CACHE_BLOCK_WRITER_BLOCK_SIZE);
     }
@@ -1959,7 +1951,7 @@ public class CacheConfig {
   /**
    * Set block writer block size by cache name
    * @param cacheName cache name
-   * @param size block size
+   * @param size      block size
    */
   public void setBlockWriterBlockSize(String cacheName, int size) {
     props.setProperty(cacheName + "." + CACHE_BLOCK_WRITER_BLOCK_SIZE_KEY, Integer.toString(size));
@@ -1974,7 +1966,7 @@ public class CacheConfig {
     String value = props.getProperty(cacheName + "." + FILE_PREFETCH_BUFFER_SIZE_KEY);
     if (value == null) {
       return (int) getLongProperty(FILE_PREFETCH_BUFFER_SIZE_KEY,
-        DEFAULT_FILE_PREFETCH_BUFFER_SIZE);
+          DEFAULT_FILE_PREFETCH_BUFFER_SIZE);
     } else {
       return (int) getLong(value, DEFAULT_FILE_PREFETCH_BUFFER_SIZE);
     }
@@ -1983,7 +1975,7 @@ public class CacheConfig {
   /**
    * Set file prefetch buffer by cache name
    * @param cacheName cache name
-   * @param prefetch buffer size
+   * @param prefetch  buffer size
    */
   public void setFilePrefetchBufferSize(String cacheName, int prefetch) {
     props.setProperty(cacheName + "." + FILE_PREFETCH_BUFFER_SIZE_KEY, Integer.toString(prefetch));
@@ -2001,8 +1993,8 @@ public class CacheConfig {
       value = props.getProperty(CACHE_EXPIRE_SUPPORT_IMPL_KEY, DEFAULT_CACHE_EXPIRE_SUPPORT_IMPL);
     }
 
-    @SuppressWarnings("unchecked")
-    Class<ExpireSupport> clz = (Class<ExpireSupport>) Class.forName(value);
+    @SuppressWarnings("unchecked") Class<ExpireSupport> clz =
+        (Class<ExpireSupport>) Class.forName(value);
     ExpireSupport instance = clz.newInstance();
     return instance;
   }
@@ -2025,20 +2017,20 @@ public class CacheConfig {
     String value = props.getProperty(cacheName + "." + CACHE_EXPIRATION_BIN_START_VALUE_KEY);
     if (value == null) {
       return (int) getLongProperty(CACHE_EXPIRATION_BIN_START_VALUE_KEY,
-        DEFAULT_CACHE_EXPIRATION_BIN_START_VALUE);
+          DEFAULT_CACHE_EXPIRATION_BIN_START_VALUE);
     } else {
-      return Integer.parseInt(value);
+      return Integer.parseInt(value.replaceAll("_", ""));
     }
   }
 
   /**
    * Set start bin value for expiration - based admission controller
    * @param cacheName cache name
-   * @param value (in seconds)
+   * @param value     (in seconds)
    */
   public void setExpireStartBinValue(String cacheName, int value) {
     props.setProperty(cacheName + "." + CACHE_EXPIRATION_BIN_START_VALUE_KEY,
-      Integer.toString(value));
+        Integer.toString(value));
   }
 
   /**
@@ -2050,7 +2042,7 @@ public class CacheConfig {
     String value = props.getProperty(cacheName + "." + CACHE_EXPIRATION_MULTIPLIER_VALUE_KEY);
     if (value == null) {
       return getDoubleProperty(CACHE_EXPIRATION_MULTIPLIER_VALUE_KEY,
-        DEFAULT_CACHE_EXPIRATION_MULTIPLIER_VALUE);
+          DEFAULT_CACHE_EXPIRATION_MULTIPLIER_VALUE);
     } else {
       return Double.parseDouble(value);
     }
@@ -2058,12 +2050,12 @@ public class CacheConfig {
 
   /**
    * Set expiration bin multiplier
-   * @param cacheName cache name
+   * @param cacheName  cache name
    * @param multiplier value multiplier
    */
   public void setExpireBinMultiplier(String cacheName, double multiplier) {
     props.setProperty(cacheName + "." + CACHE_EXPIRATION_MULTIPLIER_VALUE_KEY,
-      Double.toString(multiplier));
+        Double.toString(multiplier));
   }
 
   /**
@@ -2075,7 +2067,7 @@ public class CacheConfig {
     String value = props.getProperty(cacheName + "." + CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO_KEY);
     if (value == null) {
       return getDoubleProperty(CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO_KEY,
-        DEFAULT_CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO);
+          DEFAULT_CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO);
     } else {
       return Double.parseDouble(value);
     }
@@ -2084,11 +2076,11 @@ public class CacheConfig {
   /**
    * Set minimum cache active data set threshold
    * @param cacheName cache name
-   * @param ratio minimum cache active data set threshold
+   * @param ratio     minimum cache active data set threshold
    */
   public void setMinimumActiveDatasetRatio(String cacheName, double ratio) {
     props.setProperty(cacheName + "." + CACHE_MINIMUM_ACTIVE_DATA_SET_RATIO_KEY,
-      Double.toString(ratio));
+        Double.toString(ratio));
   }
 
   /**
@@ -2100,7 +2092,7 @@ public class CacheConfig {
     String value = props.getProperty(cacheName + "." + CACHE_EVICTION_DISABLED_MODE_KEY);
     if (value == null) {
       return getBooleanProperty(CACHE_EVICTION_DISABLED_MODE_KEY,
-        DEFAULT_CACHE_EVICTION_DISABLED_MODE);
+          DEFAULT_CACHE_EVICTION_DISABLED_MODE);
     } else {
       return Boolean.parseBoolean(value);
     }
@@ -2109,7 +2101,7 @@ public class CacheConfig {
   /**
    * Set eviction disabled mode
    * @param cacheName cache name
-   * @param mode true or false
+   * @param mode      true or false
    */
   public void setEvictionDisabledMode(String cacheName, boolean mode) {
     props.setProperty(cacheName + "." + CACHE_EVICTION_DISABLED_MODE_KEY, Boolean.toString(mode));
@@ -2124,16 +2116,16 @@ public class CacheConfig {
     String value = props.getProperty(cacheName + "." + CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY);
     if (value == null) {
       return (int) getLongProperty(CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY,
-        DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_BINS);
+          DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_BINS);
     } else {
-      return Integer.parseInt(value);
+      return Integer.parseInt(value.replaceAll("_", ""));
     }
   }
 
   /**
    * Set rolling window number of bins
    * @param cacheName cache name
-   * @param n number of bins
+   * @param n         number of bins
    */
   public void setRollingWindowNumberBins(String cacheName, int n) {
     props.setProperty(cacheName + "." + CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY, Integer.toString(n));
@@ -2148,20 +2140,20 @@ public class CacheConfig {
     String value = props.getProperty(cacheName + "." + CACHE_ROLLING_WINDOW_COUNTER_DURATION_KEY);
     if (value == null) {
       return (int) getLongProperty(CACHE_ROLLING_WINDOW_COUNTER_DURATION_KEY,
-        DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_DURATION);
+          DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_DURATION);
     } else {
-      return Integer.parseInt(value);
+      return Integer.parseInt(value.replaceAll("_", ""));
     }
   }
 
   /**
    * Set rolling window duration in seconds
    * @param cacheName cache name
-   * @param n seconds
+   * @param n         seconds
    */
   public void setRollingWindowDuration(String cacheName, int n) {
     props.setProperty(cacheName + "." + DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_DURATION,
-      Integer.toString(n));
+        Integer.toString(n));
   }
 
   /**
@@ -2174,16 +2166,16 @@ public class CacheConfig {
     String value = props.getProperty(cacheName + "." + CACHE_IO_STORAGE_POOL_SIZE_KEY);
     if (value == null) {
       return (int) getLongProperty(CACHE_IO_STORAGE_POOL_SIZE_KEY,
-        DEFAULT_CACHE_IO_STORAGE_POOL_SIZE);
+          DEFAULT_CACHE_IO_STORAGE_POOL_SIZE);
     } else {
-      return Integer.parseInt(value);
+      return Integer.parseInt(value.replaceAll("_", ""));
     }
   }
 
   /**
    * Set I/O storage pool size
    * @param cacheName cache name
-   * @param n size
+   * @param n         size
    */
   public void setIOStoragePoolSize(String cacheName, int n) {
     props.setProperty(cacheName + "." + CACHE_IO_STORAGE_POOL_SIZE_KEY, Integer.toString(n));
@@ -2198,7 +2190,7 @@ public class CacheConfig {
     String value = props.getProperty(cacheName + "." + CACHE_VICTIM_PROMOTION_ON_HIT_KEY);
     if (value == null) {
       return getBooleanProperty(CACHE_VICTIM_PROMOTION_ON_HIT_KEY,
-        DEFAULT_CACHE_VICTIM_PROMOTION_ON_HIT);
+          DEFAULT_CACHE_VICTIM_PROMOTION_ON_HIT);
     } else {
       return Boolean.parseBoolean(value);
     }
@@ -2207,7 +2199,7 @@ public class CacheConfig {
   /**
    * Set promotion on hit for victim cache
    * @param cacheName cache name
-   * @param v true or false
+   * @param v         true or false
    */
   public void setVictimCachePromotionOnHit(String cacheName, boolean v) {
     props.setProperty(cacheName + "." + CACHE_VICTIM_PROMOTION_ON_HIT_KEY, Boolean.toString(v));
@@ -2230,7 +2222,7 @@ public class CacheConfig {
   /**
    * Set hybrid cache inverse mode
    * @param cacheName cache name
-   * @param v true or false
+   * @param v         true or false
    */
   public void setCacheHybridInverseMode(String cacheName, boolean v) {
     props.setProperty(cacheName + "." + CACHE_HYBRID_INVERSE_MODE_KEY, Boolean.toString(v));
@@ -2245,7 +2237,7 @@ public class CacheConfig {
     String value = props.getProperty(cacheName + "." + CACHE_VICTIM_PROMOTION_THRESHOLD_KEY);
     if (value == null) {
       return getDoubleProperty(CACHE_VICTIM_PROMOTION_THRESHOLD_KEY,
-        DEFAULT_CACHE_VICTIM_PROMOTION_THRESHOLD);
+          DEFAULT_CACHE_VICTIM_PROMOTION_THRESHOLD);
     } else {
       return Double.parseDouble(value);
     }
@@ -2254,7 +2246,7 @@ public class CacheConfig {
   /**
    * Set victim cache promotion threshold
    * @param cacheName cache name
-   * @param v promotion threshold
+   * @param v         promotion threshold
    */
   public void setVictimPromotionThreshold(String cacheName, double v) {
     props.setProperty(cacheName + "." + CACHE_VICTIM_PROMOTION_THRESHOLD_KEY, Double.toString(v));
@@ -2270,14 +2262,14 @@ public class CacheConfig {
     if (value == null) {
       return getLongProperty(CACHE_SPIN_WAIT_TIME_NS_KEY, DEFAULT_CACHE_SPIN_WAIT_TIME_NS);
     } else {
-      return Long.parseLong(value);
+      return Long.parseLong(value.replaceAll("_", ""));
     }
   }
 
   /**
    * Set cache spin wait time on high pressure (in nanoseconds)
    * @param cacheName cache name
-   * @param v wait time
+   * @param v         wait time
    */
   public void setCacheSpinWaitTimeOnHighPressure(String cacheName, long v) {
     props.setProperty(cacheName + "." + CACHE_SPIN_WAIT_TIME_NS_KEY, Long.toString(v));
@@ -2307,7 +2299,7 @@ public class CacheConfig {
     String value = props.getProperty(cacheName + "." + CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY);
     if (value == null) {
       return (int) getLongProperty(CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY,
-        DEFAULT_CACHE_STREAMING_SUPPORT_BUFFER_SIZE);
+          DEFAULT_CACHE_STREAMING_SUPPORT_BUFFER_SIZE);
     } else {
       return (int) getLong(value, DEFAULT_CACHE_STREAMING_SUPPORT_BUFFER_SIZE);
     }
@@ -2328,7 +2320,7 @@ public class CacheConfig {
    */
   public void setCacheStreamingSupportBufferSize(String cacheName, int size) {
     this.props.setProperty(cacheName + "." + CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY,
-      Integer.toString(size));
+        Integer.toString(size));
   }
 
   /**
@@ -2349,18 +2341,18 @@ public class CacheConfig {
     if (value == null) {
       return (int) getLongProperty(SCAVENGER_NUMBER_THREADS_KEY, DEFAULT_SCAVENGER_NUMBER_THREADS);
     } else {
-      return Integer.parseInt(value);
+      return Integer.parseInt(value.replaceAll("_", ""));
     }
   }
 
   /**
    * Set scavenger number of threads
    * @param cacheName cache name
-   * @param threads number
+   * @param threads   number
    */
   public void setScavengerNumberOfThreads(String cacheName, int threads) {
     this.props.setProperty(cacheName + "." + SCAVENGER_NUMBER_THREADS_KEY,
-      Integer.toString(threads));
+        Integer.toString(threads));
   }
 
   /**
@@ -2373,13 +2365,13 @@ public class CacheConfig {
     if (value == null) {
       return getLongProperty(CACHE_MAX_WAIT_ON_PUT_MS_KEY, DEFAULT_CACHE_MAX_WAIT_ON_PUT_MS);
     }
-    return Long.parseLong(value);
+    return Long.parseLong(value.replaceAll("_", ""));
   }
 
   /**
    * Set maximum wait time on PUT for a given cache
    * @param cacheName cache name
-   * @param time wait time
+   * @param time      wait time
    */
   public void setCacheMaximumWaitTimeOnPut(String cacheName, long time) {
     this.props.setProperty(cacheName + "." + CACHE_MAX_WAIT_ON_PUT_MS_KEY, Long.toString(time));
@@ -2401,7 +2393,7 @@ public class CacheConfig {
   /**
    * Sets cache maximum key-value size in bytes
    * @param cacheName cache name
-   * @param size maximum size
+   * @param size      maximum size
    */
   public void setKeyValueMaximumSize(String cacheName, int size) {
     props.setProperty(cacheName + "." + CACHE_MAX_KEY_VALUE_SIZE_KEY, Integer.toString(size));
@@ -2418,17 +2410,17 @@ public class CacheConfig {
       return (int) getLong(value, DEFAULT_OBJECT_CACHE_INITIAL_BUFFER_SIZE);
     }
     return (int) getLongProperty(OBJECT_CACHE_INITIAL_BUFFER_SIZE_KEY,
-      DEFAULT_OBJECT_CACHE_INITIAL_BUFFER_SIZE);
+        DEFAULT_OBJECT_CACHE_INITIAL_BUFFER_SIZE);
   }
 
   /**
    * Sets object cache initial output buffer size
    * @param cacheName cache name
-   * @param size initial size
+   * @param size      initial size
    */
   public void setObjectCacheInitialOutputBufferSize(String cacheName, int size) {
     props.setProperty(cacheName + "." + OBJECT_CACHE_INITIAL_BUFFER_SIZE_KEY,
-      Integer.toString(size));
+        Integer.toString(size));
   }
 
   /**
@@ -2442,17 +2434,17 @@ public class CacheConfig {
       return (int) getLong(value, DEFAULT_OBJECT_CACHE_MAX_BUFFER_SIZE);
     }
     return (int) getLongProperty(OBJECT_CACHE_MAX_BUFFER_SIZE_KEY,
-      DEFAULT_OBJECT_CACHE_MAX_BUFFER_SIZE);
+        DEFAULT_OBJECT_CACHE_MAX_BUFFER_SIZE);
   }
 
   /**
    * Sets object cache maximum output buffer size
    * @param cacheName cache name
-   * @param size maximum size
+   * @param size      maximum size
    */
   public void setObjectCacheMaxOutputBufferSize(String cacheName, int size) {
     props.setProperty(cacheName + "." + OBJECT_CACHE_INITIAL_BUFFER_SIZE_KEY,
-      Integer.toString(size));
+        Integer.toString(size));
   }
 
   /**
@@ -2472,7 +2464,7 @@ public class CacheConfig {
   /**
    * Set Thread-Local-Storage supported
    * @param cacheName cache name
-   * @param v true or false
+   * @param v         true or false
    */
   public void setCacheTLSSupported(String cacheName, boolean v) {
     props.setProperty(cacheName + "." + CACHE_TLS_SUPPORTED_KEY, Boolean.toString(v));
@@ -2489,13 +2481,13 @@ public class CacheConfig {
       return (int) getLong(value, DEFAULT_CACHE_TLS_INITIAL_BUFFER_SIZE);
     }
     return (int) getLongProperty(CACHE_TLS_INITIAL_BUFFER_SIZE_KEY,
-      DEFAULT_CACHE_TLS_INITIAL_BUFFER_SIZE);
+        DEFAULT_CACHE_TLS_INITIAL_BUFFER_SIZE);
   }
 
   /**
    * Sets cache TLS initial buffer size
    * @param cacheName cache name
-   * @param size maximum size
+   * @param size      maximum size
    */
   public void setCacheTLSInitialBufferSize(String cacheName, int size) {
     props.setProperty(cacheName + "." + CACHE_TLS_INITIAL_BUFFER_SIZE_KEY, Integer.toString(size));
@@ -2512,13 +2504,13 @@ public class CacheConfig {
       return (int) getLong(value, DEFAULT_CACHE_TLS_MAXIMUM_BUFFER_SIZE);
     }
     return (int) getLongProperty(CACHE_TLS_MAXIMUM_BUFFER_SIZE_KEY,
-      DEFAULT_CACHE_TLS_MAXIMUM_BUFFER_SIZE);
+        DEFAULT_CACHE_TLS_MAXIMUM_BUFFER_SIZE);
   }
 
   /**
    * Sets cache TLS maximum buffer size
    * @param cacheName cache name
-   * @param size maximum size
+   * @param size      maximum size
    */
   public void setCacheTLSMaxBufferSize(String cacheName, int size) {
     props.setProperty(cacheName + "." + CACHE_TLS_MAXIMUM_BUFFER_SIZE_KEY, Integer.toString(size));
@@ -2541,7 +2533,7 @@ public class CacheConfig {
   /**
    * Set cache compression enabled
    * @param cacheName cache name
-   * @param v true or false
+   * @param v         true or false
    */
   public void setCacheCompressionEnabled(String cacheName, boolean v) {
     props.setProperty(cacheName + "." + CACHE_COMPRESSION_ENABLED_KEY, Boolean.toString(v));
@@ -2559,7 +2551,7 @@ public class CacheConfig {
         return (int) getLong(value, DEFAULT_CACHE_COMPRESSION_BLOCK_SIZE);
       }
       return (int) getLongProperty(CACHE_COMPRESSION_BLOCK_SIZE_KEY,
-        DEFAULT_CACHE_COMPRESSION_BLOCK_SIZE);
+          DEFAULT_CACHE_COMPRESSION_BLOCK_SIZE);
     } else {
       return -1;
     }
@@ -2568,7 +2560,7 @@ public class CacheConfig {
   /**
    * Sets cache compression block size
    * @param cacheName cache name
-   * @param size block size
+   * @param size      block size
    */
   public void setCacheCompressionBlockSize(String cacheName, int size) {
     props.setProperty(cacheName + "." + CACHE_COMPRESSION_BLOCK_SIZE_KEY, Integer.toString(size));
@@ -2586,7 +2578,7 @@ public class CacheConfig {
         return (int) getLong(value, DEFAULT_CACHE_COMPRESSION_DICTIONARY_SIZE);
       }
       return (int) getLongProperty(CACHE_COMPRESSION_DICTIONARY_SIZE_KEY,
-        DEFAULT_CACHE_COMPRESSION_DICTIONARY_SIZE);
+          DEFAULT_CACHE_COMPRESSION_DICTIONARY_SIZE);
     } else {
       return -1;
     }
@@ -2595,11 +2587,11 @@ public class CacheConfig {
   /**
    * Sets cache compression dictionary size
    * @param cacheName cache name
-   * @param size dictionary size
+   * @param size      dictionary size
    */
   public void setCacheCompressionDictionarySize(String cacheName, int size) {
     props.setProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_SIZE_KEY,
-      Integer.toString(size));
+        Integer.toString(size));
   }
 
   /**
@@ -2611,7 +2603,7 @@ public class CacheConfig {
     if (isCacheCompressionEnabled(cacheName)) {
       String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_LEVEL_KEY);
       if (value != null) {
-        return Integer.parseInt(value);
+        return Integer.parseInt(value.replaceAll("_", ""));
       }
       return (int) getLongProperty(CACHE_COMPRESSION_LEVEL_KEY, DEFAULT_CACHE_COMPRESSION_LEVEL);
     } else {
@@ -2622,7 +2614,7 @@ public class CacheConfig {
   /**
    * Sets cache compression level
    * @param cacheName cache name
-   * @param level compression level
+   * @param level     compression level
    */
   public void setCacheCompressionLevel(String cacheName, int level) {
     props.setProperty(cacheName + "." + CACHE_COMPRESSION_LEVEL_KEY, Integer.toString(level));
@@ -2648,7 +2640,7 @@ public class CacheConfig {
   /**
    * Sets cache compression codec type
    * @param cacheName cache name
-   * @param type codec type
+   * @param type      codec type
    */
   public void setCacheCompressionCodecType(String cacheName, String type) {
     props.setProperty(cacheName + "." + CACHE_COMPRESSION_CODEC_KEY, type);
@@ -2664,7 +2656,7 @@ public class CacheConfig {
       String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_ENABLED_KEY);
       if (value == null) {
         return getBooleanProperty(CACHE_COMPRESSION_DICTIONARY_ENABLED_KEY,
-          DEFAULT_CACHE_COMPRESSION_DICTIONARY_ENABLED);
+            DEFAULT_CACHE_COMPRESSION_DICTIONARY_ENABLED);
       } else {
         return Boolean.parseBoolean(value);
       }
@@ -2676,11 +2668,11 @@ public class CacheConfig {
   /**
    * Set cache compression dictionary enabled
    * @param cacheName cache name
-   * @param v true or false
+   * @param v         true or false
    */
   public void setCacheCompressionDictionaryEnabled(String cacheName, boolean v) {
     props.setProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_ENABLED_KEY,
-      Boolean.toString(v));
+        Boolean.toString(v));
   }
 
   /**
@@ -2693,7 +2685,7 @@ public class CacheConfig {
       String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_KEYS_ENABLED_KEY);
       if (value == null) {
         return getBooleanProperty(CACHE_COMPRESSION_KEYS_ENABLED_KEY,
-          DEFAULT_CACHE_COMPRESSION_KEYS_ENABLED);
+            DEFAULT_CACHE_COMPRESSION_KEYS_ENABLED);
       } else {
         return Boolean.parseBoolean(value);
       }
@@ -2705,7 +2697,7 @@ public class CacheConfig {
   /**
    * Set cache compression keys enabled
    * @param cacheName cache name
-   * @param v true or false
+   * @param v         true or false
    */
   public void setCacheCompressionKeysEnabled(String cacheName, boolean v) {
     props.setProperty(cacheName + "." + CACHE_COMPRESSION_KEYS_ENABLED_KEY, Boolean.toString(v));
@@ -2721,7 +2713,7 @@ public class CacheConfig {
         props.getProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC_KEY);
     if (value == null) {
       return getBooleanProperty(CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC_KEY,
-        DEFAULT_CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC);
+          DEFAULT_CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC);
     } else {
       return Boolean.parseBoolean(value);
     }
@@ -2730,11 +2722,11 @@ public class CacheConfig {
   /**
    * Set cache compression dictionary training async mode
    * @param cacheName cache name
-   * @param v true or false
+   * @param v         true or false
    */
   public void setCacheCompressionDictionaryTrainingAsync(String cacheName, boolean v) {
     props.setProperty(cacheName + "." + CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC_KEY,
-      Boolean.toString(v));
+        Boolean.toString(v));
   }
 
   /**
@@ -2754,7 +2746,7 @@ public class CacheConfig {
   /**
    * Set cache save on shutdown
    * @param cacheName cache name
-   * @param v true or false
+   * @param v         true or false
    */
   public void setSaveOnShutdown(String cacheName, boolean v) {
     props.setProperty(cacheName + "." + CACHE_SAVE_ON_SHUTDOWN_KEY, Boolean.toString(v));
@@ -2776,7 +2768,7 @@ public class CacheConfig {
   /**
    * Sets estimated avg key value size
    * @param cacheName cache name
-   * @param size size
+   * @param size      size
    */
   public void setEstimatedAvgKeyValueSize(String cacheName, int size) {
     props.setProperty(cacheName + "." + CACHE_ESTIMATED_AVG_KV_SIZE_KEY, Integer.toString(size));
@@ -2790,20 +2782,20 @@ public class CacheConfig {
   public int getCacheMemoryBufferPoolMaximumSize(String cacheName) {
     String value = props.getProperty(cacheName + "." + CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY);
     if (value != null) {
-      return Integer.parseInt(value);
+      return Integer.parseInt(value.replaceAll("_", ""));
     }
     return (int) getLongProperty(CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY,
-      DEFAULT_CACHE_MEMORY_BUFFER_POOL_MAX_SIZE);
+        DEFAULT_CACHE_MEMORY_BUFFER_POOL_MAX_SIZE);
   }
 
   /**
    * Sets maximum size of memory buffer pool for cache
    * @param cacheName cache name
-   * @param size maximum size
+   * @param size      maximum size
    */
   public void setCacheMemoryBufferPoolMaximumSize(String cacheName, int size) {
     props.setProperty(cacheName + "." + CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY,
-      Integer.toString(size));
+        Integer.toString(size));
   }
 
   /**
@@ -2817,19 +2809,19 @@ public class CacheConfig {
       return Double.parseDouble(value);
     }
     return (double) getDoubleProperty(CACHE_PROACTIVE_EXPIRATION_FACTOR_KEY,
-      DEFAULT_CACHE_PROACTIVE_EXPIRATION_FACTOR);
+        DEFAULT_CACHE_PROACTIVE_EXPIRATION_FACTOR);
   }
 
   /**
    * Sets cache pro-active expiration factor
    * @param cacheName cache name
-   * @param factor expiration check factor (probability to check on get operation)
+   * @param factor    expiration check factor (probability to check on get operation)
    */
   public void setCacheProactiveExpirationFactor(String cacheName, double factor) {
     props.setProperty(cacheName + "." + CACHE_PROACTIVE_EXPIRATION_FACTOR_KEY,
-      Double.toString(factor));
+        Double.toString(factor));
   }
-  
+
   public void sanityCheck(String cacheName) {
     long maxSize = getCacheMaximumSize(cacheName);
     if (maxSize > 0 && maxSize < 200 * 1024 * 1024) {
