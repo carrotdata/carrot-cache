@@ -1,7 +1,7 @@
 
 # Carrot Cache (CC)
 
-[Documentation](https://github.com/carrotdata/carrot-cache/wiki/Overview)
+[Documentation](https://github.com/carrotdata/carrot-cache/wiki/Overview) 🥕🥕 [Forum & Discussions](https://github.com/carrotdata/carrot-cache/discussions)
 
 The Carrot Cache (CC) project aims to modernize data caching and enable users to build custom caching solutions through pluggable components within the CC framework. CC is a 100% Java solution that extensively utilizes off-heap memory, minimizing the impact on Java garbage collection (GC).
 
