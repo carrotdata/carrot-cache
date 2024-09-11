@@ -22,16 +22,6 @@ The Carrot Cache (CC) project aims to modernize data caching and enable users to
 - **Compression**: CC can compress and decompress both keys and values in real-time using pluggable compression codecs, significantly reducing memory usage. Currently supports Zstd with dictionary.
 - **Memcached API Compatible**: Supports all store, retrieval, and miscellaneous commands (text protocol only).
 
-## Features in Development (TBI)
-
-- **Replication for HA**
-- **Concurrent Save**: Allows concurrent saving of cache data and metadata on demand, similar to Redis's BGSAVE.
-- **AutoConfiguration Mode**: Finds optimal parameters for specific workloads, including cache size, in offline mode.
-- **Shadow Mode**: Enables real-time decision-making on optimal cache sizing, important for workloads that vary by time of day.
-- **Periodic Cache Backup**
-- **Rolling Restart** in Cluster Mode (Add-On TBI)
-- **Fast Scale Up/Down** in Cluster Mode (Add-On TBI)
-
 ## Download
 
 You can download ```Carrot Cache``` Jar - file with dependencies from the latest [Releases](https://github.com/carrotdata/carrot-cache/releases) page. Supported platforms:
