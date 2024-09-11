@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2024-present Carrot Data, Inc. 
+ * Copyright (C) 2024-present Carrot Data, Inc.
  * <p>This program is free software: you can redistribute it
  * and/or modify it under the terms of the Server Side Public License, version 1, as published by
  * MongoDB, Inc.
  * <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY
  * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- * PURPOSE. See the Server Side Public License for more details. 
+ * PURPOSE. See the Server Side Public License for more details.
  * <p>You should have received a copy of the Server Side Public License along with this program. If not, see
  * <http://www.mongodb.com/licensing/server-side-public-license>.
  */
@@ -41,18 +41,20 @@ import com.carrotdata.cache.io.DataWriter;
 @SuppressWarnings("deprecation")
 public class CacheConfig {
 
+  public static final String CHARS_TO_REMOVE_REGEX = "[_,]";
+
   static class EnvProperties extends Properties {
 
     private static final long serialVersionUID = 1L;
-    
+
     public EnvProperties() {
       super();
     }
-    
+
     public EnvProperties(Properties p) {
       super(p);
     }
-    
+
     @Override
     public String getProperty(String name) {
       String v = System.getenv(name);
@@ -60,7 +62,7 @@ public class CacheConfig {
       return super.getProperty(name);
     }
   }
-  
+
   private static final Logger LOG = LoggerFactory.getLogger(CacheConfig.class);
 
   /** List of all caches logical names, comma-separated */
@@ -197,7 +199,7 @@ public class CacheConfig {
 
   /** Evict all to victim cache. Default: false - only objects with hits > 0 */
   public static final String VICTIM_EVICT_ALL_KEY = "victim.evict.all";
-  
+
   /*
    * Some file systems : ext4, xfs, APFS etc supports sparse files and so called "hole punching" -
    * discarding regions of files. We use different algorithm of compaction when file system supports
@@ -219,8 +221,8 @@ public class CacheConfig {
    * Scavenger run interval key (seconds)
    */
   public static final String SCAVENGER_RUN_INTERVAL_SEC_KEY = "scavenger.run.interval.sec";
-  
-  
+
+
   /*
    * Cache write throughput controller tolerance limit
    */
@@ -373,7 +375,7 @@ public class CacheConfig {
   public final static String CACHE_PROACTIVE_EXPIRATION_FACTOR_KEY = "proactive.expiration.factor";
 
   public final static String VACUUM_CLEANER_INTERVAL_SEC_KEY = "vacuum.cleaner.interval";
-  
+
   /** Defaults section */
 
   public static final long DEFAULT_CACHE_SEGMENT_SIZE = 4 * 1024 * 1024;
@@ -462,7 +464,7 @@ public class CacheConfig {
 
   /** Default Scavenger run interval - 1 min */
   public static final long DEFAULT_SCAVENGER_RUN_INTERVAL_SEC = 60;// 1min
-  
+
   /** Default Scavenger evict all to a victim cache */
   public static final boolean DEFAULT_VICTIM_EVICT_ALL = false;// 1min
 
@@ -614,9 +616,9 @@ public class CacheConfig {
       DEFAULT_CACHE_POPULARITY_NUMBER_RANKS / 2;
 
   public final static double DEFAULT_CACHE_PROACTIVE_EXPIRATION_FACTOR = 0.25;
-  
+
   public final static long DEFAULT_VACUUM_CLEANER_INTERVAL_SEC = -1; // disabled
-  
+
   static CacheConfig instance;
 
   public static CacheConfig getInstance() {
@@ -731,7 +733,7 @@ public class CacheConfig {
 
   public double getDoubleProperty(String name, double defValue) {
     String value = props.getProperty(name);
-    if (value == null) return defValue;    
+    if (value == null) return defValue;
     return Double.parseDouble(value);
   }
 
@@ -756,7 +758,7 @@ public class CacheConfig {
     if (multiplier > 1) {
       value = value.substring(0, value.length() - 1);
     }
-    return Long.parseLong(value) * multiplier;
+    return Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, "")) * multiplier;
   }
 
   public long getLong(String value, long defValue) {
@@ -780,9 +782,9 @@ public class CacheConfig {
     if (multiplier > 1) {
       value = value.substring(0, value.length() - 1);
     }
-    return Long.parseLong(value) * multiplier;
+    return Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, "")) * multiplier;
   }
-  
+
   public String getProperty(String name, String defValue) {
     String value = props.getProperty(name);
     if (value == null) return defValue;
@@ -1016,7 +1018,7 @@ public class CacheConfig {
   public int getNumberOfPopularityRanks(String cacheName) {
     String value = props.getProperty(cacheName + "." + CACHE_POPULARITY_NUMBER_RANKS_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value);
+      return (int) Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
     return (int) getLongProperty(CACHE_POPULARITY_NUMBER_RANKS_KEY,
       DEFAULT_CACHE_POPULARITY_NUMBER_RANKS);
@@ -1039,7 +1041,7 @@ public class CacheConfig {
   public int getSLRUInsertionPoint(String cacheName) {
     String value = props.getProperty(cacheName + "." + SLRU_CACHE_INSERT_POINT_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value);
+      return (int) Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
     return (int) getLongProperty(SLRU_CACHE_INSERT_POINT_KEY, DEFAULT_SLRU_CACHE_INSERT_POINT);
   }
@@ -1061,7 +1063,7 @@ public class CacheConfig {
   public int getSLRUNumberOfSegments(String cacheName) {
     String value = props.getProperty(cacheName + "." + SLRU_NUMBER_SEGMENTS_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value);
+      return (int) Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
     return (int) getLongProperty(SLRU_NUMBER_SEGMENTS_KEY, DEFAULT_SLRU_NUMBER_SEGMENTS);
   }
@@ -1118,7 +1120,7 @@ public class CacheConfig {
   public void setSparseFilesSupport(String cacheName, boolean v) {
     props.setProperty(cacheName + "." + SPARSE_FILES_SUPPORT_KEY, Boolean.toString(v));
   }
-  
+
   /**
    * Get start index size for a cache
    * @param cacheName cache name
@@ -1127,7 +1129,7 @@ public class CacheConfig {
   public int getStartIndexNumberOfSlotsPower(String cacheName) {
     String value = props.getProperty(cacheName + "." + START_INDEX_NUMBER_OF_SLOTS_POWER_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value);
+      return (int) Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
     return (int) getLongProperty(START_INDEX_NUMBER_OF_SLOTS_POWER_KEY,
       DEFAULT_START_INDEX_NUMBER_OF_SLOTS_POWER);
@@ -1414,7 +1416,7 @@ public class CacheConfig {
   public long getThroughputCheckInterval(String cacheName) {
     String value = props.getProperty(cacheName + "." + THROUGHPUT_CHECK_INTERVAL_SEC_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value) * 1000;
+      return Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, "")) * 1000;
     }
     return getLongProperty(THROUGHPUT_CHECK_INTERVAL_SEC_KEY, DEFAULT_THROUGHPUT_CHECK_INTERVAL_SEC)
         * 1000;
@@ -1437,7 +1439,7 @@ public class CacheConfig {
   public long getVacuumCleanerInterval(String cacheName) {
     String value = props.getProperty(cacheName + "." + VACUUM_CLEANER_INTERVAL_SEC_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value) * 1000;
+      return Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, "")) * 1000;
     }
     return getLongProperty(VACUUM_CLEANER_INTERVAL_SEC_KEY, DEFAULT_VACUUM_CLEANER_INTERVAL_SEC)
         * 1000;
@@ -1451,7 +1453,7 @@ public class CacheConfig {
   public void setVacuumCleanerInterval(String cacheName, int interval) {
     props.setProperty(cacheName + "." + VACUUM_CLEANER_INTERVAL_SEC_KEY, Long.toString(interval));
   }
-  
+
   /**
    * Get Scavenger run interval for a given cache name
    * @param cacheName cache name
@@ -1460,7 +1462,7 @@ public class CacheConfig {
   public long getScavengerRunInterval(String cacheName) {
     String value = props.getProperty(cacheName + "." + SCAVENGER_RUN_INTERVAL_SEC_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value);
+      return Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, "")) * 1000;
     }
     return getLongProperty(SCAVENGER_RUN_INTERVAL_SEC_KEY, DEFAULT_SCAVENGER_RUN_INTERVAL_SEC);
   }
@@ -1563,7 +1565,7 @@ public class CacheConfig {
   public int getThrougputControllerNumberOfAdjustmentSteps(String cacheName) {
     String value = props.getProperty(cacheName + "." + THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS_KEY);
     if (value != null) {
-      return (int) Long.parseLong(value);
+      return (int) Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
     return (int) getLongProperty(THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS_KEY,
       DEFAULT_THROUGHPUT_CONTROLLER_ADJUSTMENT_STEPS);
@@ -2027,7 +2029,7 @@ public class CacheConfig {
       return (int) getLongProperty(CACHE_EXPIRATION_BIN_START_VALUE_KEY,
         DEFAULT_CACHE_EXPIRATION_BIN_START_VALUE);
     } else {
-      return Integer.parseInt(value);
+      return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
   }
 
@@ -2126,7 +2128,7 @@ public class CacheConfig {
       return (int) getLongProperty(CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY,
         DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_BINS);
     } else {
-      return Integer.parseInt(value);
+      return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
   }
 
@@ -2150,7 +2152,7 @@ public class CacheConfig {
       return (int) getLongProperty(CACHE_ROLLING_WINDOW_COUNTER_DURATION_KEY,
         DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_DURATION);
     } else {
-      return Integer.parseInt(value);
+      return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
   }
 
@@ -2176,7 +2178,7 @@ public class CacheConfig {
       return (int) getLongProperty(CACHE_IO_STORAGE_POOL_SIZE_KEY,
         DEFAULT_CACHE_IO_STORAGE_POOL_SIZE);
     } else {
-      return Integer.parseInt(value);
+      return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
   }
 
@@ -2270,7 +2272,7 @@ public class CacheConfig {
     if (value == null) {
       return getLongProperty(CACHE_SPIN_WAIT_TIME_NS_KEY, DEFAULT_CACHE_SPIN_WAIT_TIME_NS);
     } else {
-      return Long.parseLong(value);
+      return Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
   }
 
@@ -2349,7 +2351,7 @@ public class CacheConfig {
     if (value == null) {
       return (int) getLongProperty(SCAVENGER_NUMBER_THREADS_KEY, DEFAULT_SCAVENGER_NUMBER_THREADS);
     } else {
-      return Integer.parseInt(value);
+      return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
   }
 
@@ -2373,7 +2375,7 @@ public class CacheConfig {
     if (value == null) {
       return getLongProperty(CACHE_MAX_WAIT_ON_PUT_MS_KEY, DEFAULT_CACHE_MAX_WAIT_ON_PUT_MS);
     }
-    return Long.parseLong(value);
+    return Long.parseLong(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
   }
 
   /**
@@ -2611,7 +2613,7 @@ public class CacheConfig {
     if (isCacheCompressionEnabled(cacheName)) {
       String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_LEVEL_KEY);
       if (value != null) {
-        return Integer.parseInt(value);
+        return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
       }
       return (int) getLongProperty(CACHE_COMPRESSION_LEVEL_KEY, DEFAULT_CACHE_COMPRESSION_LEVEL);
     } else {
@@ -2790,7 +2792,7 @@ public class CacheConfig {
   public int getCacheMemoryBufferPoolMaximumSize(String cacheName) {
     String value = props.getProperty(cacheName + "." + CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY);
     if (value != null) {
-      return Integer.parseInt(value);
+      return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
     }
     return (int) getLongProperty(CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY,
       DEFAULT_CACHE_MEMORY_BUFFER_POOL_MAX_SIZE);
@@ -2829,7 +2831,7 @@ public class CacheConfig {
     props.setProperty(cacheName + "." + CACHE_PROACTIVE_EXPIRATION_FACTOR_KEY,
       Double.toString(factor));
   }
-  
+
   public void sanityCheck(String cacheName) {
     long maxSize = getCacheMaximumSize(cacheName);
     if (maxSize > 0 && maxSize < 200 * 1024 * 1024) {
