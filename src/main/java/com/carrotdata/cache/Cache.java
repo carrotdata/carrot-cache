@@ -2747,18 +2747,24 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   public void load() throws IOException {
 
-    LOG.info("Started loading cache ...");
-    long startTime = System.currentTimeMillis();
-    loadCache();
-    initAllDuringLoad();
-    loadAdmissionControlller();
-    loadThroughputControlller();
-    loadEngine();
-    loadScavengerStats();
-    startThroughputController();
-    startVacuumCleaner();
-    long endTime = System.currentTimeMillis();
-    LOG.info("Cache loaded in {}ms", endTime - startTime);
+    try {
+      LOG.info("Started loading cache ...");
+      long startTime = System.currentTimeMillis();
+      loadCache();
+      initAllDuringLoad();
+      loadAdmissionControlller();
+      loadThroughputControlller();
+      loadEngine();
+      loadScavengerStats();
+      startThroughputController();
+      startVacuumCleaner();
+      long endTime = System.currentTimeMillis();
+      LOG.info("Cache loaded in {}ms", endTime - startTime);
+    } catch (IOException e) {
+      LOG.error("Failed to load cache \"" + this.cacheName +"\" delete cache data directory and retry", e);
+      removeShutdownHook();
+      throw e;
+    }
   }
 
   /**
