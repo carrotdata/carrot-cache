@@ -27,6 +27,7 @@ import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
 
@@ -98,6 +99,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /* Total rejected writes */
   private AtomicLong totalRejectedWrites = new AtomicLong(0);
 
+  /* Number of active requests */
+  private AtomicInteger activeRequests = new AtomicInteger();
+  
   /* Cache name */
   String cacheName;
 
@@ -862,13 +866,18 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (cacheDisabled) {
       return false;
     }
-    int rank = getDefaultRankToInsert();
+    try {
+      activeRequests.incrementAndGet();
+      int rank = getDefaultRankToInsert();
 
-    if (this.victimCache != null && this.hybridCacheInverseMode) {
-      return this.victimCache.put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank, false,
-        false);
-    } else {
-      return putDirectly(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank, false, false);
+      if (this.victimCache != null && this.hybridCacheInverseMode) {
+        return this.victimCache.put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank,
+          false, false);
+      } else {
+        return putDirectly(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank, false, false);
+      }
+    } finally {
+      activeRequests.decrementAndGet();
     }
   }
 
@@ -890,12 +899,17 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (cacheDisabled) {
       return false;
     }
-    if (this.victimCache != null && this.hybridCacheInverseMode) {
-      return this.victimCache.put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank, force,
-        scavenger);
-    } else {
-      return putDirectly(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank, force,
-        scavenger);
+    try {
+      activeRequests.incrementAndGet();
+      if (this.victimCache != null && this.hybridCacheInverseMode) {
+        return this.victimCache.put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank,
+          force, scavenger);
+      } else {
+        return putDirectly(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank, force,
+          scavenger);
+      }
+    } finally {
+      activeRequests.decrementAndGet();
     }
   }
 
@@ -1050,15 +1064,18 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (cacheDisabled) {
       return false;
     }
-
-    if (this.victimCache != null && this.hybridCacheInverseMode) {
-      return this.victimCache.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank,
-        groupRank, force, scavenger);
-    } else {
-      return putDirectly(key, keyOffset, keySize, value, valOffset, valSize, expire, rank,
-        groupRank, force, scavenger);
+    try {
+      activeRequests.incrementAndGet();
+      if (this.victimCache != null && this.hybridCacheInverseMode) {
+        return this.victimCache.put(key, keyOffset, keySize, value, valOffset, valSize, expire,
+          rank, groupRank, force, scavenger);
+      } else {
+        return putDirectly(key, keyOffset, keySize, value, valOffset, valSize, expire, rank,
+          groupRank, force, scavenger);
+      }
+    } finally {
+      activeRequests.decrementAndGet();
     }
-
   }
 
   private boolean storageIsFull(int keySize, int valueSize) {
@@ -1232,53 +1249,57 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return -1;
     }
     long result = -1;
-    
-    try {
-      result = this.engine.get(keyPtr, keySize, hit, buffer, bufOffset);
-    } catch (IOException e) {
-      return result;
-    }
 
-    if (result <= buffer.length - bufOffset) {
-      access();
-      if (result >= 0) {
-        hit(result);
+    try {
+      activeRequests.incrementAndGet();
+      try {
+        result = this.engine.get(keyPtr, keySize, hit, buffer, bufOffset);
+      } catch (IOException e) {
+        return result;
       }
-    }
-    if (result >= 0 && result <= buffer.length - bufOffset) {
-      if (this.admissionController != null) {
-        this.admissionController.access(keyPtr, keySize);
+      if (result <= buffer.length - bufOffset) {
+        access();
+        if (result >= 0) {
+          hit(result);
+        }
       }
-    }
-    if (result < 0 && this.victimCache != null) {
-      result = this.victimCache.getKeyValue(keyPtr, keySize, hit, buffer, bufOffset);
-      if (this.victimCachePromoteOnHit && result >= 0 && result <= buffer.length - bufOffset) {
-        // put k-v into this cache, remove it from the victim cache
-        MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
-        if (this.promotionController == null) {
-          // We promote item based on its popularity in the victim cache
-          double popularity = mi.popularity(keyPtr, keySize);
-          if (popularity > this.victimCachePromoteThreshold) {
-            long expire = mi.getExpire(keyPtr, keySize);
-            boolean res = put(buffer, bufOffset, expire);
-            if (res) {
-              this.victimCache.delete(keyPtr, keySize);
+      if (result >= 0 && result <= buffer.length - bufOffset) {
+        if (this.admissionController != null) {
+          this.admissionController.access(keyPtr, keySize);
+        }
+      }
+      if (result < 0 && this.victimCache != null) {
+        result = this.victimCache.getKeyValue(keyPtr, keySize, hit, buffer, bufOffset);
+        if (this.victimCachePromoteOnHit && result >= 0 && result <= buffer.length - bufOffset) {
+          // put k-v into this cache, remove it from the victim cache
+          MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
+          if (this.promotionController == null) {
+            // We promote item based on its popularity in the victim cache
+            double popularity = mi.popularity(keyPtr, keySize);
+            if (popularity > this.victimCachePromoteThreshold) {
+              long expire = mi.getExpire(keyPtr, keySize);
+              boolean res = put(buffer, bufOffset, expire);
+              if (res) {
+                this.victimCache.delete(keyPtr, keySize);
+              }
             }
-          }
-        } else {
-          // verify with PC
-          int valSize = Utils.getValueSize(buffer, bufOffset);
-          if (this.promotionController.promote(keyPtr, keySize, valSize)) {
-            long expire = mi.getExpire(keyPtr, keySize);
-            boolean res = put(buffer, bufOffset, expire);
-            if (res) {
-              this.victimCache.delete(keyPtr, keySize);
+          } else {
+            // verify with PC
+            int valSize = Utils.getValueSize(buffer, bufOffset);
+            if (this.promotionController.promote(keyPtr, keySize, valSize)) {
+              long expire = mi.getExpire(keyPtr, keySize);
+              boolean res = put(buffer, bufOffset, expire);
+              if (res) {
+                this.victimCache.delete(keyPtr, keySize);
+              }
             }
           }
         }
       }
+      return result;
+    } finally {
+      activeRequests.decrementAndGet();
     }
-    return result;
   }
 
   /**
@@ -1324,33 +1345,36 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return -1;
     }
-    long result = -1;
     try {
-      result = engine.getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
-    } catch (IOException e) {
-      // IOException is possible
-      // TODO: better mitigation
+      activeRequests.incrementAndGet();
+      long result = -1;
+      try {
+        result = engine.getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
+      } catch (IOException e) {
+        // IOException is possible
+        // TODO: better mitigation
+        return result;
+      }
+      if (result <= buffer.length - bufOffset) {
+        access();
+        if (result >= 0) {
+          hit(result);
+        }
+      }
+      if (result >= 0 && result <= buffer.length - bufOffset) {
+        if (this.admissionController != null) {
+          this.admissionController.access(keyPtr, keySize);
+        }
+      }
+      if (result < 0 && this.victimCache != null) {
+        result = this.victimCache.getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer,
+          bufOffset);
+        // For range queries we do not promote item to the parent cache
+      }
       return result;
+    } finally {
+      activeRequests.decrementAndGet();
     }
-
-    if (result <= buffer.length - bufOffset) {
-      access();
-      if (result >= 0) {
-        hit(result);
-      }
-    }
-    if (result >= 0 && result <= buffer.length - bufOffset) {
-      if (this.admissionController != null) {
-        this.admissionController.access(keyPtr, keySize);
-      }
-    }
-
-    if (result < 0 && this.victimCache != null) {
-      result =
-          this.victimCache.getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
-      // For range queries we do not promote item to the parent cache
-    }
-    return result;
   }
 
   /**
@@ -1387,58 +1411,63 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return -1;
     }
-    long result = -1;
     try {
-      result = engine.get(key, keyOffset, keySize, hit, buffer, bufOffset);
-    } catch (IOException e) {
-      // IOException is possible
-      // TODO: better mitigation
-      return result;
-    }
+      activeRequests.incrementAndGet();
+      long result = -1;
+      try {
+        result = engine.get(key, keyOffset, keySize, hit, buffer, bufOffset);
+      } catch (IOException e) {
+        // IOException is possible
+        // TODO: better mitigation
+        return result;
+      }
 
-    if (result <= buffer.length - bufOffset) {
-      access();
-      if (result >= 0) {
-        hit(result);
+      if (result <= buffer.length - bufOffset) {
+        access();
+        if (result >= 0) {
+          hit(result);
+        }
       }
-    }
-    if (result >= 0 && result <= buffer.length - bufOffset) {
-      if (this.admissionController != null) {
-        this.admissionController.access(key, keyOffset, keySize);
+      if (result >= 0 && result <= buffer.length - bufOffset) {
+        if (this.admissionController != null) {
+          this.admissionController.access(key, keyOffset, keySize);
+        }
       }
-    }
-    if (result < 0 && this.victimCache != null) {
-      // TODO: optimize it
-      // getWithExpire and getWithExpireAndDelete API
-      // one call instead of three
-      result = this.victimCache.getKeyValue(key, keyOffset, keySize, hit, buffer, bufOffset);
-      if (this.victimCachePromoteOnHit && result >= 0 && result <= buffer.length - bufOffset) {
-        // put k-v into this cache, remove it from the victim cache
-        MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
-        if (this.promotionController == null) {
-          double popularity = mi.popularity(key, keyOffset, keySize);
-          // Promote only popular items
-          if (popularity > this.victimCachePromoteThreshold) {
-            long expire = mi.getExpire(key, keyOffset, keySize);
-            boolean res = put(buffer, bufOffset, expire);
-            if (res) {
-              this.victimCache.delete(key, keyOffset, keySize);
+      if (result < 0 && this.victimCache != null) {
+        // TODO: optimize it
+        // getWithExpire and getWithExpireAndDelete API
+        // one call instead of three
+        result = this.victimCache.getKeyValue(key, keyOffset, keySize, hit, buffer, bufOffset);
+        if (this.victimCachePromoteOnHit && result >= 0 && result <= buffer.length - bufOffset) {
+          // put k-v into this cache, remove it from the victim cache
+          MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
+          if (this.promotionController == null) {
+            double popularity = mi.popularity(key, keyOffset, keySize);
+            // Promote only popular items
+            if (popularity > this.victimCachePromoteThreshold) {
+              long expire = mi.getExpire(key, keyOffset, keySize);
+              boolean res = put(buffer, bufOffset, expire);
+              if (res) {
+                this.victimCache.delete(key, keyOffset, keySize);
+              }
             }
-          }
-        } else {
-          // verify with PC
-          int valSize = Utils.getValueSize(buffer, bufOffset);
-          if (this.promotionController.promote(key, keyOffset, keySize, valSize)) {
-            long expire = mi.getExpire(key, keyOffset, keySize);
-            boolean res = put(buffer, bufOffset, expire);
-            if (res) {
-              this.victimCache.delete(key, keyOffset, keySize);
+          } else {
+            // verify with PC
+            int valSize = Utils.getValueSize(buffer, bufOffset);
+            if (this.promotionController.promote(key, keyOffset, keySize, valSize)) {
+              long expire = mi.getExpire(key, keyOffset, keySize);
+              boolean res = put(buffer, bufOffset, expire);
+              if (res) {
+                this.victimCache.delete(key, keyOffset, keySize);
+              }
             }
           }
         }
       }
+      return result;
+    } finally {
+      activeRequests.decrementAndGet();
     }
-    return result;
   }
 
   /**
@@ -1577,39 +1606,43 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return null;
     }
-    byte[] buffer = this.tlsEnabled ? this.tlsBuffer.get() : new byte[0];
-    long result = getKeyValue(key, keyOffset, keySize, hit, buffer, 0);
-    if (result < 0) {
-      return null;
-    }
-    if (result > buffer.length) {
-      while (true) {
-        buffer = ensureTLSBufferSize((int) result);
-        if (buffer == null) {
-          buffer = new byte[(int) result];
-        }
-        result = getKeyValue(key, keyOffset, keySize, hit, buffer, 0);
-        if (result < 0) return null;
-        if (result <= buffer.length) {
-          break;
+    try {
+      activeRequests.incrementAndGet();
+      byte[] buffer = this.tlsEnabled ? this.tlsBuffer.get() : new byte[0];
+      long result = getKeyValue(key, keyOffset, keySize, hit, buffer, 0);
+      if (result < 0) {
+        return null;
+      }
+      if (result > buffer.length) {
+        while (true) {
+          buffer = ensureTLSBufferSize((int) result);
+          if (buffer == null) {
+            buffer = new byte[(int) result];
+          }
+          result = getKeyValue(key, keyOffset, keySize, hit, buffer, 0);
+          if (result < 0) return null;
+          if (result <= buffer.length) {
+            break;
+          }
         }
       }
+      int size = 0;
+      int off = 0;
+      int kSize = Utils.readUVInt(buffer, off);
+      int kSizeSize = Utils.sizeUVInt(kSize);
+      off += kSizeSize;
+      int vSize = Utils.readUVInt(buffer, off);
+      int vSizeSize = Utils.sizeUVInt(vSize);
+      size = kSize + vSize + kSizeSize + vSizeSize;
+      if (this.tlsEnabled || size < buffer.length) {
+        byte[] buf = new byte[(int) size];
+        System.arraycopy(buffer, 0, buf, 0, buf.length);
+        return buf;
+      }
+      return buffer;
+    } finally {
+      activeRequests.decrementAndGet();
     }
-
-    int size = 0;
-    int off = 0;
-    int kSize = Utils.readUVInt(buffer, off);
-    int kSizeSize = Utils.sizeUVInt(kSize);
-    off += kSizeSize;
-    int vSize = Utils.readUVInt(buffer, off);
-    int vSizeSize = Utils.sizeUVInt(vSize);
-    size = kSize + vSize + kSizeSize + vSizeSize;
-    if (this.tlsEnabled || size < buffer.length) {
-      byte[] buf = new byte[(int) size];
-      System.arraycopy(buffer, 0, buf, 0, buf.length);
-      return buf;
-    }
-    return buffer;
   }
 
   /**
@@ -1757,6 +1790,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return -1;
     }
+
     // TODO: compare other method (get into temp buffer, then copy to destination)
     int rem = buffer.length - bufOffset;
     long result = getKeyValue(key, keyOffset, keySize, hit, buffer, bufOffset);
@@ -1786,34 +1820,38 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return -1;
     }
-    long result = -1;
     try {
-      result =
-          engine.getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
-    } catch (IOException e) {
-      // IOException is possible
-      // TODO: better mitigation
+      activeRequests.incrementAndGet();
+      long result = -1;
+      try {
+        result =
+            engine.getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
+      } catch (IOException e) {
+        // IOException is possible
+        // TODO: better mitigation
+        return result;
+      }
+
+      if (result <= buffer.length - bufOffset) {
+        access();
+        if (result >= 0) {
+          hit(result);
+        }
+      }
+      if (result >= 0 && result <= buffer.length - bufOffset) {
+        if (this.admissionController != null) {
+          this.admissionController.access(key, keyOffset, keySize);
+        }
+      }
+      if (result < 0 && this.victimCache != null) {
+        result = this.victimCache.getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit,
+          buffer, bufOffset);
+        // For range queries we do not promote item to the parent cache
+      }
       return result;
+    } finally {
+      activeRequests.decrementAndGet();
     }
-
-    if (result <= buffer.length - bufOffset) {
-      access();
-      if (result >= 0) {
-        hit(result);
-      }
-    }
-    if (result >= 0 && result <= buffer.length - bufOffset) {
-      if (this.admissionController != null) {
-        this.admissionController.access(key, keyOffset, keySize);
-      }
-    }
-
-    if (result < 0 && this.victimCache != null) {
-      result = this.victimCache.getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit,
-        buffer, bufOffset);
-      // For range queries we do not promote item to the parent cache
-    }
-    return result;
   }
 
   /**
@@ -1847,52 +1885,58 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return -1;
     }
-    int rem = buffer.remaining();
-    long result = -1;
     try {
-      result = this.engine.get(key, keyOff, keySize, hit, buffer);
-    } catch (IOException e) {
-      return result;
-    }
-    if (result <= rem) {
-      access();
-      if (result >= 0) {
-        hit(result);
+
+      activeRequests.incrementAndGet();
+      int rem = buffer.remaining();
+      long result = -1;
+      try {
+        result = this.engine.get(key, keyOff, keySize, hit, buffer);
+      } catch (IOException e) {
+        return result;
       }
-    }
-    if (result >= 0 && result <= rem) {
-      if (this.admissionController != null) {
-        this.admissionController.access(key, keyOff, keySize);
+      if (result <= rem) {
+        access();
+        if (result >= 0) {
+          hit(result);
+        }
       }
-    }
-    if (result < 0 && this.victimCache != null) {
-      result = this.victimCache.getKeyValue(key, keyOff, keySize, hit, buffer);
-      if (this.victimCachePromoteOnHit && result >= 0 && result <= rem) {
-        // put k-v into this cache, remove it from the victim cache
-        MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
-        if (this.promotionController == null) {
-          double popularity = mi.popularity(key, keyOff, keySize);
-          if (popularity > this.victimCachePromoteThreshold) {
-            long expire = mi.getExpire(key, keyOff, keySize);
-            boolean res = put(buffer, expire);
-            if (res) {
-              this.victimCache.delete(key, keyOff, keySize);
+      if (result >= 0 && result <= rem) {
+        if (this.admissionController != null) {
+          this.admissionController.access(key, keyOff, keySize);
+        }
+      }
+      if (result < 0 && this.victimCache != null) {
+        result = this.victimCache.getKeyValue(key, keyOff, keySize, hit, buffer);
+        if (this.victimCachePromoteOnHit && result >= 0 && result <= rem) {
+          // put k-v into this cache, remove it from the victim cache
+          MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
+          if (this.promotionController == null) {
+            double popularity = mi.popularity(key, keyOff, keySize);
+            if (popularity > this.victimCachePromoteThreshold) {
+              long expire = mi.getExpire(key, keyOff, keySize);
+              boolean res = put(buffer, expire);
+              if (res) {
+                this.victimCache.delete(key, keyOff, keySize);
+              }
             }
-          }
-        } else {
-          // verify with PC
-          int valSize = Utils.getValueSize(buffer);
-          if (this.promotionController.promote(key, keyOff, keySize, valSize)) {
-            long expire = mi.getExpire(key, keyOff, keySize);
-            boolean res = put(buffer, expire);
-            if (res) {
-              this.victimCache.delete(key, keyOff, keySize);
+          } else {
+            // verify with PC
+            int valSize = Utils.getValueSize(buffer);
+            if (this.promotionController.promote(key, keyOff, keySize, valSize)) {
+              long expire = mi.getExpire(key, keyOff, keySize);
+              boolean res = put(buffer, expire);
+              if (res) {
+                this.victimCache.delete(key, keyOff, keySize);
+              }
             }
           }
         }
       }
+      return result;
+    } finally {
+      activeRequests.decrementAndGet();
     }
-    return result;
   }
 
   /**
@@ -1911,6 +1955,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return -1;
     }
+
     int rem = buffer.remaining();
     long result = getKeyValue(key, keyOff, keySize, hit, buffer);
     if (result > 0 && result <= rem) {
@@ -1937,34 +1982,37 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return -1;
     }
-    long result = -1;
-    int rem = buffer.remaining();
     try {
-      result = engine.getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer);
-    } catch (IOException e) {
-      // IOException is possible
-      // TODO: better mitigation
+      activeRequests.incrementAndGet();
+      long result = -1;
+      int rem = buffer.remaining();
+      try {
+        result = engine.getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer);
+      } catch (IOException e) {
+        // IOException is possible
+        // TODO: better mitigation
+        return result;
+      }
+      if (result <= rem) {
+        access();
+        if (result >= 0) {
+          hit(result);
+        }
+      }
+      if (result >= 0 && result <= rem) {
+        if (this.admissionController != null) {
+          this.admissionController.access(key, keyOffset, keySize);
+        }
+      }
+      if (result < 0 && this.victimCache != null) {
+        result =
+            this.victimCache.getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer);
+        // For range queries we do not promote item to the parent cache
+      }
       return result;
+    } finally {
+      activeRequests.decrementAndGet();
     }
-
-    if (result <= rem) {
-      access();
-      if (result >= 0) {
-        hit(result);
-      }
-    }
-    if (result >= 0 && result <= rem) {
-      if (this.admissionController != null) {
-        this.admissionController.access(key, keyOffset, keySize);
-      }
-    }
-
-    if (result < 0 && this.victimCache != null) {
-      result =
-          this.victimCache.getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer);
-      // For range queries we do not promote item to the parent cache
-    }
-    return result;
   }
 
   /**
@@ -1995,55 +2043,57 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return -1;
     }
-    int rem = buffer.remaining();
-
-    long result = -1;
-
     try {
-      result = this.engine.get(keyPtr, keySize, hit, buffer);
-    } catch (IOException e) {
-      return result;
-    }
-
-    if (result <= rem) {
-      access();
-      if (result >= 0) {
-        hit(result);
+      activeRequests.incrementAndGet();
+      int rem = buffer.remaining();
+      long result = -1;
+      try {
+        result = this.engine.get(keyPtr, keySize, hit, buffer);
+      } catch (IOException e) {
+        return result;
       }
-    }
-    if (result >= 0 && result <= rem) {
-      if (this.admissionController != null) {
-        this.admissionController.access(keyPtr, keySize);
+      if (result <= rem) {
+        access();
+        if (result >= 0) {
+          hit(result);
+        }
       }
-    }
-    if (result < 0 && this.victimCache != null) {
-      result = this.victimCache.getKeyValue(keyPtr, keySize, hit, buffer);
-      if (this.victimCachePromoteOnHit && result >= 0 && result <= rem) {
-        // put k-v into this cache, remove it from the victim cache
-        MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
-        if (this.promotionController == null) {
-          double popularity = mi.popularity(keyPtr, keySize);
-          if (popularity > this.victimCachePromoteThreshold) {
-            long expire = mi.getExpire(keyPtr, keySize);
-            boolean res = put(buffer, expire);
-            if (res) {
-              this.victimCache.delete(keyPtr, keySize);
+      if (result >= 0 && result <= rem) {
+        if (this.admissionController != null) {
+          this.admissionController.access(keyPtr, keySize);
+        }
+      }
+      if (result < 0 && this.victimCache != null) {
+        result = this.victimCache.getKeyValue(keyPtr, keySize, hit, buffer);
+        if (this.victimCachePromoteOnHit && result >= 0 && result <= rem) {
+          // put k-v into this cache, remove it from the victim cache
+          MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
+          if (this.promotionController == null) {
+            double popularity = mi.popularity(keyPtr, keySize);
+            if (popularity > this.victimCachePromoteThreshold) {
+              long expire = mi.getExpire(keyPtr, keySize);
+              boolean res = put(buffer, expire);
+              if (res) {
+                this.victimCache.delete(keyPtr, keySize);
+              }
             }
-          }
-        } else {
-          // verify with PC
-          int valSize = Utils.getValueSize(buffer);
-          if (this.promotionController.promote(keyPtr, keySize, valSize)) {
-            long expire = mi.getExpire(keyPtr, keySize);
-            boolean res = put(buffer, expire);
-            if (res) {
-              this.victimCache.delete(keyPtr, keySize);
+          } else {
+            // verify with PC
+            int valSize = Utils.getValueSize(buffer);
+            if (this.promotionController.promote(keyPtr, keySize, valSize)) {
+              long expire = mi.getExpire(keyPtr, keySize);
+              boolean res = put(buffer, expire);
+              if (res) {
+                this.victimCache.delete(keyPtr, keySize);
+              }
             }
           }
         }
       }
+      return result;
+    } finally {
+      activeRequests.decrementAndGet();
     }
-    return result;
   }
 
   /**
@@ -2086,33 +2136,38 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return -1;
     }
-    long result = -1;
-    int rem = buffer.remaining();
     try {
-      result = engine.getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer);
-    } catch (IOException e) {
-      // IOException is possible
-      // TODO: better mitigation
+      activeRequests.incrementAndGet();
+      long result = -1;
+      int rem = buffer.remaining();
+      try {
+        result = engine.getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer);
+      } catch (IOException e) {
+        // IOException is possible
+        // TODO: better mitigation
+        return result;
+      }
+
+      if (result <= rem) {
+        access();
+        if (result >= 0) {
+          hit(result);
+        }
+      }
+      if (result >= 0 && result <= rem) {
+        if (this.admissionController != null) {
+          this.admissionController.access(keyPtr, keySize);
+        }
+      }
+
+      if (result < 0 && this.victimCache != null) {
+        result = this.victimCache.getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer);
+        // For range queries we do not promote item to the parent cache
+      }
       return result;
+    } finally {
+      activeRequests.decrementAndGet();
     }
-
-    if (result <= rem) {
-      access();
-      if (result >= 0) {
-        hit(result);
-      }
-    }
-    if (result >= 0 && result <= rem) {
-      if (this.admissionController != null) {
-        this.admissionController.access(keyPtr, keySize);
-      }
-    }
-
-    if (result < 0 && this.victimCache != null) {
-      result = this.victimCache.getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer);
-      // For range queries we do not promote item to the parent cache
-    }
-    return result;
   }
 
   /* Delete API */
@@ -2128,11 +2183,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return false;
     }
-    boolean result = engine.delete(keyPtr, keySize);
-    if (!result && this.victimCache != null) {
-      return this.victimCache.delete(keyPtr, keySize);
+    try {
+      activeRequests.incrementAndGet();
+      boolean result = engine.delete(keyPtr, keySize);
+      if (!result && this.victimCache != null) {
+        return this.victimCache.delete(keyPtr, keySize);
+      }
+      return result;
+    } finally {
+      activeRequests.decrementAndGet();
     }
-    return result;
   }
 
   /**
@@ -2147,11 +2207,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return false;
     }
-    boolean result = engine.delete(key, keyOffset, keySize);
-    if (!result && this.victimCache != null) {
-      return this.victimCache.delete(key, keyOffset, keySize);
+    try {
+      activeRequests.incrementAndGet();
+      boolean result = engine.delete(key, keyOffset, keySize);
+      if (!result && this.victimCache != null) {
+        return this.victimCache.delete(key, keyOffset, keySize);
+      }
+      return result;
+    } finally {
+      activeRequests.decrementAndGet();
     }
-    return result;
   }
 
   /**
@@ -2208,8 +2273,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return -1;
     }
-    long expire = this.engine.getMemoryIndex().getExpire(key, off, size);
-    return expire;
+    try {
+      activeRequests.incrementAndGet();
+      long expire = this.engine.getMemoryIndex().getExpire(key, off, size);
+      return expire;
+    } finally {
+      activeRequests.decrementAndGet();
+    }
   }
 
   /**
@@ -2222,7 +2292,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return -1;
     }
-    return this.engine.getMemoryIndex().getExpire(keyPtr, keySize);
+    try {
+      activeRequests.incrementAndGet();
+      return this.engine.getMemoryIndex().getExpire(keyPtr, keySize);
+    } finally {
+      activeRequests.decrementAndGet();
+    }
   }
 
   /**
@@ -2236,7 +2311,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return -1;
     }
-    return this.engine.getMemoryIndex().getAndSetExpire(key, off, size, expire);
+    try {
+      activeRequests.incrementAndGet();
+      return this.engine.getMemoryIndex().getAndSetExpire(key, off, size, expire);
+    } finally {
+      activeRequests.decrementAndGet();
+    }
   }
 
   /**
@@ -2249,7 +2329,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return -1;
     }
-    return this.engine.getMemoryIndex().getAndSetExpire(keyPtr, keySize, expire);
+    try {
+      activeRequests.incrementAndGet();
+      return this.engine.getMemoryIndex().getAndSetExpire(keyPtr, keySize, expire);
+    } finally {
+      activeRequests.decrementAndGet();
+    }
   }
 
   /**
@@ -2272,7 +2357,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return false;
     }
-    return this.engine.getMemoryIndex().exists(key, off, size);
+    try {
+      activeRequests.incrementAndGet();
+      return this.engine.getMemoryIndex().exists(key, off, size);
+    } finally {
+      activeRequests.decrementAndGet();
+    }
   }
 
   /**
@@ -2287,9 +2377,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return false;
     }
-    byte[] buf = new byte[16];
-    long result = get(key, off, size, false, buf, 0);
-    return result >= 0;
+    try {
+      activeRequests.incrementAndGet();
+      byte[] buf = new byte[16];
+      long result = get(key, off, size, false, buf, 0);
+      return result >= 0;
+    } finally {
+      activeRequests.decrementAndGet();
+    }
   }
 
   /**
@@ -2304,9 +2399,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return false;
     }
-    byte[] buf = new byte[16];
-    long result = get(keyPtr, size, false, buf, 0);
-    return result >= 0;
+    try {
+      activeRequests.incrementAndGet();
+      byte[] buf = new byte[16];
+      long result = get(keyPtr, size, false, buf, 0);
+      return result >= 0;
+    } finally {
+      activeRequests.decrementAndGet();
+    }
   }
 
   /**
@@ -2884,7 +2984,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     stopScavengers();
     // Disable cache
     this.cacheDisabled = true;
-
+    waitForActiveRequestsFinished();
     // stop IOEngine
     this.engine.shutdown();
     if (this.saveOnShutdown) {
@@ -2907,22 +3007,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     return size;
   }
-
-  /**
-   * Not used. Not safe for usage
-   * @return
-   */
-  public Segment[] getSegmentsSorted() {
-    return this.engine.getDataSegmentsSorted();
-  }
-
-  public SegmentScanner getSegmentScanner(Segment s) throws IOException {
-    if (this.cacheDisabled) {
-      throw new IOException("Shutdown is in progress");
+  
+  private void waitForActiveRequestsFinished() {
+    long timeout = 1000;
+    long start = System.currentTimeMillis();  
+    while(System.currentTimeMillis() - start < timeout && activeRequests.get() > 0) {
+      LockSupport.park(100000);
     }
-    return this.engine.getScanner(s);
   }
-
+  
   public static Cache loadCache(String cacheName) throws IOException {
     CacheConfig conf = CacheConfig.getInstance();
     String snapshotDir = conf.getSnapshotDir(cacheName);
