@@ -1166,22 +1166,22 @@ public class Segment implements Persistent {
       seal();
       // Save info
       this.info.save(dos);
-      if (!isMemory()) {
-        return;
-      }
-      // Write segment size
-      long size = getFullDataSize();
-      dos.writeLong(size);
-
-      int bufSize = (int) Math.min(size, 1024 * 1024);
-      byte[] buffer = new byte[bufSize];
-      long written = 0;
-      while (written < size) {
-        int toCopy = (int) Math.min(bufSize, size - written);
-        UnsafeAccess.copy(this.address + written, buffer, 0, toCopy);
-        written += toCopy;
-        dos.write(buffer, 0, toCopy);
-      }
+//      if (!isMemory()) {
+//        return;
+//      }
+//      // Write segment size
+//      long size = getFullDataSize();
+//      dos.writeLong(size);
+//
+//      int bufSize = (int) Math.min(size, 1024 * 1024);
+//      byte[] buffer = new byte[bufSize];
+//      long written = 0;
+//      while (written < size) {
+//        int toCopy = (int) Math.min(bufSize, size - written);
+//        UnsafeAccess.copy(this.address + written, buffer, 0, toCopy);
+//        written += toCopy;
+//        dos.write(buffer, 0, toCopy);
+//      }
     } finally {
       dos.flush();
       readUnlock();
@@ -1229,23 +1229,23 @@ public class Segment implements Persistent {
     this.info = new Info();
     this.info.load(dis);
 
-    if (isMemory()) {
-      long size = dis.readLong();
-      // We here do not have IOEngine reference yet
-      // therefore we allocate memory directly
-      long ptr = UnsafeAccess.mallocZeroed(size());
-      int bufSize = (int) Math.min(1024 * 1024, size);
-      byte[] buffer = new byte[bufSize];
-      int read = 0;
-
-      while (read < size) {
-        int toRead = (int) Math.min(size - read, bufSize);
-        dis.readFully(buffer, 0, toRead);
-        UnsafeAccess.copy(buffer, 0, ptr + read, toRead);
-        read += toRead;
-      }
-      this.setAddress(ptr);
-    }
+//    if (isMemory()) {
+//      long size = dis.readLong();
+//      // We here do not have IOEngine reference yet
+//      // therefore we allocate memory directly
+//      long ptr = UnsafeAccess.mallocZeroed(size());
+//      int bufSize = (int) Math.min(1024 * 1024, size);
+//      byte[] buffer = new byte[bufSize];
+//      int read = 0;
+//
+//      while (read < size) {
+//        int toRead = (int) Math.min(size - read, bufSize);
+//        dis.readFully(buffer, 0, toRead);
+//        UnsafeAccess.copy(buffer, 0, ptr + read, toRead);
+//        read += toRead;
+//      }
+//      this.setAddress(ptr);
+//    }
   }
 
   public boolean isRecycling() {

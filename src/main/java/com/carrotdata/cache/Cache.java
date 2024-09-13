@@ -2984,7 +2984,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     stopScavengers();
     // Disable cache
     this.cacheDisabled = true;
-    waitForActiveRequestsFinished();
+    waitForActiveRequestsFinishedOrTimeout(1000);
     // stop IOEngine
     this.engine.shutdown();
     if (this.saveOnShutdown) {
@@ -2998,7 +2998,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       shutdownStatusMsg =
           String.format("Cache [%s] saved %d bytes in %d ms. Shutdown complete", cacheName, size, (end - start));
     } else {
-      shutdownStatusMsg += "Shutdown complete";
+      shutdownStatusMsg += ". Shutdown complete";
     }
     LOG.info(shutdownStatusMsg);
     if (this.saveOnShutdown) {
@@ -3008,8 +3008,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return size;
   }
   
-  private void waitForActiveRequestsFinished() {
-    long timeout = 1000;
+  private void waitForActiveRequestsFinishedOrTimeout(long timeout) {
     long start = System.currentTimeMillis();  
     while(System.currentTimeMillis() - start < timeout && activeRequests.get() > 0) {
       LockSupport.park(100000);

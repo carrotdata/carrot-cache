@@ -132,12 +132,13 @@ public class FileIOEngine extends IOEngine {
         LOG.error("saveInternal segmentId=" + data.getId() + " s=" + data, e);
       } finally {
         data.writeUnlock();
-        activeSaveTasks.decrementAndGet();
+        //activeSaveTasks.decrementAndGet();
       }
     //};
     //submitTask(r);
   }
 
+  @SuppressWarnings("unused")
   private void submitTask(Runnable r) {
     activeSaveTasks.incrementAndGet();
     unboundedThreadPool.submit(r);

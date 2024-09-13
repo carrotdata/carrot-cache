@@ -564,10 +564,11 @@ public final class MemoryIndex implements Persistent {
    */
   long expand(long indexBlockPtr, int requiredSize, boolean force) {
     int num = numEntries(indexBlockPtr);
-    if (!force && num >= MAX_INDEX_ENTRIES_PER_BLOCK) {
+    int blockSize = blockSize(indexBlockPtr);
+
+    if (!force && num >= MAX_INDEX_ENTRIES_PER_BLOCK && blockSize >= 4096) {
       return FAILED;
     }
-    int blockSize = blockSize(indexBlockPtr);
     if (blockSize >= requiredSize) return indexBlockPtr;
     int newSize = getMinSizeGreaterOrEqualsThan(requiredSize);
     if (newSize == FAILED) {
