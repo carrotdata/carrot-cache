@@ -34,19 +34,19 @@ public class TestZstdCompressionCSV {
   private static final Logger LOG = LoggerFactory.getLogger(TestZstdCompressionCSV.class);
 
   private static int DICT_SIZE = 1 << 20; // 16KB
-  private static int COMP_LEVEL = 3;
+  private static int COMP_LEVEL = 10;
 
   @SuppressWarnings("unused")
   public static void main(String[] args) throws IOException {
     // String file = "/Users/vrodionov/Development/datasets/spotify/spotify.csv";
-    // String file =
+    // String file ="/Users/vrodionov/Development/carrotdata/membench/data/twitter_sentiments/twitter_sentiments.csv";
     // "/Users/vrodionov/Development/datasets/twitter_sentiments/training.1600000.processed.noemoticon.csv";
     // String file = "/Users/vrodionov/Development/datasets/amazon_product_review/Reviews.csv";
     // String file = "/Users/vrodionov/Development/datasets/airbnb/Airbnb_Data.csv";
     // String file = "/Users/vrodionov/Development/datasets/arxiv/arxiv-metadata-oai-snapshot.json";
-    // String file = "/Users/vrodionov/Development/datasets/dblp/dblp.json";
+     String file = "/Users/vrodionov/Development/carrotdata/membench/data/dblp/dblp.json";
     // String file = "/Users/vrodionov/Development/datasets/ohio/higher_ed_employee_salaries.csv";
-    String file = "/Users/vrodionov/Development/datasets/twitter/twitter.twitter2.json";
+    //String file = "/Users/vrodionov/Development/datasets/twitter/twitter.twitter2.json";
 
     File f = new File(file);
     long fileSize = f.length();
@@ -77,7 +77,7 @@ public class TestZstdCompressionCSV {
     compContext.loadDict(dictCompress);
     compContext.setLevel(COMP_LEVEL);
 
-    int n = 1;
+    int n = 20;
     LOG.info("Group of:{}", n);
     LOG.info("Compression starts");
     List<Integer> sizes = new ArrayList<Integer>();

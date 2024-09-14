@@ -129,6 +129,7 @@ public class TestFileIOEngine extends IOTestBase {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
     this.engine.save(dos);
+    this.engine.getMemoryIndex().save(dos);
     // Dispose engine
     engine.dispose();
     // Re-create new one
@@ -136,6 +137,7 @@ public class TestFileIOEngine extends IOTestBase {
     ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
     DataInputStream dis = new DataInputStream(bais);
     engine.load(dis);
+    engine.getMemoryIndex().load(dis);
     verifyMemoryEngine(engine, loaded);
   }
 

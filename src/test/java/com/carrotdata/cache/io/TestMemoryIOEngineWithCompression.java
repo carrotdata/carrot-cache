@@ -274,6 +274,7 @@ public class TestMemoryIOEngineWithCompression extends IOCompressionTestBase {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
     this.engine.save(dos);
+    this.engine.getMemoryIndex().save(dos);
     // Get current config, we will reuse it later because it keeps location of a dictionary folder
     CacheConfig config = CacheConfig.getInstance();
     // Dispose engine
@@ -284,6 +285,7 @@ public class TestMemoryIOEngineWithCompression extends IOCompressionTestBase {
     ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
     DataInputStream dis = new DataInputStream(bais);
     engine.load(dis);
+    engine.getMemoryIndex().load(dis);
     verifyMemoryEngine(engine, loaded);
   }
 

@@ -104,6 +104,9 @@ public class CacheConfig {
   /** File name for cache engine snapshot data */
   public final static String CACHE_ENGINE_SNAPSHOT_NAME = "engine.data";
 
+  /** File name for cache engine snapshot data */
+  public final static String CACHE_INDEX_SNAPSHOT_NAME = "index.data";
+  
   /** Dictionary directory name (there can be multiple dictionary versions) */
   public final static String DICTIONARY_DIR_NAME = "dict";
 

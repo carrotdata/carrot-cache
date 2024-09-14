@@ -11,6 +11,7 @@
  */
 package com.carrotdata.cache;
 
+import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.FileInputStream;
@@ -2823,17 +2824,56 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   /**
+   * Loads engine data
+   * @throws IOException
+   */
+  private void loadIndex() throws IOException {
+    String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
+    String file = CacheConfig.CACHE_INDEX_SNAPSHOT_NAME;
+    Path p = Paths.get(snapshotDir, file);
+    if (Files.exists(p) && Files.size(p) > 0) {
+      FileInputStream fis = new FileInputStream(p.toFile());
+      BufferedInputStream bis = new BufferedInputStream(fis, 16 << 20);
+      DataInputStream dis = new DataInputStream(bis);
+      this.engine.getMemoryIndex().load(dis);
+      dis.close();
+    }
+  }
+
+  /**
+   * Saves engine data
+   * @throws IOException
+   */
+  private void saveIndex() throws IOException {
+    String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
+    String file = CacheConfig.CACHE_INDEX_SNAPSHOT_NAME;
+    Path p = Paths.get(snapshotDir, file);
+    FileOutputStream fos = new FileOutputStream(p.toFile());
+    DataOutputStream dos = new DataOutputStream(fos);
+    this.engine.getMemoryIndex().save(dos);
+    dos.close();
+  }
+  
+  
+  private IOException onEngineSaveLoad;
+  
+  private IOException onIndexSaveLoad;
+  /**
    * Save cache data and meta-data
    * @throws IOException
    */
   public void save() throws IOException {
     LOG.info("Started saving cache ...");
+    onEngineSaveLoad = null;
+    onIndexSaveLoad = null;
     long startTime = System.currentTimeMillis();
     saveCache();
     saveAdmissionController();
     saveThroughputController();
-    saveEngine();
     saveScavengerStats();
+
+    saveEngineAndIndex();
+    
     if (victimCache != null) {
       victimCache.save();
     }
@@ -2842,20 +2882,158 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   /**
+   * Saves in parallel engine and index data
+   * @throws IOException
+   */
+  private void saveEngineAndIndex() throws IOException {
+    // Can do this in parallel
+    Runnable engineSave = () -> {
+      try {
+        long t1 = System.currentTimeMillis();
+        saveEngine();
+        long t2 = System.currentTimeMillis();
+        LOG.info("Engine save time:{}ms", t2 - t1);
+      } catch (IOException e) {
+        onEngineSaveLoad = e;
+      }
+    };
+    
+    Runnable indexSave = () -> {
+      try {
+        long t1 = System.currentTimeMillis();
+        saveIndex();
+        long t2 = System.currentTimeMillis();
+        LOG.info("Index save time:{}ms", t2 - t1);
+      } catch (IOException e) {
+        onEngineSaveLoad = e;
+      }
+    };
+    
+    Thread saveEngineThread = new Thread(engineSave);
+    saveEngineThread.start();
+    Thread saveIndexThread = new Thread(indexSave);
+    saveIndexThread.start();
+    
+    while(true) {
+      try {
+        saveEngineThread.join();
+        saveIndexThread.join();
+        break;
+      } catch(InterruptedException e) {
+        // Handle the exception properly, e.g., by re-interrupting the thread
+        Thread.currentThread().interrupt();
+        LOG.error("Thread was interrupted: " + e.getMessage());
+        break; // Exit the loop in case of interruption
+      }
+    }
+    
+    if(onEngineSaveLoad != null) {
+      throw onEngineSaveLoad;
+    }
+    
+    if(onIndexSaveLoad != null) {
+      throw onIndexSaveLoad;
+    }
+  }
+  
+  /**
+   * Loads in parallel engine data and data index
+   * @throws IOException
+   */
+  private void loadEngineAndIndex() throws IOException {
+    // Can do this in parallel
+    Runnable engineLoad = () -> {
+      try {
+        long t1 = System.currentTimeMillis();
+        loadEngine();
+        long t2 = System.currentTimeMillis();
+        LOG.info("Engine load time:{}ms", t2-t1);
+      } catch (IOException e) {
+        onEngineSaveLoad = e;
+      }
+    };
+    
+    Runnable indexLoad = () -> {
+      try {
+        long t1 = System.currentTimeMillis();
+        loadIndex();
+        long t2 = System.currentTimeMillis();
+        LOG.info("Index load time:{}ms", t2-t1);
+      } catch (IOException e) {
+        onEngineSaveLoad = e;
+      }
+    };
+    
+    Thread loadEngineThread = new Thread(engineLoad);
+    loadEngineThread.start();
+    Thread loadIndexThread = new Thread(indexLoad);
+    loadIndexThread.start();
+    
+    while(true) {
+      try {
+        loadEngineThread.join();
+        loadIndexThread.join();
+        break;
+      } catch(InterruptedException e) {
+        // Handle the exception properly, e.g., by re-interrupting the thread
+        Thread.currentThread().interrupt();
+        LOG.error("Thread was interrupted: " + e.getMessage());
+        break; // Exit the loop in case of interruption
+      }
+    }
+    
+    if(onEngineSaveLoad != null) {
+      throw onEngineSaveLoad;
+    }
+    
+    if(onIndexSaveLoad != null) {
+      throw onIndexSaveLoad;
+    }
+  }
+  
+  private IOException onLoadException;
+  /**
    * Load cache data and meta-data from a file system
    * @throws IOException
    */
   public void load() throws IOException {
-
+    onEngineSaveLoad = null;
+    onIndexSaveLoad = null;
+    onLoadException = null;
+    // We run load in three separate threads
     try {
       LOG.info("Started loading cache ...");
-      long startTime = System.currentTimeMillis();
+      
       loadCache();
       initAllDuringLoad();
-      loadAdmissionControlller();
-      loadThroughputControlller();
-      loadEngine();
-      loadScavengerStats();
+      
+      long startTime = System.currentTimeMillis();
+      
+      Runnable load = () -> {
+        try {    
+          loadAdmissionControlller();
+          loadThroughputControlller();
+          loadScavengerStats();
+        } catch (IOException e) {
+          onLoadException = e;
+        }
+      };
+      
+      Thread loadOne = new Thread(load);
+      loadOne.start();
+      
+      // Load data and index in parallel
+      loadEngineAndIndex();
+      
+      try {
+        loadOne.join();
+      } catch (InterruptedException ee) {
+        //
+      }
+      if (onLoadException != null) {
+        throw onLoadException;
+      }
+      
       startThroughputController();
       startVacuumCleaner();
       long endTime = System.currentTimeMillis();

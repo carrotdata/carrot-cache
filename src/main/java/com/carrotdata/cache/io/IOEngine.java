@@ -2507,7 +2507,7 @@ public abstract class IOEngine implements Persistent {
       s.save(dos);
     }
     // Save index
-    this.index.save(dos);
+    //this.index.save(dos);
     this.recyclingSelector.save(dos);
     dos.writeLong(this.storageAllocated.get());
     dos.writeLong(this.rawDataSize.get());
@@ -2545,7 +2545,7 @@ public abstract class IOEngine implements Persistent {
       s.setDataWriterAndEngine(this.dataWriter, this);
       this.dataSegments[s.getId()] = s;
     }
-    this.index.load(dis);
+    //this.index.load(dis);
     this.recyclingSelector.load(dis);
     this.storageAllocated.set(dis.readLong());
     this.rawDataSize.set(dis.readLong());

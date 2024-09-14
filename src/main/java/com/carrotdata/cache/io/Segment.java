@@ -1234,7 +1234,7 @@ public class Segment implements Persistent {
       // We here do not have IOEngine reference yet
       // therefore we allocate memory directly
       long ptr = UnsafeAccess.mallocZeroed(size());
-      int bufSize = (int) Math.min(1024 * 1024, size);
+      int bufSize = (int) Math.min(16 * 1024 * 1024, size);
       byte[] buffer = new byte[bufSize];
       int read = 0;
 
