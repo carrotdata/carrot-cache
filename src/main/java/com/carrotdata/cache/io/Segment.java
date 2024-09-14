@@ -1202,7 +1202,7 @@ public class Segment implements Persistent {
       long size = getFullDataSize();
       file.writeLong(size);
 
-      int bufSize = (int) Math.min(size, 1024 * 1024);
+      int bufSize = (int) Math.min(size, 1 << 20);
       byte[] buffer = new byte[bufSize];
       long written = 0;
       long beforePtr = this.address;

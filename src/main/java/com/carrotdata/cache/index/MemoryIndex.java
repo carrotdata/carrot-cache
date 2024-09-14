@@ -564,10 +564,10 @@ public final class MemoryIndex implements Persistent {
    */
   long expand(long indexBlockPtr, int requiredSize, boolean force) {
     int num = numEntries(indexBlockPtr);
-    if (!force && num >= MAX_INDEX_ENTRIES_PER_BLOCK) {
+    int blockSize = blockSize(indexBlockPtr);
+    if (!force && num >= MAX_INDEX_ENTRIES_PER_BLOCK /*&& blockSize >= 4096*/) {
       return FAILED;
     }
-    int blockSize = blockSize(indexBlockPtr);
     if (blockSize >= requiredSize) return indexBlockPtr;
     int newSize = getMinSizeGreaterOrEqualsThan(requiredSize);
     if (newSize == FAILED) {
@@ -2537,6 +2537,10 @@ public final class MemoryIndex implements Persistent {
         if (index[i] == 0) continue;
         currentSlot = i;
         lock(i);
+        if (index[i] == 0) {
+          unlock(i);
+          continue;
+        }
         rehashSlot(i);
         unlock(i);
       }
@@ -2630,7 +2634,7 @@ public final class MemoryIndex implements Persistent {
   public void save(OutputStream os) throws IOException {
 
     DataOutputStream dos = Utils.toDataOutputStream(os);
-    completeRehashing();
+
     // TODO: locking index?
     // Cache name
     dos.writeUTF(cacheName);
@@ -2640,8 +2644,10 @@ public final class MemoryIndex implements Persistent {
     dos.writeUTF(this.indexFormat.getClass().getCanonicalName());
     /* Index format */
     indexFormat.save(dos);
-    /* Hash table size */
-    dos.writeLong(this.ref_index_base.get().length);
+    
+    dos.writeBoolean(this.rehashInProgress);
+    dos.writeLong(this.rehashedSlots.get());
+    
     /* Index entry size */
     dos.writeInt(this.indexSize);
     /* Is eviction enabled yet? */
@@ -2656,18 +2662,34 @@ public final class MemoryIndex implements Persistent {
     dos.writeLong(this.expiredEvictedBalance.get());
     /* Total allocated memory */
     dos.writeLong(this.allocatedMemory.get());
+    
     long[] table = this.ref_index_base.get();
-    int bufferSize = 1024 * 1024;
+    saveTable(dos, table);
+    
+    if (this.rehashInProgress) {
+      table = this.ref_index_base_rehash.get();
+      saveTable(dos, table);
+    }
+    dos.flush();
+  }
+
+  private void saveTable(DataOutputStream dos, long[] table) throws IOException {
+    /* Main Hash table size */
+    dos.writeLong(table.length);
+    
+    int bufferSize = 1 << 20;
     byte[] buffer = new byte[bufferSize];
     int bufferOffset = 0;
     for (int i = 0; i < table.length; i++) {
       long ptr = table[i];
-      int size = blockSize(ptr);
+      int size = ptr > 0? blockSize(ptr): 0;
       if (bufferSize - bufferOffset >= size + Utils.SIZEOF_INT) {
         UnsafeAccess.putInt(buffer, bufferOffset, size);
         bufferOffset += Utils.SIZEOF_INT;
-        UnsafeAccess.copy(ptr, buffer, bufferOffset, size);
-        bufferOffset += size;
+        if (size > 0) {
+          UnsafeAccess.copy(ptr, buffer, bufferOffset, size);
+          bufferOffset += size;
+        }
       } else {
         dos.write(buffer, 0, bufferOffset);
         bufferOffset = 0;
@@ -2675,9 +2697,8 @@ public final class MemoryIndex implements Persistent {
       }
     }
     dos.write(buffer, 0, bufferOffset);
-    dos.flush();
   }
-
+  
   @SuppressWarnings("deprecation")
   @Override
   public void load(InputStream is) throws IOException {
@@ -2700,12 +2721,10 @@ public final class MemoryIndex implements Persistent {
         throw new IOException(e);
       }
     }
-
     // Load index format
     indexFormat.load(dis);
-    // Read table size
-    int tableSize = (int) dis.readLong();
-    long[] table = new long[tableSize];
+    this.rehashInProgress = dis.readBoolean();
+    this.rehashedSlots.set(dis.readLong());
     // Entry size
     this.indexSize = dis.readInt();
     // Eviction enabled
@@ -2720,16 +2739,30 @@ public final class MemoryIndex implements Persistent {
     this.expiredEvictedBalance = new AtomicLong(dis.readLong());
     // Total allocated memory
     this.allocatedMemory = new AtomicLong(dis.readLong());
-
+    long[] table = loadTable(dis);
+    this.ref_index_base.set(table);
+    if (this.rehashInProgress) {
+      table = loadTable(dis);
+      this.ref_index_base_rehash.set(table);
+    }
+  }
+  
+  private long[] loadTable(DataInputStream dis) throws IOException {
+    // Read table size
+    int tableSize = (int) dis.readLong();
+    long[] table = new long[tableSize];
     byte[] buffer = new byte[getMaximumBlockSize()];
     for (int i = 0; i < tableSize; i++) {
       // index segment size
       int len = dis.readInt();
+      if (len == 0) {
+        continue;
+      }
       dis.readFully(buffer, 0, len);
       long ptr = UnsafeAccess.malloc(len);
       UnsafeAccess.copy(buffer, 0, ptr, len);
       table[i] = ptr;
     }
-    this.ref_index_base.set(table);
+    return table;
   }
 }
