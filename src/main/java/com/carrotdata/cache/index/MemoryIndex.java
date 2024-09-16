@@ -272,7 +272,10 @@ public final class MemoryIndex implements Persistent {
     this.engine = engine;
     this.cacheConfig = CacheConfig.getInstance();
     this.cacheName = this.engine.getCacheName();
-    init();
+    boolean persistent  = this.cacheConfig.isSaveOnShutdown(cacheName);
+    if (!persistent) {
+      init();
+    }
     setType(type);
   }
 
@@ -284,7 +287,10 @@ public final class MemoryIndex implements Persistent {
   public MemoryIndex(String cacheName, Type type) {
     this.cacheConfig = CacheConfig.getInstance();
     this.cacheName = cacheName;
-    init();
+    boolean persistent  = this.cacheConfig.isSaveOnShutdown(cacheName);
+    if (!persistent) {
+      init();
+    }    
     setType(type);
   }
 
@@ -294,7 +300,10 @@ public final class MemoryIndex implements Persistent {
   public MemoryIndex(String cacheName) {
     this.cacheConfig = CacheConfig.getInstance();
     this.cacheName = cacheName;
-    init();
+    boolean persistent  = this.cacheConfig.isSaveOnShutdown(cacheName);
+    if (!persistent) {
+      init();
+    }
   }
 
   private long getMemoryBuffer(int size) {
@@ -498,7 +507,7 @@ public final class MemoryIndex implements Persistent {
     }
     return size;
   }
-
+  
   /**
    * Set type of an index - either AdmissionQueue index or Main Queue
    * @param type
@@ -532,10 +541,14 @@ public final class MemoryIndex implements Persistent {
   }
 
   /** Index initializer */
-  private void init() {
+  public void init() {
+    if (ref_index_base.get() != null) {
+      return;
+    }
     this.numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
     this.expCheckProb = this.cacheConfig.getCacheProactiveExpirationFactor(this.cacheName);
-    int startNumberOfSlots = 1 << cacheConfig.getStartIndexNumberOfSlotsPower(this.cacheName);
+    int slotPower = cacheConfig.getStartIndexNumberOfSlotsPower(this.cacheName);
+    int startNumberOfSlots = 1 << slotPower;
     // TODO: must be positive
     long[] index_base = new long[startNumberOfSlots];
     int size = BASE_SIZE * BASE_MULTIPLIERS[0];
@@ -565,7 +578,7 @@ public final class MemoryIndex implements Persistent {
   long expand(long indexBlockPtr, int requiredSize, boolean force) {
     int num = numEntries(indexBlockPtr);
     int blockSize = blockSize(indexBlockPtr);
-    if (!force && num >= MAX_INDEX_ENTRIES_PER_BLOCK /*&& blockSize >= 4096*/) {
+    if (!force && num >= MAX_INDEX_ENTRIES_PER_BLOCK && blockSize >= 4096) {
       return FAILED;
     }
     if (blockSize >= requiredSize) return indexBlockPtr;
@@ -904,7 +917,6 @@ public final class MemoryIndex implements Persistent {
       return true;
     } finally {
       freeMemoryBuffer(buf);
-      ;
     }
   }
 
@@ -2702,6 +2714,8 @@ public final class MemoryIndex implements Persistent {
   @SuppressWarnings("deprecation")
   @Override
   public void load(InputStream is) throws IOException {
+    this.numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
+    this.expCheckProb = this.cacheConfig.getCacheProactiveExpirationFactor(this.cacheName);
     DataInputStream dis = Utils.toDataInputStream(is);
     // Read index type
     this.cacheName = dis.readUTF();
@@ -2745,6 +2759,7 @@ public final class MemoryIndex implements Persistent {
       table = loadTable(dis);
       this.ref_index_base_rehash.set(table);
     }
+    initLocks();
   }
   
   private long[] loadTable(DataInputStream dis) throws IOException {

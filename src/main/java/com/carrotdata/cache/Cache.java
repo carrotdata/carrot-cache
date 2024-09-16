@@ -63,7 +63,6 @@ import com.carrotdata.cache.io.IOEngine;
 import com.carrotdata.cache.io.IOEngine.IOEngineEvent;
 import com.carrotdata.cache.io.MemoryIOEngine;
 import com.carrotdata.cache.io.Segment;
-import com.carrotdata.cache.io.SegmentScanner;
 import com.carrotdata.cache.jmx.CacheJMXSink;
 import com.carrotdata.cache.util.CacheConfig;
 import com.carrotdata.cache.util.Epoch;
@@ -386,6 +385,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     initThroughputController();
     startThroughputController();
     startVacuumCleaner();
+    this.engine.getMemoryIndex().init();
   }
 
   private void initAllDuringLoad() throws IOException {
@@ -2837,6 +2837,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       DataInputStream dis = new DataInputStream(bis);
       this.engine.getMemoryIndex().load(dis);
       dis.close();
+    } else {
+      this.engine.getMemoryIndex().init();
     }
   }
 
@@ -3156,6 +3158,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     shutdownStatusMsg =
         String.format("Shutting down cache [%s], save data=%s", cacheName, saveOnShutdown);
     LOG.info(shutdownStatusMsg);
+    
     long size = getStorageUsedActual();
     size += this.engine.getMemoryIndex().getAllocatedMemory();
     long start = System.currentTimeMillis();
