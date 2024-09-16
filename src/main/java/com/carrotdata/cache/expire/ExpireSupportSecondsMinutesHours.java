@@ -29,6 +29,8 @@ public class ExpireSupportSecondsMinutesHours extends AbstractExpireSupport {
   public ExpireSupportSecondsMinutesHours() {
     this.epochStartTime = Epoch.getEpochStartTime();
     this.metaSectionSize = super.metaSectionSize + 3 * Utils.SIZEOF_SHORT;
+    this.fieldSize = Utils.SIZEOF_SHORT;
+
   }
 
   /**
