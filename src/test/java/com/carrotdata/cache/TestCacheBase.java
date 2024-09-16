@@ -28,10 +28,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.carrotdata.cache.controllers.MinAliveRecyclingSelector;
-import com.carrotdata.cache.index.CompactBlockWithExpireIndexFormat;
-import com.carrotdata.cache.io.BlockDataWriter;
-import com.carrotdata.cache.io.BlockFileDataReader;
-import com.carrotdata.cache.io.BlockMemoryDataReader;
+import com.carrotdata.cache.index.CompactBaseWithExpireIndexFormat;
+import com.carrotdata.cache.io.BaseDataWriter;
+import com.carrotdata.cache.io.BaseFileDataReader;
+import com.carrotdata.cache.io.BaseMemoryDataReader;
 import com.carrotdata.cache.io.IOTestBase;
 import com.carrotdata.cache.util.TestUtils;
 
@@ -49,10 +49,10 @@ public abstract class TestCacheBase extends IOTestBase {
   int maxKeyValueSize = 0;
 
   String recycleSelector = MinAliveRecyclingSelector.class.getName();
-  String dataWriter = BlockDataWriter.class.getName();
-  String dataReaderMemory = BlockMemoryDataReader.class.getName();
-  String dataReaderFile = BlockFileDataReader.class.getName();
-  String indexFormat = CompactBlockWithExpireIndexFormat.class.getName();
+  String dataWriter = BaseDataWriter.class.getName();
+  String dataReaderMemory = BaseMemoryDataReader.class.getName();
+  String dataReaderFile = BaseFileDataReader.class.getName();
+  String indexFormat = CompactBaseWithExpireIndexFormat.class.getName();
 
   @Before
   public void setUp() throws IOException {
