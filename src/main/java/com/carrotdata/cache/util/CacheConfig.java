@@ -2858,10 +2858,12 @@ public class CacheConfig {
     int avgKVSize = getEstimatedAvgKeyValueSize(cacheName);
     int maxItems = (int) (maxSize / avgKVSize);
     int l = getStartIndexNumberOfSlotsPower(cacheName);
-    int val = (int) Math.pow(2, l) * 100;
-    if (val > maxItems) {
-      l = (int) Math.floor(Math.log(maxItems / 100) / Math.log(2));
-      setStartIndexNumberOfSlotsPower(cacheName, l);
+    if (l == DEFAULT_START_INDEX_NUMBER_OF_SLOTS_POWER) {
+      int val = (int) Math.pow(2, l) * 100;
+      if (val > maxItems) {
+        l = (int) Math.floor(Math.log(maxItems / 100) / Math.log(2));
+        setStartIndexNumberOfSlotsPower(cacheName, l);
+      }
     }
   }
 }

@@ -33,6 +33,7 @@ public class TestCacheConfig {
     assertEquals(1073741824L, conf.getCacheMaximumSize("cache"));
     assertEquals(1073741999L, conf.getCacheMaximumSize("cache1"));
     assertEquals(4194304L, conf.getCacheSegmentSize("cache1"));
+    assertEquals(24, conf.getStartIndexNumberOfSlotsPower("cache"));
     props.forEach((x, y) -> LOG.info(x + "=" + y));
   }
 }
