@@ -2950,8 +2950,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         loadEngine();
         long t2 = System.currentTimeMillis();
         LOG.info("Engine load time:{}ms", t2-t1);
-      } catch (IOException e) {
-        onEngineSaveLoad = e;
+      } catch (Throwable e) {
+        onEngineSaveLoad = new IOException(e);
+        LOG.error("Load Engine", e);      
       }
     };
     
@@ -2961,8 +2962,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         loadIndex();
         long t2 = System.currentTimeMillis();
         LOG.info("Index load time:{}ms", t2-t1);
-      } catch (IOException e) {
-        onEngineSaveLoad = e;
+      } catch (Throwable e) {
+        onEngineSaveLoad = new IOException(e);
+        LOG.error("Load Index", e);      
       }
     };
     
@@ -2983,7 +2985,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         break; // Exit the loop in case of interruption
       }
     }
-    
     if(onEngineSaveLoad != null) {
       throw onEngineSaveLoad;
     }
