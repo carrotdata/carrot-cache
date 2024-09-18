@@ -589,7 +589,7 @@ public class Scavenger implements Runnable {
         engine.finishRecycling(s);
         segmentsProcessed++;
       }
-    } catch (Exception e) {
+    } catch (Throwable e) {
       LOG.error("May be FATAL", e);
       // TODO
     } finally {

@@ -271,10 +271,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       TimerTask r = new TimerTask() {
         @Override
         public void run() {
-          printStats();
-          Scavenger.printStats();
+          try {
+            printStats();
+            Scavenger.printStats();
+          } catch (Throwable e) {
+            LOG.error("startStatsTask", e);
+          }
         }
       };
+      LOG.info("Started statistic output task {}", interval);
       timer.schedule(r, interval, interval);
   }
   
@@ -305,7 +310,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   
   /**
    * Is disk cache
-   * @return true or falsew
+   * @return true or false
    */
   public boolean isDiskCache() {
     return this.type == Type.DISK;
@@ -380,12 +385,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   void initAll() throws IOException {
     initFromConfiguration();
+    this.engine.getMemoryIndex().init();
     initAdmissionController();
     initPromotionController();
     initThroughputController();
     startThroughputController();
     startVacuumCleaner();
-    this.engine.getMemoryIndex().init();
   }
 
   private void initAllDuringLoad() throws IOException {
@@ -441,13 +446,23 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.scavDisabled) {
       return;
     }
-    if (vacuum || Scavenger.getActiveThreadsCount(this.cacheName) < this.scavengerNoThreads) {
+    
+    int attempt = 0;
+    
+    while (Scavenger.getActiveThreadsCount(this.cacheName) < this.scavengerNoThreads) {
         Scavenger scavenger = new Scavenger(this);
         scavenger.setVacuumMode(vacuum);
         scavenger.start();
-        if (wait) {
-          LockSupport.parkNanos(50000);
+        attempt++;
+        if (!vacuum || attempt == this.scavengerNoThreads) {
+          break;
+        } else {
+          // vacuum mode can wait
+          LockSupport.parkNanos(10_000_000);
         }
+    }
+    if (wait) {
+      LockSupport.parkNanos(50000);
     }
   }
   
@@ -553,7 +568,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     TimerTask task = new TimerTask() {
       public void run() {
+        try {
         adjustThroughput();
+        } catch (Throwable e) {
+          LOG.error("startThroughputController", e);
+        }
       }
     };
     if (this.timer == null) {
@@ -567,7 +586,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   private void startVacuumCleaner() {
     TimerTask task = new TimerTask() {
       public void run() {
-        startScavengers(false, true);
+        try {
+          startScavengers(false, true);
+        } catch(Throwable e) {
+          LOG.error("startVacuumCleaner", e);
+        }
       }
     };
     long interval = this.conf.getVacuumCleanerInterval(this.cacheName);
