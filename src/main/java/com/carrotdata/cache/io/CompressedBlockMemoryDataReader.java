@@ -861,6 +861,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
 
   @Override
   public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
+    checkCodec();
     return new CompressedBlockMemorySegmentScanner(s, this.codec);
   }
 

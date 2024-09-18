@@ -364,6 +364,7 @@ public class CompressedBlockFileDataReader implements DataReader {
 
   @Override
   public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
+    checkCodec();
     return new CompressedBlockFileSegmentScanner(s, (FileIOEngine) engine, this.codec);
   }
 }
