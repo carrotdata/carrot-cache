@@ -1,12 +1,10 @@
 /*
- * Copyright (C) 2024-present Carrot Data, Inc. 
- * <p>This program is free software: you can redistribute it
- * and/or modify it under the terms of the Server Side Public License, version 1, as published by
- * MongoDB, Inc.
- * <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- * PURPOSE. See the Server Side Public License for more details. 
- * <p>You should have received a copy of the Server Side Public License along with this program. If not, see
+ * Copyright (C) 2024-present Carrot Data, Inc. <p>This program is free software: you can
+ * redistribute it and/or modify it under the terms of the Server Side Public License, version 1, as
+ * published by MongoDB, Inc. <p>This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE. See the Server Side Public License for more details. <p>You should have
+ * received a copy of the Server Side Public License along with this program. If not, see
  * <http://www.mongodb.com/licensing/server-side-public-license>.
  */
 package com.carrotdata.cache.index;
@@ -68,12 +66,13 @@ public final class MemoryIndex implements Persistent {
     private Result result;
 
     private int rank;
-    
+
     private int hitCount;
 
     private long expire;
 
-    public ResultWithRankAndExpire setResultRankExpire(Result result, int rank, int hitCount, long expire) {
+    public ResultWithRankAndExpire setResultRankExpire(Result result, int rank, int hitCount,
+        long expire) {
       this.result = result;
       this.rank = rank;
       this.hitCount = hitCount;
@@ -92,7 +91,7 @@ public final class MemoryIndex implements Persistent {
     public long getExpire() {
       return this.expire;
     }
-    
+
     public int hitCount() {
       return this.hitCount;
     }
@@ -227,7 +226,7 @@ public final class MemoryIndex implements Persistent {
 
   /* Counter for total expired - evicted balance */
   private AtomicLong expiredEvictedBalance = new AtomicLong();
-  
+
   /* Expiration check probability */
   private double expCheckProb;
 
@@ -244,7 +243,7 @@ public final class MemoryIndex implements Persistent {
     int min = Integer.MAX_VALUE, max = Integer.MIN_VALUE;
     for (int i = 0; i < base.length; i++) {
       long ptr = base[i];
-      if (ptr != 0) {
+      if (ptr > 0) {
         int n = numEntries(ptr);
         if (n < min) min = n;
         LOG.error("i={} block size={} num entries={}", i, blockSize(ptr), numEntries(ptr));
@@ -272,7 +271,7 @@ public final class MemoryIndex implements Persistent {
     this.engine = engine;
     this.cacheConfig = CacheConfig.getInstance();
     this.cacheName = this.engine.getCacheName();
-    boolean persistent  = this.cacheConfig.isSaveOnShutdown(cacheName);
+    boolean persistent = this.cacheConfig.isSaveOnShutdown(cacheName);
     if (!persistent) {
       init();
     }
@@ -287,10 +286,10 @@ public final class MemoryIndex implements Persistent {
   public MemoryIndex(String cacheName, Type type) {
     this.cacheConfig = CacheConfig.getInstance();
     this.cacheName = cacheName;
-    boolean persistent  = this.cacheConfig.isSaveOnShutdown(cacheName);
+    boolean persistent = this.cacheConfig.isSaveOnShutdown(cacheName);
     if (!persistent) {
       init();
-    }    
+    }
     setType(type);
   }
 
@@ -300,7 +299,7 @@ public final class MemoryIndex implements Persistent {
   public MemoryIndex(String cacheName) {
     this.cacheConfig = CacheConfig.getInstance();
     this.cacheName = cacheName;
-    boolean persistent  = this.cacheConfig.isSaveOnShutdown(cacheName);
+    boolean persistent = this.cacheConfig.isSaveOnShutdown(cacheName);
     if (!persistent) {
       init();
     }
@@ -328,11 +327,11 @@ public final class MemoryIndex implements Persistent {
   public void dispose() {
     // FIXME: not a thread safe, can't be called twice
     Arrays.stream(ref_index_base.get()).forEach(x -> {
-      if (x != 0) UnsafeAccess.free(x);
+      if (x > 0) UnsafeAccess.free(x);
     });
     if (ref_index_base_rehash.get() != null) {
       Arrays.stream(ref_index_base_rehash.get()).forEach(x -> {
-        if (x != 0) UnsafeAccess.free(x);
+        if (x > 0) UnsafeAccess.free(x);
       });
     }
   }
@@ -444,10 +443,14 @@ public final class MemoryIndex implements Persistent {
   private boolean shrinkIndexSlot(long[] index, int slot) {
     double ratio = ((double) this.maxEntries) / size();
 
+    if (index[slot] == 0) {
+      initSlot(index, slot);
+    }
+
     try {
       lock(slot);
       long ptr = index[slot];
-      if (ptr == 0) {
+      if (ptr <= 0) {
         return false;
       }
       int num = numEntries(ptr);
@@ -499,15 +502,14 @@ public final class MemoryIndex implements Persistent {
    * @return
    */
   public long getAllocatedMemory() {
-    long size = this.allocatedMemory.get() + 
-        Utils.SIZEOF_LONG * ref_index_base.get().length;
+    long size = this.allocatedMemory.get() + Utils.SIZEOF_LONG * ref_index_base.get().length;
     long[] rehash = ref_index_base_rehash.get();
     if (rehash != null) {
       size += Utils.SIZEOF_LONG * rehash.length;
     }
     return size;
   }
-  
+
   /**
    * Set type of an index - either AdmissionQueue index or Main Queue
    * @param type
@@ -547,18 +549,10 @@ public final class MemoryIndex implements Persistent {
     }
     this.numRanks = this.cacheConfig.getNumberOfPopularityRanks(this.cacheName);
     this.expCheckProb = this.cacheConfig.getCacheProactiveExpirationFactor(this.cacheName);
-    int slotPower = cacheConfig.getStartIndexNumberOfSlotsPower(this.cacheName);
-    int startNumberOfSlots = 1 << slotPower;
+    int initSlotPower = cacheConfig.getStartIndexNumberOfSlotsPower(this.cacheName);
+    int startNumberOfSlots = 1 << initSlotPower;
     // TODO: must be positive
     long[] index_base = new long[startNumberOfSlots];
-    int size = BASE_SIZE * BASE_MULTIPLIERS[0];
-    for (int i = 0; i < index_base.length; i++) {
-      index_base[i] = UnsafeAccess.mallocZeroed(size); // 256 bytes
-      // Set block size
-      UnsafeAccess.putShort(index_base[i], (short) (size));
-      // Number of entries and data size are 0
-    }
-    this.allocatedMemory.addAndGet((long) size * index_base.length);
     ref_index_base.set(index_base);
     initLocks();
   }
@@ -568,6 +562,13 @@ public final class MemoryIndex implements Persistent {
     for (int i = 0; i < locks.length; i++) {
       locks[i] = new ReentrantLock();
     }
+  }
+
+  private long initSlot(long[] index, int slot) {
+    int size = BASE_SIZE * BASE_MULTIPLIERS[0];
+    index[slot] = UnsafeAccess.mallocZeroed(size);
+    this.allocatedMemory.addAndGet((long) size);
+    return index[slot];
   }
 
   /**
@@ -724,7 +725,7 @@ public final class MemoryIndex implements Persistent {
     int slot = getSlotNumber(hash, index.length);
     ReentrantLock lock = locks[slot % locks.length];
     lock.lock();
-    if (index[slot] == 0) {
+    if (index[slot] == -1) {
       // rehash is in progress
       lock.unlock();
       index = ref_index_base_rehash.get();
@@ -742,6 +743,8 @@ public final class MemoryIndex implements Persistent {
       // NOTES: either we lock correct slot in a main index or a
       // correct slot in rehash index (during rehashing)
       // In both cases we are safe
+    } else if (index[slot] == 0) {
+      initSlot(index, slot);
     }
     return slot;
   }
@@ -758,7 +761,7 @@ public final class MemoryIndex implements Persistent {
     int slot = getSlotNumber(hash, index.length);
     ReentrantLock lock = locks[slot % locks.length];
     lock.lock();
-    if (index[slot] == 0) {
+    if (index[slot] == -1) {
       // rehash is in progress
       lock.unlock();
       index = ref_index_base_rehash.get();
@@ -773,6 +776,8 @@ public final class MemoryIndex implements Persistent {
       // NOTES: either we lock correct slot in a main index or a
       // correct slot in rehash index (during rehashing)
       // In both cases we are safe
+    } else if (index[slot] == 0) {
+      initSlot(index, slot);
     }
     return slot;
   }
@@ -788,7 +793,7 @@ public final class MemoryIndex implements Persistent {
 
     ReentrantLock lock = locks[slot % locks.length];
     lock.lock();
-    if (index[slot] == 0) {
+    if (index[slot] == -1) {
       // rehash is in progress
       lock.unlock();
       index = ref_index_base_rehash.get();
@@ -803,6 +808,8 @@ public final class MemoryIndex implements Persistent {
       // NOTES: either we lock correct slot in a main index or a
       // correct slot in rehash index (during rehashing)
       // In both cases we are safe
+    } else if (index[slot] == 0) {
+      initSlot(index, slot);
     }
     return new PtrSlotPair(index[slot], slot);
   }
@@ -822,7 +829,7 @@ public final class MemoryIndex implements Persistent {
    * Write lock on a slot
    * @param slot slot number
    */
-  public void lock(int slot) {
+  private void lock(int slot) {
     ReentrantLock lock = locks[slot % locks.length];
     lock.lock();
   }
@@ -831,7 +838,7 @@ public final class MemoryIndex implements Persistent {
    * Write unlock on a slot
    * @param slot slot number
    */
-  public void unlock(int slot) {
+  private void unlock(int slot) {
     ReentrantLock lock = locks[slot % locks.length];
     if (lock.isHeldByCurrentThread()) {
       lock.unlock();
@@ -1178,8 +1185,8 @@ public final class MemoryIndex implements Persistent {
 
     long $ptr = ptr + this.indexBlockHeaderSize;
     int count = 0;
-    final int indexMetaSize = 0;//this.indexFormat.superIndexBlockHeaderSize;
-    final int expireOffset = 0;//this.indexFormat.expireOffset;
+    final int indexMetaSize = 0;// this.indexFormat.superIndexBlockHeaderSize;
+    final int expireOffset = 0;// this.indexFormat.expireOffset;
     while (count < numEntries) {
       // Check if expired - pro-active expiration check
       long expire = this.indexFormat.getExpire(ptr + indexMetaSize, $ptr + expireOffset);
@@ -1511,8 +1518,8 @@ public final class MemoryIndex implements Persistent {
     int count = 0;
 
     result = result.setResultRankExpire(Result.NOT_FOUND, 0, 0, 0);
-    final int indexMetaSize = 0;//this.indexFormat.superIndexBlockHeaderSize;
-    final int expireOffset = 0;//this.indexFormat.expireOffset;
+    final int indexMetaSize = 0;// this.indexFormat.superIndexBlockHeaderSize;
+    final int expireOffset = 0;// this.indexFormat.expireOffset;
     this.indexFormat.begin(ptr, true); // force scan
     try {
 
@@ -1532,7 +1539,7 @@ public final class MemoryIndex implements Persistent {
           long current = System.currentTimeMillis();
           int rank = this.evictionPolicy.getRankForIndex(this.numRanks, count, numEntries);
           int hitCount = this.indexFormat.getHitCount($ptr);
-          
+
           if (expire > 0 && current > expire) {
             // For expired items rank does not matter
             result.setResultRankExpire(Result.EXPIRED, rank, hitCount, expire);
@@ -1573,8 +1580,8 @@ public final class MemoryIndex implements Persistent {
     int numEntries = numEntries(ptr);
     long $ptr = ptr + this.indexBlockHeaderSize;
     int count = 0;
-    final int indexMetaSize = 0;//this.indexFormat.superIndexBlockHeaderSize;
-    final int expireOffset = 0;//this.indexFormat.expireOffset;
+    final int indexMetaSize = 0;// this.indexFormat.superIndexBlockHeaderSize;
+    final int expireOffset = 0;// this.indexFormat.expireOffset;
     while (count < numEntries) {
       if (this.indexFormat.equals($ptr, hash)) {
         return this.indexFormat.getExpire(ptr + indexMetaSize, $ptr + expireOffset);
@@ -1616,7 +1623,7 @@ public final class MemoryIndex implements Persistent {
     long ptr = 0;
 
     ptr = index[$slot];
-    if (ptr == 0) {
+    if (ptr == -1) {
       // Rehashing is in progress
       index = ref_index_base_rehash.get();
       if (index == null) {
@@ -1625,6 +1632,8 @@ public final class MemoryIndex implements Persistent {
       }
       $slot = getSlotNumber(hash, index.length);
       ptr = index[$slot];
+    } else if (ptr == 0) {
+      ptr = initSlot(index, $slot);
     }
     return ptr;
   }
@@ -1699,7 +1708,7 @@ public final class MemoryIndex implements Persistent {
     long[] index = ref_index_base.get();
     int $slot = getSlotNumber(hash, index.length);
     long ptr = index[$slot];
-    if (ptr == 0) {
+    if (ptr == -1) {
       // Rehashing is in progress
       index = ref_index_base_rehash.get();
       if (index == null) {
@@ -2087,7 +2096,7 @@ public final class MemoryIndex implements Persistent {
     long[] index = ref_index_base.get();
     int $slot = getSlotNumber(hash, index.length);
     long ptr = index[$slot];
-    if (ptr == 0) {
+    if (ptr == -1) {
       // Rehashing is in progress
       index = ref_index_base_rehash.get();
       // Check one more time (there are possible race conditions)
@@ -2095,6 +2104,8 @@ public final class MemoryIndex implements Persistent {
         // Get back to the main
         index = ref_index_base.get();
       }
+    } else if (ptr == 0) {
+      initSlot(index, $slot);
     }
     return index;
   }
@@ -2267,7 +2278,7 @@ public final class MemoryIndex implements Persistent {
         // rehash slot
         long[] index = ref_index_base.get();
         int $slot = getSlotNumber(hash, index.length);
-        if (index[$slot] == 0) {
+        if (index[$slot] == -1) {
           // this slot is in rehash array and it can not be expanded w/o force
           // lets enforce expansion
           $ptr = expand(ptr, requiredSize, true);
@@ -2346,8 +2357,8 @@ public final class MemoryIndex implements Persistent {
     boolean expired = false;
     long expire = -1;
     int numEntries = numEntries(slotPtr);
-    final int indexMetaSize = 0;//this.indexFormat.superIndexBlockHeaderSize;
-    final int expireOffset = 0;//this.indexFormat.expireOffset;
+    final int indexMetaSize = 0;// this.indexFormat.superIndexBlockHeaderSize;
+    final int expireOffset = 0;// this.indexFormat.expireOffset;
     if (numEntries == 0) {
       return;
     }
@@ -2383,8 +2394,8 @@ public final class MemoryIndex implements Persistent {
     int numEntries = numEntries(slotPtr);
     int count = 0;
     long ptr = slotPtr + this.indexBlockHeaderSize;
-    final int indexMetaSize = 0;//this.indexFormat.superIndexBlockHeaderSize;
-    final int expireOffset = 0;//this.indexFormat.expireOffset;
+    final int indexMetaSize = 0;// this.indexFormat.superIndexBlockHeaderSize;
+    final int expireOffset = 0;// this.indexFormat.expireOffset;
     while (count < numEntries) {
       long time = this.indexFormat.getExpire(slotPtr + indexMetaSize, ptr + expireOffset);
       if (time > 0 && System.currentTimeMillis() > time) {
@@ -2448,8 +2459,8 @@ public final class MemoryIndex implements Persistent {
     this.rehashInProgress = true;
     long ptr = ref_index_base.get()[slot];
     /* DEBUG */
-    if (ptr == 0) {
-      LOG.error("FATAL rehashSlot ptr == 0");
+    if (ptr == -1) {
+      LOG.error("FATAL rehashSlot ptr == -1");
       Thread.dumpStack();
       System.exit(-1);
     }
@@ -2529,7 +2540,7 @@ public final class MemoryIndex implements Persistent {
     int oldBlockSize = blockSize(ptr);
     this.allocatedMemory.addAndGet(-oldBlockSize);
     UnsafeAccess.free(ptr);
-    ref_index_base.get()[slot] = 0;
+    ref_index_base.get()[slot] = -1;
     // Update index format meta sections
     this.indexFormat.updateMetaSection(ptr0);
     this.indexFormat.updateMetaSection(ptr1);
@@ -2538,6 +2549,7 @@ public final class MemoryIndex implements Persistent {
   /*
    * This method is not thread safe TODO : test on save/load when rehasing is in progress
    */
+  @SuppressWarnings("unused")
   private void completeRehashing() {
 
     if (isRehashingInProgress() == false) return;
@@ -2546,10 +2558,10 @@ public final class MemoryIndex implements Persistent {
     try {
       long[] index = ref_index_base.get();
       for (int i = 0; i < index.length; i++) {
-        if (index[i] == 0) continue;
+        if (index[i] == -1) continue;
         currentSlot = i;
         lock(i);
-        if (index[i] == 0) {
+        if (index[i] == -1) {
           unlock(i);
           continue;
         }
@@ -2618,7 +2630,7 @@ public final class MemoryIndex implements Persistent {
     int $slot = getSlotNumber(hash, index.length);
     long ptr = index[$slot];
 
-    if (ptr == 0) {
+    if (ptr == -1) {
       // Rehash is in progress
       index = ref_index_base_rehash.get();
       if (index == null) {
@@ -2656,10 +2668,10 @@ public final class MemoryIndex implements Persistent {
     dos.writeUTF(this.indexFormat.getClass().getCanonicalName());
     /* Index format */
     indexFormat.save(dos);
-    
+
     dos.writeBoolean(this.rehashInProgress);
     dos.writeLong(this.rehashedSlots.get());
-    
+
     /* Index entry size */
     dos.writeInt(this.indexSize);
     /* Is eviction enabled yet? */
@@ -2674,10 +2686,10 @@ public final class MemoryIndex implements Persistent {
     dos.writeLong(this.expiredEvictedBalance.get());
     /* Total allocated memory */
     dos.writeLong(this.allocatedMemory.get());
-    
+
     long[] table = this.ref_index_base.get();
     saveTable(dos, table);
-    
+
     if (this.rehashInProgress) {
       table = this.ref_index_base_rehash.get();
       saveTable(dos, table);
@@ -2688,13 +2700,14 @@ public final class MemoryIndex implements Persistent {
   private void saveTable(DataOutputStream dos, long[] table) throws IOException {
     /* Main Hash table size */
     dos.writeLong(table.length);
-    
+
     int bufferSize = 1 << 20;
     byte[] buffer = new byte[bufferSize];
     int bufferOffset = 0;
     for (int i = 0; i < table.length; i++) {
       long ptr = table[i];
-      int size = ptr > 0? blockSize(ptr): 0;
+      int size = ptr > 0 ? blockSize(ptr) : (int) ptr /*either 0 or -1*/;
+      
       if (bufferSize - bufferOffset >= size + Utils.SIZEOF_INT) {
         UnsafeAccess.putInt(buffer, bufferOffset, size);
         bufferOffset += Utils.SIZEOF_INT;
@@ -2710,7 +2723,7 @@ public final class MemoryIndex implements Persistent {
     }
     dos.write(buffer, 0, bufferOffset);
   }
-  
+
   @SuppressWarnings("deprecation")
   @Override
   public void load(InputStream is) throws IOException {
@@ -2761,7 +2774,7 @@ public final class MemoryIndex implements Persistent {
     }
     initLocks();
   }
-  
+
   private long[] loadTable(DataInputStream dis) throws IOException {
     // Read table size
     int tableSize = (int) dis.readLong();
@@ -2770,7 +2783,8 @@ public final class MemoryIndex implements Persistent {
     for (int i = 0; i < tableSize; i++) {
       // index segment size
       int len = dis.readInt();
-      if (len == 0) {
+      if (len <= 0) {
+        table[i] = len;
         continue;
       }
       dis.readFully(buffer, 0, len);
