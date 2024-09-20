@@ -184,7 +184,7 @@ System.out.printf("Value for key %s is %s", key2, result);
 
 ### Important - Core Dumps Are Possible
 
-... because the code has direct access to the native memory via the `sun.misc.Unsafe` class, and this is a pre-beta version.
+... because the code has direct access to the native memory via the `sun.misc.Unsafe` class, and this is a pre-release version.
 
 To debug possible core dumps, you need to activate the debug mode in the memory allocator:
 
