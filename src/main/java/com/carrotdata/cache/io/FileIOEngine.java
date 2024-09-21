@@ -117,7 +117,7 @@ public class FileIOEngine extends IOEngine {
 
         // Save to file without locking
         data.save(file);
-
+        
         // LOCK AGAIN
         data.writeLock();
         // Release segment
@@ -441,18 +441,29 @@ public class FileIOEngine extends IOEngine {
   @Override
   public void dispose() {
     waitForIoStoragePool();
+    long startTime = System.currentTimeMillis();
     super.dispose();
     int count = 0;
-    for (RandomAccessFile f : this.dataFiles.values()) {
+    int deleted = 0;
+    for (Map.Entry<Integer, RandomAccessFile> entry : this.dataFiles.entrySet()) {
       try {
-        f.close();
-        count++;
+        int id = entry.getKey();
+        Path p = getPathForDataSegment(id);
+        if (Files.exists(p)) {
+          long lastModifiedTime = Files.getLastModifiedTime(p).toMillis();
+          entry.getValue().close();
+          if (lastModifiedTime < startTime) {
+            Files.delete(p);
+            deleted++;
+          }
+          count++;
+        }
       } catch (IOException e) {
         // swallow
         LOG.error("Error:", e);
       }
     }
-    LOG.debug("Closed {} files", count);
+    LOG.debug("Closed {} files, deleted {}", count, deleted);
   }
 
   @Override

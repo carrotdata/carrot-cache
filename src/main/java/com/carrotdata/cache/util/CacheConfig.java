@@ -69,13 +69,13 @@ public class CacheConfig {
   public final static String CACHES_NAME_LIST_KEY = "cache.names";
 
   /** By default we have only one cache */
-  public final static String DEFAULT_CACHES_NAME_LIST = "cache"; // only one cache
+  public final static String DEFAULT_CACHES_NAME_LIST = ""; // only one cache
 
   /** Caches types ('memory', 'file' only supported), comma-separated */
   public final static String CACHES_TYPES_LIST_KEY = "cache.types";
 
   /** By default cache type is memory */
-  public final static String DEFAULT_CACHES_TYPES_LIST = "memory";
+  public final static String DEFAULT_CACHES_TYPES_LIST = "";
 
   /**
    * Cache victim name. If cache name is C1, then to lookup for its victim name we must request
@@ -1538,6 +1538,17 @@ public class CacheConfig {
     props.setProperty(CACHES_NAME_LIST_KEY, names);
   }
 
+  public void addCacheNameType(String name, String type) {
+    String s = props.getProperty(CACHES_NAME_LIST_KEY, DEFAULT_CACHES_NAME_LIST);
+    s += ",";
+    s += name;
+    props.setProperty(CACHES_NAME_LIST_KEY, s);
+    s = props.getProperty(CACHES_TYPES_LIST_KEY, DEFAULT_CACHES_TYPES_LIST);
+    s += ",";
+    s += type;
+    props.setProperty(CACHES_TYPES_LIST_KEY, s);
+  }
+  
   /**
    * Get cache types list
    * @return cache types list

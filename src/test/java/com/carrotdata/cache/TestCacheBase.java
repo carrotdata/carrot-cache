@@ -23,6 +23,7 @@ import java.util.Random;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +35,7 @@ import com.carrotdata.cache.io.BaseFileDataReader;
 import com.carrotdata.cache.io.BaseMemoryDataReader;
 import com.carrotdata.cache.io.IOTestBase;
 import com.carrotdata.cache.util.TestUtils;
+import com.carrotdata.cache.util.UnsafeAccess;
 
 public abstract class TestCacheBase extends IOTestBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheBase.class);
@@ -54,6 +56,11 @@ public abstract class TestCacheBase extends IOTestBase {
   String dataReaderFile = BaseFileDataReader.class.getName();
   String indexFormat = CompactBaseWithExpireIndexFormat.class.getName();
 
+  @BeforeClass
+  public static void before() {
+    //UnsafeAccess.setMallocDebugEnabled(true);
+  }
+  
   @Before
   public void setUp() throws IOException {
     this.r = new Random();
@@ -69,6 +76,7 @@ public abstract class TestCacheBase extends IOTestBase {
     super.tearDown();
     cache.dispose();
     TestUtils.deleteCacheFiles(cache);
+    //UnsafeAccess.mallocStats.printStats();
   }
 
   protected Cache createCache() throws IOException {
@@ -379,6 +387,30 @@ public abstract class TestCacheBase extends IOTestBase {
     TestUtils.deleteCacheFiles(newCache);
   }
 
+  @Test
+  public void testFlushAll() throws IOException {
+    LOG.info("Test flushAll");
+    Scavenger.clear();
+    // Create cache
+    this.cache = createCache();
+    this.expireTime = 1000000;
+    prepareData();
+    // Fill cache completely (no eviction is enabled)
+    int loaded = loadBytesCache(cache);
+    LOG.info("loaded=" + loaded);
+    verifyBytesCacheByteBuffer(cache, loaded);
+
+    long t1 = System.currentTimeMillis();
+    this.cache = Cache.flushAll(cache);
+    long t2 = System.currentTimeMillis();
+    LOG.info("Flushed all in {} ms", t2 - t1);
+
+    loaded = loadBytesCache(cache);
+    LOG.info("loaded=" + loaded);
+    verifyBytesCacheByteBuffer(cache, loaded);
+ 
+  }
+  
   @Test
   public void testSaveLoadSmallData() throws IOException {
     LOG.info("Test save load small data");

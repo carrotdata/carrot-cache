@@ -279,8 +279,8 @@ public class Memcached {
   }
   
   private Cache fromConfig() throws IOException {
+    long t1 = System.currentTimeMillis();
     CacheConfig conf = CacheConfig.getInstance();
-
     String[] cacheNames = conf.getCacheNames();
     Cache cache = null, mainCache = null;
     for (String name : cacheNames) {
@@ -299,6 +299,8 @@ public class Memcached {
       }
       cache = c;
     }
+    long t2 = System.currentTimeMillis();
+    LOG.info("Create cache from config time={}ms", t2 - t1);
     return mainCache;
   }
 

@@ -1217,6 +1217,7 @@ public class Segment implements Persistent {
         written += toCopy;
         file.write(buffer, 0, toCopy);
       }
+      //file.getChannel().force(true);
     } finally {
       this.sip = false;
       readUnlock();

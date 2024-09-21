@@ -14,6 +14,7 @@ package com.carrotdata.cache;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -3106,14 +3107,33 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * Dispose cache
    */
   public void dispose() {
+    long start = System.currentTimeMillis();
+    this.cacheDisabled = true;
     removeShutdownHook();
     stopScavengers();
+    // Disable cache
+    waitForActiveRequestsFinished();
+    cancelTimer();
+    try {
+      cleanPersistentStorage();
+      //TODO delete saved dictionaries
+    } catch(IOException e) {
+      LOG.error("dispose", e);
+    }
     this.engine.dispose();
     if (this.victimCache != null) {
       this.victimCache.dispose();
     }
+    long end = System.currentTimeMillis();
+    LOG.info("Cache [{}] disposed in {}ms", this.cacheName, end - start);
   }
 
+  private void cancelTimer() {
+    if (this.timer != null) {
+      this.timer.cancel();
+    }
+  }
+  
   public void printStats() {
     double compRatio = (double) getRawDataSize() / getTotalAllocated();
     double compRatioReal = (double) getRawDataSize() / getStorageUsedActual();
@@ -3221,6 +3241,27 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
   }
   
+  private void cleanPersistentStorage() throws IOException {
+    CacheConfig conf = CacheConfig.getInstance();
+    String snapshotDir = conf.getSnapshotDir(cacheName);
+    Path p = Paths.get(snapshotDir);
+
+    if (Files.notExists(p)) {
+      return;
+    }
+    
+    if (Files.list(p).count() == 0) {
+      return;
+    }
+    
+    File dir = p.toFile();
+    File[] files = dir.listFiles();
+    for (File f: files) {
+      if (f.isFile()) f.delete();
+    }
+    
+  }
+  
   public static Cache loadCache(String cacheName) throws IOException {
     CacheConfig conf = CacheConfig.getInstance();
     String snapshotDir = conf.getSnapshotDir(cacheName);
@@ -3278,5 +3319,29 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     CacheConfig conf = CacheConfig.getInstance();
     conf.setGlobalCacheRootDir(rootDir);
     return loadCache(cacheName);
+  }
+  
+  public static Cache flushAll(Cache c) throws IOException {
+    // Create empty cache with the same configuration
+    Cache main = new Cache(c.getName());
+    Cache cache = main;
+    Cache victim = null, cc = c;
+    while ((victim = cc.getVictimCache()) != null) {
+      Cache ccc = new Cache(victim.getName());
+      cache.setVictimCache(ccc);
+      cache = ccc;
+      cc = victim;
+    };
+    
+    // Dispose the old cache in the background
+    Runnable r = () -> {
+      try {
+        c.dispose();
+      } catch(Exception e){
+        LOG.error("Cache flushAll", e);
+      }
+    };
+    new Thread(r).start();
+    return main;
   }
 }

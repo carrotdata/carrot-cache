@@ -301,6 +301,10 @@ public class Scavenger implements Runnable {
   public static void setStatisticsForCache(String cacheName, Stats stats) {
     statsMap.put(cacheName, stats);
   }
+  
+  public static void removeStatisticsForCache(String cacheName) {
+    statsMap.remove(cacheName);
+  }
 
   private static void initPoolForCacheName(final String cacheName) {
     // This method is called under parent cache lock
@@ -461,6 +465,7 @@ public class Scavenger implements Runnable {
     numInstancesMap.put(cacheName, new AtomicInteger());
     vacuumCleanersMap.put(cacheName, new AtomicInteger());
     initPoolForCacheName(cacheName);
+    removeStatisticsForCache(cacheName);
   }
 
   public static int getActiveThreadsCount(String cacheName) {

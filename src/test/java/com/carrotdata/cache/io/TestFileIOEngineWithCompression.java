@@ -11,13 +11,24 @@
  */
 package com.carrotdata.cache.io;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
+
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.carrotdata.cache.util.CacheConfig;
 
 public class TestFileIOEngineWithCompression extends TestMemoryIOEngineWithCompression {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestFileIOEngineWithCompression.class);
+  
   @Override
   protected IOEngine getEngine(CacheConfig conf) {
     conf.setDataWriter(cacheName, CompressedBlockDataWriter.class.getName());
@@ -27,7 +38,28 @@ public class TestFileIOEngineWithCompression extends TestMemoryIOEngineWithCompr
   }
 
   @Override
+  @Test
   public void testLoadSave() throws IOException, URISyntaxException {
-    super.testLoadSave();
+    /* DEBUG */ LOG.info("testLoadSave");
+    createEngine(4 * 1024 * 1024, 20 * 4 * 1024 * 1024, false, true, 100000);
+    int loaded = loadMemoryEngine(engine);
+    /* DEBUG */ LOG.info("loaded=" + loaded);
+
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(baos);
+    this.engine.save(dos);
+    this.engine.getMemoryIndex().save(dos);
+    // Get current config, we will reuse it later because it keeps location of a dictionary folder
+    CacheConfig config = CacheConfig.getInstance();
+    // Dispose engine
+    //engine.dispose();
+    // Re-create new one (creates new root directory for cache)
+    engine = getEngine(config);
+
+    ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
+    DataInputStream dis = new DataInputStream(bais);
+    engine.load(dis);
+    engine.getMemoryIndex().load(dis);
+    verifyMemoryEngine(engine, loaded);
   }
 }
