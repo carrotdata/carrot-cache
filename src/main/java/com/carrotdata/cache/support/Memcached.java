@@ -192,7 +192,7 @@ public class Memcached {
     memory.set($ptr);
   }
 
-  private Cache cache;
+  private volatile Cache cache;
 
   public Memcached(Cache cache) throws IOException {
     CacheConfig config = CacheConfig.getInstance();
@@ -1371,6 +1371,26 @@ public class Memcached {
     }
   }
 
+  public void flushAll(int timeout) {
+    if (timeout == 0) {
+      try {
+        this.cache = Cache.flushAll(cache);
+      } catch (IOException e) {
+        LOG.error("FlushAll:", e);
+      }
+    } else {
+      Runnable r = () -> {
+        try {
+          Thread.sleep(timeout * 1000L);
+          this.cache = Cache.flushAll(cache);
+        } catch (Exception e) {
+          LOG.error("FlushAll:", e);
+        }
+      };
+      new Thread(r).start();
+    }
+  }
+  
   /*************************** Utility methods ************************/
 
   long computeCAS(byte[] value, int valueOffset, int valueSize) {
