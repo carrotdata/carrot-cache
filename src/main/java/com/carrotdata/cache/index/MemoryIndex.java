@@ -236,31 +236,41 @@ public final class MemoryIndex implements Persistent {
   }
 
   public void dump() {
-    LOG.error("ref_index_base length={}", ref_index_base.get().length);
-    LOG.error("ref_index_rehash length={}", ref_index_base_rehash.get().length);
+    //LOG.error("ref_index_base length={}", ref_index_base.get().length);
+    //LOG.error("ref_index_rehash length={}", ref_index_base_rehash.get().length);
     long[] base = ref_index_base.get();
     long[] rehash = ref_index_base_rehash.get();
     int min = Integer.MAX_VALUE, max = Integer.MIN_VALUE;
+    long data = 0, allocated = base.length * 8 + ((rehash != null)? rehash.length * 8 : 0);
     for (int i = 0; i < base.length; i++) {
       long ptr = base[i];
       if (ptr > 0) {
         int n = numEntries(ptr);
+        int bs = blockSize(ptr);
+        allocated += bs;
+        data += n * this.indexSize;
         if (n < min) min = n;
-        LOG.error("i={} block size={} num entries={}", i, blockSize(ptr), numEntries(ptr));
-      } else {
-        LOG.error("i={}", i);
+        //LOG.error("i={} block size={} num entries={}", i, blockSize(ptr), numEntries(ptr));
+      } else if (ptr == -1) {
+        //LOG.error("i={}", i);
         long ptr1 = rehash[i * 2];
         long ptr2 = rehash[i * 2 + 1];
         int n1 = numEntries(ptr1);
         int n2 = numEntries(ptr2);
+        int bs1 = blockSize(ptr1);
+        int bs2 = blockSize(ptr2);
+        data += this.indexSize * (n1 + n2);
+        allocated += bs1 + bs2;
         if (n1 > max) max = n1;
         if (n2 > max) max = n2;
-        LOG.error("  ii={} block size={} num entries={}", i * 2, blockSize(ptr1), numEntries(ptr1));
-        LOG.error("  ii={} block size={} num entries={}", i * 2 + 1, blockSize(ptr2),
-          numEntries(ptr2));
+        //LOG.error("  ii={} block size={} num entries={}", i * 2, blockSize(ptr1), numEntries(ptr1));
+        //LOG.error("  ii={} block size={} num entries={}", i * 2 + 1, blockSize(ptr2),
+        //  numEntries(ptr2));
       }
     }
-    LOG.error("min base={} max rehash={}", min, max);
+    
+    LOG.error("base={} rehash={} data={} alllocated={}",
+       base.length, (rehash != null)? rehash.length: 0, data, allocated);
   }
 
   /**
@@ -563,14 +573,15 @@ public final class MemoryIndex implements Persistent {
       locks[i] = new ReentrantLock();
     }
   }
-
+  
   private long initSlot(long[] index, int slot) {
     int size = BASE_SIZE * BASE_MULTIPLIERS[0];
     index[slot] = UnsafeAccess.mallocZeroed(size);
+    setBlockSize(index[slot], size);
     this.allocatedMemory.addAndGet((long) size);
     return index[slot];
   }
-
+  
   /**
    * Expand index block
    * @param indexBlockPtr current pointer
@@ -579,7 +590,7 @@ public final class MemoryIndex implements Persistent {
   long expand(long indexBlockPtr, int requiredSize, boolean force) {
     int num = numEntries(indexBlockPtr);
     int blockSize = blockSize(indexBlockPtr);
-    if (!force && num >= MAX_INDEX_ENTRIES_PER_BLOCK && blockSize >= 4096) {
+    if (!force && num >= MAX_INDEX_ENTRIES_PER_BLOCK /*&& blockSize >= 4096*/) {
       return FAILED;
     }
     if (blockSize >= requiredSize) return indexBlockPtr;
@@ -619,7 +630,6 @@ public final class MemoryIndex implements Persistent {
     setBlockSize(ptr, newSize);
     UnsafeAccess.free(indexBlockPtr);
     this.allocatedMemory.addAndGet(newSize - blockSize);
-
     return ptr;
   }
 
@@ -2656,7 +2666,6 @@ public final class MemoryIndex implements Persistent {
 
   @Override
   public void save(OutputStream os) throws IOException {
-
     DataOutputStream dos = Utils.toDataOutputStream(os);
 
     // TODO: locking index?
