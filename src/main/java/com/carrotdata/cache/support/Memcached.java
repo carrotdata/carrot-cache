@@ -1375,6 +1375,7 @@ public class Memcached {
     if (timeout == 0) {
       try {
         this.cache = Cache.flushAll(cache);
+        this.cache.startStatsTask(-1);
       } catch (IOException e) {
         LOG.error("FlushAll:", e);
       }
@@ -1383,6 +1384,7 @@ public class Memcached {
         try {
           Thread.sleep(timeout * 1000L);
           this.cache = Cache.flushAll(cache);
+          this.cache.startStatsTask(-1);
         } catch (Exception e) {
           LOG.error("FlushAll:", e);
         }

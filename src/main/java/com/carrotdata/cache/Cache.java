@@ -266,24 +266,36 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
   
   public void startStatsTask(long interval) {
-      if (timer == null) {
-        timer = new Timer();
+    if (interval < 0) {
+      String value = System.getProperty("STATS_TASK_INTERVAL");
+      if (value == null) {
+        return;
       }
-      TimerTask r = new TimerTask() {
-        @Override
-        public void run() {
-          try {
-            printStats();
-            Scavenger.printStats();
-          } catch (Throwable e) {
-            LOG.error("startStatsTask", e);
-          }
+      try {
+        interval = Long.parseLong(value) * 1000;
+      } catch (NumberFormatException e) {
+        LOG.warn("Stats task interval is not a number {}", value);
+        return;
+      }
+    }
+    if (timer == null) {
+      timer = new Timer();
+    }
+    TimerTask r = new TimerTask() {
+      @Override
+      public void run() {
+        try {
+          printStats();
+          Scavenger.printStats();
+        } catch (Throwable e) {
+          LOG.error("startStatsTask", e);
         }
-      };
-      LOG.info("Started statistic output task {}", interval);
-      timer.schedule(r, interval, interval);
+      }
+    };
+    LOG.info("Started statistic output task {}", interval);
+    timer.schedule(r, interval, interval);
   }
-  
+
   public Cache(String name, CacheConfig conf) throws IOException {
     this.cacheName = name;
     this.conf = conf;
@@ -3131,6 +3143,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   private void cancelTimer() {
     if (this.timer != null) {
       this.timer.cancel();
+      this.timer = null;
     }
   }
   

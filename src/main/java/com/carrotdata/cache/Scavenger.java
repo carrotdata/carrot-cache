@@ -26,6 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -344,6 +346,7 @@ public class Scavenger implements Runnable {
         //
       }
     }
+    LOG.info("Executor Service {} terminated for cache[{}]", es, cacheName);
   }
 
   public static void printStats() {
@@ -485,8 +488,21 @@ public class Scavenger implements Runnable {
 
   }
 
-  public void start() {
-    ExecutorService service = poolMap.get(this.cache.getName());
+  public synchronized void start() {
+    String cacheName = this.cache.getName();
+    ExecutorService service = poolMap.get(cacheName);
+    ThreadPoolExecutor ex = (ThreadPoolExecutor) service;
+    
+    if (ex.isShutdown() || ex.isTerminating() || ex.isTerminated()) {
+      //FIXME: There is a chances for race condition
+      // when flushAll is in progress and new Scavenger starts (in vacuum mode)
+      // If vacuum interval is very low?
+      poolMap.remove(cacheName);
+      numInstancesMap.put(cacheName, new AtomicInteger());
+      vacuumCleanersMap.put(cacheName, new AtomicInteger());
+      initPoolForCacheName(cacheName);
+      service = poolMap.get(cacheName);
+    }
     service.submit(this);
   }
 
