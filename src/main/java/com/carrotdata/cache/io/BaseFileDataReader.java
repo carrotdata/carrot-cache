@@ -11,9 +11,12 @@
  */
 package com.carrotdata.cache.io;
 
+
+import static com.carrotdata.cache.io.BlockReaderWriterSupport.OPT_META_SIZE;
+import static com.carrotdata.cache.io.BlockReaderWriterSupport.META_SIZE;
+import static com.carrotdata.cache.io.BlockReaderWriterSupport.findInBlock;
 import static com.carrotdata.cache.io.IOUtils.readFully;
 import static com.carrotdata.cache.util.Utils.getItemSize;
-import static com.carrotdata.cache.util.Utils.getKeyOffset;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -22,143 +25,152 @@ import java.nio.ByteBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.carrotdata.cache.Cache;
+import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
 public class BaseFileDataReader implements DataReader {
-  private static final Logger LOG = LoggerFactory.getLogger(BaseFileDataReader.class);
+  @SuppressWarnings("unused")
+  private static Logger LOG = LoggerFactory.getLogger(BaseFileDataReader.class);
 
-  private final int blockSize = 4096;
+  private static int INIT_BUFFER_SIZE = 1 << 16;
+
+  private static ThreadLocal<byte[]> readBuffers = new ThreadLocal<byte[]>() {
+    @Override
+    protected byte[] initialValue() {
+      return new byte[INIT_BUFFER_SIZE];
+    }
+  };
+
+  private static void checkReadBuffer(int required) {
+    byte[] buf = readBuffers.get();
+    if (buf.length < required) {
+      buf = new byte[required];
+      readBuffers.set(buf);
+    }
+  }
+
+  private int blockSize = 4096;
+
+  public BaseFileDataReader() {
+  }
 
   @Override
   public void init(String cacheName) {
-    // TODO init blockSize from config
+    // Can be null on initialization
   }
-
+  
   @Override
   public int read(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid, long offset,
-      int size, // can be < 0 - unknown
+      int size, // can be -1 (unknown)
       byte[] buffer, int bufOffset) throws IOException {
     // FIXME: Dirty hack
-    offset += Segment.META_SIZE; // add 8 bytes to
-
-    int avail = buffer.length - bufOffset;
+    offset += Segment.META_SIZE; // add 8 bytes to the file offset
+    // every segment in a file system has 8 bytes meta prefix
+    final int avail = buffer.length - bufOffset;
     // sanity check
-    if (size < 0 && avail < 8) {
-      return blockSize; // just in case
-    }
-
     if (size > avail) {
       return size;
     }
-
     // TODO prevent file from being closed/deleted
     FileIOEngine fileEngine = (FileIOEngine) engine;
     RandomAccessFile file = fileEngine.getFileFor(sid);
     if (file == null) {
+      // TODO: what kind of error is it?
       return IOEngine.NOT_FOUND;
     }
-    boolean loaded = false;
-    if (size < 0) {
-      int toRead = (int) Math.min(blockSize, file.length() - offset);
-      toRead = Math.min(toRead, avail);
-      readFully(file, offset, buffer, bufOffset, toRead);
-      size = getItemSize(buffer, bufOffset);
+    int off = 0;
+    // Read first block
+    // TODO: we can improve read speed if we do 4K aligned reads
+    int toRead = (int) Math.min(blockSize, file.length() - offset);
+    // Check buffers
+    checkReadBuffer(toRead);
+    byte[] readBuffer = readBuffers.get();
+    readFully(file, offset, readBuffer, 0, toRead);
+    final int size1 = UnsafeAccess.toInt(readBuffer, 0);
+    final int id = UnsafeAccess.toInt(readBuffer, Utils.SIZEOF_INT);
+    final int size2 = UnsafeAccess.toInt(readBuffer, 2 * Utils.SIZEOF_INT);
 
-      if (size > avail) {
-        return size;
-      }
-      if (size < toRead) {
-        loaded = true;
-      }
+    if (id != -1 || size1 != size2 || size1 < 0) {
+      // sanity check - possible wrong segment request
+      return IOEngine.NOT_FOUND;
+    } 
+    int boff = OPT_META_SIZE;
+    int sizeToRead = size1;
+    if (sizeToRead > toRead - OPT_META_SIZE) {
+      // means that this is a single item larger than a block
+      checkReadBuffer(sizeToRead);
+      readBuffer = readBuffers.get();
+      readFully(file, offset + OPT_META_SIZE, readBuffer, 0, sizeToRead);
+      boff = 0;
     }
-
-    if (file.length() < offset + size) {
-      // Rare situation - wrong segment - hash collision
+    int offAdj = boff - META_SIZE;
+    off = (int) findInBlock(readBuffer, offAdj, size1, key, keyOffset, keySize);
+    if (off < 0) {
       return IOEngine.NOT_FOUND;
     }
-    if (!loaded) {
-      readFully(file, offset, buffer, bufOffset, size);
+    int itemSize = getItemSize(readBuffer, off);
+    if (itemSize > avail) {
+      return itemSize;
     }
-
-    // Now buffer contains both: key and value, we need to compare keys
-    // Format of a key-value pair in a buffer: key-size, value-size, key, value
-
-    bufOffset += getKeyOffset(buffer, bufOffset);
-    // Now compare keys
-    if (Utils.compareTo(buffer, bufOffset, keySize, key, keyOffset, keySize) == 0) {
-      // If key is the same
-      return size;
-    } else {
-      return IOEngine.NOT_FOUND;
-    }
+    System.arraycopy(readBuffer, off, buffer, bufOffset, itemSize);
+    return itemSize;
   }
 
+  // TODO: tests
+  // TODO: handle IOException upstream
   @Override
   public int read(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid, long offset,
-      int size, /* can be < 0 */
-      ByteBuffer buffer) throws IOException {
+      int size, ByteBuffer buffer) throws IOException {
     // FIXME: Dirty hack
     offset += Segment.META_SIZE; // add 8 bytes to
-
-    int avail = buffer.remaining();
-    // Sanity check
+    final int avail = buffer.remaining();
+    // sanity check
     if (size > avail) {
       return size;
     }
-    if (size < 0 && avail < 8) {
-      return blockSize; // just in case
-    }
-
-    int pos = buffer.position();
-
     // TODO prevent file from being closed/deleted
     FileIOEngine fileEngine = (FileIOEngine) engine;
     RandomAccessFile file = fileEngine.getFileFor(sid);
     if (file == null) {
+      // TODO: what kind of error is it?
       return IOEngine.NOT_FOUND;
     }
-    boolean loaded = false;
-
-    if (size < 0) {
-      // Get size of an item
+    int pos = buffer.position();
+    // int off = pos;
+    try {
+      // TODO: make file read a separate method
       int toRead = (int) Math.min(blockSize, file.length() - offset);
-      toRead = Math.min(toRead, avail);
-      readFully(file, offset, buffer, toRead);
-      size = getItemSize(buffer);
-      if (size > avail) {
-        return size;
+      checkReadBuffer(toRead);
+      byte[] readBuffer = readBuffers.get();
+      readFully(file, offset, readBuffer, 0, toRead);
+      final int size1 = UnsafeAccess.toInt(readBuffer, 0);
+      final int id = UnsafeAccess.toInt(readBuffer, Utils.SIZEOF_INT);
+      final int size2 = UnsafeAccess.toInt(readBuffer, 2 * Utils.SIZEOF_INT);
+      if (id != -1 || size1 != size2 || size1 < 0) {
+        return IOEngine.NOT_FOUND;
+      } 
+      int boff = OPT_META_SIZE;
+      int sizeToRead = size1;
+      if (sizeToRead > toRead - OPT_META_SIZE) {
+        // means that this is a single item larger than a block
+        checkReadBuffer(sizeToRead);
+        readBuffer = readBuffers.get();
+        readFully(file, offset + OPT_META_SIZE, readBuffer, 0, sizeToRead);
+        boff = 0;
       }
-      if (size < toRead) {
-        loaded = true;
+      int offAdj = boff - META_SIZE;
+      int off = (int) findInBlock(readBuffer, offAdj, size1, key, keyOffset, keySize);
+      if (off < 0) {
+        return IOEngine.NOT_FOUND;
       }
-    }
-
-    if (file.length() < offset + size) {
-      // Rare situation - wrong segment - hash collision
-      return IOEngine.NOT_FOUND;
-    }
-
-    if (!loaded) {
+      int itemSize = getItemSize(readBuffer, off);
+      if (itemSize > avail) {
+        return itemSize;
+      }
+      buffer.put(readBuffer, off, itemSize);
+      return itemSize;
+    } finally {
       buffer.position(pos);
-      readFully(file, offset, buffer, size);
-    }
-    buffer.position(pos);
-
-    // Now buffer contains both: key and value, we need to compare keys
-    // Format of a key-value pair in a buffer: key-size, value-size, key, value
-
-    int $off = getKeyOffset(buffer);
-    buffer.position(pos + $off);
-
-    // Now compare keys
-    if (Utils.compareTo(buffer, keySize, key, keyOffset, keySize) == 0) {
-      // If key is the same
-      // TODO: position?
-      buffer.position(pos);
-      return size;
-    } else {
-      return IOEngine.NOT_FOUND;
     }
   }
 
@@ -166,13 +178,10 @@ public class BaseFileDataReader implements DataReader {
   public int read(IOEngine engine, long keyPtr, int keySize, int sid, long offset, int size,
       byte[] buffer, int bufOffset) throws IOException {
     // FIXME: Dirty hack
-    offset += Segment.META_SIZE; // add 8 bytes to
-    int avail = buffer.length - bufOffset;
-
+    offset += Segment.META_SIZE; // add 8 bytes to the file offset
+    // every segment in a file system has 8 bytes meta prefix
+    final int avail = buffer.length - bufOffset;
     // sanity check
-    if (size < 0 && avail < 8) {
-      return blockSize; // just in case
-    }
     if (size > avail) {
       return size;
     }
@@ -180,42 +189,42 @@ public class BaseFileDataReader implements DataReader {
     FileIOEngine fileEngine = (FileIOEngine) engine;
     RandomAccessFile file = fileEngine.getFileFor(sid);
     if (file == null) {
+      // TODO: what kind of error is it?
       return IOEngine.NOT_FOUND;
     }
-    boolean loaded = false;
-    if (size < 0) {
-      int toRead = (int) Math.min(blockSize, file.length() - offset);
-      toRead = Math.min(toRead, avail);
-      readFully(file, offset, buffer, bufOffset, toRead);
-      size = Utils.getItemSize(buffer, bufOffset);
-      if (size > avail) {
-        return size;
-      }
-      if (size < toRead) {
-        loaded = true;
-      }
+    int off = 0;
+    // Read first block
+    int toRead = (int) Math.min(blockSize, file.length() - offset);
+    // Check buffers
+    checkReadBuffer(toRead);
+    byte[] readBuffer = readBuffers.get();
+    readFully(file, offset, readBuffer, 0, toRead);
+    final int size1 = UnsafeAccess.toInt(readBuffer, 0);
+    final int id = UnsafeAccess.toInt(readBuffer, Utils.SIZEOF_INT);
+    final int size2 = UnsafeAccess.toInt(readBuffer, 2 * Utils.SIZEOF_INT);
+    if (id != -1 || size1 != size2 || size1 < 0) {
+      return IOEngine.NOT_FOUND;
+    } 
+    int boff = OPT_META_SIZE;
+    int sizeToRead = size1;
+    if (sizeToRead > toRead - OPT_META_SIZE) {
+      // means that this is a single item larger than a block
+      checkReadBuffer(sizeToRead);
+      readBuffer = readBuffers.get();
+      readFully(file, offset + OPT_META_SIZE, readBuffer, 0, sizeToRead);
+      boff = 0;
     }
-    if (file.length() < offset + size) {
-      // Rare situation - wrong segment - hash collision
+    int offAdj = boff - META_SIZE;
+    off = (int) findInBlock(readBuffer, offAdj, size1, keyPtr, keySize);
+    if (off < 0) {
       return IOEngine.NOT_FOUND;
     }
-
-    if (!loaded) {
-      readFully(file, offset, buffer, bufOffset, size);
+    int itemSize = getItemSize(readBuffer, off);
+    if (itemSize > avail) {
+      return itemSize;
     }
-
-    // Now buffer contains both: key and value, we need to compare keys
-    // Format of a key-value pair in a buffer: key-size, value-size, key, value
-
-    bufOffset += getKeyOffset(buffer, bufOffset);
-
-    // Now compare keys
-    if (Utils.compareTo(buffer, bufOffset, keySize, keyPtr, keySize) == 0) {
-      // If key is the same
-      return size;
-    } else {
-      return IOEngine.NOT_FOUND;
-    }
+    System.arraycopy(readBuffer, off, buffer, bufOffset, itemSize);
+    return itemSize;
   }
 
   @Override
@@ -223,13 +232,8 @@ public class BaseFileDataReader implements DataReader {
       ByteBuffer buffer) throws IOException {
     // FIXME: Dirty hack
     offset += Segment.META_SIZE; // add 8 bytes to
-    int avail = buffer.remaining();
-    int pos = buffer.position();
-
+    final int avail = buffer.remaining();
     // sanity check
-    if (size < 0 && avail < 8) {
-      return blockSize; // just in case
-    }
     if (size > avail) {
       return size;
     }
@@ -237,388 +241,318 @@ public class BaseFileDataReader implements DataReader {
     FileIOEngine fileEngine = (FileIOEngine) engine;
     RandomAccessFile file = fileEngine.getFileFor(sid);
     if (file == null) {
+      // TODO: what kind of error is it?
       return IOEngine.NOT_FOUND;
     }
-    boolean loaded = false;
-
-    if (size < 0) {
-      // Get size of an item
+    int pos = buffer.position();
+    try {
+      // TODO: make file read a separate method
       int toRead = (int) Math.min(blockSize, file.length() - offset);
-      toRead = Math.min(toRead, avail);
-      readFully(file, offset, buffer, toRead);
-      size = getItemSize(buffer);
-      if (size > avail) {
-        return size;
+      checkReadBuffer(toRead);
+      byte[] readBuffer = readBuffers.get();
+      readFully(file, offset, readBuffer, 0, toRead);
+      final int size1 = UnsafeAccess.toInt(readBuffer, 0);
+      final int id = UnsafeAccess.toInt(readBuffer, Utils.SIZEOF_INT);
+      final int size2 = UnsafeAccess.toInt(readBuffer, 2 * Utils.SIZEOF_INT);
+      if (id != -1 || size1 != size2 || size1 < 0) {
+        return IOEngine.NOT_FOUND;
+      } 
+      int boff = OPT_META_SIZE;
+      int sizeToRead = size1;
+      if (sizeToRead > toRead - OPT_META_SIZE) {
+        // means that this is a single item larger than a block
+        checkReadBuffer(sizeToRead);
+        readBuffer = readBuffers.get();
+        readFully(file, offset + OPT_META_SIZE, readBuffer, 0, sizeToRead);
+        boff = 0;
       }
-      if (size < toRead) {
-        loaded = true;
+      int offAdj = boff - META_SIZE;
+      int off = (int) findInBlock(readBuffer, offAdj, size1, keyPtr, keySize);
+      if (off < 0) {
+        return IOEngine.NOT_FOUND;
       }
-    }
-
-    if (file.length() < offset + size) {
-      // Rare situation - wrong segment - hash collision
-      return IOEngine.NOT_FOUND;
-    }
-
-    if (!loaded) {
+      int itemSize = getItemSize(readBuffer, off);
+      if (itemSize > avail) {
+        return itemSize;
+      }
+      buffer.put(readBuffer, off, itemSize);
+      return itemSize;
+    } finally {
       buffer.position(pos);
-      readFully(file, offset, buffer, size);
-    }
-    buffer.position(pos);
-    int $off = getKeyOffset(buffer);
-    buffer.position(pos + $off);
-
-    // Now compare keys
-    if (Utils.compareTo(buffer, keySize, keyPtr, keySize) == 0) {
-      // If key is the same
-      buffer.position(pos);
-      return size;
-    } else {
-      return IOEngine.NOT_FOUND;
     }
   }
 
   @Override
   public int readValueRange(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid,
-      long offset, int size, byte[] buffer, int bufOffset, int rangeStart, int rangeSize)
+      long offset, int size, byte[] buffer, int bufferOffset, int rangeStart, int rangeSize)
       throws IOException {
-
-    offset += Segment.META_SIZE; // add 8 bytes to the offset
-
-    int avail = buffer.length - bufOffset;
-    // Sanity check
-    if (avail < 8) {
-      // 8 bytes will allow to read at least key size and value size
-      // TODO: is it safe? The caller might not expect this
-      return blockSize;
-    }
-
-    // sanity check
+    // FIXME: Dirty hack
+    offset += Segment.META_SIZE; // add 8 bytes to the file offset
+    // every segment in a file system has 8 bytes meta prefix
+    final int avail = buffer.length - bufferOffset;
     if (rangeSize > avail) {
       rangeSize = avail;
     }
-
     // TODO prevent file from being closed/deleted
     FileIOEngine fileEngine = (FileIOEngine) engine;
     RandomAccessFile file = fileEngine.getFileFor(sid);
-
     if (file == null) {
+      // TODO: what kind of error is it?
       return IOEngine.NOT_FOUND;
     }
-
-    boolean loaded = false;
+    int off = 0;
+    // Read first block
+    // TODO: we can improve read speed if we do 4K aligned reads
     int toRead = (int) Math.min(blockSize, file.length() - offset);
-    toRead = Math.min(toRead, avail);
+    // Check buffers
+    checkReadBuffer(toRead);
+    byte[] readBuffer = readBuffers.get();
+    readFully(file, offset, readBuffer, 0, toRead);
+    final int size1 = UnsafeAccess.toInt(readBuffer, 0);
+    final int id = UnsafeAccess.toInt(readBuffer, Utils.SIZEOF_INT);
+    final int size2 = UnsafeAccess.toInt(readBuffer, 2 * Utils.SIZEOF_INT);
 
-    readFully(file, offset, buffer, bufOffset, toRead);
-
-    int valueSize = Utils.getValueSize(buffer, bufOffset);
-    int valueOffset = Utils.getValueOffset(buffer, bufOffset);
-
-    if (size < 0) {
-      size = Utils.getItemSize(buffer, bufOffset);
+    if (id != -1 || size1 != size2 || size1 < 0) {
+      // sanity check - possible wrong segment request
+      return IOEngine.NOT_FOUND;
+    } 
+    int boff = OPT_META_SIZE;
+    int sizeToRead = size1;
+    if (sizeToRead > toRead - OPT_META_SIZE) {
+      // means that this is a single item larger than a block
+      checkReadBuffer(sizeToRead);
+      readBuffer = readBuffers.get();
+      readFully(file, offset + OPT_META_SIZE, readBuffer, 0, sizeToRead);
+      boff = 0;
     }
-
-    if (file.length() < offset + size) {
-      // Rare situation - wrong segment - hash collision
+    int offAdj = boff - META_SIZE;
+    off = (int) findInBlock(readBuffer, offAdj, size1, key, keyOffset, keySize);
+    if (off < 0) {
       return IOEngine.NOT_FOUND;
     }
-
-    if (size < toRead) {
-      loaded = true;
-    }
-
-    if (rangeStart > valueSize) {
+    int valueSize = Utils.getValueSize(readBuffer, off);
+    if (valueSize < rangeStart) {
+      // TODO: better handling
       return IOEngine.NOT_FOUND;
     }
-
-    if (rangeStart + rangeSize > valueSize) {
+    if (valueSize < rangeStart + rangeSize) {
       rangeSize = valueSize - rangeStart;
     }
-
-    // Now buffer contains both: key and value, we need to compare keys
-    // Format of a key-value pair in a buffer: key-size, value-size, key, value
-    int kSize = Utils.getKeySize(buffer, bufOffset);
-    int kOffset = Utils.getKeyOffset(buffer, bufOffset);
-
-    if (kSize != keySize) {
-      // Hash collision
-      return IOEngine.NOT_FOUND;
+    int valueOffset = Utils.getValueOffset(readBuffer, off);
+    valueOffset += rangeStart;
+    long fileSize = file.length();
+    if (fileSize < offset + valueOffset + rangeSize) {
+      // Rare situation - wrong segment - hash collision
+      return IOEngine.READ_ERROR;
     }
-    // Now compare keys
-    if (Utils.compareTo(buffer, bufOffset + kOffset, kSize, key, keyOffset, keySize) != 0) {
-      // Hash collision
-      return IOEngine.NOT_FOUND;
-    }
-
-    if (!loaded) {
-      readFully(file, offset + valueOffset + rangeStart, buffer, bufOffset, rangeSize);
-    } else {
-      Utils.extractValueRange(buffer, bufOffset, rangeStart, rangeSize);
-    }
-
+    UnsafeAccess.copy(readBuffer, off + valueOffset, buffer, 0, rangeSize);
     return rangeSize;
   }
 
   @Override
   public int readValueRange(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid,
       long offset, int size, ByteBuffer buffer, int rangeStart, int rangeSize) throws IOException {
-
-    int pos = buffer.position();
-
-    offset += Segment.META_SIZE; // add 8 bytes to the offset
-
-    int avail = buffer.remaining();
-    // Sanity check
-    if (avail < 8) {
-      // 8 bytes will allow to read at least key size and value size
-      // TODO: is it safe? The caller might not expect this
-      return blockSize;
-    }
-
+    // FIXME: Dirty hack
+    offset += Segment.META_SIZE; // add 8 bytes to
+    final int avail = buffer.remaining();
     // sanity check
     if (rangeSize > avail) {
       rangeSize = avail;
     }
-
     // TODO prevent file from being closed/deleted
     FileIOEngine fileEngine = (FileIOEngine) engine;
     RandomAccessFile file = fileEngine.getFileFor(sid);
-
     if (file == null) {
+      // TODO: what kind of error is it?
       return IOEngine.NOT_FOUND;
     }
-
-    boolean loaded = false;
-
-    int toRead = (int) Math.min(blockSize, file.length() - offset);
-    toRead = Math.min(toRead, avail);
-
-    readFully(file, offset, buffer, toRead);
-
-    int valueSize = Utils.getValueSize(buffer);
-    int valueOffset = Utils.getValueOffset(buffer);
-
-    if (size < 0) {
-      size = Utils.getItemSize(buffer);
+    int pos = buffer.position();
+    // int off = pos;
+    try {
+      // TODO: make file read a separate method
+      int toRead = (int) Math.min(blockSize, file.length() - offset);
+      checkReadBuffer(toRead);
+      byte[] readBuffer = readBuffers.get();
+      readFully(file, offset, readBuffer, 0, toRead);
+      final int size1 = UnsafeAccess.toInt(readBuffer, 0);
+      final int id = UnsafeAccess.toInt(readBuffer, Utils.SIZEOF_INT);
+      final int size2 = UnsafeAccess.toInt(readBuffer, 2 * Utils.SIZEOF_INT);
+      if (id != -1 || size1 != size2 || size1 < 0) {
+        return IOEngine.NOT_FOUND;
+      } 
+      int boff = OPT_META_SIZE;
+      int sizeToRead = size1;
+      if (sizeToRead > toRead - OPT_META_SIZE) {
+        // means that this is a single item larger than a block
+        checkReadBuffer(sizeToRead);
+        readBuffer = readBuffers.get();
+        readFully(file, offset + OPT_META_SIZE, readBuffer, 0, sizeToRead);
+        boff = 0;
+      }
+      int offAdj = boff - META_SIZE;
+      int off = (int) findInBlock(readBuffer, offAdj, size1, key, keyOffset, keySize);
+      if (off < 0) {
+        return IOEngine.NOT_FOUND;
+      }
+      int valueSize = Utils.getValueSize(readBuffer, off);
+      if (valueSize < rangeStart) {
+        // TODO: better handling
+        return IOEngine.NOT_FOUND;
+      }
+      if (valueSize < rangeStart + rangeSize) {
+        rangeSize = valueSize - rangeStart;
+      }
+      int valueOffset = Utils.getValueOffset(readBuffer, off);
+      valueOffset += rangeStart;
+      long fileLength = file.length();
+      if (fileLength < offset + valueOffset + rangeSize) {
+        // Rare situation - wrong segment - hash collision
+        return IOEngine.READ_ERROR;
+      }
+      UnsafeAccess.copy(readBuffer, off + valueOffset, buffer, pos, rangeSize);
+      return rangeSize;
+    } finally {
+      buffer.position(pos);
     }
-
-    if (file.length() < offset + size) {
-      // Rare situation - wrong segment - hash collision
-      return IOEngine.NOT_FOUND;
-    }
-
-    if (size < toRead) {
-      loaded = true;
-    }
-
-    if (rangeStart > valueSize) {
-      return IOEngine.NOT_FOUND;
-    }
-
-    if (rangeStart + rangeSize > valueSize) {
-      rangeSize = valueSize - rangeStart;
-    }
-
-    // Now buffer contains both: key and value, we need to compare keys
-    // Format of a key-value pair in a buffer: key-size, value-size, key, value
-    int kSize = Utils.getKeySize(buffer);
-    int kOffset = Utils.getKeyOffset(buffer);
-
-    if (kSize != keySize) {
-      // Hash collision
-      return IOEngine.NOT_FOUND;
-    }
-    // Now compare keys
-    buffer.position(pos + kOffset);
-    if (Utils.compareTo(buffer, kSize, key, keyOffset, keySize) != 0) {
-      // Hash collision
-      return IOEngine.NOT_FOUND;
-    }
-
-    buffer.position(pos);
-
-    if (!loaded) {
-      readFully(file, offset + valueOffset + rangeStart, buffer, rangeSize);
-    } else {
-      Utils.extractValueRange(buffer, rangeStart, rangeSize);
-    }
-    buffer.position(pos);
-
-    return rangeSize;
   }
 
   @Override
   public int readValueRange(IOEngine engine, long keyPtr, int keySize, int sid, long offset,
-      int size, byte[] buffer, int bufOffset, int rangeStart, int rangeSize) throws IOException {
-    offset += Segment.META_SIZE; // add 8 bytes to the offset
-
-    int avail = buffer.length - bufOffset;
-    // Sanity check
-    if (avail < 8) {
-      // 8 bytes will allow to read at least key size and value size
-      // TODO: is it safe? The caller might not expect this
-      return blockSize;
-    }
-
-    // sanity check
+      int size, byte[] buffer, int bufferOffset, int rangeStart, int rangeSize) throws IOException {
+    // FIXME: Dirty hack
+    offset += Segment.META_SIZE; // add 8 bytes to the file offset
+    // every segment in a file system has 8 bytes meta prefix
+    final int avail = buffer.length - bufferOffset;
     if (rangeSize > avail) {
       rangeSize = avail;
     }
-
     // TODO prevent file from being closed/deleted
     FileIOEngine fileEngine = (FileIOEngine) engine;
     RandomAccessFile file = fileEngine.getFileFor(sid);
-
     if (file == null) {
+      // TODO: what kind of error is it?
       return IOEngine.NOT_FOUND;
     }
-
-    boolean loaded = false;
+    int off = 0;
+    // Read first block
+    // TODO: we can improve read speed if we do 4K aligned reads
     int toRead = (int) Math.min(blockSize, file.length() - offset);
-    toRead = Math.min(toRead, avail);
+    // Check buffers
+    checkReadBuffer(toRead);
+    byte[] readBuffer = readBuffers.get();
+    readFully(file, offset, readBuffer, 0, toRead);
+    final int size1 = UnsafeAccess.toInt(readBuffer, 0);
+    final int id = UnsafeAccess.toInt(readBuffer, Utils.SIZEOF_INT);
+    final int size2 = UnsafeAccess.toInt(readBuffer, 2 * Utils.SIZEOF_INT);
 
-    readFully(file, offset, buffer, bufOffset, toRead);
-
-    int valueSize = Utils.getValueSize(buffer, bufOffset);
-    int valueOffset = Utils.getValueOffset(buffer, bufOffset);
-
-    if (size < 0) {
-      size = Utils.getItemSize(buffer, bufOffset);
+    if (id != -1 || size1 != size2 || size1 < 0) {
+      // sanity check - possible wrong segment request
+      return IOEngine.NOT_FOUND;
+    } 
+    int boff = OPT_META_SIZE;
+    int sizeToRead = size1;
+    if (sizeToRead > toRead - OPT_META_SIZE) {
+      // means that this is a single item larger than a block
+      checkReadBuffer(sizeToRead);
+      readBuffer = readBuffers.get();
+      readFully(file, offset + OPT_META_SIZE, readBuffer, 0, sizeToRead);
+      boff = 0;
     }
-
-    if (file.length() < offset + size) {
-      // Rare situation - wrong segment - hash collision
+    int offAdj = boff - META_SIZE;
+    off = (int) findInBlock(readBuffer, offAdj, size1, keyPtr, keySize);
+    if (off < 0) {
       return IOEngine.NOT_FOUND;
     }
-
-    if (size < toRead) {
-      loaded = true;
-    }
-
-    if (rangeStart > valueSize) {
+    int valueSize = Utils.getValueSize(readBuffer, off);
+    if (valueSize < rangeStart) {
+      // TODO: better handling
       return IOEngine.NOT_FOUND;
     }
-
-    if (rangeStart + rangeSize > valueSize) {
+    if (valueSize < rangeStart + rangeSize) {
       rangeSize = valueSize - rangeStart;
     }
-
-    // Now buffer contains both: key and value, we need to compare keys
-    // Format of a key-value pair in a buffer: key-size, value-size, key, value
-    int kSize = Utils.getKeySize(buffer, bufOffset);
-    int kOffset = Utils.getKeyOffset(buffer, bufOffset);
-
-    if (kSize != keySize) {
-      // Hash collision
-      return IOEngine.NOT_FOUND;
+    int valueOffset = Utils.getValueOffset(readBuffer, off);
+    valueOffset += rangeStart;
+    long fileSize = file.length();
+    if (fileSize < offset + valueOffset + rangeSize) {
+      // Rare situation - wrong segment - hash collision
+      return IOEngine.READ_ERROR;
     }
-    // Now compare keys
-    if (Utils.compareTo(buffer, bufOffset + kOffset, kSize, keyPtr, keySize) != 0) {
-      // Hash collision
-      return IOEngine.NOT_FOUND;
-    }
-
-    if (!loaded) {
-      readFully(file, offset + valueOffset + rangeStart, buffer, bufOffset, rangeSize);
-    } else {
-      Utils.extractValueRange(buffer, bufOffset, rangeStart, rangeSize);
-    }
-
+    UnsafeAccess.copy(readBuffer, off + valueOffset, buffer, 0, rangeSize);
     return rangeSize;
   }
 
   @Override
   public int readValueRange(IOEngine engine, long keyPtr, int keySize, int sid, long offset,
       int size, ByteBuffer buffer, int rangeStart, int rangeSize) throws IOException {
-    int pos = buffer.position();
-
-    offset += Segment.META_SIZE; // add 8 bytes to the offset
-
-    int avail = buffer.remaining();
-    // Sanity check
-    if (avail < 8) {
-      // 8 bytes will allow to read at least key size and value size
-      // TODO: is it safe? The caller might not expect this
-      return blockSize;
-    }
-
+    // FIXME: Dirty hack
+    offset += Segment.META_SIZE; // add 8 bytes to
+    final int avail = buffer.remaining();
     // sanity check
     if (rangeSize > avail) {
       rangeSize = avail;
     }
-
     // TODO prevent file from being closed/deleted
     FileIOEngine fileEngine = (FileIOEngine) engine;
     RandomAccessFile file = fileEngine.getFileFor(sid);
-
     if (file == null) {
+      // TODO: what kind of error is it?
       return IOEngine.NOT_FOUND;
     }
-
-    boolean loaded = false;
-
-    int toRead = (int) Math.min(blockSize, file.length() - offset);
-    toRead = Math.min(toRead, avail);
-
-    readFully(file, offset, buffer, toRead);
-
-    int valueSize = Utils.getValueSize(buffer);
-    int valueOffset = Utils.getValueOffset(buffer);
-
-    if (size < 0) {
-      size = Utils.getItemSize(buffer);
+    int pos = buffer.position();
+    // int off = pos;
+    try {
+      // TODO: make file read a separate method
+      int toRead = (int) Math.min(blockSize, file.length() - offset);
+      checkReadBuffer(toRead);
+      byte[] readBuffer = readBuffers.get();
+      readFully(file, offset, readBuffer, 0, toRead);
+      final int size1 = UnsafeAccess.toInt(readBuffer, 0);
+      final int id = UnsafeAccess.toInt(readBuffer, Utils.SIZEOF_INT);
+      final int size2 = UnsafeAccess.toInt(readBuffer, 2 * Utils.SIZEOF_INT);
+      if (id != -1 || size1 != size2 || size1 < 0) {
+        return IOEngine.NOT_FOUND;
+      } 
+      int boff = OPT_META_SIZE;
+      int sizeToRead = size1;
+      if (sizeToRead > toRead - OPT_META_SIZE) {
+        // means that this is a single item larger than a block
+        checkReadBuffer(sizeToRead);
+        readBuffer = readBuffers.get();
+        readFully(file, offset + OPT_META_SIZE, readBuffer, 0, sizeToRead);
+        boff = 0;
+      }
+      int offAdj = boff - META_SIZE;
+      int off = (int) findInBlock(readBuffer, offAdj, size1, keyPtr, keySize);
+      if (off < 0) {
+        return IOEngine.NOT_FOUND;
+      }
+      int valueSize = Utils.getValueSize(readBuffer, off);
+      if (valueSize < rangeStart) {
+        // TODO: better handling
+        return IOEngine.NOT_FOUND;
+      }
+      if (valueSize < rangeStart + rangeSize) {
+        rangeSize = valueSize - rangeStart;
+      }
+      int valueOffset = Utils.getValueOffset(readBuffer, off);
+      valueOffset += rangeStart;
+      long fileLength = file.length();
+      if (fileLength < offset + valueOffset + rangeSize) {
+        // Rare situation - wrong segment - hash collision
+        return IOEngine.READ_ERROR;
+      }
+      UnsafeAccess.copy(readBuffer, off + valueOffset, buffer, pos, rangeSize);
+      return rangeSize;
+    } finally {
+      buffer.position(pos);
     }
-
-    if (file.length() < offset + size) {
-      // Rare situation - wrong segment - hash collision
-      return IOEngine.NOT_FOUND;
-    }
-
-    if (size < toRead) {
-      loaded = true;
-    }
-
-    if (rangeStart > valueSize) {
-      return IOEngine.NOT_FOUND;
-    }
-
-    if (rangeStart + rangeSize > valueSize) {
-      rangeSize = valueSize - rangeStart;
-    }
-
-    // Now buffer contains both: key and value, we need to compare keys
-    // Format of a key-value pair in a buffer: key-size, value-size, key, value
-    int kSize = Utils.getKeySize(buffer);
-    int kOffset = Utils.getKeyOffset(buffer);
-
-    if (kSize != keySize) {
-      // Hash collision
-      return IOEngine.NOT_FOUND;
-    }
-    // Now compare keys
-    buffer.position(pos + kOffset);
-    if (Utils.compareTo(buffer, kSize, keyPtr, keySize) != 0) {
-      // Hash collision
-      return IOEngine.NOT_FOUND;
-    }
-
-    buffer.position(pos);
-
-    if (!loaded) {
-      readFully(file, offset + valueOffset + rangeStart, buffer, rangeSize);
-    } else {
-      Utils.extractValueRange(buffer, rangeStart, rangeSize);
-    }
-    buffer.position(pos);
-
-    return rangeSize;
   }
 
   @Override
   public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
     RandomAccessFile file = ((FileIOEngine) engine).getFileFor(s.getId());
     int prefetchBuferSize = ((FileIOEngine) engine).getFilePrefetchBufferSize();
-    return new BaseFileSegmentScanner(s, file, prefetchBuferSize);
+    return new BaseFileSegmentScannerOpt(s, file, prefetchBuferSize);
   }
 }

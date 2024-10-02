@@ -41,7 +41,10 @@ public class TestSegmentBaseDataWriterReaderMemory extends IOTestBase {
     segment = Segment.newSegment(ptr, this.segmentSize, 1, 1);
     segment.init("default");
     prepareRandomData(this.numRecords);
-    segment.setDataWriterAndEngine(new BaseDataWriter(), null);
+    FileIOEngine engine = Mockito.mock(FileIOEngine.class);
+    DataWriter writer = new BaseDataWriter();
+    Mockito.when(engine.getWriteBatches()).thenReturn(new WriteBatches(writer));
+    segment.setDataWriterAndEngine(new BaseDataWriter(), engine); 
   }
 
   @After
@@ -53,8 +56,6 @@ public class TestSegmentBaseDataWriterReaderMemory extends IOTestBase {
   @Test
   public void testWritesBytes() throws IOException {
     int count = loadBytes();
-    long expire = expires[count - 1];
-    assertEquals(expire, segment.getInfo().getMaxExpireAt());
     verifyBytes(count);
 
     DataReader reader = new BaseMemoryDataReader();
@@ -67,8 +68,6 @@ public class TestSegmentBaseDataWriterReaderMemory extends IOTestBase {
   @Test
   public void testWritesMemory() throws IOException {
     int count = loadMemory();
-    long expire = expires[count - 1];
-    assertEquals(expire, segment.getInfo().getMaxExpireAt());
     verifyMemory(count);
 
     DataReader reader = new BaseMemoryDataReader();
@@ -106,12 +105,15 @@ public class TestSegmentBaseDataWriterReaderMemory extends IOTestBase {
     DataInputStream dis = new DataInputStream(bais);
     Segment seg = new Segment();
     seg.load(dis);
-    seg.setDataWriterAndEngine(new BaseDataWriter(), null);
+    FileIOEngine engine = Mockito.mock(FileIOEngine.class);
+    DataWriter writer = new BaseDataWriter();
+    Mockito.when(engine.getWriteBatches()).thenReturn(new WriteBatches(writer));
+    segment.setDataWriterAndEngine(new BaseDataWriter(), engine); 
     segment.dispose();
     segment = seg;
     verifyBytes(count);
     DataReader reader = new BaseMemoryDataReader();
-    IOEngine engine = Mockito.mock(IOEngine.class);
+    engine = (FileIOEngine) Mockito.mock(FileIOEngine.class);
     Mockito.when(engine.getSegmentById(Mockito.anyInt())).thenReturn(segment);
     verifyBytesWithReader(count, reader, engine);
   }

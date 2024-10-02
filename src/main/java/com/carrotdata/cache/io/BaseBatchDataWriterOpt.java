@@ -18,7 +18,7 @@ import com.carrotdata.cache.util.CacheConfig;
 import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
-public class BaseDataWriter implements DataWriter {
+public class BaseBatchDataWriterOpt implements DataWriter {
 
   private int blockSize;
 

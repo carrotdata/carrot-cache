@@ -17,7 +17,8 @@ import com.carrotdata.cache.util.Utils;
 public class BlockReaderWriterSupport {
   public final static int SIZE_OFFSET = 0;
   public final static int META_SIZE = Utils.SIZEOF_INT;
-
+  public final static int OPT_META_SIZE = 3 * Utils.SIZEOF_INT; 
+  
   /**
    * Get data size in block n
    * @param s segment
@@ -113,7 +114,7 @@ public class BlockReaderWriterSupport {
     long $ptr = ptr + META_SIZE;
     long found = IOEngine.NOT_FOUND;
 
-    while ($ptr < ptr + blockDataSize) {
+    while ($ptr < ptr + META_SIZE + blockDataSize) {
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
       int kSize = Utils.readUVInt($ptr);
       int kSizeSize = Utils.sizeUVInt(kSize);
@@ -165,7 +166,7 @@ public class BlockReaderWriterSupport {
   public static long findInBlock(long ptr, int blockDataSize, long keyPtr, int keySize) {
     long $ptr = ptr + META_SIZE;
     long found = IOEngine.NOT_FOUND;
-    while ($ptr < ptr + blockDataSize) {
+    while ($ptr < ptr + META_SIZE + blockDataSize) {
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
       int kSize = Utils.readUVInt($ptr);
       int kSizeSize = Utils.sizeUVInt(kSize);
@@ -217,9 +218,10 @@ public class BlockReaderWriterSupport {
   public static long findInBlock(byte[] block, int blockOff, int blockDataSize, byte[] key,
       int keyOffset, int keySize) {
     int off = META_SIZE + blockOff;
+    int startOffset = off;
     long found = IOEngine.NOT_FOUND;
 
-    while (off < blockDataSize) {
+    while (off < blockDataSize + startOffset) {
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
       int kSize = Utils.readUVInt(block, off);
       int kSizeSize = Utils.sizeUVInt(kSize);
@@ -231,7 +233,7 @@ public class BlockReaderWriterSupport {
         off += kSize + vSize;
         continue;
       }
-      if (off + kSize >= blockDataSize + META_SIZE) {
+      if (off + kSize >= blockDataSize + startOffset) {
         break;
       }
       if (Utils.equals(key, keyOffset, keySize, block, off, kSize)) {
@@ -267,9 +269,11 @@ public class BlockReaderWriterSupport {
   public static long findInBlock(byte[] block, int blockOff, int blockDataSize, long keyPtr,
       int keySize) {
     int off = META_SIZE + blockOff;
+    int startOffset = off;
+
     long found = IOEngine.NOT_FOUND;
 
-    while (off < blockDataSize) {
+    while (off < blockDataSize + startOffset) {
       // Format of a key-value pair in a buffer: key-size, value-size, key, value
       int kSize = Utils.readUVInt(block, off);
       int kSizeSize = Utils.sizeUVInt(kSize);
@@ -281,7 +285,7 @@ public class BlockReaderWriterSupport {
         off += kSize + vSize;
         continue;
       }
-      if (off + kSize >= blockDataSize + META_SIZE) {
+      if (off + kSize >= blockDataSize + startOffset) {
         break;
       }
       if (Utils.equals(block, off, kSize, keyPtr, keySize)) {

@@ -20,6 +20,7 @@ import static com.carrotdata.cache.util.Utils.getItemSize;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -161,7 +162,7 @@ public class CompressedBlockMemoryDataReader implements DataReader {
     }
     return size;
   }
-
+  
   @Override
   public int read(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid, long offset,
       int size, // can be < 0 - unknown

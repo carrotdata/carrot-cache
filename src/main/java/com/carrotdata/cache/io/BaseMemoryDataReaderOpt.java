@@ -26,11 +26,11 @@ import org.slf4j.LoggerFactory;
 import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
-public class BaseMemoryDataReader implements DataReader {
+public class BaseMemoryDataReaderOpt implements DataReader {
   @SuppressWarnings("unused")
-  private static final Logger LOG = LoggerFactory.getLogger(BaseMemoryDataReader.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BaseMemoryDataReaderOpt.class);
 
-  public BaseMemoryDataReader() {
+  public BaseMemoryDataReaderOpt() {
   }
 
   @Override
@@ -355,7 +355,7 @@ public class BaseMemoryDataReader implements DataReader {
       return IOEngine.NOT_FOUND;
     }
     final long ptr = s.getAddress();
-    final int size1 = UnsafeAccess.toInt(ptr + offset);
+    final int size1 = UnsafeAccess.toInt(ptr);
     final int id = UnsafeAccess.toInt(ptr + offset + Utils.SIZEOF_INT);
     final int size2 = UnsafeAccess.toInt(ptr + offset + 2 * Utils.SIZEOF_INT);
     int pos = buffer.position();

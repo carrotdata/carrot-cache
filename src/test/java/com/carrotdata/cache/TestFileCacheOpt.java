@@ -12,23 +12,21 @@
 package com.carrotdata.cache;
 
 import java.io.IOException;
-import java.util.Random;
 
 import org.junit.Before;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-public class TestFileCacheGetRangeAPI extends TestMemoryCacheGetRangeAPI {
-  private static final Logger LOG = LoggerFactory.getLogger(TestFileCacheGetRangeAPI.class);
+import com.carrotdata.cache.io.BaseBatchDataWriterOpt;
+import com.carrotdata.cache.io.BaseFileDataReaderOpt;
+import com.carrotdata.cache.io.BaseMemoryDataReaderOpt;
+
+public class TestFileCacheOpt extends TestFileCache {
 
   @Before
   public void setUp() throws IOException {
-    this.memory = false;
-    cache = createCache();
-    this.numRecords = 100000;
-    this.r = new Random();
-    long seed = System.currentTimeMillis();
-    LOG.info("r.seed={}", seed);
-  }
+    super.setUp();
+    this.dataWriter = BaseBatchDataWriterOpt.class.getName();
+    this.dataReaderMemory = BaseMemoryDataReaderOpt.class.getName();
+    this.dataReaderFile = BaseFileDataReaderOpt.class.getName();
 
+  }
 }

@@ -25,9 +25,9 @@ import com.carrotdata.cache.util.Utils;
 /**
  * Segment scanner Usage: while(scanner.hasNext()){ // do job // ... // next() scanner.next(); }
  */
-public final class BaseFileSegmentScanner implements SegmentScanner {
+public final class BaseFileSegmentScannerOpt implements SegmentScanner {
   private static final Logger LOG =
-      LoggerFactory.getLogger(BaseFileSegmentScanner.class);
+      LoggerFactory.getLogger(BaseFileSegmentScannerOpt.class);
 
   /*
    * Data segment
@@ -57,7 +57,7 @@ public final class BaseFileSegmentScanner implements SegmentScanner {
   /*
    * Private constructor
    */
-  BaseFileSegmentScanner(Segment s, RandomAccessFile file, int bufSize)
+  BaseFileSegmentScannerOpt(Segment s, RandomAccessFile file, int bufSize)
       throws IOException {
     // Make sure it is sealed
     if (s.isSealed() == false) {

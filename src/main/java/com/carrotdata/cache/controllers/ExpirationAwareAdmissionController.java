@@ -97,12 +97,12 @@ public class ExpirationAwareAdmissionController implements AdmissionController {
     }
     int newRank = ttlBins.length - 1; // set to minimum
     for (int i = 0; i < ttlBins.length; i++) {
-      if (ttlBins[i] < relExpireSec) {
+      if (ttlBins[i] <= relExpireSec) {
         newRank = i;
         break;
       }
     }
-    return newRank;
+    return Math.max(popularityRank, newRank);
   }
 
   @Override
@@ -111,18 +111,19 @@ public class ExpirationAwareAdmissionController implements AdmissionController {
     if (expire <= 0) {
       return ttlBins[0] * 1000 + currentTime; // maximum
     }
-    long relExpireSec = (expire - currentTime) / 1000;
-    if (relExpireSec < 0) {
-      // Log warning
-      return ttlBins[ttlBins.length - 1] * 1000 + currentTime;
-    }
-    long newExpire = ttlBins[ttlBins.length - 1]; // set to minimum
-    for (int i = 0; i < ttlBins.length; i++) {
-      if (ttlBins[i] < relExpireSec) {
-        newExpire = ttlBins[i];
-        break;
-      }
-    }
-    return newExpire * 1000 + currentTime;
+    return expire;
+//    long relExpireSec = (expire - currentTime) / 1000;
+//    if (relExpireSec < 0) {
+//      // Log warning
+//      return ttlBins[ttlBins.length - 1] * 1000 + currentTime;
+//    }
+//    long newExpire = ttlBins[ttlBins.length - 1]; // set to minimum
+//    for (int i = 0; i < ttlBins.length; i++) {
+//      if (ttlBins[i] < relExpireSec) {
+//        newExpire = ttlBins[i];
+//        break;
+//      }
+//    }
+//    return newExpire * 1000 + currentTime;
   }
 }

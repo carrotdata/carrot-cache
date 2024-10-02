@@ -915,7 +915,7 @@ public class Segment implements Persistent {
     }
   }
 
-  private WriteBatch getWriteBatch() {
+  WriteBatch getWriteBatch() {
     if (this.writeBatches == null) {
       return null;
     }
@@ -926,7 +926,7 @@ public class Segment implements Persistent {
     return writeBatches.getWriteBatch(tid);
   }
 
-  private int makeIdForThread(long tid) {
+  int makeIdForThread(long tid) {
     // Rank is a low number, default maximum is 7
     int rank = this.info.getGroupRank();
     // Id for a thread is a negative which is intentionally less than -1 (used as NOT_FOUND,

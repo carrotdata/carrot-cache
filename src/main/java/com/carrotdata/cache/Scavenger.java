@@ -354,15 +354,15 @@ public class Scavenger implements Runnable {
       String name = entry.getKey();
       Stats stats = entry.getValue();
       LOG.info(
-        "Scavenger [{}]: runs={} scanned={} freed={} written back={} empty segments={}, items scanned={} items freed={}",
+        "Scavenger [{}]: runs={} scanned bytes={} freed bytes={} written back={} empty segments={}, items: scanned={} freed={} expired={}, not found={}. deleted={}",
         name, stats.getTotalRuns(), stats.getTotalBytesScanned(), stats.getTotalBytesFreed(),
         stats.getTotalBytesScanned() - stats.getTotalBytesFreed(), stats.getTotalEmptySegments(),
-        stats.getTotalItemsScanned(), stats.getTotalItemsFreed());
+        stats.getTotalItemsScanned(), stats.getTotalItemsFreed(), stats.getTotalItemsExpired(), stats.getTotalItemsNotFound(), stats.getTotalItemsDeleted());
     }
   }
 
   public final static String NAME = "cc-scavenger";
-
+  
   private Stats stats;
 
   private final Cache cache;
@@ -738,7 +738,7 @@ public class Scavenger implements Runnable {
           case EXPIRED:
             stats.totalBytesExpired.addAndGet(totalSize);
             stats.totalBytesFreed.addAndGet(totalSize);
-            stats.totalItemsExpired.incrementAndGet();
+            //stats.totalItemsExpired.incrementAndGet();
             expired++;
             break;
           case NOT_FOUND:// Actually deleted or overwritten

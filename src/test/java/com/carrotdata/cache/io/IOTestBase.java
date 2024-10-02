@@ -175,10 +175,9 @@ public abstract class IOTestBase {
       byte[] value = values[count];
       int size = Utils.kvSize(key.length, value.length);
       long offset = segment.append(key, 0, key.length, value, 0, value.length, expire);
-      if (offset < 0) {
+      if (offset == -1) {
         break;
       }
-
       if (this.index != null) {
         format.writeIndex(0L, indexBuf, key, 0, key.length, value, 0, value.length, sid,
           (int) offset, size, expire);
@@ -189,7 +188,7 @@ public abstract class IOTestBase {
     if (indexBuf > 0) {
       UnsafeAccess.free(indexBuf);
     }
-    LOG.info("time=" + (System.currentTimeMillis() - start));
+    LOG.info("load bytes time={} loaded={}",(System.currentTimeMillis() - start), count);
     return count;
   }
 
@@ -322,7 +321,7 @@ public abstract class IOTestBase {
       long valuePtr = mValues[count];
       long offset = segment.append(keyPtr, keySize, valuePtr, valueSize, expire);
 
-      if (offset < 0) {
+      if (offset == -1) {
         break;
       }
 
@@ -342,7 +341,8 @@ public abstract class IOTestBase {
   protected void verifyBytes(int num) {
     long ptr = segment.getAddress();
 
-    for (int i = 0; i < num; i++) {
+    for (int i = 0; i < num; i++) { 
+      ptr += 12;// // BaseDataWriter meta header block size
       byte[] key = keys[i];
       byte[] value = values[i];
       int kSize = Utils.readUVInt(ptr);
@@ -362,7 +362,6 @@ public abstract class IOTestBase {
     int bufferSize = safeBufferSize();// .kvSize(maxKeySize, maxValueSize);
     byte[] buffer = new byte[bufferSize];
     for (int i = 0; i < num; i++) {
-      // *DEBUG*/ LOG.info(i);
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);
@@ -443,7 +442,6 @@ public abstract class IOTestBase {
     int failed = 0;
     /* DEBUG */ LOG.info("Verify =" + num);
     for (int i = 0; i < num; i++) {
-      ///*DEBUG*/ LOG.info("i={}", i);
       byte[] key = keys[i];
       byte[] value = values[i];
       long expSize = Utils.kvSize(key.length, value.length);
@@ -581,6 +579,7 @@ public abstract class IOTestBase {
     long ptr = segment.getAddress();
 
     for (int i = 0; i < num; i++) {
+      ptr += 12;// BaseDataWriter meta header block size
       byte[] key = keys[i];
       byte[] value = values[i];
       int kSize = Utils.readUVInt(ptr);
@@ -764,6 +763,7 @@ public abstract class IOTestBase {
       assertEquals(indexSize, (int) result);
 
       int offset = (int) format.getOffset(indexBuf);
+      if (offset < 0) continue;// WriteBatch
       int size = format.getKeyValueSize(indexBuf);
       int expSize = Utils.kvSize(key.length, value.length);
       assertEquals(expSize, size);
@@ -800,6 +800,7 @@ public abstract class IOTestBase {
       assertEquals(indexSize, (int) result);
 
       int offset = (int) format.getOffset(indexBuf);
+      if (offset < 0) continue;// WriteBatch
 
       int size = format.getKeyValueSize(indexBuf);
       int expSize = Utils.kvSize(key.length, value.length);
@@ -837,7 +838,6 @@ public abstract class IOTestBase {
 
     int sid = segment.getId();
     for (int i = 0; i < num; i++) {
-
       int kSize = keys[i].length;
       int vSize = values[i].length;
       long keyPtr = mKeys[i];
@@ -846,6 +846,8 @@ public abstract class IOTestBase {
       assertEquals(indexSize, (int) result);
 
       int offset = (int) format.getOffset(indexBuf);
+      if (offset < 0) continue;// WriteBatch
+
       int size = format.getKeyValueSize(indexBuf);
       int expSize = Utils.kvSize(kSize, vSize);
       assertEquals(expSize, size);
@@ -886,6 +888,8 @@ public abstract class IOTestBase {
       assertEquals(indexSize, (int) result);
 
       int offset = (int) format.getOffset(indexBuf);
+      if (offset < 0) continue;// WriteBatch
+
       int size = format.getKeyValueSize(indexBuf);
       int expSize = Utils.kvSize(kSize, vSize);
       assertEquals(expSize, size);

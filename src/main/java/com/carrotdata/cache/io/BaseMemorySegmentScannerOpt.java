@@ -12,8 +12,8 @@
 package com.carrotdata.cache.io;
 
 import static com.carrotdata.cache.io.BlockReaderWriterSupport.OPT_META_SIZE;
+
 import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 
 import org.slf4j.Logger;
@@ -25,22 +25,22 @@ import com.carrotdata.cache.util.Utils;
 /**
  * Segment scanner Usage: while(scanner.hasNext()){ // do job // ... // next() scanner.next(); }
  */
-public final class BaseFileSegmentScanner implements SegmentScanner {
+public final class BaseMemorySegmentScannerOpt implements SegmentScanner {
   private static final Logger LOG =
-      LoggerFactory.getLogger(BaseFileSegmentScanner.class);
+      LoggerFactory.getLogger(BaseMemorySegmentScannerOpt.class);
 
   /*
    * Data segment
    */
   Segment segment;
   /*
-   * Prefetch buffer
-   */
-  PrefetchBuffer prefetch;
-  /*
    * Current scanner index
    */
   int currentIndex = 0;
+  /**
+   * Current offset in a parent segment
+   */
+  int offset = 0;
   /**
    * Current offset in the current block
    */
@@ -48,17 +48,20 @@ public final class BaseFileSegmentScanner implements SegmentScanner {
   /**
    * Current block size
    */
-  int blockSize = 4096;
+  int blockSize = 0;
   /**
-   * Internal buffer
+   * Internal buffer address
    */
-  byte[] buf;
+  long bufPtr;
+  /**
+   * Internal buffer size
+   */
+  int bufferSize;
 
   /*
    * Private constructor
    */
-  BaseFileSegmentScanner(Segment s, RandomAccessFile file, int bufSize)
-      throws IOException {
+  BaseMemorySegmentScannerOpt(Segment s) {
     // Make sure it is sealed
     if (s.isSealed() == false) {
       throw new RuntimeException("segment is not sealed");
@@ -66,48 +69,41 @@ public final class BaseFileSegmentScanner implements SegmentScanner {
     this.segment = s;
     s.readLock();
     // Allocate internal buffer
-    int bufferSize = 1 << 16;
-    buf = new byte[bufferSize];
-    this.prefetch = new PrefetchBuffer(file, bufSize);
+    this.bufferSize = 1 << 16;
+    this.bufPtr = UnsafeAccess.malloc(this.bufferSize);
     nextBlock();
   }
+
   private void checkBuffer(int requiredSize) {
-    if (requiredSize <= buf.length) {
+    if (requiredSize <= this.bufferSize) {
       return;
     }
-    this.buf = new byte[requiredSize];
+    UnsafeAccess.free(this.bufPtr);
+    this.bufferSize = requiredSize;
+    this.bufPtr = UnsafeAccess.malloc(this.bufferSize);
   }
-  private void nextBlock() throws IOException {
-    if (currentIndex >= segment.getTotalItems()) {
+
+  private void nextBlock() {
+    if (this.currentIndex >= segment.getTotalItems()) {
       return;
     }
-    byte[] buffer = prefetch.getBuffer();
-    int bufferOffset = prefetch.getBufferOffset();
+    long ptr = segment.getAddress();
     // next blockSize
-    if (this.prefetch.available() <= OPT_META_SIZE) {
-      this.prefetch.prefetch();
-      bufferOffset = 0;
-    }
-    this.blockSize = UnsafeAccess.toInt(buffer, bufferOffset);
-    int id = UnsafeAccess.toInt(buffer, bufferOffset + Utils.SIZEOF_INT);
-    int size2 = UnsafeAccess.toInt(buffer, bufferOffset + 2 * Utils.SIZEOF_INT);
-    if (this.prefetch.available() < this.blockSize + OPT_META_SIZE) {
-      this.prefetch.prefetch();
-      bufferOffset = 0;
-    }
+    this.blockSize = UnsafeAccess.toInt(ptr + this.offset);
+    int id = UnsafeAccess.toInt(ptr + this.offset + Utils.SIZEOF_INT);
+    int size2 = UnsafeAccess.toInt(ptr + this.offset + 2 * Utils.SIZEOF_INT);
     checkBuffer(this.blockSize);
     if (id != -1 || this.blockSize != size2 || this.blockSize < 0) {
-      // PANIC - memory corruption
       LOG.error(
-        "Segment size={} offset={} size1={} size2={} id={} index={} total items={}",
-        segment.getSegmentDataSize(), this.prefetch.getFileOffset(), this.blockSize, size2,
-        id, currentIndex, segment.getTotalItems());
+        "Segment size={} offset={} size1={} size2={} dictId={} index={} total items={}",
+        segment.getSegmentDataSize(), offset, this.blockSize, size2, id, currentIndex,
+        segment.getTotalItems());
       throw new RuntimeException();
     } else {
-      UnsafeAccess.copy(buffer, bufferOffset + OPT_META_SIZE, this.buf, 0, this.blockSize);
-    }
+      UnsafeAccess.copy(ptr + this.offset + OPT_META_SIZE, this.bufPtr, this.blockSize);
+    } 
     // Advance segment offset
-    this.prefetch.advance(this.blockSize + OPT_META_SIZE);
+    this.offset += this.blockSize + OPT_META_SIZE;
     this.blockOffset = 0;
   }
 
@@ -115,12 +111,12 @@ public final class BaseFileSegmentScanner implements SegmentScanner {
     return currentIndex < segment.getTotalItems();
   }
 
-  public boolean next() throws IOException {
-
-    int keySize = Utils.readUVInt(buf, this.blockOffset);
+  public boolean next() {
+    long ptr = this.bufPtr;
+    int keySize = Utils.readUVInt(ptr + this.blockOffset);
     int keySizeSize = Utils.sizeUVInt(keySize);
     this.blockOffset += keySizeSize;
-    int valueSize = Utils.readUVInt(buf, this.blockOffset);
+    int valueSize = Utils.readUVInt(ptr + this.blockOffset);
     int valueSizeSize = Utils.sizeUVInt(valueSize);
     this.blockOffset += valueSizeSize;
     this.blockOffset += keySize + valueSize;
@@ -145,7 +141,7 @@ public final class BaseFileSegmentScanner implements SegmentScanner {
    * @return key size
    */
   public final int keyLength() {
-    return Utils.readUVInt(this.buf, this.blockOffset);
+    return Utils.readUVInt(this.bufPtr + this.blockOffset);
   }
 
   /**
@@ -154,30 +150,28 @@ public final class BaseFileSegmentScanner implements SegmentScanner {
    */
 
   public final int valueLength() {
+    long ptr = this.bufPtr;
     int off = this.blockOffset;
-    int keySize = Utils.readUVInt(this.buf, off);
+    int keySize = Utils.readUVInt(ptr + off);
     int keySizeSize = Utils.sizeUVInt(keySize);
     off += keySizeSize;
-    return Utils.readUVInt(this.buf, off);
+    return Utils.readUVInt(ptr + off);
   }
 
   /**
    * Get current key's address
-   * @return keys address or 0 (if not supported)
+   * @return keys address
    */
   public final long keyAddress() {
-    return 0;
-  }
-
-  private final int keyOffset() {
+    long ptr = this.bufPtr;
     int off = this.blockOffset;
-    int keySize = Utils.readUVInt(this.buf, off);
+    int keySize = Utils.readUVInt(ptr + off);
     int keySizeSize = Utils.sizeUVInt(keySize);
     off += keySizeSize;
-    int valueSize = Utils.readUVInt(this.buf, off);
+    int valueSize = Utils.readUVInt(ptr + off);
     int valueSizeSize = Utils.sizeUVInt(valueSize);
     off += valueSizeSize;
-    return off;
+    return ptr + off;
   }
 
   /**
@@ -185,31 +179,31 @@ public final class BaseFileSegmentScanner implements SegmentScanner {
    * @return values address
    */
   public final long valueAddress() {
-    return 0;
-  }
-
-  private final int valueOffset() {
+    long ptr = this.bufPtr;
     int off = this.blockOffset;
-    int keySize = Utils.readUVInt(this.buf, off);
+    int keySize = Utils.readUVInt(ptr + off);
     int keySizeSize = Utils.sizeUVInt(keySize);
     off += keySizeSize;
-    int valueSize = Utils.readUVInt(this.buf, off);
+    int valueSize = Utils.readUVInt(ptr + off);
     int valueSizeSize = Utils.sizeUVInt(valueSize);
     off += valueSizeSize + keySize;
-    return off;
+    return ptr + off;
   }
 
   @Override
   public void close() throws IOException {
     segment.readUnlock();
+    if (this.bufPtr != 0) {
+      UnsafeAccess.free(this.bufPtr);
+    }
   }
 
   @Override
   public int getKey(ByteBuffer b) {
     int keySize = keyLength();
-    int keyOffset = keyOffset();
+    long keyAddress = keyAddress();
     if (keySize <= b.remaining()) {
-      b.put(this.buf, keyOffset, keySize);
+      UnsafeAccess.copy(keyAddress, b, keySize);
     }
     return keySize;
   }
@@ -217,9 +211,9 @@ public final class BaseFileSegmentScanner implements SegmentScanner {
   @Override
   public int getValue(ByteBuffer b) {
     int valueSize = valueLength();
-    int valueOffset = valueOffset();
+    long valueAddress = valueAddress();
     if (valueSize <= b.remaining()) {
-      b.put(this.buf, valueOffset, valueSize);
+      UnsafeAccess.copy(valueAddress, b, valueSize);
     }
     return valueSize;
   }
@@ -230,8 +224,8 @@ public final class BaseFileSegmentScanner implements SegmentScanner {
     if (keySize > buffer.length - offset) {
       return keySize;
     }
-    int keyOffset = keyOffset();
-    System.arraycopy(this.buf, keyOffset, buffer, offset, keySize);
+    long keyAddress = keyAddress();
+    UnsafeAccess.copy(keyAddress, buffer, offset, keySize);
     return keySize;
   }
 
@@ -241,8 +235,8 @@ public final class BaseFileSegmentScanner implements SegmentScanner {
     if (valueSize > buffer.length - offset) {
       return valueSize;
     }
-    int valueOffset = valueOffset();
-    System.arraycopy(this.buf, valueOffset, buffer, offset, valueSize);
+    long valueAddress = valueAddress();
+    UnsafeAccess.copy(valueAddress, buffer, offset, valueSize);
     return valueSize;
   }
 
@@ -253,11 +247,19 @@ public final class BaseFileSegmentScanner implements SegmentScanner {
 
   @Override
   public long getOffset() {
-    return this.prefetch.getFileOffset();
+    return this.offset;
   }
 
   @Override
   public boolean isDirect() {
-    return false;
+    return true;
+  }
+
+  public long getBufferAddress() {
+    return this.bufPtr;
+  }
+
+  public int getBufferSize() {
+    return this.bufferSize;
   }
 }

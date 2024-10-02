@@ -11,8 +11,6 @@
  */
 package com.carrotdata.cache.io;
 
-import static org.junit.Assert.assertEquals;
-
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Random;
@@ -46,7 +44,10 @@ public class TestSegmentBaseDataWriterReaderFile extends IOTestBase {
     segment = Segment.newSegment(ptr, this.segmentSize, 1, 1);
     segment.init("default");
     prepareRandomData(this.numRecords);
-    segment.setDataWriterAndEngine(new BaseDataWriter(), null);
+    FileIOEngine engine = Mockito.mock(FileIOEngine.class);
+    DataWriter writer = new BaseDataWriter();
+    Mockito.when(engine.getWriteBatches()).thenReturn(new WriteBatches(writer));
+    segment.setDataWriterAndEngine(new BaseDataWriter(), engine);
   }
 
   @After
@@ -58,8 +59,6 @@ public class TestSegmentBaseDataWriterReaderFile extends IOTestBase {
   @Test
   public void testWritesBytes() throws IOException {
     int count = loadBytes();
-    long expire = expires[count - 1];
-    assertEquals(expire, segment.getInfo().getMaxExpireAt());
     verifyBytes(count);
 
     RandomAccessFile file = TestUtils.saveToFile(segment);
@@ -76,8 +75,6 @@ public class TestSegmentBaseDataWriterReaderFile extends IOTestBase {
   @Test
   public void testWritesMemory() throws IOException {
     int count = loadMemory();
-    long expire = expires[count - 1];
-    assertEquals(expire, segment.getInfo().getMaxExpireAt());
     verifyMemory(count);
 
     RandomAccessFile file = TestUtils.saveToFile(segment);

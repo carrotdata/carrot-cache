@@ -16,6 +16,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.carrotdata.cache.util.Persistent;
@@ -52,6 +53,10 @@ public class WriteBatches implements Persistent {
     return wb;
   }
 
+  Collection<WriteBatch> writeBatches(){
+    return wbMap.values();
+  }
+  
   void dispose() {
     for (WriteBatch wb : wbMap.values()) {
       wb.dispose();

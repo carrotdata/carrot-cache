@@ -11,8 +11,13 @@
  */
 package com.carrotdata.cache.io;
 
+import static com.carrotdata.cache.io.BlockReaderWriterSupport.OPT_META_SIZE;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
@@ -21,6 +26,9 @@ import com.carrotdata.cache.util.Utils;
  * Segment scanner Usage: while(scanner.hasNext()){ // do job // ... // next() scanner.next(); }
  */
 public final class BaseMemorySegmentScanner implements SegmentScanner {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(BaseMemorySegmentScanner.class);
+
   /*
    * Data segment
    */
@@ -29,11 +37,26 @@ public final class BaseMemorySegmentScanner implements SegmentScanner {
    * Current scanner index
    */
   int currentIndex = 0;
-
   /**
    * Current offset in a parent segment
    */
   int offset = 0;
+  /**
+   * Current offset in the current block
+   */
+  int blockOffset = 0;
+  /**
+   * Current block size
+   */
+  int blockSize = 0;
+  /**
+   * Internal buffer address
+   */
+  long bufPtr;
+  /**
+   * Internal buffer size
+   */
+  int bufferSize;
 
   /*
    * Private constructor
@@ -45,6 +68,43 @@ public final class BaseMemorySegmentScanner implements SegmentScanner {
     }
     this.segment = s;
     s.readLock();
+    // Allocate internal buffer
+    this.bufferSize = 1 << 16;
+    this.bufPtr = UnsafeAccess.malloc(this.bufferSize);
+    nextBlock();
+  }
+
+  private void checkBuffer(int requiredSize) {
+    if (requiredSize <= this.bufferSize) {
+      return;
+    }
+    UnsafeAccess.free(this.bufPtr);
+    this.bufferSize = requiredSize;
+    this.bufPtr = UnsafeAccess.malloc(this.bufferSize);
+  }
+
+  private void nextBlock() {
+    if (this.currentIndex >= segment.getTotalItems()) {
+      return;
+    }
+    long ptr = segment.getAddress();
+    // next blockSize
+    this.blockSize = UnsafeAccess.toInt(ptr + this.offset);
+    int id = UnsafeAccess.toInt(ptr + this.offset + Utils.SIZEOF_INT);
+    int size2 = UnsafeAccess.toInt(ptr + this.offset + 2 * Utils.SIZEOF_INT);
+    checkBuffer(this.blockSize);
+    if (id != -1 || this.blockSize != size2 || this.blockSize < 0) {
+      LOG.error(
+        "Segment size={} offset={} size1={} size2={} dictId={} index={} total items={}",
+        segment.getSegmentDataSize(), offset, this.blockSize, size2, id, currentIndex,
+        segment.getTotalItems());
+      throw new RuntimeException();
+    } else {
+      UnsafeAccess.copy(ptr + this.offset + OPT_META_SIZE, this.bufPtr, this.blockSize);
+    } 
+    // Advance segment offset
+    this.offset += this.blockSize + OPT_META_SIZE;
+    this.blockOffset = 0;
   }
 
   public boolean hasNext() {
@@ -52,17 +112,18 @@ public final class BaseMemorySegmentScanner implements SegmentScanner {
   }
 
   public boolean next() {
-    long ptr = segment.getAddress();
-
-    int keySize = Utils.readUVInt(ptr + offset);
+    long ptr = this.bufPtr;
+    int keySize = Utils.readUVInt(ptr + this.blockOffset);
     int keySizeSize = Utils.sizeUVInt(keySize);
-    offset += keySizeSize;
-    int valueSize = Utils.readUVInt(ptr + offset);
+    this.blockOffset += keySizeSize;
+    int valueSize = Utils.readUVInt(ptr + this.blockOffset);
     int valueSizeSize = Utils.sizeUVInt(valueSize);
-    offset += valueSizeSize;
-    offset += keySize + valueSize;
-    currentIndex++;
-    // TODO
+    this.blockOffset += valueSizeSize;
+    this.blockOffset += keySize + valueSize;
+    this.currentIndex++;
+    if (this.blockOffset >= this.blockSize) {
+      nextBlock();
+    }
     return true;
   }
 
@@ -80,8 +141,7 @@ public final class BaseMemorySegmentScanner implements SegmentScanner {
    * @return key size
    */
   public final int keyLength() {
-    long ptr = segment.getAddress();
-    return Utils.readUVInt(ptr + offset);
+    return Utils.readUVInt(this.bufPtr + this.blockOffset);
   }
 
   /**
@@ -90,8 +150,8 @@ public final class BaseMemorySegmentScanner implements SegmentScanner {
    */
 
   public final int valueLength() {
-    long ptr = segment.getAddress();
-    int off = offset;
+    long ptr = this.bufPtr;
+    int off = this.blockOffset;
     int keySize = Utils.readUVInt(ptr + off);
     int keySizeSize = Utils.sizeUVInt(keySize);
     off += keySizeSize;
@@ -103,8 +163,8 @@ public final class BaseMemorySegmentScanner implements SegmentScanner {
    * @return keys address
    */
   public final long keyAddress() {
-    long ptr = segment.getAddress();
-    int off = offset;
+    long ptr = this.bufPtr;
+    int off = this.blockOffset;
     int keySize = Utils.readUVInt(ptr + off);
     int keySizeSize = Utils.sizeUVInt(keySize);
     off += keySizeSize;
@@ -119,8 +179,8 @@ public final class BaseMemorySegmentScanner implements SegmentScanner {
    * @return values address
    */
   public final long valueAddress() {
-    long ptr = segment.getAddress();
-    int off = offset;
+    long ptr = this.bufPtr;
+    int off = this.blockOffset;
     int keySize = Utils.readUVInt(ptr + off);
     int keySizeSize = Utils.sizeUVInt(keySize);
     off += keySizeSize;
@@ -133,6 +193,9 @@ public final class BaseMemorySegmentScanner implements SegmentScanner {
   @Override
   public void close() throws IOException {
     segment.readUnlock();
+    if (this.bufPtr != 0) {
+      UnsafeAccess.free(this.bufPtr);
+    }
   }
 
   @Override
@@ -185,5 +248,18 @@ public final class BaseMemorySegmentScanner implements SegmentScanner {
   @Override
   public long getOffset() {
     return this.offset;
+  }
+
+  @Override
+  public boolean isDirect() {
+    return true;
+  }
+
+  public long getBufferAddress() {
+    return this.bufPtr;
+  }
+
+  public int getBufferSize() {
+    return this.bufferSize;
   }
 }

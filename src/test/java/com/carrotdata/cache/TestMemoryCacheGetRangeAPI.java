@@ -85,7 +85,9 @@ public class TestMemoryCacheGetRangeAPI {
         .withScavengerRunInterval(scavengerInterval)
         .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
         .withRecyclingSelector(MinAliveRecyclingSelector.class.getName()).withCacheRootDir(rootDir)
-        .withEvictionDisabledMode(true).withMinimumActiveDatasetRatio(minActiveRatio);
+        .withEvictionDisabledMode(true).withMinimumActiveDatasetRatio(minActiveRatio)
+        .withBlockWriterBlockSize(1); // Disable write batch (TODO: getRange API is not fully supported by
+        // by BaseDataWriter/Readers)
     if (memory) {
       return builder.buildMemoryCache();
     } else {
@@ -158,8 +160,9 @@ public class TestMemoryCacheGetRangeAPI {
   protected void verifyMemoryCache(int num) throws IOException {
     int bufferSize = safeBufferSize();
     ByteBuffer buffer = ByteBuffer.allocate(bufferSize);
-
+    //byte[] barr = buffer.array();
     for (int i = 0; i < num; i++) {
+      //LOG.info("i={}", i);
       int keySize = keys[i].length;
       int valueSize = values[i].length;
       long keyPtr = mKeys[i];
@@ -168,6 +171,9 @@ public class TestMemoryCacheGetRangeAPI {
       int rangeSize = r.nextInt(valueSize - rangeStart) + 1;
       long size = cache.getRange(keyPtr, keySize, rangeStart, rangeSize, false, buffer);
       assertEquals(rangeSize, size);
+      //LOG.info(Utils.toHex(valuePtr + rangeStart, rangeSize));
+      //LOG.info(Utils.toHex(barr, 0, rangeSize));
+      
       assertTrue(Utils.compareTo(buffer, rangeSize, valuePtr + rangeStart, rangeSize) == 0);
       buffer.clear();
     }
@@ -210,6 +216,7 @@ public class TestMemoryCacheGetRangeAPI {
     int bufferSize = safeBufferSize();
     byte[] buffer = new byte[bufferSize];
     for (int i = 0; i < num; i++) {
+      //LOG.info("i={}", i);
       byte[] key = keys[i];
       byte[] value = values[i];
       int valueSize = value.length;
@@ -220,6 +227,8 @@ public class TestMemoryCacheGetRangeAPI {
       int rangeSize = r.nextInt(valueSize - rangeStart);
       long size = cache.getRange(keyPtr, keySize, rangeStart, rangeSize, false, buffer, 0);
       assertEquals(rangeSize, size);
+      //LOG.info(Utils.toHex(valuePtr + rangeStart, rangeSize));
+      //LOG.info(Utils.toHex(buffer, 0, rangeSize));
       assertTrue(Utils.compareTo(buffer, 0, rangeSize, valuePtr + rangeStart, rangeSize) == 0);
     }
   }
