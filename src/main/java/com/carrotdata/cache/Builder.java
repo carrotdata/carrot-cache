@@ -839,17 +839,7 @@ public class Builder {
     conf.setCacheProactiveExpirationFactor(cacheName, factor);
     return this;
   }
-  
-  /**
-   * With memory buffer pool maximum size
-   * @param size maximum size
-   * @return builder instance
-   */
-  public Builder withMemoryBufferPoolMaxSize(int size) {
-    conf.setCacheMemoryBufferPoolMaximumSize(cacheName, size);
-    return this;
-  }
-  
+
   /**
    * With vacuum cleaner interval
    * @param interval interval in seconds to run cleaner

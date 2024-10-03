@@ -373,8 +373,6 @@ public class CacheConfig {
 
   public final static String CACHE_ESTIMATED_AVG_KV_SIZE_KEY = "estimated.avg.kv.size";
 
-  public final static String CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY =
-      "memory.buffer.pool.size.max";
   public final static String CACHE_PROACTIVE_EXPIRATION_FACTOR_KEY = "proactive.expiration.factor";
 
   public final static String VACUUM_CLEANER_INTERVAL_SEC_KEY = "vacuum.cleaner.interval";
@@ -612,11 +610,6 @@ public class CacheConfig {
 
   /* Default average K-V size */
   public final static int DEFAULT_ESTIMATED_AVG_KV_SIZE = 10 * 1024;
-
-  /* Default maximum size of memory buffer pool */
-
-  public final static int DEFAULT_CACHE_MEMORY_BUFFER_POOL_MAX_SIZE =
-      DEFAULT_CACHE_POPULARITY_NUMBER_RANKS / 2;
 
   public final static double DEFAULT_CACHE_PROACTIVE_EXPIRATION_FACTOR = 0.25;
 
@@ -2798,29 +2791,6 @@ public class CacheConfig {
     props.setProperty(cacheName + "." + CACHE_ESTIMATED_AVG_KV_SIZE_KEY, Integer.toString(size));
   }
 
-  /**
-   * Gets memory buffer pool maximum size for cache
-   * @param cacheName cache name
-   * @return size maximum size
-   */
-  public int getCacheMemoryBufferPoolMaximumSize(String cacheName) {
-    String value = props.getProperty(cacheName + "." + CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY);
-    if (value != null) {
-      return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
-    }
-    return (int) getLongProperty(CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY,
-      DEFAULT_CACHE_MEMORY_BUFFER_POOL_MAX_SIZE);
-  }
-
-  /**
-   * Sets maximum size of memory buffer pool for cache
-   * @param cacheName cache name
-   * @param size maximum size
-   */
-  public void setCacheMemoryBufferPoolMaximumSize(String cacheName, int size) {
-    props.setProperty(cacheName + "." + CACHE_MEMORY_BUFFER_POOL_MAX_SIZE_KEY,
-      Integer.toString(size));
-  }
 
   /**
    * Gets cache pro-active expiration factor

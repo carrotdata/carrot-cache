@@ -35,7 +35,6 @@ import com.carrotdata.cache.index.IndexFormat;
 import com.carrotdata.cache.index.MemoryIndex;
 import com.carrotdata.cache.index.MemoryIndex.MutationResult;
 import com.carrotdata.cache.util.CacheConfig;
-import com.carrotdata.cache.util.MemoryBufferPool;
 import com.carrotdata.cache.util.Persistent;
 import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
@@ -127,9 +126,6 @@ public abstract class IOEngine implements Persistent {
   /* Memory index */
   protected MemoryIndex index;
 
-  /* Memory buffer pool */
-  protected MemoryBufferPool memoryBufferPool;
-
   /* Cached data directory name */
   protected String dataDir;
 
@@ -212,8 +208,6 @@ public abstract class IOEngine implements Persistent {
     this.defaultRank = this.index.getEvictionPolicy().getDefaultRankForInsert();
     this.dataEmbedded = this.config.isIndexDataEmbeddedSupported(this.cacheName);
     this.maxEmbeddedSize = this.config.getIndexDataEmbeddedSize(this.cacheName);
-    int maxPoolSize = this.config.getCacheMemoryBufferPoolMaximumSize(cacheName);
-    this.memoryBufferPool = new MemoryBufferPool((int) this.segmentSize, maxPoolSize);
     try {
       this.dataWriter = this.config.getDataWriter(this.cacheName);
       this.memoryDataReader = this.config.getMemoryDataReader(this.cacheName);
@@ -255,9 +249,6 @@ public abstract class IOEngine implements Persistent {
    */
   public long getTotalAllocated() {
     long size =  this.storageAllocated.get() + this.index.getAllocatedMemory();
-    if (this.memoryBufferPool != null) {
-      size += this.memoryBufferPool.getMemoryAllocated(); 
-    }
     return size;
   }
   
@@ -291,9 +282,6 @@ public abstract class IOEngine implements Persistent {
    */
   public final long getTotalUsed() {
     long size = this.storageUsed.get() + this.index.getAllocatedMemory();
-    if (this.memoryBufferPool != null) {
-      size += this.memoryBufferPool.getMemoryAllocated(); 
-    }
     return size;
   }
   
@@ -2135,12 +2123,6 @@ public abstract class IOEngine implements Persistent {
     // long dataSize = seg.getInfo().getSegmentDataSize();
     try {
       seg.writeLock();
-      if (seg.isMemory()) {
-        boolean res = this.memoryBufferPool.offer(seg.getAddress());
-        if (res) {
-          seg.setAddress(0);
-        }
-      }
       seg.dispose();
       dataSegments[seg.getId()] = null;
       reportAllocation(-this.segmentSize);
@@ -2467,7 +2449,7 @@ public abstract class IOEngine implements Persistent {
           return null;
         }
         if (this.dataSegments[id] == null) {
-          long ptr = this.memoryBufferPool.poll();
+          long ptr = UnsafeAccess.mallocZeroed(this.segmentSize);
           s = Segment.newSegment(ptr, (int) this.segmentSize, id, rank);
           s.init(this.cacheName);
           reportAllocation(this.segmentSize);
@@ -2584,9 +2566,7 @@ public abstract class IOEngine implements Persistent {
     }
     // 2. dispose memory index
     this.index.dispose();
-    // 3. Dispose memory buffer pool
-    this.memoryBufferPool.dispose();
-    // 4. Dispose write batches
+    // 3. Dispose write batches
     if (this.writeBatches != null) {
       this.writeBatches.dispose();
     }
@@ -2684,7 +2664,6 @@ public abstract class IOEngine implements Persistent {
 
   public void shutdown() {
     // do nothing, delegate to subclass
-    this.memoryBufferPool.shutdown();
   }
 
   public Segment[] getDataSegmentsSorted() {
