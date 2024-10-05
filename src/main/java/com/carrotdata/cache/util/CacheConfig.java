@@ -304,12 +304,6 @@ public class CacheConfig {
   /** Eviction disabled mode */
   public static final String CACHE_EVICTION_DISABLED_MODE_KEY = "eviction.disabled";
 
-  /** Rolling Window Counter number of bins - NOT USED YET */
-  public static final String CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY = "rwc.bins";
-
-  /** Rolling Window Counter window duration in seconds - NOT USED YET */
-  public static final String CACHE_ROLLING_WINDOW_COUNTER_DURATION_KEY = "rwc.window";
-
   /** Hybrid cache mode of operation */
   public static final String CACHE_HYBRID_INVERSE_MODE_KEY = "hybrid.inverse.mode";
 
@@ -2122,55 +2116,6 @@ public class CacheConfig {
    */
   public void setEvictionDisabledMode(String cacheName, boolean mode) {
     props.setProperty(cacheName + "." + CACHE_EVICTION_DISABLED_MODE_KEY, Boolean.toString(mode));
-  }
-
-  /**
-   * Get rolling window number of bins
-   * @param cacheName cache name
-   * @return true or false
-   */
-  public int getRollingWindowNumberBins(String cacheName) {
-    String value = props.getProperty(cacheName + "." + CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY);
-    if (value == null) {
-      return (int) getLongProperty(CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY,
-        DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_BINS);
-    } else {
-      return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
-    }
-  }
-
-  /**
-   * Set rolling window number of bins
-   * @param cacheName cache name
-   * @param n number of bins
-   */
-  public void setRollingWindowNumberBins(String cacheName, int n) {
-    props.setProperty(cacheName + "." + CACHE_ROLLING_WINDOW_COUNTER_BINS_KEY, Integer.toString(n));
-  }
-
-  /**
-   * Get rolling window duration in seconds
-   * @param cacheName cache name
-   * @return window duration in seconds
-   */
-  public int getRollingWindowDuration(String cacheName) {
-    String value = props.getProperty(cacheName + "." + CACHE_ROLLING_WINDOW_COUNTER_DURATION_KEY);
-    if (value == null) {
-      return (int) getLongProperty(CACHE_ROLLING_WINDOW_COUNTER_DURATION_KEY,
-        DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_DURATION);
-    } else {
-      return Integer.parseInt(value.replaceAll(CHARS_TO_REMOVE_REGEX, ""));
-    }
-  }
-
-  /**
-   * Set rolling window duration in seconds
-   * @param cacheName cache name
-   * @param n seconds
-   */
-  public void setRollingWindowDuration(String cacheName, int n) {
-    props.setProperty(cacheName + "." + DEFAULT_CACHE_ROLLING_WINDOW_COUNTER_DURATION,
-      Integer.toString(n));
   }
 
   /**

@@ -641,26 +641,6 @@ public class Builder {
   }
 
   /**
-   * With rolling window duration
-   * @param duration
-   * @return builder instance
-   */
-  public Builder withRollingWindowDuration(int duration) {
-    conf.setRollingWindowDuration(cacheName, duration);
-    return this;
-  }
-
-  /**
-   * With rolling window bins count
-   * @param count number of bins
-   * @return builder instance
-   */
-  public Builder withRollingWindowBinsCount(int count) {
-    conf.setRollingWindowNumberBins(cacheName, count);
-    return this;
-  }
-
-  /**
    * With cache maximum value size
    * @param size maximum size
    * @return builder instance

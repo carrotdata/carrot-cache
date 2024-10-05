@@ -20,7 +20,6 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.junit.After;
@@ -97,10 +96,6 @@ public abstract class TestCacheMultithreadedZipfBase {
 
   protected long spinOnWaitTime;
 
-  protected int windowSize = 60;
-
-  protected int binsCount = 60;
-
   protected boolean hybridCacheInverseMode = false;
 
   @After
@@ -122,15 +117,20 @@ public abstract class TestCacheMultithreadedZipfBase {
     String rootDir = rootDirPath.toFile().getAbsolutePath();
     Builder builder = new Builder(cacheName);
 
-    builder.withCacheDataSegmentSize(segmentSize).withCacheMaximumSize(maxCacheSize)
+    builder.withCacheDataSegmentSize(segmentSize)
+        .withCacheMaximumSize(maxCacheSize)
         .withScavengerRunInterval(scavengerInterval)
-        .withScavengerDumpEntryBelowMin(scavDumpBelowRatio).withCacheEvictionPolicy(epClz.getName())
-        .withRecyclingSelector(rsClz.getName()).withCacheRootDir(rootDir)
-        .withMinimumActiveDatasetRatio(minActiveRatio).withEvictionDisabledMode(evictionDisabled)
-        .withAdmissionQueueStartSizeRatio(aqStartRatio).withAdmissionController(acClz.getName())
+        .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
+        .withCacheEvictionPolicy(epClz.getName())
+        .withRecyclingSelector(rsClz.getName())
+        .withCacheRootDir(rootDir)
+        .withMinimumActiveDatasetRatio(minActiveRatio)
+        .withEvictionDisabledMode(evictionDisabled)
+        .withAdmissionQueueStartSizeRatio(aqStartRatio)
+        .withAdmissionController(acClz.getName())
         .withSLRUInsertionPoint(slruInsertionPoint)
-        .withCacheSpinWaitTimeOnHighPressure(spinOnWaitTime).withRollingWindowDuration(windowSize)
-        .withRollingWindowBinsCount(binsCount).withScavengerNumberOfThreads(scavNumberThreads)
+        .withCacheSpinWaitTimeOnHighPressure(spinOnWaitTime)
+        .withScavengerNumberOfThreads(scavNumberThreads)
         .withCacheHybridInverseMode(hybridCacheInverseMode)
         .withPromotionController(pcController.getName())
         .withPromotionQueueStartSizeRatio(pqStartRatio);

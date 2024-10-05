@@ -22,7 +22,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.carrotdata.cache.controllers.LRCRecyclingSelector;
-import com.carrotdata.cache.controllers.LeastAccessedRecyclingSelector;
 import com.carrotdata.cache.controllers.MRCRecyclingSelector;
 import com.carrotdata.cache.controllers.MinAliveRecyclingSelector;
 import com.carrotdata.cache.eviction.LRUEvictionPolicy;
@@ -151,30 +150,6 @@ public class TestCompressedMemoryCacheMultithreadedZipf
     super.testContinuosLoadMemoryRun();
   }
 
-  @Ignore
-  @Test
-  public void testLRUEvictionAndLeastAccessedSelectorBytesAPI() throws IOException {
-    LOG.info("Bytes API: eviction=LRU, selector=LeastAccessed");
-    this.evictionDisabled = false;
-    this.scavengerInterval = 2; // scavenger interval in sec
-    this.epClz = LRUEvictionPolicy.class;
-    this.rsClz = LeastAccessedRecyclingSelector.class;
-    // this.scavDumpBelowRatio = 1.0;
-    super.testContinuosLoadBytesRun();
-  }
-
-  @Ignore
-  @Test
-  public void testLRUEvictionAndLeastAccessedSelectorMemoryAPI() throws IOException {
-    LOG.info("Memory API: eviction=LRU, selector=LeastAccessed");
-
-    this.evictionDisabled = false;
-    this.scavengerInterval = 2; // scavenger interval in sec
-    this.epClz = LRUEvictionPolicy.class;
-    this.rsClz = LeastAccessedRecyclingSelector.class;
-    // this.scavDumpBelowRatio = 1.0;
-    super.testContinuosLoadMemoryRun();
-  }
 
   @Test
   public void testSLRUEvictionAndLRCSelectorBytesAPI() throws IOException {
@@ -239,28 +214,4 @@ public class TestCompressedMemoryCacheMultithreadedZipf
     super.testContinuosLoadMemoryRun();
   }
 
-  @Ignore
-  @Test
-  public void testSLRUEvictionAndLeastAccessedSelectorBytesAPI() throws IOException {
-    LOG.info("Bytes API: eviction=SLRU, selector=LeastAccessed");
-    this.evictionDisabled = false;
-    this.scavengerInterval = 2; // scavenger interval in sec
-    this.epClz = SLRUEvictionPolicy.class;
-    this.rsClz = LeastAccessedRecyclingSelector.class;
-    // this.scavDumpBelowRatio = 1.0;
-    super.testContinuosLoadBytesRun();
-  }
-
-  @Ignore
-  @Test
-  public void testSLRUEvictionAndLeastAccessedSelectorMemoryAPI() throws IOException {
-    LOG.info("Memory API: eviction=SLRU, selector=LeastAccessed");
-
-    this.evictionDisabled = false;
-    this.scavengerInterval = 2; // scavenger interval in sec
-    this.epClz = SLRUEvictionPolicy.class;
-    this.rsClz = LeastAccessedRecyclingSelector.class;
-    // this.scavDumpBelowRatio = 1.0;
-    super.testContinuosLoadMemoryRun();
-  }
 }

@@ -26,9 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.carrotdata.cache.index.MemoryIndex;
-import com.carrotdata.cache.util.CacheConfig;
 import com.carrotdata.cache.util.Persistent;
-import com.carrotdata.cache.util.RollingWindowCounter;
 import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
@@ -107,9 +105,6 @@ public class Segment implements Persistent {
 
     /* Tracks maximum item expiration time - absolute in ms since 01-01-1970 Jan 1st 12am */
     private AtomicLong maxExpireAt = new AtomicLong(0);
-
-    /* Rolling access counter */
-    private RollingWindowCounter counter;
 
     Info() {
     }
@@ -406,21 +401,6 @@ public class Segment implements Persistent {
       return maxExpireAt.compareAndSet(expected, newValue);
     }
 
-    /**
-     * Record access to this segment
-     */
-    public void access() {
-      this.counter.increment();
-    }
-
-    /**
-     * Get access count to this segment
-     * @return count
-     */
-    public long getAccessCount() {
-      return this.counter.count();
-    }
-
     @Override
     /**
      * Save segment to output stream
@@ -461,8 +441,6 @@ public class Segment implements Persistent {
       dos.writeLong(this.blockDataSize.get());
       // Block offset
       dos.writeLong(getBlockOffset());
-      // Rolling Window Counter
-      this.counter.save(dos);
       dos.flush();
     }
 
@@ -483,8 +461,6 @@ public class Segment implements Persistent {
       this.memory = dis.readBoolean();
       this.blockDataSize.set(dis.readLong());
       this.blockOffset.set(dis.readLong());
-      this.counter = new RollingWindowCounter();
-      this.counter.load(dis);
     }
   }
 
@@ -556,11 +532,7 @@ public class Segment implements Persistent {
     setMemory(true);
   }
 
-  public void init(String cacheName) {
-    CacheConfig conf = CacheConfig.getInstance();
-    int numBins = conf.getRollingWindowNumberBins(cacheName);
-    int windowsDuration = conf.getRollingWindowDuration(cacheName);
-    this.info.counter = new RollingWindowCounter(numBins, windowsDuration);
+  public void init(String cacheName) {    
   }
 
   /**
@@ -1142,21 +1114,6 @@ public class Segment implements Persistent {
       return; // do nothing - segment was recycled recently
     }
     this.info.updateExpired();
-  }
-
-  /**
-   * Record access to this segment
-   */
-  public void access() {
-    this.info.access();
-  }
-
-  /**
-   * Get access count to this segment
-   * @return count
-   */
-  public long getAccessCount() {
-    return this.info.getAccessCount();
   }
 
   @Override

@@ -574,9 +574,7 @@ public abstract class IOEngine implements Persistent {
             }
             // Read the data
             res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer, bufOffset);
-            if (res >= 0) {
-              access(s, res, hit);
-            } else if (res == READ_ERROR) {
+            if (res == READ_ERROR) {
               continue;
             }
             return res;
@@ -673,7 +671,6 @@ public abstract class IOEngine implements Persistent {
           // Read the data
           int res = getRange(sid, offset, keyValueSize, keyPtr, keySize, rangeStart, rangeSize,
             buffer, bufOffset);
-          access(s, res, hit);
           return res;
         } finally {
           s.readUnlock();
@@ -798,9 +795,7 @@ public abstract class IOEngine implements Persistent {
             }
             // Read the data
             res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer, bufOffset);
-            if (res >= 0) {
-              access(s, res, hit);
-            } else if (res == IOEngine.READ_ERROR) {
+            if (res == IOEngine.READ_ERROR) {
               // next attempt
               continue;
             }
@@ -900,7 +895,6 @@ public abstract class IOEngine implements Persistent {
           // Read the data
           int res = getRange(sid, offset, keyValueSize, key, keyOffset, keySize, rangeStart,
             rangeSize, buffer, bufOffset);
-          access(s, res, hit);
           return res;
         } finally {
           s.readUnlock();
@@ -908,14 +902,6 @@ public abstract class IOEngine implements Persistent {
       }
     } finally {
       UnsafeAccess.free(buf);
-    }
-  }
-
-  private void access(Segment s, int result, boolean hit) {
-    if (result > 0 && hit) {
-      if (s != null) {
-        s.access();
-      }
     }
   }
 
@@ -1029,9 +1015,7 @@ public abstract class IOEngine implements Persistent {
             }
             // Read the data
             res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer);
-            if (res >= 0) {
-              access(s, res, hit);
-            } else if (res == READ_ERROR) {
+            if (res == READ_ERROR) {
               this.totalFailedReads.incrementAndGet();
             }
             return res;
@@ -1131,7 +1115,6 @@ public abstract class IOEngine implements Persistent {
           // Read the data
           int res =
               getRange(sid, offset, keyValueSize, keyPtr, keySize, rangeStart, rangeSize, buffer);
-          access(s, res, hit);
           return res;
         } finally {
           s.readUnlock();
@@ -1255,9 +1238,7 @@ public abstract class IOEngine implements Persistent {
             }
             // Read the data
             res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer);
-            if (res >= 0) {
-              access(s, res, hit);
-            } else if (res == READ_ERROR) {
+            if (res == READ_ERROR) {
               continue;
             }
             return res;
@@ -1354,7 +1335,6 @@ public abstract class IOEngine implements Persistent {
           // Read the data
           int res = getRange(sid, offset, keyValueSize, key, keyOffset, keySize, rangeStart,
             rangeSize, buffer);
-          access(s, res, hit);
           return res;
         } finally {
           s.readUnlock();
