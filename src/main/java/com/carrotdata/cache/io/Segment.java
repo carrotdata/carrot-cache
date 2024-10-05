@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -523,7 +524,7 @@ public class Segment implements Persistent {
   private volatile boolean sip = false;
 
   /* Segment is in recycling */
-  private volatile boolean inRecycling;
+  private AtomicBoolean inRecycling = new AtomicBoolean(false);
 
   /** We need this instance for data used reporting */
   IOEngine engine;
@@ -599,6 +600,8 @@ public class Segment implements Persistent {
       if (this.address != 0) {
         UnsafeAccess.free(this.address);
         this.address = 0;
+      } else {
+        throw new RuntimeException ("Segment memory address is 0");
       }
     }
     this.valid = false;
@@ -1250,14 +1253,10 @@ public class Segment implements Persistent {
   }
 
   public boolean isRecycling() {
-    return this.inRecycling;
+    return this.inRecycling.get();
   }
 
-  public synchronized boolean setRecycling(boolean v) {
-    if (v && this.inRecycling) {
-      return false;
-    }
-    this.inRecycling = v;
-    return true;
+  public boolean setRecycling(boolean v) {
+    return this.inRecycling.compareAndSet(!v, v);
   }
 }

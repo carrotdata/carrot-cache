@@ -2119,8 +2119,6 @@ public abstract class IOEngine implements Persistent {
    * @param seg data segment
    */
   public void disposeDataSegment(Segment seg) {
-    // FIXME: does not work for compressed data
-    // long dataSize = seg.getInfo().getSegmentDataSize();
     try {
       seg.writeLock();
       seg.dispose();
@@ -2130,7 +2128,6 @@ public abstract class IOEngine implements Persistent {
       // usage uncompressed was updated in Scavenger
       // reportUsage(-dataSize);
     } finally {
-      seg.setRecycling(false);
       seg.writeUnlock();
     }
   }
