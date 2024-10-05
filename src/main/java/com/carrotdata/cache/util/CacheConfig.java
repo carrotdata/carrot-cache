@@ -467,7 +467,7 @@ public class CacheConfig {
   public static final long DEFAULT_SCAVENGER_RUN_INTERVAL_SEC = 60;// 1min
 
   /** Default Scavenger evict all to a victim cache */
-  public static final boolean DEFAULT_VICTIM_EVICT_ALL = false;// 1min
+  public static final boolean DEFAULT_VICTIM_EVICT_ALL = true;// 1min
 
   /** Default throughput controller tolerance limit */
   public static final double DEFAULT_THROUGHPUT_CONTROLLER_TOLERANCE_LIMIT = 0.05;
