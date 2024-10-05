@@ -613,7 +613,7 @@ public class CacheConfig {
 
   public final static double DEFAULT_CACHE_PROACTIVE_EXPIRATION_FACTOR = 0.25;
 
-  public final static long DEFAULT_VACUUM_CLEANER_INTERVAL_SEC = -1; // disabled
+  public final static long DEFAULT_VACUUM_CLEANER_INTERVAL_SEC = 60; // seconds
 
   static CacheConfig instance;
 
