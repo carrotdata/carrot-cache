@@ -316,6 +316,9 @@ public class CacheConfig {
   /** JMX metrics domain name */
   public static final String CACHE_JMX_METRICS_DOMAIN_NAME_KEY = "jmx.metrics.domain.name";
 
+  /** JMX metrics enable - disable */
+  public static final String CACHE_JMX_METRICS_ENABLED_KEY = "jmx.metrics.enabled";
+  
   /* Do not expose */
   public static final String CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY =
       "streaming.buffer.size";
@@ -544,6 +547,9 @@ public class CacheConfig {
 
   /** Default domain name for JMX metrics */
   public final static String DEFAULT_CACHE_JMX_METRICS_DOMAIN_NAME = "com.carrotdata.cache";
+
+  /** Default JMX metrics enable-disable */
+  public final static boolean DEFAULT_CACHE_JMX_METRICS_ENABLED = false;
 
   /** Default streaming support buffer size */
   public final static int DEFAULT_CACHE_STREAMING_SUPPORT_BUFFER_SIZE = 1 << 22;
@@ -2257,6 +2263,29 @@ public class CacheConfig {
     props.setProperty(CACHE_JMX_METRICS_DOMAIN_NAME_KEY, name);
   }
 
+  /**
+   * Sets JMX metrics enabled
+   * @param cacheName cache name
+   * @param v true or false
+   */
+  public void setJMXMetricsEnabled(String cacheName, boolean v) {
+    props.setProperty(cacheName + "." + CACHE_JMX_METRICS_ENABLED_KEY, Boolean.toString(v));
+  }
+  
+  /**
+   * Get JMX metrics enabled
+   * @param cacheName cache name
+   * @return true or false
+   */
+  public boolean getJMXMetricsEnabled(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_JMX_METRICS_ENABLED_KEY);
+    if (value == null) {
+      return getBooleanProperty(CACHE_JMX_METRICS_ENABLED_KEY, DEFAULT_CACHE_JMX_METRICS_ENABLED);
+    } else {
+      return Boolean.parseBoolean(value);
+    }
+  }
+  
   public int getCacheStreamingSupportBufferSize(String cacheName) {
     String value = props.getProperty(cacheName + "." + CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY);
     if (value == null) {

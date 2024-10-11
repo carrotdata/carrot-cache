@@ -369,6 +369,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.saveOnShutdown) {
       addShutdownHook();
     }
+    boolean jmxEnabled = this.conf.getJMXMetricsEnabled(cacheName);
+    if (jmxEnabled) {
+      registerJMXMetricsSink();
+    }
     initTLS();
     Scavenger.registerCache(cacheName);
   }

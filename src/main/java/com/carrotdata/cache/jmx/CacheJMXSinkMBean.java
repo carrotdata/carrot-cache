@@ -84,13 +84,13 @@ public interface CacheJMXSinkMBean {
    * Get number of items in the cache
    * @return number of items
    */
-  long get_items();
+  long getitems_total();
 
   /**
    *  Get number of active items
    * @return number of active items
    */
-  long get_active_items();
+  long getitems_active();
   
   /**
    * Cache total number of put operations (including victim cache)

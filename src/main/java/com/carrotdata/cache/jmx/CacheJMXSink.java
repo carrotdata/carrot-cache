@@ -102,12 +102,12 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
   
   @Override
-  public long get_items() {
+  public long getitems_total() {
     return cache.size();
   }
 
   @Override
-  public long get_active_items() {
+  public long getitems_active() {
     return cache.activeSize();
   }
   
@@ -404,11 +404,11 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     list.add("" + getactive_dataset_size());
     list.add(name + ":active_dataset_size_ratio");
     list.add("" + getactive_dataset_size_ratio());
-    list.add(name + ":items");
-    list.add("" + get_items());
+    list.add(name + ":total_items");
+    list.add("" + getitems_total());
     
     list.add(name + ":active_items");
-    list.add("" + get_active_items());  
+    list.add("" + getitems_active());  
     
     list.add(name + ":total_puts");
     list.add("" + gettotal_puts()); 
