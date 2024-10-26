@@ -553,6 +553,6 @@ public class BaseFileDataReader implements DataReader {
   public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
     RandomAccessFile file = ((FileIOEngine) engine).getFileFor(s.getId());
     int prefetchBuferSize = ((FileIOEngine) engine).getFilePrefetchBufferSize();
-    return new BaseFileSegmentScannerOpt(s, file, prefetchBuferSize);
+    return new BaseFileSegmentScanner(s, file, prefetchBuferSize);
   }
 }

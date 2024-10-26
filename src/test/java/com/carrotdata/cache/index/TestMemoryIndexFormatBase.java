@@ -31,7 +31,6 @@ import com.carrotdata.cache.util.UnsafeAccess;
 
 public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase {
   /** Logger */
-  @SuppressWarnings("unused")
   private static final Logger LOG = LoggerFactory.getLogger(TestMemoryIndexFormatBase.class);
 
   @Before
@@ -108,17 +107,11 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase {
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     int verified = 0;
-    int notFound = 0;
-    int sidIncorrect = 0;
-    int offsetIncorrect = 0;
-    int sizeIncorrect = 0;
-    int expireIncorrect=0;
     for (int i = 0; i < numRecords; i++) {
       int result = (int) memoryIndex.find(keys[i], 0, keySize, hit, buf, entrySize);
       if (result > 0) {
         assertEquals(entrySize, result);
       } else {
-        notFound ++;
         continue;
       }
 
@@ -126,26 +119,21 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase {
       int offset = (int) format.getOffset(buf);
       int size = (int) format.getKeyValueSize(buf);
       if (sids[i] != sid) {
-        sidIncorrect++;
         continue;
       }
       if (offsets[i] != offset) {
-        offsetIncorrect++;
         continue;
       }
       if (sizes[i] != size) {
-        sizeIncorrect++;
         continue;
       }
       long expire = memoryIndex.getExpire(keys[i], 0, keySize);
       if (!sameExpire(expires[i], expire)) {
-        expireIncorrect++;
         continue;
       }
       verified++;
     }
     UnsafeAccess.free(buf);
-    //LOG.info("notfound={} sid ={} off={} expire={}", notFound, sidIncorrect, offsetIncorrect, expireIncorrect);
     assertEquals(expected, verified);
   }
 
@@ -325,6 +313,24 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase {
       }
       long expire = memoryIndex.getExpire(mKeys[i], keySize);
       if (!sameExpire(expires[i], expire)) {
+        continue;
+      }
+      verified++;
+    }
+    UnsafeAccess.free(buf);
+    assertEquals(expected, verified);
+  }
+  
+  protected void verifyIndexMemoryFound(boolean hit, int expected) {
+    IndexFormat format = memoryIndex.getIndexFormat();
+    int entrySize = format.indexEntrySize();
+    long buf = UnsafeAccess.mallocZeroed(entrySize);
+    int verified = 0;
+    for (int i = 0; i < numRecords; i++) {
+      int result = (int) memoryIndex.find(mKeys[i], keySize, hit, buf, entrySize);
+      if (result > 0) {
+        assertEquals(entrySize, result);
+      } else {
         continue;
       }
       verified++;
@@ -660,6 +666,7 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase {
     int loaded = loadIndexMemory();
     long size = memoryIndex.size();
     assertEquals(loaded, (int) size);
+    
     verifyIndexMemory(loaded);
     return loaded;
   }

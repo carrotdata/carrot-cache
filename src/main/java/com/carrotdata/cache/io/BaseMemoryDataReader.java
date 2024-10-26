@@ -531,6 +531,6 @@ public class BaseMemoryDataReader implements DataReader {
 
   @Override
   public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
-    return new BaseMemorySegmentScannerOpt(s);
+    return new BaseMemorySegmentScanner(s);
   }
 }
