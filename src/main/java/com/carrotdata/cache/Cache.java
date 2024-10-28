@@ -1,25 +1,43 @@
 /*
- * Copyright (C) 2024-present Carrot Data, Inc. 
+ * Copyright (C) 2024-present Carrot Data, Inc.
  * <p>This program is free software: you can redistribute it
  * and/or modify it under the terms of the Server Side Public License, version 1, as published by
  * MongoDB, Inc.
  * <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY
  * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- * PURPOSE. See the Server Side Public License for more details. 
+ * PURPOSE. See the Server Side Public License for more details.
  * <p>You should have received a copy of the Server Side Public License along with this program. If not, see
  * <http://www.mongodb.com/licensing/server-side-public-license>.
  */
 package com.carrotdata.cache;
 
-import java.io.BufferedInputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import com.carrotdata.cache.Scavenger.Stats;
+import com.carrotdata.cache.compression.CodecFactory;
+import com.carrotdata.cache.compression.CompressionCodec;
+import com.carrotdata.cache.controllers.AdmissionController;
+import com.carrotdata.cache.controllers.PromotionController;
+import com.carrotdata.cache.controllers.ThroughputController;
+import com.carrotdata.cache.eviction.EvictionListener;
+import com.carrotdata.cache.index.IndexFormat;
+import com.carrotdata.cache.index.MemoryIndex;
+import com.carrotdata.cache.io.*;
+import com.carrotdata.cache.io.IOEngine.IOEngineEvent;
+import com.carrotdata.cache.jmx.CacheJMXSink;
+import com.carrotdata.cache.util.CacheConfig;
+import com.carrotdata.cache.util.Epoch;
+import com.carrotdata.cache.util.UnsafeAccess;
+import com.carrotdata.cache.util.Utils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.core.impl.Log4jContextFactory;
+import org.apache.logging.log4j.core.util.DefaultShutdownCallbackRegistry;
+import org.apache.logging.log4j.core.util.ShutdownCallbackRegistry;
+import org.apache.logging.log4j.spi.LoggerContextFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import java.io.*;
 import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
@@ -32,43 +50,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
-
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.core.impl.Log4jContextFactory;
-import org.apache.logging.log4j.core.util.ShutdownCallbackRegistry;
-import org.apache.logging.log4j.core.util.DefaultShutdownCallbackRegistry;
-
-import org.apache.logging.log4j.spi.LoggerContextFactory;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.carrotdata.cache.Scavenger.Stats;
-import com.carrotdata.cache.compression.CodecFactory;
-import com.carrotdata.cache.compression.CompressionCodec;
-import com.carrotdata.cache.controllers.AdmissionController;
-import com.carrotdata.cache.controllers.PromotionController;
-import com.carrotdata.cache.controllers.ThroughputController;
-import com.carrotdata.cache.eviction.EvictionListener;
-import com.carrotdata.cache.index.IndexFormat;
-import com.carrotdata.cache.index.MemoryIndex;
-import com.carrotdata.cache.io.CacheInputStream;
-import com.carrotdata.cache.io.CacheOutputStream;
-import com.carrotdata.cache.io.CompressedBlockBatchDataWriter;
-import com.carrotdata.cache.io.CompressedBlockFileDataReader;
-import com.carrotdata.cache.io.CompressedBlockMemoryDataReader;
-import com.carrotdata.cache.io.FileIOEngine;
-import com.carrotdata.cache.io.IOEngine;
-import com.carrotdata.cache.io.IOEngine.IOEngineEvent;
-import com.carrotdata.cache.io.MemoryIOEngine;
-import com.carrotdata.cache.io.Segment;
-import com.carrotdata.cache.jmx.CacheJMXSink;
-import com.carrotdata.cache.util.CacheConfig;
-import com.carrotdata.cache.util.Epoch;
-import com.carrotdata.cache.util.UnsafeAccess;
-import com.carrotdata.cache.util.Utils;
 
 /**
  * Main entry for off-heap/on-disk cache
@@ -83,28 +64,27 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   /* Total number of accesses (GET) */
-  private AtomicLong totalGets = new AtomicLong(0);
+  private final AtomicLong totalGets = new AtomicLong(0);
 
   /* Total gets size */
-  private AtomicLong totalGetsSize = new AtomicLong(0);
+  private final AtomicLong totalGetsSize = new AtomicLong(0);
 
   /* Total hits */
-  private AtomicLong totalHits = new AtomicLong(0);
+  private final AtomicLong totalHits = new AtomicLong(0);
 
   /* Total writes */
-  private AtomicLong totalWrites = new AtomicLong(0);
+  private final AtomicLong totalWrites = new AtomicLong(0);
 
   /* Total writes size */
-  private AtomicLong totalWritesSize = new AtomicLong(0);
+  private final AtomicLong totalWritesSize = new AtomicLong(0);
 
   /* Total rejected writes */
   private AtomicLong totalRejectedWrites = new AtomicLong(0);
 
   /* Number of active requests */
-  private AtomicInteger activeRequests = new AtomicInteger();
-  
-  /* Cache name */
-  String cacheName;
+  private final AtomicInteger activeRequests = new AtomicInteger();
+
+  /* Cache name */ String cacheName;
 
   /** Cache configuration */
   CacheConfig conf;
@@ -115,29 +95,22 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /** Maximum key-value size to cache */
   int maximumKeyValueSize;
 
-  /* IOEngine */
-  IOEngine engine;
+  /* IOEngine */ IOEngine engine;
 
-  /* Admission Controller - optional */
-  AdmissionController admissionController;
+  /* Admission Controller - optional */ AdmissionController admissionController;
 
-  /* Promotion controller (from victim cache back to parent)- optional */
-  PromotionController promotionController;
+  /* Promotion controller (from victim cache back to parent)- optional */ PromotionController
+      promotionController;
 
-  /* Throughput controller - optional */
-  ThroughputController throughputController;
+  /* Throughput controller - optional */ ThroughputController throughputController;
 
-  /* Periodic task runner */
-  Timer timer;
+  /* Periodic task runner */ Timer timer;
 
-  /* Victim cache */
-  Cache victimCache;
+  /* Victim cache */ Cache victimCache;
 
-  /* Parent cache */
-  Cache parentCache;
+  /* Parent cache */ Cache parentCache;
 
-  /* Cache epoch */
-  Epoch epoch;
+  /* Cache epoch */ Epoch epoch;
 
   Thread shutDownHook = new Thread(() -> {
     try {
@@ -147,56 +120,41 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
   });
 
-  /* Throughput controller enabled */
-  boolean tcEnabled;
+  /* Throughput controller enabled */ boolean tcEnabled;
 
-  /* Index embedding supported */
-  boolean indexEmdeddingSupported;
+  /* Index embedding supported */ boolean indexEmdeddingSupported;
 
-  /* Index embedded size */
-  int indexEmbeddedSize;
+  /* Index embedded size */ int indexEmbeddedSize;
 
-  /* Eviction disabled mode */
-  boolean evictionDisabledMode;
+  /* Eviction disabled mode */ boolean evictionDisabledMode;
 
-  /* Scavenger start memory ratio */
-  double scavengerStartMemoryRatio;
+  /* Scavenger start memory ratio */ double scavengerStartMemoryRatio;
 
-  /* Scavenger stop memory ratio */
-  double scavengerStopMemoryRatio;
+  /* Scavenger stop memory ratio */ double scavengerStopMemoryRatio;
 
-  /* Victim cache promote on hit */
-  boolean victimCachePromoteOnHit;
+  /* Victim cache promote on hit */ boolean victimCachePromoteOnHit;
 
-  /* Victim cache promote threshold */
-  double victimCachePromoteThreshold;
+  /* Victim cache promote threshold */ double victimCachePromoteThreshold;
 
-  /* Hybrid cache inverse mode */
-  boolean hybridCacheInverseMode;
+  /* Hybrid cache inverse mode */ boolean hybridCacheInverseMode;
 
-  /* Cache spin wait time */
-  long spinWaitTimeNs;
+  /* Cache spin wait time */ long spinWaitTimeNs;
 
   /** Maximum wait time to complete PUT operation in ms */
   long waitOnPutTimeMs;
 
-  /* Cache type */
-  Type type;
+  /* Cache type */ Type type;
 
   /* shutdown is in progress */
   volatile boolean shutdownInProgress = false;
 
-  /* Thread - local buffer */
-  ThreadLocal<byte[]> tlsBuffer;
+  /* Thread - local buffer */ ThreadLocal<byte[]> tlsBuffer;
 
-  /* Thread-local storage enabled */
-  boolean tlsEnabled;
+  /* Thread-local storage enabled */ boolean tlsEnabled;
 
-  /* TLS buffer maximum size in bytes */
-  int tlsBufferMaxSize;
+  /* TLS buffer maximum size in bytes */ int tlsBufferMaxSize;
 
-  /* Save cache on shutdown */
-  boolean saveOnShutdown;
+  /* Save cache on shutdown */ boolean saveOnShutdown;
 
   /* Scavengers are disabled for safe SAVE operation */
   volatile boolean scavDisabled = false;
@@ -210,9 +168,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /*
    *  For testing only
-   */
-  boolean scavengerDisabled = false;
-  
+   */ boolean scavengerDisabled = false;
+
   /**
    * Constructor to use when loading cache from a storage set cache name after that
    */
@@ -255,7 +212,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       initCodec();
     }
   }
-  
+
   private void initCodec() throws IOException {
     CodecFactory factory = CodecFactory.getInstance();
     CompressionCodec codec = factory.getCompressionCodecForCache(cacheName);
@@ -264,7 +221,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
 
   }
-  
+
   public void startStatsTask(long interval) {
     if (interval < 0) {
       String value = System.getProperty("STATS_TASK_INTERVAL");
@@ -320,7 +277,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public boolean isMemoryCache() {
     return this.type == Type.MEMORY;
   }
-  
+
   /**
    * Is disk cache
    * @return true or false
@@ -328,7 +285,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public boolean isDiskCache() {
     return this.type == Type.DISK;
   }
-  
+
   void setIOEngine(IOEngine engine) {
     this.engine = engine;
     // set engine listener
@@ -359,8 +316,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     int min = Math.min(maxSize, (int) segmentSize);
 
     if (this.maximumKeyValueSize > min - 8) {
-      LOG.warn("Maximum key-value size %d can not exceed 256MB and data segment size %d",
-        segmentSize, min);
+      LOG.warn("Maximum key-value size {} can not exceed 256MB and data segment size {}",
+          segmentSize, min);
       this.maximumKeyValueSize = min - 8;
     } else if (this.maximumKeyValueSize == 0) {
       this.maximumKeyValueSize = min - 8;
@@ -412,8 +369,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   private void initAllDuringLoad() throws IOException {
     initFromConfiguration();
-    this.engine = this.type == Type.MEMORY ? new MemoryIOEngine(this.cacheName)
-        : new FileIOEngine(this.cacheName);
+    this.engine = this.type == Type.MEMORY ?
+        new MemoryIOEngine(this.cacheName) :
+        new FileIOEngine(this.cacheName);
     // set engine listener
     this.engine.setListener(this);
     initAdmissionController();
@@ -433,14 +391,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   private void disableLog4j2ShutdownHook() {
     final LoggerContextFactory factory = LogManager.getFactory();
     if (factory instanceof Log4jContextFactory) {
-        LOG.info("Deregister Log4j2 shutdown hook");
-        Log4jContextFactory contextFactory = (Log4jContextFactory) factory;
-        ShutdownCallbackRegistry registry = contextFactory.getShutdownCallbackRegistry();
-        ((DefaultShutdownCallbackRegistry) registry).stop();
-        LOG.info("Deregistering Log4j2 shutdown hook done.");
+      LOG.info("Deregister Log4j2 shutdown hook");
+      Log4jContextFactory contextFactory = (Log4jContextFactory) factory;
+      ShutdownCallbackRegistry registry = contextFactory.getShutdownCallbackRegistry();
+      ((DefaultShutdownCallbackRegistry) registry).stop();
+      LOG.info("Deregistering Log4j2 shutdown hook done.");
     }
   }
-  
+
   /**
    * Remove shutdown hook
    */
@@ -452,43 +410,42 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public void disableScavengers() {
     this.scavDisabled = true;
   }
-  
-  
+
   void startScavengers(boolean wait) {
     startScavengers(wait, false);
   }
 
   void startScavengers(boolean wait, boolean vacuum) {
-    
+
     if (this.scavDisabled) {
       return;
     }
-    
+
     int attempt = 0;
-    
+
     while (Scavenger.getActiveThreadsCount(this.cacheName) < this.scavengerNoThreads) {
-        Scavenger scavenger = new Scavenger(this);
-        scavenger.setVacuumMode(vacuum);
-        scavenger.start();
-        attempt++;
-        if (!vacuum || attempt == this.scavengerNoThreads) {
-          break;
-        } else {
-          // vacuum mode can wait
-          LockSupport.parkNanos(10_000_000);
-        }
+      Scavenger scavenger = new Scavenger(this);
+      scavenger.setVacuumMode(vacuum);
+      scavenger.start();
+      attempt++;
+      if (!vacuum || attempt == this.scavengerNoThreads) {
+        break;
+      } else {
+        // vacuum mode can wait
+        LockSupport.parkNanos(10_000_000);
+      }
     }
     if (wait) {
       LockSupport.parkNanos(50000);
     }
   }
-  
+
   void stopScavengers() {
     Scavenger.safeShutdown(this.cacheName);
     while (Scavenger.getActiveThreadsCount(this.cacheName) > 0) {
       try {
         Thread.sleep(100);
-      } catch (InterruptedException e) {
+      } catch (InterruptedException ignored) {
       }
     }
   }
@@ -535,7 +492,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     this.admissionController.setCache(this);
     LOG.info("Started Admission Controller [{}], cache={}",
-      this.admissionController.getClass().getName(), getName());
+        this.admissionController.getClass().getName(), getName());
 
   }
 
@@ -553,7 +510,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.promotionController == null) {
       return;
     }
-    LOG.info("Before Started Promotion Controller [{}]", this.admissionController.getClass().getName());
+    LOG.info("Before Started Promotion Controller [{}]",
+        this.admissionController.getClass().getName());
 
     this.promotionController.setCache(this);
     LOG.info("Started Promotion Controller [{}]", this.admissionController.getClass().getName());
@@ -586,7 +544,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     TimerTask task = new TimerTask() {
       public void run() {
         try {
-        adjustThroughput();
+          adjustThroughput();
         } catch (Throwable e) {
           LOG.error("startThroughputController", e);
         }
@@ -599,13 +557,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.timer.scheduleAtFixedRate(task, interval, interval);
     LOG.info("Started throughput controller, interval={} sec", interval / 1000);
   }
-  
+
   private void startVacuumCleaner() {
     TimerTask task = new TimerTask() {
       public void run() {
         try {
           startScavengers(false, true);
-        } catch(Throwable e) {
+        } catch (Throwable e) {
           LOG.error("startVacuumCleaner", e);
         }
       }
@@ -618,10 +576,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.timer == null) {
       this.timer = new Timer();
     }
-    
+
     this.timer.scheduleAtFixedRate(task, interval, interval);
     LOG.info("Started vacuum cleaner, interval={} sec", interval / 1000);
-  
+
   }
 
   /**
@@ -691,7 +649,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public long getTotalAllocated() {
     return this.engine.getTotalAllocated();
   }
-  
+
   /**
    * Get total used memory (storage + index + memory buffers) when compression is on
    * @return used memory
@@ -741,7 +699,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.maximumCacheSize == 0) return 0;
     return (double) getTotalAllocated() / this.maximumCacheSize;
   }
-  
+
   /**
    * Get admission controller
    * @return admission controller
@@ -851,11 +809,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Put item into the cache
-   * @param keyPtr key address
+   * @param keyPtr  key address
    * @param keySize key size
-   * @param valPtr value address
+   * @param valPtr  value address
    * @param valSize value size
-   * @param expire - expiration (0 - no expire)
+   * @param expire  - expiration (0 - no expire)
    * @return true on success, false - otherwise
    */
   public boolean put(long keyPtr, int keySize, long valPtr, int valSize, long expire)
@@ -871,18 +829,17 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     return true;
   }
-  
+
   /**
    * Put item into a cache
-   * 
-   * @param keyPtr key address
-   * @param keySize key size
-   * @param valPtr value address
-   * @param valSize value size
-   * @param expire expiration time (absolute) in ms
-   * @param rank popularity rank
+   * @param keyPtr    key address
+   * @param keySize   key size
+   * @param valPtr    value address
+   * @param valSize   value size
+   * @param expire    expiration time (absolute) in ms
+   * @param rank      popularity rank
    * @param groupRank grouping rank
-   * @param force, if true - bypass admission controller
+   * @param force,    if true - bypass admission controller
    * @return
    * @throws IOException
    */
@@ -893,11 +850,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Put item into the cache with grouping rank - API for new items
-   * @param keyPtr key address
-   * @param keySize key size
-   * @param valPtr value address
-   * @param valSize value size
-   * @param expire expiration (0 - no expire)
+   * @param keyPtr    key address
+   * @param keySize   key size
+   * @param valPtr    value address
+   * @param valSize   value size
+   * @param expire    expiration (0 - no expire)
    * @param groupRank grouping rank
    * @return true on success, false - otherwise
    */
@@ -913,7 +870,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
       if (this.victimCache != null && this.hybridCacheInverseMode) {
         return this.victimCache.put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank,
-          false, false);
+            false, false);
       } else {
         return putDirectly(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank, false, false);
       }
@@ -924,14 +881,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Put item into the cache - API for new items
-   * @param keyPtr key address
-   * @param keySize key size
-   * @param valPtr value address
-   * @param valSize value size
-   * @param expire expiration (0 - no expire)
-   * @param rank popularity rank of the item
+   * @param keyPtr    key address
+   * @param keySize   key size
+   * @param valPtr    value address
+   * @param valSize   value size
+   * @param expire    expiration (0 - no expire)
+   * @param rank      popularity rank of the item
    * @param groupRank grouping rank
-   * @param force if true - bypass admission controller
+   * @param force     if true - bypass admission controller
    * @return true on success, false - otherwise
    */
   public boolean put(long keyPtr, int keySize, long valPtr, int valSize, long expire, int rank,
@@ -944,10 +901,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       activeRequests.incrementAndGet();
       if (this.victimCache != null && this.hybridCacheInverseMode) {
         return this.victimCache.put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank,
-          force, scavenger);
+            force, scavenger);
       } else {
         return putDirectly(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank, force,
-          scavenger);
+            scavenger);
       }
     } finally {
       activeRequests.decrementAndGet();
@@ -983,9 +940,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     boolean result = false;
     boolean scavStarted = false;
     long start = System.currentTimeMillis();
-    do  { 
-      result = engine.put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank,
-        scavenger);
+    do {
+      result = engine.put(keyPtr, keySize, valPtr, valSize, expire, rank, groupRank, scavenger);
       if (scavenger) {
         //Check scavengers if put failed - its victim cache
         if (!result) {
@@ -997,7 +953,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         this.totalWrites.incrementAndGet();
         this.totalWritesSize.addAndGet(Utils.kvSize(keySize, valSize));
         break;
-      } else if (!scavStarted){
+      } else if (!scavStarted) {
         startScavengers(true);
         scavStarted = true;
       } else {
@@ -1009,7 +965,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     return result;
   }
-  
+
   private void checkRank(int rank) {
     int maxRank = this.engine.getNumberOfRanks();
     if (rank < 0 || rank >= maxRank) {
@@ -1045,7 +1001,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     int rank = getDefaultRankToInsert();
     int groupRank = rank;
     return put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, groupRank, false,
-      false);
+        false);
   }
 
   public boolean put(byte[] key, int keyOffset, int keySize, byte[] value, int valOffset,
@@ -1053,14 +1009,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     int rank = getDefaultRankToInsert();
     int groupRank = rank;
     return put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, groupRank, force,
-      false);
+        false);
   }
 
   public boolean put(byte[] key, int keyOffset, int keySize, byte[] value, int valOffset,
       int valSize, long expire, int rank, boolean force) throws IOException {
     int groupRank = rank;
     return put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, groupRank, force,
-      false);
+        false);
   }
 
   /**
@@ -1081,21 +1037,21 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     int rank = getDefaultRankToInsert();
 
     return put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, groupRank, false,
-      false);
+        false);
   }
 
   /**
    * Put item into the cache
-   * @param key key
+   * @param key       key
    * @param keyOffset key offset
-   * @param keySize key size
-   * @param value value
+   * @param keySize   key size
+   * @param value     value
    * @param valOffset value offset
-   * @param valSize value size
-   * @param expire - expiration (0 - no expire)
-   * @param rank item's popularity rank
+   * @param valSize   value size
+   * @param expire    - expiration (0 - no expire)
+   * @param rank      item's popularity rank
    * @param groupRank - group rank
-   * @param force if true - bypass admission controller
+   * @param force     if true - bypass admission controller
    * @return true on success, false - otherwise
    */
   public boolean put(byte[] key, int keyOffset, int keySize, byte[] value, int valOffset,
@@ -1109,10 +1065,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       activeRequests.incrementAndGet();
       if (this.victimCache != null && this.hybridCacheInverseMode) {
         return this.victimCache.put(key, keyOffset, keySize, value, valOffset, valSize, expire,
-          rank, groupRank, force, scavenger);
+            rank, groupRank, force, scavenger);
       } else {
         return putDirectly(key, keyOffset, keySize, value, valOffset, valSize, expire, rank,
-          groupRank, force, scavenger);
+            groupRank, force, scavenger);
       }
     } finally {
       activeRequests.decrementAndGet();
@@ -1133,12 +1089,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     boolean res = size > this.maximumKeyValueSize;
     if (res) {
       LOG.warn("Unable to cache. Serialized size {} of key-value exceeds the limit of {}.", size,
-        maximumKeyValueSize);
+          maximumKeyValueSize);
     }
     return res;
   }
 
-  
   private void maybeWait() {
     if (Scavenger.getActiveThreadsCount(this.cacheName) == 0) {
       // If scavengers are not running - return immediately
@@ -1146,7 +1101,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     //FIXME: how to make it adapt to a current write load?
     ThreadLocalRandom tlr = ThreadLocalRandom.current();
-    if(tlr.nextDouble() > 0.5) {
+    if (tlr.nextDouble() > 0.5) {
       LockSupport.parkNanos(50_000);
     }
   }
@@ -1182,9 +1137,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     boolean result = false;
     boolean scavStarted = false;
     long start = System.currentTimeMillis();
-    do  { 
-      result = engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, groupRank,
-        scavenger);
+    do {
+      result =
+          engine.put(key, keyOffset, keySize, value, valOffset, valSize, expire, rank, groupRank,
+              scavenger);
       if (scavenger) {
         //Scavenger failed - its parent's scavenger 
         // check scavengers for victim cache
@@ -1197,7 +1153,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         this.totalWrites.incrementAndGet();
         this.totalWritesSize.addAndGet(Utils.kvSize(keySize, valSize));
         break;
-      } else if (!scavStarted){
+      } else if (!scavStarted) {
         startScavengers(true);
         scavStarted = true;
       } else {
@@ -1218,7 +1174,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     int valueSize = Utils.readUVInt(buf, off + kSizeSize);
     int vSizeSize = Utils.sizeUVInt(valueSize);
     return putDirectly(buf, off + kSizeSize + vSizeSize, keySize, buf,
-      off + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, groupRank, true, false);
+        off + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, groupRank, true, false);
   }
 
   private boolean put(long bufPtr, long expire) throws IOException {
@@ -1230,7 +1186,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     int valueSize = Utils.readUVInt(bufPtr + kSizeSize);
     int vSizeSize = Utils.sizeUVInt(valueSize);
     return putDirectly(bufPtr + kSizeSize + vSizeSize, keySize,
-      bufPtr + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, groupRank, true, false);
+        bufPtr + kSizeSize + vSizeSize + keySize, valueSize, expire, rank, groupRank, true, false);
   }
 
   private boolean put(ByteBuffer buf, long expire) throws IOException {
@@ -1247,8 +1203,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Put item into the cache
-   * @param key key
-   * @param value value
+   * @param key    key
+   * @param value  value
    * @param expire - expiration (0 - no expire)
    */
   public boolean put(byte[] key, byte[] value, long expire) throws IOException {
@@ -1260,12 +1216,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached item (if any)
-   * @param keyPtr key address
-   * @param keySize key size
-   * @param buffer buffer for item
+   * @param keyPtr    key address
+   * @param keySize   key size
+   * @param buffer    buffer for item
    * @param bufOffset buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *         adjusted buffer
+   *     adjusted buffer
    * @throws IOException
    */
   public long getKeyValue(long keyPtr, int keySize, byte[] buffer, int bufOffset)
@@ -1275,13 +1231,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached item and key (if any)
-   * @param keyPtr key address
-   * @param keySize key size
-   * @param hit if true - its a hit
-   * @param buffer buffer for item
+   * @param keyPtr    key address
+   * @param keySize   key size
+   * @param hit       if true - its a hit
+   * @param buffer    buffer for item
    * @param bufOffset buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *         adjusted buffer
+   *     adjusted buffer
    * @throws IOException
    */
   public long getKeyValue(long keyPtr, int keySize, boolean hit, byte[] buffer, int bufOffset)
@@ -1345,13 +1301,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached item only (if any)
-   * @param keyPtr key address
-   * @param keySize key size
-   * @param hit if true - its a hit
-   * @param buffer buffer for item
+   * @param keyPtr    key address
+   * @param keySize   key size
+   * @param hit       if true - its a hit
+   * @param buffer    buffer for item
    * @param bufOffset buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *         adjusted buffer
+   *     adjusted buffer
    * @throws IOException
    */
   public long get(long keyPtr, int keySize, boolean hit, byte[] buffer, int bufOffset)
@@ -1370,15 +1326,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached value range (if any)
-   * @param keyPtr key address
-   * @param keySize key size
+   * @param keyPtr     key address
+   * @param keySize    key size
    * @param rangeStart range start
-   * @param rangeSize range size
-   * @param hit if true - its a hit
-   * @param buffer buffer for item
-   * @param bufOffset buffer offset
+   * @param rangeSize  range size
+   * @param hit        if true - its a hit
+   * @param buffer     buffer for item
+   * @param bufOffset  buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *         adjusted buffer
+   *     adjusted buffer
    * @throws IOException
    */
   public long getRange(long keyPtr, int keySize, int rangeStart, int rangeSize, boolean hit,
@@ -1409,7 +1365,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       }
       if (result < 0 && this.victimCache != null) {
         result = this.victimCache.getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer,
-          bufOffset);
+            bufOffset);
         // For range queries we do not promote item to the parent cache
       }
       return result;
@@ -1420,13 +1376,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached item (with hit == true)
-   * @param key key buffer
+   * @param key       key buffer
    * @param keyOffset key offset
-   * @param keySize key size
-   * @param buffer buffer for item
+   * @param keySize   key size
+   * @param buffer    buffer for item
    * @param bufOffset buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *         adjusted buffer
+   *     adjusted buffer
    * @throws IOException
    */
   public long getKeyValue(byte[] key, int keyOffset, int keySize, byte[] buffer, int bufOffset)
@@ -1436,14 +1392,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached item and key (if any)
-   * @param key key buffer
+   * @param key       key buffer
    * @param keyOffset key offset
-   * @param keySize key size
-   * @param hit if true - its a hit
-   * @param buffer buffer for item
+   * @param keySize   key size
+   * @param hit       if true - its a hit
+   * @param buffer    buffer for item
    * @param bufOffset buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *         adjusted buffer
+   *     adjusted buffer
    * @throws IOException
    */
   public long getKeyValue(byte[] key, int keyOffset, int keySize, boolean hit, byte[] buffer,
@@ -1517,9 +1473,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * To write streams to the cache. Stream must be closed after using
-   * @param key stream key
-   * @param off offset
-   * @param len length
+   * @param key    stream key
+   * @param off    offset
+   * @param len    length
    * @param expire stream expiration
    * @return output stream to write data to
    */
@@ -1555,9 +1511,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached value only (if any)
-   * @param key key buffer
+   * @param key       key buffer
    * @param keyOffset key offset
-   * @param keySize key size
+   * @param keySize   key size
    * @return value or null
    * @throws IOException
    */
@@ -1567,10 +1523,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached value only (if any)
-   * @param key key buffer
+   * @param key       key buffer
    * @param keyOffset key offset
-   * @param keySize key size
-   * @param hit if true - its a hit
+   * @param keySize   key size
+   * @param hit       if true - its a hit
    * @return value or null
    * @throws IOException
    */
@@ -1622,9 +1578,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached key-value pair (if any) returned value must be processed in the same thread
-   * @param key key buffer
+   * @param key       key buffer
    * @param keyOffset key offset
-   * @param keySize key size
+   * @param keySize   key size
    * @return key - value pair
    * @throws IOException
    */
@@ -1634,10 +1590,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached key-value pair (if any) returned value must be processed in the same thread
-   * @param key key buffer
+   * @param key       key buffer
    * @param keyOffset key offset
-   * @param keySize key size
-   * @param hit if true - its a hit
+   * @param keySize   key size
+   * @param hit       if true - its a hit
    * @return key - value pair
    * @throws IOException
    */
@@ -1688,7 +1644,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached value only (if any)
-   * @param keyPtr key buffer address
+   * @param keyPtr  key buffer address
    * @param keySize key size
    * @return value or null
    * @throws IOException
@@ -1699,9 +1655,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached value only (if any)
-   * @param keyPtr key buffer address
+   * @param keyPtr  key buffer address
    * @param keySize key size
-   * @param hit if true - its a hit
+   * @param hit     if true - its a hit
    * @return value or null
    * @throws IOException
    */
@@ -1742,7 +1698,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached key-value pair (if any) returned value must be processed in the same thread
-   * @param keyPtr key buffer address
+   * @param keyPtr  key buffer address
    * @param keySize key size
    * @return key - value pair
    * @throws IOException
@@ -1753,10 +1709,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached key-value pair (if any) returned value must be processed in the same thread
-   * @param key key buffer
-   * @param keyOffset key offset
+   * @param keyPtr  key buffer
    * @param keySize key size
-   * @param hit if true - its a hit
+   * @param hit     if true - its a hit
    * @return key - value pair
    * @throws IOException
    */
@@ -1801,10 +1756,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached item only (if any)
-   * @param key key buffer
+   * @param key       key buffer
    * @param keyOffset key offset
-   * @param keySize key size
-   * @param buffer buffer
+   * @param keySize   key size
+   * @param buffer    buffer
    * @param bufOffset buffer offset
    * @return size of a value
    * @throws IOException
@@ -1816,14 +1771,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached item only (if any)
-   * @param key key buffer
+   * @param key       key buffer
    * @param keyOffset key offset
-   * @param keySize key size
-   * @param hit if true - its a hit
-   * @param buffer buffer for item
+   * @param keySize   key size
+   * @param hit       if true - its a hit
+   * @param buffer    buffer for item
    * @param bufOffset buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *         adjusted buffer
+   *     adjusted buffer
    * @throws IOException
    */
   public long get(byte[] key, int keyOffset, int keySize, boolean hit, byte[] buffer, int bufOffset)
@@ -1843,16 +1798,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached value range
-   * @param key key buffer
-   * @param keyOffset key offset
-   * @param keySize key size
+   * @param key        key buffer
+   * @param keyOffset  key offset
+   * @param keySize    key size
    * @param rangeStart range start
-   * @param rangeSize range size
-   * @param hit if true - its a hit
-   * @param buffer buffer for item
-   * @param bufOffset buffer offset
+   * @param rangeSize  range size
+   * @param hit        if true - its a hit
+   * @param buffer     buffer for item
+   * @param bufOffset  buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *         adjusted buffer
+   *     adjusted buffer
    * @throws IOException
    */
   public long getRange(byte[] key, int keyOffset, int keySize, int rangeStart, int rangeSize,
@@ -1885,8 +1840,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         }
       }
       if (result < 0 && this.victimCache != null) {
-        result = this.victimCache.getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit,
-          buffer, bufOffset);
+        result =
+            this.victimCache.getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer,
+                bufOffset);
         // For range queries we do not promote item to the parent cache
       }
       return result;
@@ -1897,12 +1853,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached item (if any)
-   * @param key key buffer
-   * @param keyOff key offset
+   * @param key     key buffer
+   * @param keyOff  key offset
    * @param keySize key size
-   * @param buffer byte buffer for item
+   * @param buffer  byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *         adjusted buffer
+   *     adjusted buffer
    * @throws IOException
    */
   public long getKeyValue(byte[] key, int keyOff, int keySize, ByteBuffer buffer)
@@ -1912,13 +1868,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached item and key (if any)
-   * @param key key buffer
-   * @param keyOff key offset
+   * @param key     key buffer
+   * @param keyOff  key offset
    * @param keySize key size
-   * @param hit if true - its a hit
-   * @param buffer byte buffer for item
+   * @param hit     if true - its a hit
+   * @param buffer  byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *         adjusted buffer
+   *     adjusted buffer
    * @throws IOException
    */
   public long getKeyValue(byte[] key, int keyOff, int keySize, boolean hit, ByteBuffer buffer)
@@ -1982,13 +1938,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached item value only (if any)
-   * @param key key buffer
-   * @param keyOff key offset
+   * @param key     key buffer
+   * @param keyOff  key offset
    * @param keySize key size
-   * @param hit if true - its a hit
-   * @param buffer byte buffer for item
+   * @param hit     if true - its a hit
+   * @param buffer  byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *         adjusted buffer
+   *     adjusted buffer
    * @throws IOException
    */
   public long get(byte[] key, int keyOff, int keySize, boolean hit, ByteBuffer buffer)
@@ -2007,15 +1963,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached value range (if any)
-   * @param key key buffer
-   * @param keyOffset key offset
-   * @param keySize key size
+   * @param key        key buffer
+   * @param keyOffset  key offset
+   * @param keySize    key size
    * @param rangeStart range start
-   * @param rangeSize range size
-   * @param hit if true - its a hit
-   * @param buffer byte buffer for item
+   * @param rangeSize  range size
+   * @param hit        if true - its a hit
+   * @param buffer     byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *         adjusted buffer
+   *     adjusted buffer
    * @throws IOException
    */
   public long getRange(byte[] key, int keyOffset, int keySize, int rangeStart, int rangeSize,
@@ -2058,11 +2014,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached item (if any)
-   * @param keyPtr key address
+   * @param keyPtr  key address
    * @param keySize key size
-   * @param buffer byte buffer for item
+   * @param buffer  byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *         adjusted buffer
+   *     adjusted buffer
    * @throws IOException
    */
   public long getKeyValue(long keyPtr, int keySize, ByteBuffer buffer) throws IOException {
@@ -2071,12 +2027,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached item and key (if any)
-   * @param keyPtr key address
+   * @param keyPtr  key address
    * @param keySize key size
-   * @param hit if true - its a hit
-   * @param buffer byte buffer for item
+   * @param hit     if true - its a hit
+   * @param buffer  byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *         adjusted buffer
+   *     adjusted buffer
    * @throws IOException
    */
   public long getKeyValue(long keyPtr, int keySize, boolean hit, ByteBuffer buffer)
@@ -2139,12 +2095,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached item only (if any)
-   * @param keyPtr key address
+   * @param keyPtr  key address
    * @param keySize key size
-   * @param hit if true - its a hit
-   * @param buffer byte buffer for item
+   * @param hit     if true - its a hit
+   * @param buffer  byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *         adjusted buffer
+   *     adjusted buffer
    * @throws IOException
    */
   public long get(long keyPtr, int keySize, boolean hit, ByteBuffer buffer) throws IOException {
@@ -2162,14 +2118,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get cached value range (if any)
-   * @param keyPtr key address
-   * @param keySize key size
+   * @param keyPtr     key address
+   * @param keySize    key size
    * @param rangeStart range start
-   * @param rangeSize range size
-   * @param hit if true - its a hit
-   * @param buffer byte buffer for item
+   * @param rangeSize  range size
+   * @param hit        if true - its a hit
+   * @param buffer     byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *         adjusted buffer
+   *     adjusted buffer
    * @throws IOException
    */
   public long getRange(long keyPtr, int keySize, int rangeStart, int rangeSize, boolean hit,
@@ -2215,7 +2171,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Delete cached item
-   * @param keyPtr key address
+   * @param keyPtr  key address
    * @param keySize key size
    * @return true - success, false - does not exist
    * @throws IOException
@@ -2238,9 +2194,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Delete cached item
-   * @param key key
+   * @param key       key
    * @param keyOffset key offset
-   * @param keySize key size
+   * @param keySize   key size
    * @return true - success, false - does not exist
    * @throws IOException
    */
@@ -2272,7 +2228,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Expire cached item
-   * @param keyPtr key address
+   * @param keyPtr  key address
    * @param keySize key size
    * @return true - success, false - does not exist
    * @throws IOException
@@ -2283,9 +2239,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Expire cached item
-   * @param key key
+   * @param key       key
    * @param keyOffset key offset
-   * @param keySize key size
+   * @param keySize   key size
    * @return true - success, false - does not exist
    * @throws IOException
    */
@@ -2305,8 +2261,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get expiration time of a key
-   * @param key key buffer
-   * @param off offset
+   * @param key  key buffer
+   * @param off  offset
    * @param size key size
    * @return time, 0 - no expire, -1 - does not exists or not supported
    */
@@ -2325,7 +2281,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get expiration time
-   * @param keyPtr key address
+   * @param keyPtr  key address
    * @param keySize key size
    * @return time in ms since you know when, -1 not supported or does not exists
    */
@@ -2343,8 +2299,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get and set expiration time of a key
-   * @param key key buffer
-   * @param off offset
+   * @param key  key buffer
+   * @param off  offset
    * @param size key size
    * @return time, 0 - no expire, -1 - does not exists or not supported
    */
@@ -2362,7 +2318,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Get and set expiration time
-   * @param keyPtr key address
+   * @param keyPtr  key address
    * @param keySize key size
    * @return time in ms since you know when, -1 not supported or does not exists
    */
@@ -2389,8 +2345,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Does key exist (false positive are possible, but not false negatives)
-   * @param key key buffer
-   * @param off key offset
+   * @param key  key buffer
+   * @param off  key offset
    * @param size key size
    * @return true or false
    */
@@ -2408,8 +2364,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Does key exist (exact)
-   * @param key key buffer
-   * @param off key offset
+   * @param key  key buffer
+   * @param off  key offset
    * @param size key size
    * @return true or false
    * @throws IOException
@@ -2430,9 +2386,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Does key exist (exact)
-   * @param key key buffer
-   * @param off key offset
-   * @param size key size
+   * @param keyPtr key buffer
+   * @param size   key size
    * @return true or false
    * @throws IOException
    */
@@ -2452,8 +2407,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Touches the key
-   * @param key key buffer
-   * @param off key offset
+   * @param key  key buffer
+   * @param off  key offset
    * @param size key size
    * @return true or false (key does not exist)
    */
@@ -2533,8 +2488,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.victimCache == null) {
       return;
     }
-    if (this.admissionController != null
-        && !this.admissionController.shouldEvictToVictimCache(ptr, $ptr)) {
+    if (this.admissionController != null && !this.admissionController.shouldEvictToVictimCache(ptr,
+        $ptr)) {
       return;
     }
     IndexFormat indexFormat = this.engine.getMemoryIndex().getIndexFormat();
@@ -2559,7 +2514,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Transfer cached item to a victim cache
-   * @param ibPtr index block pointer
+   * @param ibPtr    index block pointer
    * @param indexPtr item pointer
    * @throws IOException
    */
@@ -2595,7 +2550,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         ptr += vSizeSize;
         // Do not force PUT, let victim's cache admission controller work
         this.victimCache.put(ptr, keySize, ptr + keySize, valueSize, expire, rank, groupRank, false,
-          isScavenger);
+            isScavenger);
       } else {
         // not supported yet
       }
@@ -2610,7 +2565,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Transfer cached item to a victim cache
-   * @param ibPtr index block pointer
+   * @param ibPtr    index block pointer
    * @param indexPtr item pointer
    * @throws IOException
    */
@@ -2895,11 +2850,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.engine.getMemoryIndex().save(dos);
     dos.close();
   }
-  
-  
+
   private IOException onEngineSaveLoad;
-  
+
   private IOException onIndexSaveLoad;
+
   /**
    * Save cache data and meta-data
    * @throws IOException
@@ -2915,7 +2870,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     saveScavengerStats();
 
     saveEngineAndIndex();
-    
+
     if (victimCache != null) {
       victimCache.save();
     }
@@ -2939,7 +2894,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         onEngineSaveLoad = e;
       }
     };
-    
+
     Runnable indexSave = () -> {
       try {
         long t1 = System.currentTimeMillis();
@@ -2950,34 +2905,34 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         onEngineSaveLoad = e;
       }
     };
-    
+
     Thread saveEngineThread = new Thread(engineSave);
     saveEngineThread.start();
     Thread saveIndexThread = new Thread(indexSave);
     saveIndexThread.start();
-    
-    while(true) {
+
+    while (true) {
       try {
         saveEngineThread.join();
         saveIndexThread.join();
         break;
-      } catch(InterruptedException e) {
+      } catch (InterruptedException e) {
         // Handle the exception properly, e.g., by re-interrupting the thread
         Thread.currentThread().interrupt();
-        LOG.error("Thread was interrupted: " + e.getMessage());
+        LOG.error("Thread was interrupted: {}", e.getMessage());
         break; // Exit the loop in case of interruption
       }
     }
-    
-    if(onEngineSaveLoad != null) {
+
+    if (onEngineSaveLoad != null) {
       throw onEngineSaveLoad;
     }
-    
-    if(onIndexSaveLoad != null) {
+
+    if (onIndexSaveLoad != null) {
       throw onIndexSaveLoad;
     }
   }
-  
+
   /**
    * Loads in parallel engine data and data index
    * @throws IOException
@@ -2989,52 +2944,53 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         long t1 = System.currentTimeMillis();
         loadEngine();
         long t2 = System.currentTimeMillis();
-        LOG.info("Engine load time:{}ms", t2-t1);
+        LOG.info("Engine load time:{}ms", t2 - t1);
       } catch (Throwable e) {
         onEngineSaveLoad = new IOException(e);
-        LOG.error("Load Engine", e);      
+        LOG.error("Load Engine", e);
       }
     };
-    
+
     Runnable indexLoad = () -> {
       try {
         long t1 = System.currentTimeMillis();
         loadIndex();
         long t2 = System.currentTimeMillis();
-        LOG.info("Index load time:{}ms", t2-t1);
+        LOG.info("Index load time:{}ms", t2 - t1);
       } catch (Throwable e) {
         onEngineSaveLoad = new IOException(e);
-        LOG.error("Load Index", e);      
+        LOG.error("Load Index", e);
       }
     };
-    
+
     Thread loadEngineThread = new Thread(engineLoad);
     loadEngineThread.start();
     Thread loadIndexThread = new Thread(indexLoad);
     loadIndexThread.start();
-    
-    while(true) {
+
+    while (true) {
       try {
         loadEngineThread.join();
         loadIndexThread.join();
         break;
-      } catch(InterruptedException e) {
+      } catch (InterruptedException e) {
         // Handle the exception properly, e.g., by re-interrupting the thread
         Thread.currentThread().interrupt();
         LOG.error("Thread was interrupted: " + e.getMessage());
         break; // Exit the loop in case of interruption
       }
     }
-    if(onEngineSaveLoad != null) {
+    if (onEngineSaveLoad != null) {
       throw onEngineSaveLoad;
     }
-    
-    if(onIndexSaveLoad != null) {
+
+    if (onIndexSaveLoad != null) {
       throw onIndexSaveLoad;
     }
   }
-  
+
   private IOException onLoadException;
+
   /**
    * Load cache data and meta-data from a file system
    * @throws IOException
@@ -3046,14 +3002,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     // We run load in three separate threads
     try {
       LOG.info("Started loading cache ...");
-      
+
       loadCache();
       initAllDuringLoad();
-      
+
       long startTime = System.currentTimeMillis();
-      
+
       Runnable load = () -> {
-        try {    
+        try {
           loadAdmissionControlller();
           loadThroughputControlller();
           loadScavengerStats();
@@ -3061,13 +3017,13 @@ public class Cache implements IOEngine.Listener, EvictionListener {
           onLoadException = e;
         }
       };
-      
+
       Thread loadOne = new Thread(load);
       loadOne.start();
-      
+
       // Load data and index in parallel
       loadEngineAndIndex();
-      
+
       try {
         loadOne.join();
       } catch (InterruptedException ee) {
@@ -3076,13 +3032,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       if (onLoadException != null) {
         throw onLoadException;
       }
-      
+
       startThroughputController();
       startVacuumCleaner();
       long endTime = System.currentTimeMillis();
       LOG.info("Cache loaded in {}ms", endTime - startTime);
     } catch (IOException e) {
-      LOG.error("Failed to load cache \"" + this.cacheName +"\" delete cache data directory and retry", e);
+      LOG.error(
+          "Failed to load cache \"" + this.cacheName + "\" delete cache data directory and retry",
+          e);
       removeShutdownHook();
       throw e;
     }
@@ -3133,7 +3091,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     try {
       cleanPersistentStorage();
       //TODO delete saved dictionaries
-    } catch(IOException e) {
+    } catch (IOException e) {
       LOG.error("dispose", e);
     }
     this.engine.dispose();
@@ -3150,15 +3108,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       this.timer = null;
     }
   }
-  
+
   public void printStats() {
     double compRatio = (double) getRawDataSize() / getTotalAllocated();
     double compRatioReal = (double) getRawDataSize() / getStorageUsedActual();
     LOG.info(
-      "Cache[{}]: storage size={} data size={} index size={} comp ratio={} comp real={} items={} active items={}"+
-    " hit rate={}, gets={}, failed gets={}, puts={}, rejected puts={} bytes written={}",
-       this.cacheName, getTotalAllocated(), getRawDataSize(), this.engine.getMemoryIndex().getAllocatedMemory(), compRatio, compRatioReal, size(),
-      activeSize(), getHitRate(), getTotalGets(), getTotalFailedGets(), getTotalWrites(), getTotalRejectedWrites(), getTotalWritesSize());
+        "Cache[{}]: storage size={} data size={} index size={} comp ratio={} comp real={} items={} active items={}" + " hit rate={}, gets={}, failed gets={}, puts={}, rejected puts={} bytes written={}",
+        this.cacheName, getTotalAllocated(), getRawDataSize(),
+        this.engine.getMemoryIndex().getAllocatedMemory(), compRatio, compRatioReal, size(),
+        activeSize(), getHitRate(), getTotalGets(), getTotalFailedGets(), getTotalWrites(),
+        getTotalRejectedWrites(), getTotalWritesSize());
     if (this.victimCache != null) {
       this.victimCache.printStats();
     }
@@ -3170,11 +3129,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   public void registerJMXMetricsSink(String domainName) {
-    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-    ObjectName name;
+    var mbs = ManagementFactory.getPlatformMBeanServer();
     try {
-      name = new ObjectName(String.format("%s:type=cache,name=%s", domainName, getName()));
-      CacheJMXSink mbean = new CacheJMXSink(this);
+      var name = new ObjectName(String.format("%s:name=%s", domainName, getName()));
+      var mbean = new CacheJMXSink(this);
       mbs.registerMBean(mbean, name);
     } catch (Exception e) {
       LOG.error("Error:", e);
@@ -3188,7 +3146,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
     ObjectName name;
     try {
-      name = new ObjectName(String.format("%s:type=%s,name=%s", domainName, type, getName()));
+      name = new ObjectName(
+          String.format("%s:name=L1,type=%s,attribute=%s", domainName, type, getName()));
       CacheJMXSink mbean = new CacheJMXSink(this);
       mbs.registerMBean(mbean, name);
     } catch (Exception e) {
@@ -3214,12 +3173,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       }
       this.shutdownInProgress = true;
     }
-        
+
     // Disable writes/reads
     shutdownStatusMsg =
         String.format("Shutting down cache [%s], save data=%s", cacheName, saveOnShutdown);
     LOG.info(shutdownStatusMsg);
-    
+
     long size = getStorageUsedActual();
     size += this.engine.getMemoryIndex().getAllocatedMemory();
     long start = System.currentTimeMillis();
@@ -3238,7 +3197,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     long end = System.currentTimeMillis();
     if (saveOnShutdown) {
       shutdownStatusMsg =
-          String.format("Cache [%s] saved %d bytes in %d ms. Shutdown complete", cacheName, size, (end - start));
+          String.format("Cache [%s] saved %d bytes in %d ms. Shutdown complete", cacheName, size,
+              (end - start));
     } else {
       shutdownStatusMsg += "Shutdown complete";
     }
@@ -3249,15 +3209,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     return size;
   }
-  
+
   private void waitForActiveRequestsFinished() {
     long timeout = 1000;
-    long start = System.currentTimeMillis();  
-    while(System.currentTimeMillis() - start < timeout && activeRequests.get() > 0) {
+    long start = System.currentTimeMillis();
+    while (System.currentTimeMillis() - start < timeout && activeRequests.get() > 0) {
       LockSupport.park(100000);
     }
   }
-  
+
   private void cleanPersistentStorage() throws IOException {
     CacheConfig conf = CacheConfig.getInstance();
     String snapshotDir = conf.getSnapshotDir(cacheName);
@@ -3266,19 +3226,19 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (Files.notExists(p)) {
       return;
     }
-    
+
     if (Files.list(p).count() == 0) {
       return;
     }
-    
+
     File dir = p.toFile();
     File[] files = dir.listFiles();
-    for (File f: files) {
+    for (File f : files) {
       if (f.isFile()) f.delete();
     }
-    
+
   }
-  
+
   public static Cache loadCache(String cacheName) throws IOException {
     CacheConfig conf = CacheConfig.getInstance();
     String snapshotDir = conf.getSnapshotDir(cacheName);
@@ -3296,14 +3256,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     String file = CacheConfig.CACHE_SNAPSHOT_NAME;
     Path cachePath = Paths.get(snapshotDir, file);
     if (Files.notExists(cachePath)) {
-      LOG.warn(String.format("Cache snapshot file is missing in %s, creating new instance", p.toString()));
+      LOG.warn("Cache snapshot file is missing in {}, creating new instance", p);
       return null;
     }
 
     file = CacheConfig.CACHE_ENGINE_SNAPSHOT_NAME;
     Path enginePath = Paths.get(snapshotDir, file);
     if (Files.notExists(enginePath)) {
-      LOG.warn(String.format("IOEngine snapshot file is missing in %s, creating new instance", p.toString()));
+      LOG.warn("IOEngine snapshot file is missing in {}, creating new instance", p);
       return null;
     }
 
@@ -3337,7 +3297,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     conf.setGlobalCacheRootDir(rootDir);
     return loadCache(cacheName);
   }
-  
+
   public static Cache flushAll(Cache c) throws IOException {
     // Create empty cache with the same configuration
     Cache main = new Cache(c.getName());
@@ -3348,13 +3308,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       cache.setVictimCache(ccc);
       cache = ccc;
       cc = victim;
-    };
-    
+    }
+    ;
+
     // Dispose the old cache in the background
     Runnable r = () -> {
       try {
         c.dispose();
-      } catch(Exception e){
+      } catch (Exception e) {
         LOG.error("Cache flushAll", e);
       }
     };

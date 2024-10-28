@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 2024-present Carrot Data, Inc. 
+ * Copyright (C) 2024-present Carrot Data, Inc.
  * <p>This program is free software: you can redistribute it
  * and/or modify it under the terms of the Server Side Public License, version 1, as published by
  * MongoDB, Inc.
  * <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY
  * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- * PURPOSE. See the Server Side Public License for more details. 
+ * PURPOSE. See the Server Side Public License for more details.
  * <p>You should have received a copy of the Server Side Public License along with this program. If not, see
  * <http://www.mongodb.com/licensing/server-side-public-license>.
  */
@@ -43,19 +43,18 @@ public interface CacheJMXSinkMBean {
    */
   long getused_size_bytes();
 
-  
   /**
    * Index size bytes
    * @return index size
    */
   long getindex_size_bytes();
-  
+
   /**
-   *  Raw data size (before compression)
+   * Raw data size (before compression)
    * @return raw data size
    */
   long getraw_size_bytes();
-  
+
   /**
    * Get cache allocated size ratio
    * @return ratio
@@ -67,7 +66,7 @@ public interface CacheJMXSinkMBean {
    * @return used size ratio
    */
   double getused_size_ratio();
-  
+
   /**
    * Get cache active data set size (estimated)
    * @return active data set size
@@ -76,10 +75,10 @@ public interface CacheJMXSinkMBean {
 
   /**
    * Get active data set size ratio relative to used storage size
-   * @return active data set ration
+   * @return active data set ratio
    */
   double getactive_dataset_size_ratio();
-  
+
   /**
    * Get number of items in the cache
    * @return number of items
@@ -87,11 +86,23 @@ public interface CacheJMXSinkMBean {
   long getitems_total();
 
   /**
-   *  Get number of active items
+   * Get number of active items
    * @return number of active items
    */
   long getitems_active();
-  
+
+  /**
+   * Is cache hybrid
+   * @return true or false
+   */
+  boolean getis_hybrid();
+
+  /**
+   * For hybrid caches
+   * @return victim cache name
+   */
+  String getvictim_cache_name();
+
   /**
    * Cache total number of put operations (including victim cache)
    * @return total puts
@@ -112,7 +123,7 @@ public interface CacheJMXSinkMBean {
 
   /**
    * Cache total number of delete operations (including victim cache)
-   * @return
+   * @return total deletes
    */
   long gettotal_deletes();
 
@@ -129,99 +140,40 @@ public interface CacheJMXSinkMBean {
   long gettotal_hits();
 
   /**
-   * Is cache hybrid
-   * @return true or false
-   */
-  boolean getcache_hybrid();
-
-  /**
-   * For hybrid caches
-   * @return victim cache name
-   */
-  String getvictim_cache_name();
-
-  /**
    * Get cache get operations
    * @return number of get operations
    */
-  long getcache_gets();
+  long getgets();
 
   /**
    * Get cache writes operations
    * @return number of writes
    */
-  long getcache_writes();
+  long getwrites();
 
   /**
    * Hit ratio
    * @return hit ratio
    */
-  double getcache_hit_ratio();
+  double gethit_ratio();
 
   /**
-   * Overall hit ration including victim cache
+   * Overall hit ratio including victim cache
    * @return overall hit ratio
    */
   double getoverall_hit_ratio();
 
   /**
-   * Get total bytes written (including GC)
-   */
-  long gettotal_bytes_written();
-
-  /**
-   * Average write rate in MB/sec including GC
-   * @return write rate
-   */
-  double gettotal_avg_write_rate();
-
-  /**
-   * Get cache bytes written so far
-   * @return cache bytes written
-   */
-  long getcache_bytes_written();
-
-  /**
-   * Get cache total bytes read
-   * @return total bytes read
-   */
-  long getcache_bytes_read();
-
-  /**
-   * get overall bytes read including victim cache
-   * @return overall bytes read
-   */
-  long getoverall_bytes_read();
-
-  /**
-   * Get cache average read rate in MB/s
-   * @return average read rate
-   */
-  double getcache_avg_read_rate();
-
-  /**
-   * Get cache overall read rate (including victim cache)
-   * @return overall average read rate
-   */
-  double getoverall_avg_read_rate();
-
-  /**
-   * Average write rate by cache in MB/sec (formatted string)
-   * @return write rate
-   */
-  double getcache_avg_write_rate();
-
-  /**
-   * Get total number of bytes written back by Scavenger (GC)
+   * Get total bytes written back by Scavenger (GC)
    * @return total number of bytes
    */
-  long getgc_bytes_written();
+  long getgc_total_written_bytes();
 
   /**
    * GC average write rate in MB/sec
    * @return average write rate
    */
-  double getgc_avg_write_rate();
+  double getgc_avg_write_rate_mbps();
 
   /**
    * Number of runs of GC
@@ -233,32 +185,77 @@ public interface CacheJMXSinkMBean {
    * Get GC bytes scanned
    * @return bytes scanned
    */
-  long getgc_bytes_scanned();
+  long getgc_scanned_bytes();
 
   /**
    * Get GC bytes freed
    * @return bytes freed
    */
-  long getgc_bytes_freed();
+  long getgc_freed_bytes();
 
   /**
-   * Get IO average read operation duration
+   * Get total bytes written (including GC)
+   * @return total bytes written
+   */
+  long gettotal_written_bytes();
+
+  /**
+   * Average write rate in MB/sec including GC
+   * @return write rate
+   */
+  double gettotal_avg_write_rate();
+
+  /**
+   * Get cache bytes written so far
+   * @return cache bytes written
+   */
+  long getwritten_bytes();
+
+  /**
+   * Get cache total bytes read
+   * @return total bytes read
+   */
+  long getread_bytes();
+
+  /**
+   * Get overall bytes read including victim cache
+   * @return overall bytes read
+   */
+  long getoverall_read_bytes();
+
+  /**
+   * Get cache average read rate in MB/s
+   * @return average read rate
+   */
+  double getavg_read_rate_mbps();
+
+  /**
+   * Get cache overall read rate (including victim cache)
+   * @return overall average read rate
+   */
+  double getoverall_avg_read_rate();
+
+  /**
+   * Average write rate by cache in MB/sec (formatted string)
+   * @return write rate
+   */
+  double getavg_write_rate_mbps();
+
+  /**
+   * Get IO average read operation duration in microseconds
    * @return duration
    */
-  long getio_avg_read_duration();
+  long getio_avg_read_duration_us();
 
   /**
-   * Get IO average read size
+   * Get IO average read size bytes
+   * @return average read size
    */
-  long getio_avg_read_size();
-
-  /**************************************
-   * Compression
-   *************************************/
+  long getio_avg_read_size_bytes();
 
   /**
    * Is compression enabled
-   * @return tdrue or false
+   * @return true or false
    */
   boolean getcompression_enabled();
 
@@ -276,7 +273,7 @@ public interface CacheJMXSinkMBean {
 
   /**
    * Is compression dictionary enabled
-   * @return
+   * @return true or false
    */
   boolean getcompression_dictionary_enabled();
 
@@ -284,7 +281,7 @@ public interface CacheJMXSinkMBean {
    * Get compression dictionary size
    * @return dictionary size
    */
-  int getcompression_dictionary_size();
+  int getcompression_dictionary_size_bytes();
 
   /**
    * Get compressed data size bytes
@@ -296,7 +293,7 @@ public interface CacheJMXSinkMBean {
    * Compression block size
    * @return compression block size
    */
-  int getcompression_block_size();
+  int getcompression_block_size_bytes();
 
   /**
    * Get compression keys enabled
