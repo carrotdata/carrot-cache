@@ -92,18 +92,6 @@ public interface CacheJMXSinkMBean {
   long getitems_active();
 
   /**
-   * Is cache hybrid
-   * @return true or false
-   */
-  boolean getis_hybrid();
-
-  /**
-   * For hybrid caches
-   * @return victim cache name
-   */
-  String getvictim_cache_name();
-
-  /**
    * Cache total number of put operations (including victim cache)
    * @return total puts
    */
@@ -140,6 +128,18 @@ public interface CacheJMXSinkMBean {
   long gettotal_hits();
 
   /**
+   * Is cache hybrid
+   * @return true or false
+   */
+  boolean getis_hybrid();
+
+  /**
+   * For hybrid caches
+   * @return victim cache name
+   */
+  String getvictim_cache_name();
+
+  /**
    * Get cache get operations
    * @return number of get operations
    */
@@ -164,38 +164,7 @@ public interface CacheJMXSinkMBean {
   double getoverall_hit_ratio();
 
   /**
-   * Get total bytes written back by Scavenger (GC)
-   * @return total number of bytes
-   */
-  long getgc_total_written_bytes();
-
-  /**
-   * GC average write rate in MB/sec
-   * @return average write rate
-   */
-  double getgc_avg_write_rate_mbps();
-
-  /**
-   * Number of runs of GC
-   * @return number of runs
-   */
-  long getgc_number_of_runs();
-
-  /**
-   * Get GC bytes scanned
-   * @return bytes scanned
-   */
-  long getgc_scanned_bytes();
-
-  /**
-   * Get GC bytes freed
-   * @return bytes freed
-   */
-  long getgc_freed_bytes();
-
-  /**
    * Get total bytes written (including GC)
-   * @return total bytes written
    */
   long gettotal_written_bytes();
 
@@ -242,6 +211,35 @@ public interface CacheJMXSinkMBean {
   double getavg_write_rate_mbps();
 
   /**
+   * Get total bytes written (including GC)
+   */
+  long getgc_total_written_bytes();
+
+  /**
+   * Average write rate in MB/sec including GC
+   * @return write rate
+   */
+  double getgc_avg_write_rate_mbps();
+
+  /**
+   * Number of runs of GC
+   * @return number of runs
+   */
+  long getgc_number_of_runs();
+
+  /**
+   * Get GC bytes scanned
+   * @return bytes scanned
+   */
+  long getgc_scanned_bytes();
+
+  /**
+   * Get GC bytes freed
+   * @return bytes freed
+   */
+  long getgc_freed_bytes();
+
+  /**
    * Get IO average read operation duration in microseconds
    * @return duration
    */
@@ -252,6 +250,10 @@ public interface CacheJMXSinkMBean {
    * @return average read size
    */
   long getio_avg_read_size_bytes();
+
+  /**************************************
+   * Compression
+   *************************************/
 
   /**
    * Is compression enabled
