@@ -11,8 +11,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,7 +49,16 @@ public class TestFileIOAsync {
     }
     
     private boolean isDone() throws InterruptedException, ExecutionException {
-      return future.isDone();
+      if(future.isDone()) {
+        try {
+          channel.close();
+        } catch (Exception e) {
+          
+        }
+        return true;
+      } else {
+        return false;
+      }
     }
   }
   
@@ -105,11 +112,11 @@ public class TestFileIOAsync {
   
   public static void main(String[] args) throws InterruptedException, IOException {
     
-    int numThreads = 8;
+    int numThreads = 1;
     final String path = "/Users/vrodionov/Development/carrotdata/data/temp_250g_file";
-    final int blockSize = 1024 * 1024;
+    final int blockSize = 10000;
     final int numIterations = 10000;
-    final int ioQueueSize = 8;
+    final int ioQueueSize = 1;
     final double ratio = 1.d;
     final long waitTime = 2;
     //prepareFile(path, 250L * 1024 * 1024 * 1024);
@@ -118,8 +125,7 @@ public class TestFileIOAsync {
       AsynchronousFileChannel f = null;
       try {
         
-        f = AsynchronousFileChannel.open(Path.of(path));
-        
+        f = AsynchronousFileChannel.open(Path.of(path));       
         long length = f.size();
         int count = 0;
         int fired = 0;
@@ -158,10 +164,11 @@ public class TestFileIOAsync {
           if (fired < max) {
             double d = rnd.nextDouble();
             if (d < ratio) {
+              f = AsynchronousFileChannel.open(Path.of(path));
+              //length = f.size();
               FileReadTask task = new FileReadTask(f, offset, buffers.remove(0));
               Future<Integer> fut = task.call();
               pendingQueue.add(task);
-              
             } else {
               btask.call();
               count++;
@@ -207,13 +214,14 @@ public class TestFileIOAsync {
   @SuppressWarnings("unused")
   private static void prepareFile(String path, long l) throws IOException {
     RandomAccessFile f = new RandomAccessFile(path, "rw");
-    byte[] buffer = new byte[1 << 20];
+    byte[] buffer = new byte[1 << 16];
     ThreadLocalRandom r = ThreadLocalRandom.current();
-    r.nextBytes(buffer);
+    
     
     int count = (int) (l / buffer.length);
     long totalWritten = 0;
     for (int i = 0; i < count; i++) {
+      r.nextBytes(buffer);
       f.write(buffer);
       totalWritten += buffer.length;
       if ((totalWritten % (1 << 30)) == 0) {

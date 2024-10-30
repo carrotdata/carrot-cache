@@ -342,7 +342,7 @@ public abstract class TestMemoryThroughput {
       currentIndex.set(0);
     }
   }
-
+  
   // Implementing Fisher–Yates shuffle
   void shuffleArray(long[] arr) {
     ThreadLocalRandom rnd = ThreadLocalRandom.current();

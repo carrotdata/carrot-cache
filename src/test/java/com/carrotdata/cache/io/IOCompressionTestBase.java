@@ -92,7 +92,7 @@ public class IOCompressionTestBase extends IOTestBase {
     rootDir.deleteOnExit();
 
     CacheConfig config = CacheConfig.getInstance();
-    config.setCacheRootDir(cacheName, rootDir.getAbsolutePath());
+    config.setCacheRootDirs(cacheName, new String[] {rootDir.getAbsolutePath()});
     config.setCacheCompressionDictionaryEnabled(cacheName, dictionaryEnabled);
     config.setCacheCompressionEnabled(cacheName, true);
     config.setCacheTLSSupported(cacheName, true);

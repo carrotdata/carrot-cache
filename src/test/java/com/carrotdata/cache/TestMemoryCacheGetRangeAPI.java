@@ -79,14 +79,20 @@ public class TestMemoryCacheGetRangeAPI {
     Path rootDirPath = Files.createTempDirectory(null);
     File dir = rootDirPath.toFile();
     String rootDir = dir.getAbsolutePath();
+    String rootDir1 = rootDir + File.separator + "1";
+    String rootDir2 = rootDir + File.separator + "2";
+    
+    
     Builder builder = new Builder(cacheName);
-
+    
+    LOG.info(rootDir);
+    
     builder.withCacheDataSegmentSize(segmentSize).withCacheMaximumSize(maxCacheSize)
         .withScavengerRunInterval(scavengerInterval)
         .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
-        .withRecyclingSelector(MinAliveRecyclingSelector.class.getName()).withCacheRootDir(rootDir)
+        .withRecyclingSelector(MinAliveRecyclingSelector.class.getName()).withCacheRootDirs(new String[] {rootDir1, rootDir2})
         .withEvictionDisabledMode(true).withMinimumActiveDatasetRatio(minActiveRatio)
-        .withBlockWriterBlockSize(1); // Disable write batch (TODO: getRange API is not fully supported by
+        .withBlockWriterBlockSize(0); // Disable write batch (TODO: getRange API is not fully supported by
         // by BaseDataWriter/Readers)
     if (memory) {
       return builder.buildMemoryCache();
@@ -183,6 +189,8 @@ public class TestMemoryCacheGetRangeAPI {
     int bufferSize = safeBufferSize();
     byte[] buffer = new byte[bufferSize];
     for (int i = 0; i < num; i++) {
+      //LOG.info("i={}", i);
+
       byte[] key = keys[i];
       byte[] value = values[i];
       int valueSize = value.length;

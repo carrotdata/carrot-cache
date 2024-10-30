@@ -133,7 +133,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
         .withScavengerRunInterval(victim_scavengerInterval)
         .withScavengerDumpEntryBelowMin(victim_scavDumpBelowRatio)
         .withCacheEvictionPolicy(victim_epClz.getName())
-        .withRecyclingSelector(victim_rsClz.getName()).withCacheRootDir(rootDir)
+        .withRecyclingSelector(victim_rsClz.getName()).withCacheRootDirs(new String[] {rootDir})
         .withMinimumActiveDatasetRatio(victim_minActiveRatio)
         .withVictimCachePromoteOnHit(victim_promoteOnHit)
         .withVictimCachePromotionThreshold(victim_promoteThreshold)

@@ -75,7 +75,7 @@ public abstract class TestObjectCacheBase {
         .withMemoryDataReader(BaseMemoryDataReader.class.getName())
         .withFileDataReader(BaseFileDataReader.class.getName())
         .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName())
-        .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
+        .withCacheRootDirs(new String[] {rootDir}).withMinimumActiveDatasetRatio(minActiveRatio)
         .withCacheStreamingSupportBufferSize(1 << 19).withEvictionDisabledMode(true)
         .withCacheSaveOnShutdown(true);
 
@@ -305,8 +305,8 @@ public abstract class TestObjectCacheBase {
     LOG.info("Saved {} in {} ms", cache.getStorageAllocated(), t2 - t1);
 
     t1 = System.currentTimeMillis();
-    String rootDir = cache.getCacheConfig().getCacheRootDir(cacheName);
-    ObjectCache newCache = ObjectCache.loadCache(rootDir, cacheName);
+    String[] rootDirs = cache.getCacheConfig().getCacheRootDirs(cacheName);
+    ObjectCache newCache = ObjectCache.loadCache(rootDirs, cacheName);
     newCache.addKeyValueClasses(String.class, ArrayList.class);
 
     t2 = System.currentTimeMillis();

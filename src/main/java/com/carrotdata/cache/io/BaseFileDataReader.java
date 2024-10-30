@@ -346,7 +346,8 @@ public class BaseFileDataReader implements DataReader {
     int off = 0;
     // Read first block
     // TODO: we can improve read speed if we do 4K aligned reads
-    int toRead = (int) Math.min(blockSize, file.length() - offset);
+    int toRead = blockSize == 0? OPT_META_SIZE: blockSize;
+    toRead = (int) Math.min(toRead, file.length() - offset);
     // Check buffers
     checkReadBuffer(toRead);
     byte[] readBuffer = readBuffers.get();
@@ -413,7 +414,8 @@ public class BaseFileDataReader implements DataReader {
     // int off = pos;
     try {
       // TODO: make file read a separate method
-      int toRead = (int) Math.min(blockSize, file.length() - offset);
+      int toRead = blockSize == 0? OPT_META_SIZE: blockSize;
+      toRead = (int) Math.min(toRead, file.length() - offset);
       checkReadBuffer(toRead);
       byte[] readBuffer = readBuffers.get();
       readFully(file, offset, readBuffer, 0, toRead);
@@ -501,8 +503,8 @@ public class BaseFileDataReader implements DataReader {
     int off = 0;
     // Read first block
     // TODO: we can improve read speed if we do 4K aligned reads
-    int toRead = (int) Math.min(blockSize, file.length() - offset);
-    // Check buffers
+    int toRead = blockSize == 0? OPT_META_SIZE: blockSize;
+    toRead = (int) Math.min(toRead, file.length() - offset);    // Check buffers
     checkReadBuffer(toRead);
     byte[] readBuffer = readBuffers.get();
     readFully(file, offset, readBuffer, 0, toRead);
@@ -568,7 +570,8 @@ public class BaseFileDataReader implements DataReader {
     // int off = pos;
     try {
       // TODO: make file read a separate method
-      int toRead = (int) Math.min(blockSize, file.length() - offset);
+      int toRead = blockSize == 0? OPT_META_SIZE: blockSize;
+      toRead = (int) Math.min(toRead, file.length() - offset);
       checkReadBuffer(toRead);
       byte[] readBuffer = readBuffers.get();
       readFully(file, offset, readBuffer, 0, toRead);

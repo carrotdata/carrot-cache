@@ -101,7 +101,7 @@ public class TestMemoryCacheGetAPI {
         .withMemoryDataReader(BaseMemoryDataReader.class.getName())
         .withFileDataReader(BaseFileDataReader.class.getName())
         .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName())
-        .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
+        .withCacheRootDirs(new String[] {rootDir}).withMinimumActiveDatasetRatio(minActiveRatio)
         .withEvictionDisabledMode(true).withTLSSupported(tlsEnabled)
         .withCacheTLSInitialBufferSize(tlsInitialBufferSize).withStartIndexNumberOfSlotsPower(16)
         .withExpireSupport(ExpireSupportUnixTime.class.getName());

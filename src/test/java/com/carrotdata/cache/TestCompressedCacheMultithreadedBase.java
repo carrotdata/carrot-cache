@@ -123,7 +123,7 @@ public abstract class TestCompressedCacheMultithreadedBase {
     b.withScavengerRunInterval(scavengerInterval);
     b.withScavengerDumpEntryBelowMin(scavDumpBelowRatio);
     b.withRecyclingSelector(LRCRecyclingSelector.class.getName());
-    b.withCacheRootDir(rootDir);
+    b.withCacheRootDirs(new String[] {rootDir});
 
     try {
       initCodecs();

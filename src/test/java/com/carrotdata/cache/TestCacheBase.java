@@ -89,7 +89,8 @@ public abstract class TestCacheBase extends IOTestBase {
     File dir = path.toFile();
     dir.deleteOnExit();
     String rootDir = dir.getAbsolutePath();
-
+    String[] rootDirs = memory? new String[] {rootDir}: 
+        new String[] {rootDir + File.separator + "1", rootDir + File.separator + "2"};
     Builder builder = new Builder(cacheName);
 
     builder.withCacheDataSegmentSize(segmentSize).withCacheMaximumSize(maxCacheSize)
@@ -97,7 +98,7 @@ public abstract class TestCacheBase extends IOTestBase {
         .withScavengerDumpEntryBelowMin(scavDumpBelowRatio).withRecyclingSelector(recycleSelector)
         .withDataWriter(dataWriter).withMemoryDataReader(dataReaderMemory)
         .withFileDataReader(dataReaderFile).withMainQueueIndexFormat(indexFormat)
-        .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
+        .withCacheRootDirs(rootDirs).withMinimumActiveDatasetRatio(minActiveRatio)
         .withCacheStreamingSupportBufferSize(1 << 19).withEvictionDisabledMode(true);
     if (maxKeyValueSize > 0) {
       builder.withMaximumKeyValueSize(maxKeyValueSize);

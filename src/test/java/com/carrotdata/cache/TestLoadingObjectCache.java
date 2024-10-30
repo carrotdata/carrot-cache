@@ -70,7 +70,7 @@ public class TestLoadingObjectCache {
         .withMemoryDataReader(BaseMemoryDataReader.class.getName())
         .withFileDataReader(BaseFileDataReader.class.getName())
         .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName())
-        .withCacheRootDir(rootDir);
+        .withCacheRootDirs(new String[] {rootDir});
 
     if (memory) {
       return builder.buildObjectMemoryCache();

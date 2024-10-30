@@ -71,7 +71,7 @@ public abstract class TestScavengerWithCompressionBase extends TestScavengerBase
         .withScavengerDumpEntryBelowMin(scavDumpBelowRatio).withRecyclingSelector(recycleSelector)
         .withDataWriter(dataWriter).withMemoryDataReader(dataReaderMemory)
         .withFileDataReader(dataReaderFile).withMainQueueIndexFormat(indexFormat)
-        .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
+        .withCacheRootDirs(new String[] {rootDir}).withMinimumActiveDatasetRatio(minActiveRatio)
         .withCacheStreamingSupportBufferSize(1 << 19).withEvictionDisabledMode(true);
 
     if (memory) {

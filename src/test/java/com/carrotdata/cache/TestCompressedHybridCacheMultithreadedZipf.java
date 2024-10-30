@@ -119,7 +119,7 @@ public class TestCompressedHybridCacheMultithreadedZipf
         .withScavengerRunInterval(victim_scavengerInterval)
         .withScavengerDumpEntryBelowMax(victim_scavDumpBelowRatio)
         .withCacheEvictionPolicy(victim_epClz.getName())
-        .withRecyclingSelector(victim_rsClz.getName()).withCacheRootDir(rootDir)
+        .withRecyclingSelector(victim_rsClz.getName()).withCacheRootDirs(new String[] {rootDir})
         .withMinimumActiveDatasetRatio(victim_minActiveRatio)
         .withVictimCachePromoteOnHit(victim_promoteOnHit)
         .withAdmissionController(victim_acClz.getName());

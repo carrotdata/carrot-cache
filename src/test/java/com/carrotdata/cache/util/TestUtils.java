@@ -167,7 +167,7 @@ public class TestUtils {
     Path path = Files.createTempDirectory(null);
     File dir = path.toFile();
     dir.deleteOnExit();
-    Mockito.when(mock.getDataDir(Mockito.anyString())).thenReturn(dir.getAbsolutePath());
+    Mockito.when(mock.getDataDirs(Mockito.anyString())).thenReturn(new String[] {dir.getAbsolutePath()});
     return mock;
   }
 
@@ -179,7 +179,7 @@ public class TestUtils {
     Mockito.when(mock.getCacheSegmentSize(Mockito.anyString())).thenReturn(segmentSize);
     // define maximum cache size
     Mockito.when(mock.getCacheMaximumSize(Mockito.anyString())).thenReturn(maxCacheSize);
-    Mockito.when(mock.getDataDir(Mockito.anyString())).thenReturn(dataDir);
+    Mockito.when(mock.getDataDirs(Mockito.anyString())).thenReturn(new String[] {dataDir});
     return mock;
   }
 
@@ -209,9 +209,11 @@ public class TestUtils {
     String snapshotDir = cache.getCacheConfig().getSnapshotDir(cache.getName());
     Path p = Paths.get(snapshotDir);
     deleteDir(p);
-    String dataDir = cache.getCacheConfig().getDataDir(cache.getName());
-    p = Paths.get(dataDir);
-    deleteDir(p);
+    String[] dataDirs = cache.getCacheConfig().getDataDirs(cache.getName());
+    for (String dataDir: dataDirs) {
+      p = Paths.get(dataDir);
+      deleteDir(p);
+    }
   }
 
   public static List<byte[]> loadGithubDataAsBytes() throws URISyntaxException, IOException {

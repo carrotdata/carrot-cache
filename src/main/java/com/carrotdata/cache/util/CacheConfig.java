@@ -19,6 +19,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.Properties;
 
@@ -120,10 +121,10 @@ public class CacheConfig {
   public final static String DEFAULT_CACHE_CONFIG_DIR_NAME = "conf";
 
   /** Cache root directory - where to save cached data */
-  public final static String CACHE_ROOT_DIR_PATH_KEY = "root.dir.path";
+  public final static String CACHE_DATA_DIR_PATHS_KEY = "data.dir.paths";
 
   /** Default cache root directory path */
-  public final static String DEFAULT_CACHE_ROOT_DIR_PATH = "." + File.separator + "data";
+  public final static String DEFAULT_CACHE_DIR_PATHS = "." + File.separator + "data";
 
   /** Data segment size */
   public static final String CACHE_SEGMENT_SIZE_KEY = "data.segment.size";
@@ -1146,7 +1147,8 @@ public class CacheConfig {
    * @return snapshot directory name for a given cache name
    */
   public String getSnapshotDir(String cacheName) {
-    String value = getCacheRootDir(cacheName);
+    String[] values = getCacheRootDirs(cacheName);
+    String value = values[0];
     value += File.separator + cacheName + File.separator + "snapshot";
     Path p = Paths.get(value);
     if (Files.notExists(p)) {
@@ -1165,20 +1167,22 @@ public class CacheConfig {
    * @param cacheName cache name
    * @return data directory name for a given cache name
    */
-  public String getDataDir(String cacheName) {
-    String value = getCacheRootDir(cacheName);
-    value += File.separator + cacheName + File.separator + "data";
-    // check if directory exists
-    Path p = Paths.get(value);
-    if (Files.notExists(p)) {
-      try {
-        Files.createDirectories(p);
-      } catch (IOException e) {
-        LOG.error("Error:", e);
-        return null;
+  public String[] getDataDirs(String cacheName) {
+    String[] values = getCacheRootDirs(cacheName);
+    for (int i = 0; i < values.length; i++) {
+      values[i] += File.separator + cacheName + File.separator + "data";
+      // check if directory exists
+      Path p = Paths.get(values[i]);
+      if (Files.notExists(p)) {
+        try {
+          Files.createDirectories(p);
+        } catch (IOException e) {
+          LOG.error("Error:", e);
+          return null;
+        }
       }
     }
-    return value;
+    return values;
   }
 
   /**
@@ -1186,29 +1190,25 @@ public class CacheConfig {
    * @param cacheName cache name
    * @return root directory name for a given cache name
    */
-  public String getCacheRootDir(String cacheName) {
-    String value = props.getProperty(cacheName + "." + CACHE_ROOT_DIR_PATH_KEY);
+  public String[] getCacheRootDirs(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_DATA_DIR_PATHS_KEY);
     if (value == null) {
-      value = props.getProperty(CACHE_ROOT_DIR_PATH_KEY, DEFAULT_CACHE_ROOT_DIR_PATH);
+      value = props.getProperty(CACHE_DATA_DIR_PATHS_KEY, DEFAULT_CACHE_DIR_PATHS);
+    } else {
+      String[] values = value.split(",");
+      return Arrays.stream(values).map(String::trim).toArray(String[]::new);
     }
-    return value;
+    return new String[] {value.trim()};
   }
 
   /**
    * Set root directory location for a cache
    * @param cacheName cache name
-   * @param dir data directory name for a given cache name
+   * @param dir data directory names for a given cache name
    */
-  public void setCacheRootDir(String cacheName, String dir) {
-    props.setProperty(cacheName + "." + CACHE_ROOT_DIR_PATH_KEY, dir);
-  }
-
-  /**
-   * Get global cache root directory
-   * @return root directory
-   */
-  public String getGlobalCacheRootDir() {
-    return props.getProperty(CACHE_ROOT_DIR_PATH_KEY, DEFAULT_CACHE_ROOT_DIR_PATH);
+  public void setCacheRootDirs(String cacheName, String[] dirs) {
+    
+    props.setProperty(cacheName + "." + CACHE_DATA_DIR_PATHS_KEY, String.join(",", dirs));
   }
 
   /**
@@ -1217,7 +1217,8 @@ public class CacheConfig {
    * @return dictionary directory
    */
   public String getCacheDictionaryDir(String cacheName) {
-    String value = getCacheRootDir(cacheName);
+    String[] values = getCacheRootDirs(cacheName);
+    String value = values[0];
     value += File.separator + cacheName + File.separator + DICTIONARY_DIR_NAME;
     // check if directory exists
     Path p = Paths.get(value);
@@ -1237,7 +1238,7 @@ public class CacheConfig {
    * @param dir directory name
    */
   public void setGlobalCacheRootDir(String dir) {
-    props.setProperty(CACHE_ROOT_DIR_PATH_KEY, dir);
+    props.setProperty(CACHE_DATA_DIR_PATHS_KEY, dir);
   }
 
   /**

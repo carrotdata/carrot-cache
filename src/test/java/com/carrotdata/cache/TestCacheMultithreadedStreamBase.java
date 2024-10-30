@@ -90,7 +90,7 @@ public abstract class TestCacheMultithreadedStreamBase {
         // .withMemoryDataReader(BlockMemoryDataReader.class.getName())
         // .withFileDataReader(BlockFileDataReader.class.getName())
         // .withMainQueueIndexFormat(CompactWithExpireIndexFormat.class.getName())
-        .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
+        .withCacheRootDirs(new String[] {rootDir}).withMinimumActiveDatasetRatio(minActiveRatio)
         .withEvictionDisabledMode(evictionDisabled);
 
     if (memory) {

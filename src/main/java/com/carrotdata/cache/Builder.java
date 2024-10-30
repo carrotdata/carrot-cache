@@ -231,22 +231,12 @@ public class Builder {
   }
 
   /**
-   * With global cache root directory
-   * @param dir directory
-   * @return builder instance
-   */
-  public Builder withGlobalCacheRootDir(String dir) {
-    conf.setGlobalCacheRootDir(dir);
-    return this;
-  }
-
-  /**
    * With cache root directory
    * @param dir directory
    * @return builder instance
    */
-  public Builder withCacheRootDir(String dir) {
-    conf.setCacheRootDir(this.cacheName, dir);
+  public Builder withCacheRootDirs(String[] dirs) {
+    conf.setCacheRootDirs(this.cacheName, dirs);
     return this;
   }
 

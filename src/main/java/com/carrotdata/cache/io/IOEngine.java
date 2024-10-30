@@ -126,8 +126,8 @@ public abstract class IOEngine implements Persistent {
   /* Memory index */
   protected MemoryIndex index;
 
-  /* Cached data directory name */
-  protected String dataDir;
+  /* Cached data directory names (multiple for JBOD) */
+  protected String[] dataDirs;
 
   /* Segment data appender */
   protected DataWriter dataWriter;
@@ -204,7 +204,7 @@ public abstract class IOEngine implements Persistent {
     this.ramBuffers = new Segment[num];
     this.dataSegments = new Segment[this.numSegments];
     this.index = new MemoryIndex(this, MemoryIndex.Type.MQ);
-    this.dataDir = this.config.getDataDir(this.cacheName);
+    this.dataDirs = this.config.getDataDirs(this.cacheName);
     this.defaultRank = this.index.getEvictionPolicy().getDefaultRankForInsert();
     this.dataEmbedded = this.config.isIndexDataEmbeddedSupported(this.cacheName);
     this.maxEmbeddedSize = this.config.getIndexDataEmbeddedSize(this.cacheName);

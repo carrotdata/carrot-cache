@@ -77,7 +77,7 @@ public abstract class TestCacheWithCompressionBase extends TestCacheBase {
         .withScavengerDumpEntryBelowMin(scavDumpBelowRatio).withRecyclingSelector(recycleSelector)
         .withDataWriter(dataWriter).withMemoryDataReader(dataReaderMemory)
         .withFileDataReader(dataReaderFile).withMainQueueIndexFormat(indexFormat)
-        .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
+        .withCacheRootDirs(new String[] {rootDir}).withMinimumActiveDatasetRatio(minActiveRatio)
         .withCacheStreamingSupportBufferSize(1 << 19).withEvictionDisabledMode(true);
     if (maxKeyValueSize > 0) {
       builder.withMaximumKeyValueSize(maxKeyValueSize);

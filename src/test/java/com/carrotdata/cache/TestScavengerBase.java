@@ -87,7 +87,7 @@ public abstract class TestScavengerBase extends IOTestBase {
         .withScavengerDumpEntryBelowMin(scavDumpBelowRatio).withRecyclingSelector(recycleSelector)
         .withDataWriter(dataWriter).withMemoryDataReader(dataReaderMemory)
         .withFileDataReader(dataReaderFile).withMainQueueIndexFormat(indexFormat)
-        .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
+        .withCacheRootDirs(new String[] {rootDir}).withMinimumActiveDatasetRatio(minActiveRatio)
         .withEvictionDisabledMode(true);
 
     Cache cache = null;

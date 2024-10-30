@@ -385,9 +385,9 @@ public class ObjectCache {
    * @return object cache or null
    * @throws IOException
    */
-  public static ObjectCache loadCache(String cacheRootDir, String cacheName) throws IOException {
+  public static ObjectCache loadCache(String[] cacheRootDirs, String cacheName) throws IOException {
 
-    Cache c = Cache.loadCache(cacheRootDir, cacheName);
+    Cache c = Cache.loadCache(cacheName);
     if (c != null) {
       return new ObjectCache(c);
     }

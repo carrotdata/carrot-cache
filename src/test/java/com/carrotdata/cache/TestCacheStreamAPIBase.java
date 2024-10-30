@@ -74,7 +74,7 @@ public abstract class TestCacheStreamAPIBase {
         .withMemoryDataReader(BaseMemoryDataReader.class.getName())
         .withFileDataReader(BaseFileDataReader.class.getName())
         .withMainQueueIndexFormat(CompactBaseWithExpireIndexFormat.class.getName())
-        .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
+        .withCacheRootDirs(new String[] {rootDir}).withMinimumActiveDatasetRatio(minActiveRatio)
         .withCacheStreamingSupportBufferSize(1 << 19).withEvictionDisabledMode(true);
 
     if (memory) {

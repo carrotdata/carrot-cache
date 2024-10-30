@@ -66,7 +66,7 @@ public abstract class TestCacheMultithreadedBase extends TestIOMultithreadedBase
         // .withMemoryDataReader(BlockMemoryDataReader.class.getName())
         // .withFileDataReader(BlockFileDataReader.class.getName())
         // .withMainQueueIndexFormat(CompactWithExpireIndexFormat.class.getName())
-        .withCacheRootDir(rootDir).withMinimumActiveDatasetRatio(minActiveRatio)
+        .withCacheRootDirs(new String[] {rootDir}).withMinimumActiveDatasetRatio(minActiveRatio)
         .withEvictionDisabledMode(evictionDisabled).withTLSSupported(false);
 
     if (memory) {

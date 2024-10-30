@@ -123,7 +123,7 @@ public abstract class TestCacheMultithreadedZipfBase {
         .withScavengerDumpEntryBelowMin(scavDumpBelowRatio)
         .withCacheEvictionPolicy(epClz.getName())
         .withRecyclingSelector(rsClz.getName())
-        .withCacheRootDir(rootDir)
+        .withCacheRootDirs(new String[] {rootDir})
         .withMinimumActiveDatasetRatio(minActiveRatio)
         .withEvictionDisabledMode(evictionDisabled)
         .withAdmissionQueueStartSizeRatio(aqStartRatio)

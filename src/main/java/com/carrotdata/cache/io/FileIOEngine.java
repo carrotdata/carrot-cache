@@ -373,7 +373,8 @@ public class FileIOEngine extends IOEngine {
    * @return path to a file
    */
   private Path getPathForDataSegment(int id) {
-    return Paths.get(dataDir, getSegmentFileName(id));
+    int num = dataDirs.length;
+    return Paths.get(dataDirs[id % num], getSegmentFileName(id));
   }
 
   private int getSegmentIdFromFileName(String name) {
@@ -415,15 +416,17 @@ public class FileIOEngine extends IOEngine {
   }
 
   private void loadSegments() throws IOException {
-    try (Stream<Path> list = Files.list(Paths.get(dataDir));) {
-      Iterator<Path> it = list.iterator();
-      while (it.hasNext()) {
-        Path p = it.next();
-        File f = p.toFile();
-        String fileName = f.getName();
-        int sid = getSegmentIdFromFileName(fileName);
-        RandomAccessFile raf = new RandomAccessFile(f, "r");
-        this.dataFiles.put(sid, raf);
+    for (String dir: dataDirs) {
+      try (Stream<Path> list = Files.list(Paths.get(dir));) {
+        Iterator<Path> it = list.iterator();
+        while (it.hasNext()) {
+          Path p = it.next();
+          File f = p.toFile();
+          String fileName = f.getName();
+          int sid = getSegmentIdFromFileName(fileName);
+          RandomAccessFile raf = new RandomAccessFile(f, "r");
+          this.dataFiles.put(sid, raf);
+        }
       }
     }
   }

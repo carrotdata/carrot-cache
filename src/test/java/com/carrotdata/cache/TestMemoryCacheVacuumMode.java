@@ -75,7 +75,7 @@ public class TestMemoryCacheVacuumMode extends IOTestBase {
 
     builder.withCacheDataSegmentSize(segmentSize).withCacheMaximumSize(maxCacheSize)
         .withScavengerRunInterval(vacuumCleanerInterval)
-        .withCacheRootDir(rootDir)
+        .withCacheRootDirs(new String[] {rootDir})
         .withMinimumActiveDatasetRatio(minActiveRatio)
         .withVacuumCleanerInterval(vacuumCleanerInterval);
     

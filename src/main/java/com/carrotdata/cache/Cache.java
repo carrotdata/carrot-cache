@@ -3088,17 +3088,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
   }
 
-  /**
-   * Load cache from a given directory
-   * @param baseDirPath
-   * @throws IOException
-   */
-  public void load(String baseDirPath) throws IOException {
-    CacheConfig conf = CacheConfig.getInstance();
-    conf.setGlobalCacheRootDir(baseDirPath);
-    load();
-  }
-
   // EvictionListener
   @Override
   public void onEviction(long ibPtr, long ptr) {
@@ -3332,11 +3321,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return cache;
   }
 
-  public static Cache loadCache(String rootDir, String cacheName) throws IOException {
-    CacheConfig conf = CacheConfig.getInstance();
-    conf.setGlobalCacheRootDir(rootDir);
-    return loadCache(cacheName);
-  }
+//  public static Cache loadCache(String rootDir, String cacheName) throws IOException {
+//    CacheConfig conf = CacheConfig.getInstance();
+//    conf.setGlobalCacheRootDir(rootDir);
+//    return loadCache(cacheName);
+//  }
   
   public static Cache flushAll(Cache c) throws IOException {
     // Create empty cache with the same configuration
