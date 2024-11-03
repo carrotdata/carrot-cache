@@ -35,7 +35,7 @@ public class TestFileCachePerformance {
   
   private static byte[] value;
   
-  private static String dataDir;
+  private static String[] dataDirs;
   
   private static int segmentSize = 64_000_000;
   
@@ -45,8 +45,79 @@ public class TestFileCachePerformance {
   
   private static Cache cache;
   
+  
+  //@Before
+  public void setUp() throws IOException {
+    updateConfig();
+    logTestParameters();
+    TestFileCachePerformance.value = createValue();
+    cache = createCache();
+  }
+  
+  private static void updateConfig() {
+    String value = System.getProperty("segmentSize");
+    if (value != null) {
+      segmentSize = Integer.parseInt(value);
+    }
+    value = System.getProperty("cacheSize");
+    if (value != null) {
+      maxCacheSize = Long.parseLong(value);
+    }
+    
+    value = System.getProperty("numThreads");
+    if (value != null) {
+      numThreads = Integer.parseInt(value);
+    }
+    
+    value = System.getProperty("dataDirs");
+    if (value != null) {
+      dataDirs = value.split(",");
+    }
+
+    value = System.getProperty("valueSize");
+    if (value != null) {
+      valueSize = Integer.parseInt(value);
+    }
+    
+    value = System.getProperty("numRecords");
+    if (value != null) {
+      numRecords = Long.parseLong(value);
+    }
+  }
+  
+  private static void logTestParameters() {
+    LOG.info("cache size      ={}", maxCacheSize);
+    LOG.info("segment size    ={}", segmentSize);
+    LOG.info("value size      ={}", valueSize);
+    LOG.info("data dirs       ={}", dataDirs != null? String.join(",", dataDirs): "temp");
+    LOG.info("num records     ={}", numRecords);
+    LOG.info("write threads   ={}", numThreads);
+    LOG.info("read  threads   ={}", dataDirs != null? 16 * dataDirs.length:  16);
+
+  }
+
+  //@After
+  public void tearDown() {
+    cache.dispose();
+  }
+  
+  //@Test
+  public void testFileCacheLoadRead() throws InterruptedException, IOException {
+    LOG.info("Started Test File Load and Read");
+    loadData();
+    readData();
+    LOG.info("Finished Test File Load and Read, press any key ...");
+    System.in.read();
+  }
+  
   public static void main(String[] args) throws IOException, InterruptedException {
-    //dataDir = args[0];
+    if (args != null && args.length > 0) {
+      dataDirs = args[0].split(",");
+    }
+    
+    updateConfig();
+    logTestParameters();
+    
     value = createValue();
     cache = createCache();
     loadData();
@@ -55,7 +126,8 @@ public class TestFileCachePerformance {
   }
 
   private static void readData() throws InterruptedException {
-    numThreads = 16;
+    int dirsNum = dataDirs != null? dataDirs.length: 1;
+    numThreads = 16 * dirsNum;
     long toRead = numRecords / 10;
     long t1 = System.currentTimeMillis();
     Runnable r = () -> {
@@ -75,7 +147,7 @@ public class TestFileCachePerformance {
           e.printStackTrace();
         }
         if ((count % 100000) == 0) {
-          LOG.info("read = {}", count);
+          LOG.info("read = {} failed={}", count, failed);
         }
       }
       LOG.info("Read ={} failed={}", toRead, failed);
@@ -137,17 +209,27 @@ public class TestFileCachePerformance {
   private static Cache createCache() throws IOException {
     String cacheName = "cache";
     // Data directory
-    Path path = Files.createTempDirectory(null);
-    File dir = path.toFile();
-    dir.deleteOnExit();
-    String rootDir = dir.getAbsolutePath();
+    String[] roots = dataDirs;
+    
+    if (roots == null) {
+      Path path = Files.createTempDirectory(null);
+      File dir = path.toFile();
+      dir.deleteOnExit();
+      String rootDir = dir.getAbsolutePath();
+      
+      LOG.info("Data dir={}", rootDir);
+      
+      roots = new String[] { rootDir };
+    }
+    
     Builder builder = new Builder(cacheName);
     builder.withCacheDataSegmentSize(segmentSize)
       .withCacheMaximumSize(maxCacheSize)
       .withMainQueueIndexFormat(SubCompactBaseIndexFormat.class.getName())
-      .withCacheRootDirs(new String[] {rootDir})
-      .withStartIndexNumberOfSlotsPower(19)
-      .withTLSSupported(true);
+      .withCacheRootDirs(roots)
+      .withStartIndexNumberOfSlotsPower(21)
+      .withTLSSupported(true)
+      .withVacuumCleanerInterval(-1);
     return builder.buildDiskCache();
   }
 }
