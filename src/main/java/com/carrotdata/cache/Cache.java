@@ -95,22 +95,28 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /** Maximum key-value size to cache */
   int maximumKeyValueSize;
 
-  /* IOEngine */ IOEngine engine;
+  /** IOEngine */
+  IOEngine engine;
 
   /* Admission Controller - optional */ AdmissionController admissionController;
 
-  /* Promotion controller (from victim cache back to parent)- optional */ PromotionController
-      promotionController;
+  /** Promotion controller (from victim cache back to parent)- optional */
+  PromotionController promotionController;
 
-  /* Throughput controller - optional */ ThroughputController throughputController;
+  /** Throughput controller - optional */
+  ThroughputController throughputController;
 
-  /* Periodic task runner */ Timer timer;
+  /** Periodic task runner */
+  Timer timer;
 
-  /* Victim cache */ Cache victimCache;
+  /** Victim cache */
+  Cache victimCache;
 
-  /* Parent cache */ Cache parentCache;
+  /** Parent cache */
+  Cache parentCache;
 
-  /* Cache epoch */ Epoch epoch;
+  /** Cache epoch */
+  Epoch epoch;
 
   Thread shutDownHook = new Thread(() -> {
     try {
@@ -120,43 +126,58 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
   });
 
-  /* Throughput controller enabled */ boolean tcEnabled;
+  /** Throughput controller enabled */
+  boolean tcEnabled;
 
-  /* Index embedding supported */ boolean indexEmdeddingSupported;
+  /** Index embedding supported */
+  boolean indexEmdeddingSupported;
 
-  /* Index embedded size */ int indexEmbeddedSize;
+  /** Index embedded size */
+  int indexEmbeddedSize;
 
-  /* Eviction disabled mode */ boolean evictionDisabledMode;
+  /** Eviction disabled mode */
+  boolean evictionDisabledMode;
 
-  /* Scavenger start memory ratio */ double scavengerStartMemoryRatio;
+  /** Scavenger start memory ratio */
+  double scavengerStartMemoryRatio;
 
-  /* Scavenger stop memory ratio */ double scavengerStopMemoryRatio;
+  /** Scavenger stop memory ratio */
+  double scavengerStopMemoryRatio;
 
-  /* Victim cache promote on hit */ boolean victimCachePromoteOnHit;
+  /** Victim cache promote on hit */
+  boolean victimCachePromoteOnHit;
 
-  /* Victim cache promote threshold */ double victimCachePromoteThreshold;
+  /** Victim cache promote threshold */
+  double victimCachePromoteThreshold;
 
-  /* Hybrid cache inverse mode */ boolean hybridCacheInverseMode;
+  /** Hybrid cache inverse mode */
+  boolean hybridCacheInverseMode;
 
-  /* Cache spin wait time */ long spinWaitTimeNs;
+  /** Cache spin wait time */
+  long spinWaitTimeNs;
 
   /** Maximum wait time to complete PUT operation in ms */
   long waitOnPutTimeMs;
 
-  /* Cache type */ Type type;
+  /** Cache type */
+  Type type;
 
-  /* shutdown is in progress */
+  /** shutdown is in progress */
   volatile boolean shutdownInProgress = false;
 
-  /* Thread - local buffer */ ThreadLocal<byte[]> tlsBuffer;
+  /** Thread - local buffer */
+  ThreadLocal<byte[]> tlsBuffer;
 
-  /* Thread-local storage enabled */ boolean tlsEnabled;
+  /** Thread-local storage enabled */
+  boolean tlsEnabled;
 
-  /* TLS buffer maximum size in bytes */ int tlsBufferMaxSize;
+  /** TLS buffer maximum size in bytes */
+  int tlsBufferMaxSize;
 
-  /* Save cache on shutdown */ boolean saveOnShutdown;
+  /** Save cache on shutdown */
+  boolean saveOnShutdown;
 
-  /* Scavengers are disabled for safe SAVE operation */
+  /** Scavengers are disabled for safe SAVE operation */
   volatile boolean scavDisabled = false;
 
   /* Save operation is in progress */
@@ -166,9 +187,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   int scavengerNoThreads;
 
-  /*
-   *  For testing only
-   */ boolean scavengerDisabled = false;
+  /** For testing only */
+  boolean scavengerDisabled = false;
 
   /**
    * Constructor to use when loading cache from a storage set cache name after that
@@ -3129,10 +3149,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   public void registerJMXMetricsSink(String domainName) {
-    var mbs = ManagementFactory.getPlatformMBeanServer();
+    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
     try {
-      var name = new ObjectName(String.format("%s:name=%s", domainName, getName()));
-      var mbean = new CacheJMXSink(this);
+      ObjectName name = new ObjectName(String.format("%s:name=%s", domainName, getName()));
+      CacheJMXSink mbean = new CacheJMXSink(this);
       mbs.registerMBean(mbean, name);
     } catch (Exception e) {
       LOG.error("Error:", e);
