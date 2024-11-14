@@ -1,13 +1,19 @@
 /*
- * Copyright (C) 2024-present Carrot Data, Inc. 
- * <p>This program is free software: you can redistribute it
- * and/or modify it under the terms of the Server Side Public License, version 1, as published by
- * MongoDB, Inc.
- * <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- * PURPOSE. See the Server Side Public License for more details. 
- * <p>You should have received a copy of the Server Side Public License along with this program. If not, see
- * <http://www.mongodb.com/licensing/server-side-public-license>.
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.carrotdata.cache.util;
 
@@ -167,7 +173,7 @@ public class TestUtils {
     Path path = Files.createTempDirectory(null);
     File dir = path.toFile();
     dir.deleteOnExit();
-    Mockito.when(mock.getDataDir(Mockito.anyString())).thenReturn(dir.getAbsolutePath());
+    Mockito.when(mock.getDataDirs(Mockito.anyString())).thenReturn(new String[] {dir.getAbsolutePath()});
     return mock;
   }
 
@@ -179,7 +185,7 @@ public class TestUtils {
     Mockito.when(mock.getCacheSegmentSize(Mockito.anyString())).thenReturn(segmentSize);
     // define maximum cache size
     Mockito.when(mock.getCacheMaximumSize(Mockito.anyString())).thenReturn(maxCacheSize);
-    Mockito.when(mock.getDataDir(Mockito.anyString())).thenReturn(dataDir);
+    Mockito.when(mock.getDataDirs(Mockito.anyString())).thenReturn(new String[] {dataDir});
     return mock;
   }
 
@@ -209,9 +215,11 @@ public class TestUtils {
     String snapshotDir = cache.getCacheConfig().getSnapshotDir(cache.getName());
     Path p = Paths.get(snapshotDir);
     deleteDir(p);
-    String dataDir = cache.getCacheConfig().getDataDir(cache.getName());
-    p = Paths.get(dataDir);
-    deleteDir(p);
+    String[] dataDirs = cache.getCacheConfig().getDataDirs(cache.getName());
+    for (String dataDir: dataDirs) {
+      p = Paths.get(dataDir);
+      deleteDir(p);
+    }
   }
 
   public static List<byte[]> loadGithubDataAsBytes() throws URISyntaxException, IOException {

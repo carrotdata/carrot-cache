@@ -1,13 +1,19 @@
 /*
- * Copyright (C) 2024-present Carrot Data, Inc. 
- * <p>This program is free software: you can redistribute it
- * and/or modify it under the terms of the Server Side Public License, version 1, as published by
- * MongoDB, Inc.
- * <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- * PURPOSE. See the Server Side Public License for more details. 
- * <p>You should have received a copy of the Server Side Public License along with this program. If not, see
- * <http://www.mongodb.com/licensing/server-side-public-license>.
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.carrotdata.cache.index;
 
@@ -31,7 +37,6 @@ import com.carrotdata.cache.util.UnsafeAccess;
 
 public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase {
   /** Logger */
-  @SuppressWarnings("unused")
   private static final Logger LOG = LoggerFactory.getLogger(TestMemoryIndexFormatBase.class);
 
   @Before
@@ -108,17 +113,11 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase {
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     int verified = 0;
-    int notFound = 0;
-    int sidIncorrect = 0;
-    int offsetIncorrect = 0;
-    int sizeIncorrect = 0;
-    int expireIncorrect=0;
     for (int i = 0; i < numRecords; i++) {
       int result = (int) memoryIndex.find(keys[i], 0, keySize, hit, buf, entrySize);
       if (result > 0) {
         assertEquals(entrySize, result);
       } else {
-        notFound ++;
         continue;
       }
 
@@ -126,26 +125,21 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase {
       int offset = (int) format.getOffset(buf);
       int size = (int) format.getKeyValueSize(buf);
       if (sids[i] != sid) {
-        sidIncorrect++;
         continue;
       }
       if (offsets[i] != offset) {
-        offsetIncorrect++;
         continue;
       }
       if (sizes[i] != size) {
-        sizeIncorrect++;
         continue;
       }
       long expire = memoryIndex.getExpire(keys[i], 0, keySize);
       if (!sameExpire(expires[i], expire)) {
-        expireIncorrect++;
         continue;
       }
       verified++;
     }
     UnsafeAccess.free(buf);
-    //LOG.info("notfound={} sid ={} off={} expire={}", notFound, sidIncorrect, offsetIncorrect, expireIncorrect);
     assertEquals(expected, verified);
   }
 
@@ -325,6 +319,24 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase {
       }
       long expire = memoryIndex.getExpire(mKeys[i], keySize);
       if (!sameExpire(expires[i], expire)) {
+        continue;
+      }
+      verified++;
+    }
+    UnsafeAccess.free(buf);
+    assertEquals(expected, verified);
+  }
+  
+  protected void verifyIndexMemoryFound(boolean hit, int expected) {
+    IndexFormat format = memoryIndex.getIndexFormat();
+    int entrySize = format.indexEntrySize();
+    long buf = UnsafeAccess.mallocZeroed(entrySize);
+    int verified = 0;
+    for (int i = 0; i < numRecords; i++) {
+      int result = (int) memoryIndex.find(mKeys[i], keySize, hit, buf, entrySize);
+      if (result > 0) {
+        assertEquals(entrySize, result);
+      } else {
         continue;
       }
       verified++;
@@ -660,6 +672,7 @@ public abstract class TestMemoryIndexFormatBase extends TestMemoryIndexBase {
     int loaded = loadIndexMemory();
     long size = memoryIndex.size();
     assertEquals(loaded, (int) size);
+    
     verifyIndexMemory(loaded);
     return loaded;
   }

@@ -1,13 +1,19 @@
 /*
- * Copyright (C) 2024-present Carrot Data, Inc. 
- * <p>This program is free software: you can redistribute it
- * and/or modify it under the terms of the Server Side Public License, version 1, as published by
- * MongoDB, Inc.
- * <p>This program is distributed in the hope that it will be useful, but WITHOUT ANY
- * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
- * PURPOSE. See the Server Side Public License for more details. 
- * <p>You should have received a copy of the Server Side Public License along with this program. If not, see
- * <http://www.mongodb.com/licensing/server-side-public-license>.
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.carrotdata.cache.io;
 
@@ -25,6 +31,7 @@ import java.nio.ByteBuffer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.carrotdata.cache.util.CacheConfig;
 import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
@@ -56,7 +63,8 @@ public class BaseFileDataReader implements DataReader {
 
   @Override
   public void init(String cacheName) {
-    // Can be null on initialization
+    CacheConfig config = CacheConfig.getInstance();
+    this.blockSize = config.getBlockWriterBlockSize(cacheName);
   }
   
   @Override
@@ -78,7 +86,16 @@ public class BaseFileDataReader implements DataReader {
       // TODO: what kind of error is it?
       return IOEngine.NOT_FOUND;
     }
+    
+    // Short circuit
+    if (size > blockSize) {
+      // Read directly to the buffer with offset = OPT_META_SIZE
+      readFully(file, offset + OPT_META_SIZE, buffer, bufOffset, size);
+      return size;
+    }
+    
     int off = 0;
+    
     // Read first block
     // TODO: we can improve read speed if we do 4K aligned reads
     int toRead = (int) Math.min(blockSize, file.length() - offset);
@@ -192,6 +209,12 @@ public class BaseFileDataReader implements DataReader {
       // TODO: what kind of error is it?
       return IOEngine.NOT_FOUND;
     }
+    // Short circuit
+    if (size > blockSize) {
+      // Read directly to the buffer with offset = OPT_META_SIZE
+      readFully(file, offset + OPT_META_SIZE, buffer, bufOffset, size);
+      return size;
+    }
     int off = 0;
     // Read first block
     int toRead = (int) Math.min(blockSize, file.length() - offset);
@@ -282,6 +305,10 @@ public class BaseFileDataReader implements DataReader {
     }
   }
 
+  /**
+   * Requires 2 reads always. We can optimize: if `size` > `blockSize` and rangeSize relative to `size` is
+   * greater than some threshold. Try to use given buffer directly. 
+   */
   @Override
   public int readValueRange(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid,
       long offset, int size, byte[] buffer, int bufferOffset, int rangeStart, int rangeSize)
@@ -300,10 +327,33 @@ public class BaseFileDataReader implements DataReader {
       // TODO: what kind of error is it?
       return IOEngine.NOT_FOUND;
     }
+    // short circuit
+    if (size > blockSize && size <= avail && rangeSize >= 0.8 * size) {
+      readFully(file, offset + OPT_META_SIZE, buffer, bufferOffset, size);
+      int valueSize = Utils.getValueSize(buffer, bufferOffset);
+      if (valueSize < rangeStart) {
+        // TODO: better handling
+        return IOEngine.NOT_FOUND;
+      }
+      if (valueSize < rangeStart + rangeSize) {
+        rangeSize = valueSize - rangeStart;
+      }
+      int valueOffset = Utils.getValueOffset(buffer, bufferOffset);
+      valueOffset += rangeStart;
+      long fileSize = file.length();
+      if (fileSize < offset + valueOffset + rangeSize) {
+        // Rare situation - wrong segment - hash collision
+        return IOEngine.READ_ERROR;
+      }
+      System.arraycopy(buffer, bufferOffset + valueOffset, buffer, bufferOffset, rangeSize);
+      return rangeSize;
+    }
+    
     int off = 0;
     // Read first block
     // TODO: we can improve read speed if we do 4K aligned reads
-    int toRead = (int) Math.min(blockSize, file.length() - offset);
+    int toRead = blockSize == 0? OPT_META_SIZE: blockSize;
+    toRead = (int) Math.min(toRead, file.length() - offset);
     // Check buffers
     checkReadBuffer(toRead);
     byte[] readBuffer = readBuffers.get();
@@ -345,7 +395,7 @@ public class BaseFileDataReader implements DataReader {
       // Rare situation - wrong segment - hash collision
       return IOEngine.READ_ERROR;
     }
-    UnsafeAccess.copy(readBuffer, off + valueOffset, buffer, 0, rangeSize);
+    UnsafeAccess.copy(readBuffer, off + valueOffset, buffer, bufferOffset, rangeSize);
     return rangeSize;
   }
 
@@ -370,7 +420,8 @@ public class BaseFileDataReader implements DataReader {
     // int off = pos;
     try {
       // TODO: make file read a separate method
-      int toRead = (int) Math.min(blockSize, file.length() - offset);
+      int toRead = blockSize == 0? OPT_META_SIZE: blockSize;
+      toRead = (int) Math.min(toRead, file.length() - offset);
       checkReadBuffer(toRead);
       byte[] readBuffer = readBuffers.get();
       readFully(file, offset, readBuffer, 0, toRead);
@@ -433,11 +484,33 @@ public class BaseFileDataReader implements DataReader {
       // TODO: what kind of error is it?
       return IOEngine.NOT_FOUND;
     }
+    // short circuit
+    if (size > blockSize && size <= avail && rangeSize >= 0.8 * size) {
+      readFully(file, offset + OPT_META_SIZE, buffer, bufferOffset, size);
+      int valueSize = Utils.getValueSize(buffer, bufferOffset);
+      if (valueSize < rangeStart) {
+        // TODO: better handling
+        return IOEngine.NOT_FOUND;
+      }
+      if (valueSize < rangeStart + rangeSize) {
+        rangeSize = valueSize - rangeStart;
+      }
+      int valueOffset = Utils.getValueOffset(buffer, bufferOffset);
+      valueOffset += rangeStart;
+      long fileSize = file.length();
+      if (fileSize < offset + valueOffset + rangeSize) {
+        // Rare situation - wrong segment - hash collision
+        return IOEngine.READ_ERROR;
+      }
+      System.arraycopy(buffer, bufferOffset + valueOffset, buffer, bufferOffset, rangeSize);
+      return rangeSize;
+    }
+    
     int off = 0;
     // Read first block
     // TODO: we can improve read speed if we do 4K aligned reads
-    int toRead = (int) Math.min(blockSize, file.length() - offset);
-    // Check buffers
+    int toRead = blockSize == 0? OPT_META_SIZE: blockSize;
+    toRead = (int) Math.min(toRead, file.length() - offset);    // Check buffers
     checkReadBuffer(toRead);
     byte[] readBuffer = readBuffers.get();
     readFully(file, offset, readBuffer, 0, toRead);
@@ -478,7 +551,7 @@ public class BaseFileDataReader implements DataReader {
       // Rare situation - wrong segment - hash collision
       return IOEngine.READ_ERROR;
     }
-    UnsafeAccess.copy(readBuffer, off + valueOffset, buffer, 0, rangeSize);
+    UnsafeAccess.copy(readBuffer, off + valueOffset, buffer, bufferOffset, rangeSize);
     return rangeSize;
   }
 
@@ -503,7 +576,8 @@ public class BaseFileDataReader implements DataReader {
     // int off = pos;
     try {
       // TODO: make file read a separate method
-      int toRead = (int) Math.min(blockSize, file.length() - offset);
+      int toRead = blockSize == 0? OPT_META_SIZE: blockSize;
+      toRead = (int) Math.min(toRead, file.length() - offset);
       checkReadBuffer(toRead);
       byte[] readBuffer = readBuffers.get();
       readFully(file, offset, readBuffer, 0, toRead);
@@ -553,6 +627,6 @@ public class BaseFileDataReader implements DataReader {
   public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException {
     RandomAccessFile file = ((FileIOEngine) engine).getFileFor(s.getId());
     int prefetchBuferSize = ((FileIOEngine) engine).getFilePrefetchBufferSize();
-    return new BaseFileSegmentScannerOpt(s, file, prefetchBuferSize);
+    return new BaseFileSegmentScanner(s, file, prefetchBuferSize);
   }
 }
