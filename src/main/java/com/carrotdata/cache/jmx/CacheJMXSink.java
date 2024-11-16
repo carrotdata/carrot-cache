@@ -17,22 +17,22 @@
  */
 package com.carrotdata.cache.jmx;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-
 import com.carrotdata.cache.Cache;
 import com.carrotdata.cache.Scavenger;
 import com.carrotdata.cache.io.IOEngine;
 import com.carrotdata.cache.util.CacheConfig;
 import com.carrotdata.cache.util.Epoch;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 public class CacheJMXSink implements CacheJMXSinkMBean {
 
-  private Cache cache;
-  private Scavenger.Stats gcStats;
+  private final Cache cache;
+  private final Scavenger.Stats gcStats;
 
   public CacheJMXSink(Cache cache) {
     this.cache = cache;
@@ -62,26 +62,26 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   public long getallocated_size_bytes() {
     return cache.getTotalAllocated();
   }
-  
+
   @Override
   public double getallocated_size_ratio() {
     long max = cache.getMaximumCacheSize();
     long allocd = cache.getTotalAllocated();
     return (double) allocd / max;
   }
-  
+
   @Override
   public long getused_size_bytes() {
     return cache.getTotalUsed();
   }
-  
+
   @Override
   public double getused_size_ratio() {
     long max = cache.getMaximumCacheSize();
     long used = cache.getTotalUsed();
     return (double) used / max;
   }
-  
+
   /**
    * Index size bytes
    * @return index size
@@ -89,12 +89,12 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   public long getindex_size_bytes() {
     return this.cache.getEngine().getMemoryIndex().getAllocatedMemory();
   }
-  
+
   @Override
   public long getraw_size_bytes() {
     return cache.getRawDataSize();
   }
-  
+
   @Override
   public long getactive_dataset_size() {
     IOEngine engine = cache.getEngine();
@@ -106,7 +106,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     IOEngine engine = cache.getEngine();
     return engine.activeSizeRatio();
   }
-  
+
   @Override
   public long getitems_total() {
     return cache.size();
@@ -116,7 +116,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   public long getitems_active() {
     return cache.activeSize();
   }
-  
+
   @Override
   public long gettotal_gets() {
     return cache.getTotalGets();
@@ -128,7 +128,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
 
   @Override
-  public boolean getcache_hybrid() {
+  public boolean getis_hybrid() {
     return cache.getVictimCache() != null;
   }
 
@@ -139,7 +139,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
 
   @Override
-  public double getcache_hit_ratio() {
+  public double gethit_ratio() {
     return cache.getHitRate();
   }
 
@@ -149,7 +149,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
 
   @Override
-  public long gettotal_bytes_written() {
+  public long gettotal_written_bytes() {
     long gcWritten = gcStats.getTotalBytesScanned() - gcStats.getTotalBytesFreed();
     long cacheWritten = cache.getTotalWritesSize();
     return gcWritten + cacheWritten;
@@ -159,7 +159,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   public double gettotal_avg_write_rate() {
     long currentTime = System.currentTimeMillis();
     long elapsedTimeSec = (currentTime - Epoch.getEpochStartTime()) / 1000;
-    long totalBytesWritten = gettotal_bytes_written();
+    long totalBytesWritten = gettotal_written_bytes();
     if (totalBytesWritten == 0 || elapsedTimeSec == 0) {
       return 0.0;
     }
@@ -167,15 +167,15 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
 
   @Override
-  public long getcache_bytes_written() {
+  public long getwritten_bytes() {
     return cache.getTotalWritesSize();
   }
 
   @Override
-  public double getcache_avg_write_rate() {
+  public double getavg_write_rate_mbps() {
     long currentTime = System.currentTimeMillis();
     long elapsedTimeSec = (currentTime - Epoch.getEpochStartTime()) / 1000;
-    long cacheBytesWritten = getcache_bytes_written();
+    long cacheBytesWritten = getwritten_bytes();
     if (cacheBytesWritten == 0 || elapsedTimeSec == 0) {
       return 0.0;
     }
@@ -183,15 +183,15 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
 
   @Override
-  public long getgc_bytes_written() {
+  public long getgc_total_written_bytes() {
     return gcStats.getTotalBytesScanned() - gcStats.getTotalBytesFreed();
   }
 
   @Override
-  public double getgc_avg_write_rate() {
+  public double getgc_avg_write_rate_mbps() {
     long currentTime = System.currentTimeMillis();
     long elapsedTimeSec = (currentTime - Epoch.getEpochStartTime()) / 1000;
-    long gcBytesWritten = getgc_bytes_written();
+    long gcBytesWritten = getgc_total_written_bytes();
     if (gcBytesWritten == 0 || elapsedTimeSec == 0) {
       return 0.0;
     }
@@ -204,12 +204,12 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
 
   @Override
-  public long getgc_bytes_scanned() {
+  public long getgc_scanned_bytes() {
     return gcStats.getTotalBytesScanned();
   }
 
   @Override
-  public long getgc_bytes_freed() {
+  public long getgc_freed_bytes() {
     return gcStats.getTotalBytesFreed();
   }
 
@@ -254,22 +254,22 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
 
   @Override
-  public long getcache_gets() {
+  public long getgets() {
     return cache.getTotalGets();
   }
 
   @Override
-  public long getcache_writes() {
+  public long getwrites() {
     return cache.getTotalWrites();
   }
 
   @Override
-  public long getcache_bytes_read() {
+  public long getread_bytes() {
     return cache.getTotalGetsSize();
   }
 
   @Override
-  public double getcache_avg_read_rate() {
+  public double getavg_read_rate_mbps() {
     long totalRead = cache.getTotalGetsSize();
     long time = System.currentTimeMillis() - Epoch.getEpochStartTime();
     time /= 1000;
@@ -282,7 +282,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   public double getoverall_avg_read_rate() {
     //FIXME: Epoch can be loaded from saved cache
     // we need server start time
-    long overallRead = getoverall_bytes_read();
+    long overallRead = getoverall_read_bytes();
     long time = System.currentTimeMillis() - Epoch.getEpochStartTime();
     time /= 1000;
     if (time == 0) {
@@ -292,8 +292,8 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
 
   @Override
-  public long getoverall_bytes_read() {
-    long self = getcache_bytes_read();
+  public long getoverall_read_bytes() {
+    long self = getread_bytes();
     Cache victim = cache.getVictimCache();
     if (victim != null) {
       self += cache.getTotalGetsSize();
@@ -302,7 +302,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
 
   @Override
-  public long getio_avg_read_duration() {
+  public long getio_avg_read_duration_us() {
     long gets = gettotal_gets();
     if (gets == 0) return 0;
     // in microseconds
@@ -311,10 +311,10 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
 
   @Override
-  public long getio_avg_read_size() {
+  public long getio_avg_read_size_bytes() {
     long gets = gettotal_gets();
     if (gets == 0) return 0;
-    return getoverall_bytes_read() / gettotal_gets();
+    return getoverall_read_bytes() / gettotal_gets();
   }
 
   @Override
@@ -347,7 +347,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
   }
 
   @Override
-  public int getcompression_dictionary_size() {
+  public int getcompression_dictionary_size_bytes() {
     String cacheName = cache.getName();
     CacheConfig config = CacheConfig.getInstance();
     return config.getCacheCompressionDictionarySize(cacheName);
@@ -363,7 +363,7 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
    * @return compression block size
    */
   @Override
-  public int getcompression_block_size() {
+  public int getcompression_block_size_bytes() {
     String cacheName = cache.getName();
     CacheConfig config = CacheConfig.getInstance();
     return config.getCacheCompressionBlockSize(cacheName);
@@ -386,13 +386,13 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     long compressed = getallocated_size_bytes();
     return (double) allocd / compressed;
   }
-  
+
   public List<String> asList() {
     List<String> list = new ArrayList<String>();
     String name = cache.getName();
     list.add(name + ":type");
     list.add(gettype());
-    list.add(name + ":max_memory");    
+    list.add(name + ":max_memory");
     list.add("" + getmax_size_bytes());
     list.add(name + ":allocated_memory");
     list.add("" + getallocated_size_bytes());
@@ -412,19 +412,19 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     list.add("" + getactive_dataset_size_ratio());
     list.add(name + ":total_items");
     list.add("" + getitems_total());
-    
+
     list.add(name + ":active_items");
-    list.add("" + getitems_active());  
-    
+    list.add("" + getitems_active());
+
     list.add(name + ":total_puts");
-    list.add("" + gettotal_puts()); 
-    
+    list.add("" + gettotal_puts());
+
     list.add(name + ":total_inserts");
-    list.add("" + gettotal_inserts()); 
+    list.add("" + gettotal_inserts());
 
     list.add(name + ":total_updates");
     list.add("" + gettotal_updates());
-    
+
     list.add(name + ":total_deletes");
     list.add("" + gettotal_deletes());
 
@@ -432,101 +432,101 @@ public class CacheJMXSink implements CacheJMXSinkMBean {
     list.add("" + gettotal_gets());
     list.add(name + ":total_hits");
     list.add("" + gettotal_hits());
-    
+
     list.add(name + ":is_hybrid");
-    list.add("" + getcache_hybrid());
-    
+    list.add("" + getis_hybrid());
+
     String vname = getvictim_cache_name();
     if (vname != null) {
       list.add(name + ":victim_cache_name");
-      list.add("" + getvictim_cache_name());
+      list.add(getvictim_cache_name());
     }
-    
+
     list.add(name + ":gets");
-    list.add("" + getcache_gets());
-    
+    list.add("" + getgets());
+
     list.add(name + ":writes");
-    list.add("" + getcache_writes());
-    
+    list.add("" + getwrites());
+
     list.add(name + ":hit_ratio");
-    list.add("" + getcache_hit_ratio());
+    list.add("" + gethit_ratio());
 
     list.add(name + ":overall_hit_ratio");
     list.add("" + getoverall_hit_ratio());
-    
+
     list.add(name + ":total_bytes_written");
-    list.add("" + gettotal_bytes_written());
+    list.add("" + gettotal_written_bytes());
 
     list.add(name + ":avg_write_rate");
-    list.add("" + getcache_avg_write_rate());
-    
+    list.add("" + getavg_write_rate_mbps());
+
     list.add(name + ":total_avg_write_rate");
     list.add("" + gettotal_avg_write_rate());
-    
+
     list.add(name + ":bytes_written");
-    list.add("" + getcache_bytes_written());
-        
+    list.add("" + getwritten_bytes());
+
     list.add(name + ":bytes_read");
-    list.add("" + getcache_bytes_read());
-    
+    list.add("" + getread_bytes());
+
     list.add(name + ":total_bytes_read");
-    list.add("" + getoverall_bytes_read());
+    list.add("" + getoverall_read_bytes());
 
     list.add(name + ":avg_read_rate");
-    list.add("" + getcache_avg_read_rate());
-    
+    list.add("" + getavg_read_rate_mbps());
+
     list.add(name + ":total_avg_read_rate");
     list.add("" + getoverall_avg_read_rate());
-    
+
     list.add(name + ":gc_bytes_written");
-    list.add("" + getgc_bytes_written());
-    
+    list.add("" + getgc_total_written_bytes());
+
     list.add(name + ":gc_avg_write_rate");
-    list.add("" + getgc_avg_write_rate());
-    
+    list.add("" + getgc_avg_write_rate_mbps());
+
     list.add(name + ":gc_number_of_runs");
     list.add("" + getgc_number_of_runs());
-        
+
     list.add(name + ":gc_bytes_scanned");
-    list.add("" + getgc_bytes_scanned());
-    
+    list.add("" + getgc_scanned_bytes());
+
     list.add(name + ":gc_bytes_freed");
-    list.add("" + getgc_bytes_freed());
-    
+    list.add("" + getgc_freed_bytes());
+
     list.add(name + ":io_avg_read_duration");
-    list.add("" + getio_avg_read_duration());
-    
+    list.add("" + getio_avg_read_duration_us());
+
     list.add(name + ":io_avg_read_size");
-    list.add("" + getio_avg_read_size());
+    list.add("" + getio_avg_read_size_bytes());
 
     /**************************************
      * Compression
      *************************************/
     list.add(name + ":compression_enabled");
     list.add("" + getcompression_enabled());
-    
+
     if (getcompression_enabled()) {
       list.add(name + ":compression_codec");
-      list.add("" + getcompression_codec());
-            
+      list.add(getcompression_codec());
+
       list.add(name + ":compression_level");
       list.add("" + getcompression_level());
-            
+
       list.add(name + ":compression_dictionary_enabled");
       list.add("" + getcompression_dictionary_enabled());
-      
+
       list.add(name + ":compression_dictionary_size");
-      list.add("" + getcompression_dictionary_size());
-            
+      list.add("" + getcompression_dictionary_size_bytes());
+
       list.add(name + ":compressed_size");
       list.add("" + getcompressed_size_bytes());
-      
+
       list.add(name + ":compression_block_size");
-      list.add("" + getcompression_block_size());
-      
+      list.add("" + getcompression_block_size_bytes());
+
       list.add(name + ":compression_keys_enabled");
       list.add("" + getcompression_keys_enabled());
-      
+
       list.add(name + ":compression_ratio");
       list.add("" + getcompression_ratio());
     }
