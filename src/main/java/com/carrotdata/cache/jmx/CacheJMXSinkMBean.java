@@ -49,19 +49,18 @@ public interface CacheJMXSinkMBean {
    */
   long getused_size_bytes();
 
-  
   /**
    * Index size bytes
    * @return index size
    */
   long getindex_size_bytes();
-  
+
   /**
-   *  Raw data size (before compression)
+   * Raw data size (before compression)
    * @return raw data size
    */
   long getraw_size_bytes();
-  
+
   /**
    * Get cache allocated size ratio
    * @return ratio
@@ -73,7 +72,7 @@ public interface CacheJMXSinkMBean {
    * @return used size ratio
    */
   double getused_size_ratio();
-  
+
   /**
    * Get cache active data set size (estimated)
    * @return active data set size
@@ -82,10 +81,10 @@ public interface CacheJMXSinkMBean {
 
   /**
    * Get active data set size ratio relative to used storage size
-   * @return active data set ration
+   * @return active data set ratio
    */
   double getactive_dataset_size_ratio();
-  
+
   /**
    * Get number of items in the cache
    * @return number of items
@@ -93,11 +92,11 @@ public interface CacheJMXSinkMBean {
   long getitems_total();
 
   /**
-   *  Get number of active items
+   * Get number of active items
    * @return number of active items
    */
   long getitems_active();
-  
+
   /**
    * Cache total number of put operations (including victim cache)
    * @return total puts
@@ -118,7 +117,7 @@ public interface CacheJMXSinkMBean {
 
   /**
    * Cache total number of delete operations (including victim cache)
-   * @return
+   * @return total deletes
    */
   long gettotal_deletes();
 
@@ -138,7 +137,7 @@ public interface CacheJMXSinkMBean {
    * Is cache hybrid
    * @return true or false
    */
-  boolean getcache_hybrid();
+  boolean getis_hybrid();
 
   /**
    * For hybrid caches
@@ -150,22 +149,22 @@ public interface CacheJMXSinkMBean {
    * Get cache get operations
    * @return number of get operations
    */
-  long getcache_gets();
+  long getgets();
 
   /**
    * Get cache writes operations
    * @return number of writes
    */
-  long getcache_writes();
+  long getwrites();
 
   /**
    * Hit ratio
    * @return hit ratio
    */
-  double getcache_hit_ratio();
+  double gethit_ratio();
 
   /**
-   * Overall hit ration including victim cache
+   * Overall hit ratio including victim cache
    * @return overall hit ratio
    */
   double getoverall_hit_ratio();
@@ -173,7 +172,7 @@ public interface CacheJMXSinkMBean {
   /**
    * Get total bytes written (including GC)
    */
-  long gettotal_bytes_written();
+  long gettotal_written_bytes();
 
   /**
    * Average write rate in MB/sec including GC
@@ -185,25 +184,25 @@ public interface CacheJMXSinkMBean {
    * Get cache bytes written so far
    * @return cache bytes written
    */
-  long getcache_bytes_written();
+  long getwritten_bytes();
 
   /**
    * Get cache total bytes read
    * @return total bytes read
    */
-  long getcache_bytes_read();
+  long getread_bytes();
 
   /**
-   * get overall bytes read including victim cache
+   * Get overall bytes read including victim cache
    * @return overall bytes read
    */
-  long getoverall_bytes_read();
+  long getoverall_read_bytes();
 
   /**
    * Get cache average read rate in MB/s
    * @return average read rate
    */
-  double getcache_avg_read_rate();
+  double getavg_read_rate_mbps();
 
   /**
    * Get cache overall read rate (including victim cache)
@@ -215,19 +214,18 @@ public interface CacheJMXSinkMBean {
    * Average write rate by cache in MB/sec (formatted string)
    * @return write rate
    */
-  double getcache_avg_write_rate();
+  double getavg_write_rate_mbps();
 
   /**
-   * Get total number of bytes written back by Scavenger (GC)
-   * @return total number of bytes
+   * Get total bytes written (including GC)
    */
-  long getgc_bytes_written();
+  long getgc_total_written_bytes();
 
   /**
-   * GC average write rate in MB/sec
-   * @return average write rate
+   * Average write rate in MB/sec including GC
+   * @return write rate
    */
-  double getgc_avg_write_rate();
+  double getgc_avg_write_rate_mbps();
 
   /**
    * Number of runs of GC
@@ -239,24 +237,25 @@ public interface CacheJMXSinkMBean {
    * Get GC bytes scanned
    * @return bytes scanned
    */
-  long getgc_bytes_scanned();
+  long getgc_scanned_bytes();
 
   /**
    * Get GC bytes freed
    * @return bytes freed
    */
-  long getgc_bytes_freed();
+  long getgc_freed_bytes();
 
   /**
-   * Get IO average read operation duration
+   * Get IO average read operation duration in microseconds
    * @return duration
    */
-  long getio_avg_read_duration();
+  long getio_avg_read_duration_us();
 
   /**
-   * Get IO average read size
+   * Get IO average read size bytes
+   * @return average read size
    */
-  long getio_avg_read_size();
+  long getio_avg_read_size_bytes();
 
   /**************************************
    * Compression
@@ -264,7 +263,7 @@ public interface CacheJMXSinkMBean {
 
   /**
    * Is compression enabled
-   * @return tdrue or false
+   * @return true or false
    */
   boolean getcompression_enabled();
 
@@ -282,7 +281,7 @@ public interface CacheJMXSinkMBean {
 
   /**
    * Is compression dictionary enabled
-   * @return
+   * @return true or false
    */
   boolean getcompression_dictionary_enabled();
 
@@ -290,7 +289,7 @@ public interface CacheJMXSinkMBean {
    * Get compression dictionary size
    * @return dictionary size
    */
-  int getcompression_dictionary_size();
+  int getcompression_dictionary_size_bytes();
 
   /**
    * Get compressed data size bytes
@@ -302,7 +301,7 @@ public interface CacheJMXSinkMBean {
    * Compression block size
    * @return compression block size
    */
-  int getcompression_block_size();
+  int getcompression_block_size_bytes();
 
   /**
    * Get compression keys enabled
