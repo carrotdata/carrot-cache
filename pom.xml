@@ -90,6 +90,8 @@
                         <exclude>**/TestMemoryCacheMultithreadedZipfStress.java</exclude>
 		 	<exclude>**/TestFileCacheMultithreadedZipfStress.java</exclude>
                         <exclude>**/TestHybridCacheMultithreadedZipfStress.java</exclude>
+                        <exclude>**/TestAsyncHybridCacheMultithreadedZipfStress.java</exclude>
+                        <exclude>**/TestAsyncHybridCacheZipfStress.java</exclude>
 		    </excludes>
                     <systemProperties>
                         <property>

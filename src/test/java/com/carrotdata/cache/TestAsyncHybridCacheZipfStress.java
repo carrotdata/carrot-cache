@@ -27,7 +27,6 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.carrotdata.cache.controllers.AQBasedAdmissionController;
 import com.carrotdata.cache.controllers.AdmissionController;
 import com.carrotdata.cache.controllers.BaseAdmissionController;
 import com.carrotdata.cache.controllers.LRCRecyclingSelector;
@@ -39,13 +38,13 @@ import com.carrotdata.cache.eviction.SLRUEvictionPolicy;
 import com.carrotdata.cache.util.Epoch;
 import com.carrotdata.cache.util.TestUtils;
 
-public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithreadedZipfBase {
+public class TestAsyncHybridCacheZipfStress extends TestAsyncCacheZipfBase {
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestHybridCacheMultithreadedZipfStress.class);
+      LoggerFactory.getLogger(TestAsyncHybridCacheMultithreadedZipfStress.class);
 
-  int victim_segmentSize = 16 * 1024 * 1024;
+  int victim_segmentSize = 32 * 1024 * 1024;
 
-  long victim_maxCacheSize = 100L * victim_segmentSize;
+  long victim_maxCacheSize = 200L * victim_segmentSize;
 
   double victim_minActiveRatio = 0.5;
 
@@ -69,41 +68,15 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
 
   @Before
   public void setUp() {
-//    // Parent cache
-//    this.memory = true;
-//    this.numRecords = 10000000;
-//    this.numIterations = 10 * this.numRecords;
-//    this.numThreads = 4;
-//    this.minActiveRatio = 0.9;
-//    this.segmentSize = 4 * 1024 * 1024;
-//    this.maxCacheSize = 1000L * this.segmentSize; // 16 GB in RAM
-//    this.epClz = SLRUEvictionPolicy.class;
-//    this.rsClz = MinAliveRecyclingSelector.class;
-//    // this.acClz = AQBasedAdmissionController.class;
-//    this.aqStartRatio = 1.0;
-//    this.scavengerInterval = 4; // scavenger interval in sec
-//    this.hybridCacheInverseMode = false;
-//    this.scavDumpBelowRatio = 0.2;
-//
-//    // victim cache
-//    this.victim_segmentSize = 64 * 1024 * 1024;
-//    this.victim_maxCacheSize = 200L * this.victim_segmentSize; // 160GB
-//    this.victim_minActiveRatio = 0.0;
-//    this.victim_scavDumpBelowRatio = 0.2;
-//    this.victim_scavengerInterval = 1000;
-//    this.victim_promoteOnHit = false;
-//    this.victim_promoteThreshold = 0.9;
-//    this.victim_epClz = SLRUEvictionPolicy.class;
-//    this.victim_rsClz = LRCRecyclingSelector.class;
-//    this.zipfAlpha = 0.9;
     // Parent cache
     this.memory = true;
-    this.numRecords = 3_000_000;
+    this.numRecords = 1_000_000;
     this.numIterations = 10 * this.numRecords;
     this.numThreads = 8;
+    this.prQueueSize = 4;
     this.minActiveRatio = 0.9;
     this.segmentSize = 8 * 1024 * 1024;
-    this.maxCacheSize = 600L * numThreads * this.segmentSize; // 16 GB in RAM
+    this.maxCacheSize = 200L * numThreads * this.segmentSize; // 16 GB in RAM
     this.epClz = SLRUEvictionPolicy.class;
     this.rsClz = MinAliveRecyclingSelector.class;
     // this.acClz = AQBasedAdmissionController.class;
@@ -114,7 +87,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
 
     // victim cache
     this.victim_segmentSize = 32 * 1024 * 1024;
-    this.victim_maxCacheSize = 600L * numThreads *this.victim_segmentSize; // 160GB
+    this.victim_maxCacheSize = 200L * numThreads * this.victim_segmentSize; // 160GB
     this.victim_minActiveRatio = 0.0;
     //this.victim_scavDumpBelowRatio = 0.2;
     this.victim_scavengerInterval = 1000;
@@ -123,6 +96,7 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
     this.victim_epClz = SLRUEvictionPolicy.class;
     this.victim_rsClz = LRCRecyclingSelector.class;
     this.zipfAlpha = 0.9;
+
     Epoch.reset();
 
   }
@@ -130,12 +104,12 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
   @After
   public void tearDown() throws IOException {
     Cache victim = cache.getVictimCache();
-    LOG.info("main cache: size={} hit rate={} items={}", cache.getStorageAllocated(),
-      cache.getHitRate(), cache.size());
+    LOG.info("main cache: size={} hit rate={} items={} gets={}", cache.getStorageAllocated(),
+      cache.getHitRate(), cache.size(), cache.getTotalGets());
 
     if (victim != null) {
-      LOG.info("victim cache: size={} hit rate={} items={}", victim.getStorageAllocated(),
-        victim.getHitRate(), victim.size());
+      LOG.info("victim cache: size={} hit rate={} items={} gets={}", victim.getStorageAllocated(),
+        victim.getHitRate(), victim.size(), victim.getTotalGets());
     }
     super.tearDown();
     // Delete temp data
@@ -161,19 +135,24 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
 
     Builder builder = new Builder(cacheName);
 
-    builder.withCacheDataSegmentSize(victim_segmentSize).withCacheMaximumSize(victim_maxCacheSize)
+    builder.withCacheDataSegmentSize(victim_segmentSize)
+        .withCacheMaximumSize(victim_maxCacheSize)
         .withScavengerRunInterval(victim_scavengerInterval)
         .withScavengerDumpEntryBelowMin(victim_scavDumpBelowRatio)
         .withCacheEvictionPolicy(victim_epClz.getName())
-        .withRecyclingSelector(victim_rsClz.getName()).withCacheRootDirs(new String[] {rootDir})
+        .withRecyclingSelector(victim_rsClz.getName())
+        .withCacheRootDirs(new String[] {rootDir})
         .withMinimumActiveDatasetRatio(victim_minActiveRatio)
         .withVictimCachePromoteOnHit(victim_promoteOnHit)
         .withVictimCachePromotionThreshold(victim_promoteThreshold)
-        .withAdmissionController(victim_acClz.getName()).withCacheSpinWaitTimeOnHighPressure(10000)
-        .withScavengerNumberOfThreads(1).withAdmissionQueueStartSizeRatio(victim_aqStartRatio);
+        .withAdmissionController(victim_acClz.getName())
+        .withCacheSpinWaitTimeOnHighPressure(10000)
+        .withScavengerNumberOfThreads(1)
+        .withAdmissionQueueStartSizeRatio(victim_aqStartRatio)
+        .withAsyncIOPoolSize(this.numThreads * this.prQueueSize);
     Cache victim = builder.buildDiskCache();
     parent.setVictimCache(victim);
-    parent.registerJMXMetricsSink();
+    //parent.registerJMXMetricsSink();
 
     return parent;
   }
@@ -192,5 +171,21 @@ public class TestHybridCacheMultithreadedZipfStress extends TestCacheMultithread
     this.parentCacheName = "RAM";
     this.victimCacheName = "DISK";
     super.testContinuosLoadMemoryRun();
+  }
+  
+  @Test
+  public void testBytesAPINative() throws IOException {
+    LOG.info("Bytes API Native: eviction=SLRU, selector=MinAlive");
+    this.parentCacheName = "RAM";
+    this.victimCacheName = "DISK";
+    super.testContinuosLoadBytesNativeRun();
+  }
+
+  @Test
+  public void testMemoryAPINative() throws IOException {
+    LOG.info("Memory API Native: eviction=SLRU, selector=MinAlive");
+    this.parentCacheName = "RAM";
+    this.victimCacheName = "DISK";
+    super.testContinuosLoadMemoryNativeRun();
   }
 }

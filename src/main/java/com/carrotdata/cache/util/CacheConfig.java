@@ -380,6 +380,8 @@ public class CacheConfig {
   public final static String CACHE_PROACTIVE_EXPIRATION_FACTOR_KEY = "proactive.expiration.factor";
 
   public final static String VACUUM_CLEANER_INTERVAL_SEC_KEY = "vacuum.cleaner.interval";
+  
+  public final static String CACHE_ASYNC_IO_POOL_SIZE_KEY = "async.io.pool.size";
 
   /** Defaults section */
 
@@ -621,6 +623,8 @@ public class CacheConfig {
   public final static double DEFAULT_CACHE_PROACTIVE_EXPIRATION_FACTOR = 0.25;
 
   public final static long DEFAULT_VACUUM_CLEANER_INTERVAL_SEC = 60; // seconds
+  
+  public final int DEFAULT_CACHE_ASYNC_IO_POOL_SIZE = 32;
 
   static CacheConfig instance;
 
@@ -2773,6 +2777,29 @@ public class CacheConfig {
   }
 
 
+  /**
+   * Gets asynchronous I/O thread pool size
+   * @param cacheName cache name
+   * @return pool size
+   */
+  public int getAsyncIOPoolSize(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_ASYNC_IO_POOL_SIZE_KEY);
+    int defaultSize = Runtime.getRuntime().availableProcessors() * 8;
+    if (value != null) {
+      return (int) getLong(value, defaultSize);
+    }
+    return (int) getLongProperty(CACHE_ASYNC_IO_POOL_SIZE_KEY, defaultSize);
+  }
+
+  /**
+   * Sets asynchronous I/O thread pool size
+   * @param cacheName cache name
+   * @param size size
+   */
+  public void setAsyncIOPoolSize(String cacheName, int size) {
+    props.setProperty(cacheName + "." + CACHE_ASYNC_IO_POOL_SIZE_KEY, Integer.toString(size));
+  }
+  
   /**
    * Gets cache pro-active expiration factor
    * @param cacheName cache name

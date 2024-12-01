@@ -17,8 +17,10 @@
  */
 package com.carrotdata.cache.io;
 
+import java.io.FileDescriptor;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.file.Path;
@@ -28,7 +30,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,7 +69,7 @@ public class TestFileIOAsync {
     private boolean isDone() throws InterruptedException, ExecutionException {
       if(future.isDone()) {
         try {
-          channel.close();
+          //channel.close();
         } catch (Exception e) {
           
         }
@@ -127,22 +128,72 @@ public class TestFileIOAsync {
     
   }
   
+  static void test() {
+    try {
+    Class<?> clazz = Class.forName("sun.nio.ch.SimpleAsynchronousFileChannelImpl");
+    Method openMethod = clazz.getDeclaredMethod("open", FileDescriptor.class, boolean.class, boolean.class, Class.forName("sun.nio.ch.ThreadPool"));
+    
+    openMethod.setAccessible(true); // Bypass access restrictions
+
+    FileDescriptor fd = FileDescriptor.in; // Example
+    boolean reading = true;
+    boolean writing = false;
+    Object pool = null; // ThreadPool object if needed
+
+    AsynchronousFileChannel channel = (AsynchronousFileChannel) openMethod.invoke(null, fd, reading, writing, pool);
+    System.out.println("Channel opened: " + channel);
+    channel.close();
+    } catch (Exception e) {
+      LOG.error("", e);
+    }
+  }
+  
+  private static AsynchronousFileChannel getAsyncChannel(FileDescriptor fd) {
+    try {
+      Class<?> clazz = Class.forName("sun.nio.ch.SimpleAsynchronousFileChannelImpl");
+      Method openMethod = clazz.getDeclaredMethod("open", FileDescriptor.class, boolean.class, boolean.class, Class.forName("sun.nio.ch.ThreadPool"));
+      
+      openMethod.setAccessible(true); // Bypass access restrictions
+
+      boolean reading = true;
+      boolean writing = false;
+      Object pool = null; // ThreadPool object if needed
+      long t1 = System.nanoTime();
+      AsynchronousFileChannel channel = (AsynchronousFileChannel) openMethod.invoke(null, fd, reading, writing, pool);
+      long t2 = System.nanoTime();
+      LOG.info("Open in {}nanos", t2 - t1);
+      return channel;
+      } catch (Exception e) {
+        LOG.error("", e);
+      }
+    return null;
+  }
+  
   public static void main(String[] args) throws InterruptedException, IOException {
     
-    int numThreads = 1;
+    //test();
+    
+    int numThreads = 4;
     final String path = "/Users/vrodionov/Development/carrotdata/data/temp_250g_file";
-    final int blockSize = 10000;
+    final RandomAccessFile raf = new RandomAccessFile(path, "r");
+    
+    final FileDescriptor fd = raf.getFD();
+    
+    final int blockSize = 4096;
     final int numIterations = 10000;
-    final int ioQueueSize = 1;
-    final double ratio = 1.d;
-    final long waitTime = 2;
+    final int ioQueueSize = 16;
+    final double ratio = 0.0d;
+    final long waitTime = 1;
     //prepareFile(path, 250L * 1024 * 1024 * 1024);
     
     Runnable r = () -> {
       AsynchronousFileChannel f = null;
       try {
         
+        long t1 = System.nanoTime();
         f = AsynchronousFileChannel.open(Path.of(path));       
+        long t2 = System.nanoTime();
+        LOG.info("Open in {}nanos", t2 - t1);
         long length = f.size();
         int count = 0;
         int fired = 0;
@@ -181,11 +232,12 @@ public class TestFileIOAsync {
           if (fired < max) {
             double d = rnd.nextDouble();
             if (d < ratio) {
-              f = AsynchronousFileChannel.open(Path.of(path));
+              //f = AsynchronousFileChannel.open(Path.of(path));
               //length = f.size();
               FileReadTask task = new FileReadTask(f, offset, buffers.remove(0));
               Future<Integer> fut = task.call();
               pendingQueue.add(task);
+              //fut.get();
             } else {
               btask.call();
               count++;

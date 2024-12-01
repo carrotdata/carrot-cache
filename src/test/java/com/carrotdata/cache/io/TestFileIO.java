@@ -33,12 +33,12 @@ public class TestFileIO {
 
   public static void main(String[] args) throws InterruptedException, IOException {
     
-    int numThreads = 8;
+    int numThreads = 64;
     final String path = "/Users/vrodionov/Development/carrotdata/data/temp_250g_file";
     final int blockSize = 4096;
     final int numIterations = 100000;
     
-    prepareFile(path, 250L * 1024 * 1024 * 1024);
+    //prepareFile(path, 250L * 1024 * 1024 * 1024);
     
     Runnable r = () -> {
       RandomAccessFile f = null;

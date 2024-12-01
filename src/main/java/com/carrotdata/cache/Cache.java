@@ -27,6 +27,7 @@ import com.carrotdata.cache.eviction.EvictionListener;
 import com.carrotdata.cache.index.IndexFormat;
 import com.carrotdata.cache.index.MemoryIndex;
 import com.carrotdata.cache.io.*;
+import com.carrotdata.cache.io.FutureResult.CompletionHandler;
 import com.carrotdata.cache.io.IOEngine.IOEngineEvent;
 import com.carrotdata.cache.jmx.CacheJMXSink;
 import com.carrotdata.cache.util.CacheConfig;
@@ -52,7 +53,11 @@ import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
@@ -61,6 +66,48 @@ import java.util.concurrent.locks.LockSupport;
  * Main entry for off-heap/on-disk cache
  */
 public class Cache implements IOEngine.Listener, EvictionListener {
+  
+  static class ValueExtractor implements FutureResult.CompletionHandler {
+
+    private int available;
+
+    private FutureResult<?> future;
+
+    ValueExtractor(FutureResult<?> future) {
+      this.future = future;
+      this.available = future.available();
+    }
+
+    @Override
+    public void complete() {
+      if (future.failed()) {
+        return;
+      }
+      int result = future.result();
+      if (result < 0) {
+        return;
+      }
+      int valueSize = 0;
+      if (future instanceof FutureResultByteBuffer) {
+        if (result >= 0 && result <= available) {
+          ByteBuffer buf = (ByteBuffer) future.buffer();
+          valueSize = Utils.extractValue(buf);
+        }
+      } else {
+        if (result >= 0 && result <= available) {
+          byte[] buf = (byte[]) future.buffer();
+          int offset = future.offset();
+          valueSize = Utils.extractValue(buf, offset);
+        }
+      }
+      future.setResult(valueSize);
+    }
+
+    @Override
+    public void reset() {
+      this.available = this.future.available();
+    }
+  }
 
   /** Logger */
   private static Logger LOG = LoggerFactory.getLogger(Cache.class);
@@ -196,6 +243,17 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /** For testing only */
   boolean scavengerDisabled = false;
 
+  /**
+   * Asynchronous operations are preferred
+   */
+  protected boolean asyncPreferred = false;
+  
+  /**
+   *  Executor service for asynchronous operations
+   *  fixed size thread pool
+   */
+  protected ExecutorService asyncService;
+  
   /**
    * Constructor to use when loading cache from a storage set cache name after that
    */
@@ -358,6 +416,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     initTLS();
     Scavenger.registerCache(cacheName);
+    // Init async preferred
+    this.asyncPreferred = this.type != Type.MEMORY;
+    
   }
 
   private void initTLS() {
@@ -405,6 +466,37 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     initThroughputController();
   }
 
+  /**
+   * Initialize async pool
+   */
+  void initAsyncThreadPool() {
+    //TODO: shutdown pool
+    if (this.asyncService == null) {
+      int nThreads = this.conf.getAsyncIOPoolSize(cacheName);
+      this.asyncService = new ThreadPoolExecutor(nThreads, nThreads,
+        0L, TimeUnit.MILLISECONDS,
+        new LinkedBlockingQueue<Runnable>(nThreads * 2));
+    }
+  }
+  
+  /**
+   * Are async operations preferred 
+   * @return true or false
+   */
+  public boolean isAsyncPreferred() {
+    return this.asyncPreferred;
+  }
+  
+  public boolean isAsyncPreferredSome() {
+    if (this.isAsyncPreferred()) {
+      return true;
+    }
+    if (this.victimCache != null) {
+      return this.victimCache.isAsyncPreferredSome();
+    }
+    return false;
+  }
+  
   /**
    * Add shutdown hook
    */
@@ -1324,7 +1416,115 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       activeRequests.decrementAndGet();
     }
   }
-
+  /**
+   * Get cached item and key (if any) - asynchronous
+   * @param keyPtr       key buffer address
+   * @param keySize   key size
+   * @param hit       if true - its a hit
+   * @param buffer    future result buffer
+   * @throws IOException
+   */
+  public void getKeyValueAsync(long keyPtr, int keySize, boolean hit, FutureResultByteArray future) {
+    if (this.cacheDisabled) {
+      future.setResult(IOEngine.NOT_FOUND);
+      future.setDone(true);
+      return;
+    }
+    try {
+      activeRequests.incrementAndGet();
+      byte[] buffer = future.buffer();
+      int bufOffset = future.offset();
+      boolean submitted = future.isSubmitted();
+      boolean asyncInChain = isAsyncPreferredSome();
+      if (submitted || !asyncInChain) {
+        // make synchronous call
+        int result = IOEngine.NOT_FOUND;
+        try {
+          result = (int) getKeyValue(keyPtr, keySize, buffer, bufOffset);
+        } catch (IOException e) {
+          future.setError(e);
+        }
+        future.setResult(result);
+        future.setDone(true);
+        return;
+      }
+      long result = IOEngine.NOT_FOUND;
+      // Victim cache prefers asynchronous mode and future is not submitted yet
+      // hence this cache is memory cache - synchronous call
+      try {
+        result = engine.get(keyPtr, keySize, hit, buffer, bufOffset);
+      } catch (IOException e) {
+        future.setDone(true);
+        future.setError(e);
+        return;
+      }
+      if (result <= buffer.length - bufOffset) {
+        access();
+        if (result >= 0) {
+          hit(result);
+        }
+      }
+      if (result >= 0 && result <= buffer.length - bufOffset) {
+        if (this.admissionController != null) {
+          this.admissionController.access(keyPtr, keySize);
+        }
+      }
+      if (result < 0 && this.victimCache != null) {
+        // TODO: optimize it
+        // getWithExpire and getWithExpireAndDelete API
+        // one call instead of three
+        if (!this.victimCache.maybeExists(keyPtr, keySize)) {
+          future.setResult(IOEngine.NOT_FOUND);
+          future.setDone(true);
+          return;
+        }
+        Runnable r = () -> {
+          try {
+            UnsafeAccess.loadFence();
+            int res = (int) this.victimCache.getKeyValue(keyPtr, keySize, hit, buffer, bufOffset);
+            if (this.victimCachePromoteOnHit && res >= 0 && res <= buffer.length - bufOffset) {
+              // put k-v into this cache, remove it from the victim cache
+              MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
+              if (this.promotionController == null) {
+                double popularity = mi.popularity(keyPtr, keySize);
+                // Promote only popular items
+                if (popularity > this.victimCachePromoteThreshold) {
+                  long expire = mi.getExpire(keyPtr, keySize);
+                  boolean re = put(buffer, bufOffset, expire);
+                  if (re) {
+                    this.victimCache.delete(keyPtr, keySize);
+                  }
+                }
+              } else {
+                // verify with PC
+                int valSize = Utils.getValueSize(buffer, bufOffset);
+                if (this.promotionController.promote(keyPtr, keySize, valSize)) {
+                  long expire = mi.getExpire(keyPtr, keySize);
+                  boolean re = put(buffer, bufOffset, expire);
+                  if (re) {
+                    this.victimCache.delete(keyPtr, keySize);
+                  }
+                }
+              }
+            }
+            future.setResult(res);
+          } catch (IOException e) {
+            future.setError(e);
+          }
+          future.setDone(true);
+        };
+        future.submit();
+        UnsafeAccess.storeFence();
+        this.asyncService.submit(r);
+      } else if (result >= 0) {
+        future.setResult((int) result);
+        future.setDone(true);
+        return;
+      }
+    } finally {
+      activeRequests.decrementAndGet();
+    }
+  }
   /**
    * Get cached item only (if any)
    * @param keyPtr    key address
@@ -1350,6 +1550,33 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return result;
   }
 
+  /**
+   * Get cached item value only (if any)
+   * @param keyPtr     key address
+   * @param keySize key size
+   * @param hit     if true - its a hit
+   * @param buffer  byte buffer for item
+   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
+   *     adjusted buffer
+   * @throws IOException
+   */
+  public void getAsync(long keyPtr, int keySize, boolean hit, FutureResultByteArray future)
+      throws IOException {
+    if (this.cacheDisabled) {
+      future.setResult(IOEngine.NOT_FOUND);
+      future.setDone(true);
+      return;
+    }
+    CompletionHandler handler = future.getCompletionHandler();
+    if (handler == null) {
+      handler = new ValueExtractor(future);
+      future.setCompletionHandler(handler);
+    } else {
+      handler.reset();
+    }
+    getKeyValueAsync(keyPtr, keySize, hit, future);
+  }
+  
   /**
    * Get cached value range (if any)
    * @param keyPtr     key address
@@ -1488,6 +1715,115 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         }
       }
       return result;
+    } finally {
+      activeRequests.decrementAndGet();
+    }
+  }
+
+  /**
+   * Get cached item and key (if any) - asynchronous
+   * @param key       key buffer
+   * @param keyOffset key offset
+   * @param keySize   key size
+   * @param hit       if true - its a hit
+   * @param buffer    future result buffer
+   * @throws IOException
+   */
+  public void getKeyValueAsync(byte[] key, int keyOffset, int keySize, boolean hit, FutureResultByteArray future) {
+    if (this.cacheDisabled) {
+      future.setResult(IOEngine.NOT_FOUND);
+      future.setDone(true);
+      return;
+    }
+    try {
+      activeRequests.incrementAndGet();
+      byte[] buffer = future.buffer();
+      int bufOffset = future.offset();
+      boolean submitted = future.isSubmitted();
+      boolean asyncInChain = isAsyncPreferredSome();
+      if (submitted || !asyncInChain) {
+        // make synchronous call
+        int result = IOEngine.NOT_FOUND;
+        try {
+          result = (int) getKeyValue(key, keyOffset, keySize, buffer, bufOffset);
+        } catch (IOException e) {
+          future.setError(e);
+        }
+        future.setResult(result);
+        future.setDone(true);
+        return;
+      }
+      long result = IOEngine.NOT_FOUND;
+      // Victim cache prefers asynchronous mode and future is not submitted yet
+      // hence this cache is memory cache - synchronous call
+      try {
+        result = engine.get(key, keyOffset, keySize, hit, buffer, bufOffset);
+      } catch (IOException e) {
+        future.setDone(true);
+        future.setError(e);
+        return;
+      }
+      if (result <= buffer.length - bufOffset) {
+        access();
+        if (result >= 0) {
+          hit(result);
+        }
+      }
+      if (result >= 0 && result <= buffer.length - bufOffset) {
+        if (this.admissionController != null) {
+          this.admissionController.access(key, keyOffset, keySize);
+        }
+      }
+      if (result < 0 && this.victimCache != null) {
+        // TODO: optimize it
+        // getWithExpire and getWithExpireAndDelete API
+        // one call instead of three
+        if (!this.victimCache.maybeExists(key, keyOffset, keySize)) {
+          future.setResult(IOEngine.NOT_FOUND);
+          future.setDone(true);
+          return;
+        }
+        Runnable r = () -> {
+          try {
+            int res = (int) this.victimCache.getKeyValue(key, keyOffset, keySize, hit, buffer, bufOffset);
+            if (this.victimCachePromoteOnHit && res >= 0 && res <= buffer.length - bufOffset) {
+              // put k-v into this cache, remove it from the victim cache
+              MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
+              if (this.promotionController == null) {
+                double popularity = mi.popularity(key, keyOffset, keySize);
+                // Promote only popular items
+                if (popularity > this.victimCachePromoteThreshold) {
+                  long expire = mi.getExpire(key, keyOffset, keySize);
+                  boolean re = put(buffer, bufOffset, expire);
+                  if (re) {
+                    this.victimCache.delete(key, keyOffset, keySize);
+                  }
+                }
+              } else {
+                // verify with PC
+                int valSize = Utils.getValueSize(buffer, bufOffset);
+                if (this.promotionController.promote(key, keyOffset, keySize, valSize)) {
+                  long expire = mi.getExpire(key, keyOffset, keySize);
+                  boolean re = put(buffer, bufOffset, expire);
+                  if (re) {
+                    this.victimCache.delete(key, keyOffset, keySize);
+                  }
+                }
+              }
+            }
+            future.setResult(res);
+          } catch (IOException e) {
+            future.setError(e);
+          }
+          future.setDone(true);
+        };
+        future.submit();
+        this.asyncService.submit(r);
+      } else if (result >= 0) {
+        future.setResult((int) result);
+        future.setDone(true);
+        return;
+      }
     } finally {
       activeRequests.decrementAndGet();
     }
@@ -1823,6 +2159,32 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   /**
+   * Get cached item only (if any) - async
+   * @param key       key buffer
+   * @param keyOffset key offset
+   * @param keySize   key size
+   * @param hit       if true - its a hit
+   * @param future    buffer with future
+   * @throws IOException
+   */
+  public void getAsync(byte[] key, int keyOffset, int keySize, boolean hit, FutureResultByteArray future)
+      throws IOException {
+    if (this.cacheDisabled) {
+      future.setResult(IOEngine.NOT_FOUND);
+      future.setDone(true);
+      return;
+    }
+    CompletionHandler handler = future.getCompletionHandler();
+    if (handler == null) {
+      handler = new ValueExtractor(future);
+      future.setCompletionHandler(handler);
+    } else {
+      handler.reset();
+    }
+    getKeyValueAsync(key, keyOffset, keySize, hit, future);
+  }
+  
+  /**
    * Get cached value range
    * @param key        key buffer
    * @param keyOffset  key offset
@@ -1963,6 +2325,114 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   /**
+   * Get cached item and key (if any) - asynchronous
+   * @param key       key buffer
+   * @param keyOffset key offset
+   * @param keySize   key size
+   * @param hit       if true - its a hit
+   * @param buffer    future result buffer
+   * @throws IOException
+   */
+  public void getKeyValueAsync(byte[] key, int keyOffset, int keySize, boolean hit, FutureResultByteBuffer future) {
+    if (this.cacheDisabled) {
+      future.setResult(IOEngine.NOT_FOUND);
+      future.setDone(true);
+      return;
+    }
+    try {
+      activeRequests.incrementAndGet();
+      ByteBuffer buffer = future.buffer();
+      int avail = buffer.remaining();
+      boolean submitted = future.isSubmitted();
+      boolean asyncInChain = isAsyncPreferredSome();
+      if (submitted || !asyncInChain) {
+        // make synchronous call
+        int result = IOEngine.NOT_FOUND;
+        try {
+          result = (int) getKeyValue(key, keyOffset, keySize, buffer);
+        } catch (IOException e) {
+          future.setError(e);
+        }
+        future.setResult(result);
+        future.setDone(true);
+        return;
+      }
+      long result = IOEngine.NOT_FOUND;
+      // Victim cache prefers asynchronous mode and future is not submitted yet
+      // hence this cache is memory cache - synchronous call
+      try {
+        result = engine.get(key, keyOffset, keySize, hit, buffer);
+      } catch (IOException e) {
+        future.setDone(true);
+        future.setError(e);
+        return;
+      }
+      if (result <= avail) {
+        access();
+        if (result >= 0) {
+          hit(result);
+        }
+      }
+      if (result >= 0 && result <= avail) {
+        if (this.admissionController != null) {
+          this.admissionController.access(key, keyOffset, keySize);
+        }
+      }
+      if (result < 0 && this.victimCache != null) {
+        // TODO: optimize it
+        // getWithExpire and getWithExpireAndDelete API
+        // one call instead of three
+        if (!this.victimCache.maybeExists(key, keyOffset, keySize)) {
+          future.setResult(IOEngine.NOT_FOUND);
+          future.setDone(true);
+          return;
+        }
+        Runnable r = () -> {
+          try {
+            int res = (int) this.victimCache.getKeyValue(key, keyOffset, keySize, hit, buffer);
+            if (this.victimCachePromoteOnHit && res >= 0 && res <= avail) {
+              // put k-v into this cache, remove it from the victim cache
+              MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
+              if (this.promotionController == null) {
+                double popularity = mi.popularity(key, keyOffset, keySize);
+                // Promote only popular items
+                if (popularity > this.victimCachePromoteThreshold) {
+                  long expire = mi.getExpire(key, keyOffset, keySize);
+                  boolean re = put(buffer, expire);
+                  if (re) {
+                    this.victimCache.delete(key, keyOffset, keySize);
+                  }
+                }
+              } else {
+                // verify with PC
+                int valSize = Utils.getValueSize(buffer);
+                if (this.promotionController.promote(key, keyOffset, keySize, valSize)) {
+                  long expire = mi.getExpire(key, keyOffset, keySize);
+                  boolean re = put(buffer, expire);
+                  if (re) {
+                    this.victimCache.delete(key, keyOffset, keySize);
+                  }
+                }
+              }
+            }
+            future.setResult(res);
+          } catch (IOException e) {
+            future.setError(e);
+          }
+          future.setDone(true);
+        };
+        future.submit();
+        this.asyncService.submit(r);
+      } else if (result >= 0) {
+        future.setResult((int) result);
+        future.setDone(true);
+        return;
+      }
+    } finally {
+      activeRequests.decrementAndGet();
+    }
+  }
+  /**
    * Get cached item value only (if any)
    * @param key     key buffer
    * @param keyOff  key offset
@@ -1987,6 +2457,34 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return result;
   }
 
+  /**
+   * Get cached item value only (if any)
+   * @param key     key buffer
+   * @param keyOff  key offset
+   * @param keySize key size
+   * @param hit     if true - its a hit
+   * @param buffer  byte buffer for item
+   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
+   *     adjusted buffer
+   * @throws IOException
+   */
+  public void getAsync(byte[] key, int keyOffset, int keySize, boolean hit, FutureResultByteBuffer future)
+      throws IOException {
+    if (this.cacheDisabled) {
+      future.setResult(IOEngine.NOT_FOUND);
+      future.setDone(true);
+      return;
+    }
+    CompletionHandler handler = future.getCompletionHandler();
+    if (handler == null) {
+      handler = new ValueExtractor(future);
+      future.setCompletionHandler(handler);
+    } else {
+      handler.reset();
+    }
+    getKeyValueAsync(key, keyOffset, keySize, hit, future);
+  }
+  
   /**
    * Get cached value range (if any)
    * @param key        key buffer
@@ -2120,6 +2618,115 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   }
 
   /**
+   * Get cached item and key (if any) - asynchronous
+   * @param keyPtr       key buffer
+   * @param keySize   key size
+   * @param hit       if true - its a hit
+   * @param buffer    future result buffer
+   * @throws IOException
+   */
+  public void getKeyValueAsync(long keyPtr, int keySize, boolean hit, FutureResultByteBuffer future) {
+    if (this.cacheDisabled) {
+      future.setResult(IOEngine.NOT_FOUND);
+      future.setDone(true);
+      return;
+    }
+    try {
+      activeRequests.incrementAndGet();
+      ByteBuffer buffer = future.buffer();
+      int avail = buffer.remaining();
+      boolean submitted = future.isSubmitted();
+      boolean asyncInChain = isAsyncPreferredSome();
+      if (submitted || !asyncInChain) {
+        // make synchronous call
+        int result = IOEngine.NOT_FOUND;
+        try {
+          result = (int) getKeyValue(keyPtr, keySize, buffer);
+        } catch (IOException e) {
+          future.setError(e);
+        }
+        future.setResult(result);
+        future.setDone(true);
+        return;
+      }
+      long result = IOEngine.NOT_FOUND;
+      // Victim cache prefers asynchronous mode and future is not submitted yet
+      // hence this cache is memory cache - synchronous call
+      try {
+        result = engine.get(keyPtr, keySize, hit, buffer);
+      } catch (IOException e) {
+        future.setDone(true);
+        future.setError(e);
+        return;
+      }
+      if (result <= avail) {
+        access();
+        if (result >= 0) {
+          hit(result);
+        }
+      }
+      if (result >= 0 && result <= avail) {
+        if (this.admissionController != null) {
+          this.admissionController.access(keyPtr, keySize);
+        }
+      }
+      if (result < 0 && this.victimCache != null) {
+        // TODO: optimize it
+        // getWithExpire and getWithExpireAndDelete API
+        // one call instead of three
+        if (!this.victimCache.maybeExists(keyPtr, keySize)) {
+          future.setResult(IOEngine.NOT_FOUND);
+          future.setDone(true);
+          return;
+        }
+        Runnable r = () -> {
+          try {
+            UnsafeAccess.loadFence();
+            int res = (int) this.victimCache.getKeyValue(keyPtr, keySize, hit, buffer);
+            if (this.victimCachePromoteOnHit && res >= 0 && res <= avail) {
+              // put k-v into this cache, remove it from the victim cache
+              MemoryIndex mi = this.victimCache.getEngine().getMemoryIndex();
+              if (this.promotionController == null) {
+                double popularity = mi.popularity(keyPtr, keySize);
+                // Promote only popular items
+                if (popularity > this.victimCachePromoteThreshold) {
+                  long expire = mi.getExpire(keyPtr, keySize);
+                  boolean re = put(buffer, expire);
+                  if (re) {
+                    this.victimCache.delete(keyPtr, keySize);
+                  }
+                }
+              } else {
+                // verify with PC
+                int valSize = Utils.getValueSize(buffer);
+                if (this.promotionController.promote(keyPtr, keySize, valSize)) {
+                  long expire = mi.getExpire(keyPtr, keySize);
+                  boolean re = put(buffer, expire);
+                  if (re) {
+                    this.victimCache.delete(keyPtr, keySize);
+                  }
+                }
+              }
+            }
+            future.setResult(res);
+          } catch (IOException e) {
+            future.setError(e);
+          }
+          future.setDone(true);
+        };
+        future.submit();
+        UnsafeAccess.storeFence();
+        this.asyncService.submit(r);
+      } else if (result >= 0) {
+        future.setResult((int) result);
+        future.setDone(true);
+        return;
+      }
+    } finally {
+      activeRequests.decrementAndGet();
+    }
+  }
+  /**
    * Get cached item only (if any)
    * @param keyPtr  key address
    * @param keySize key size
@@ -2142,6 +2749,33 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return result;
   }
 
+  /**
+   * Get cached item value only (if any)
+   * @param keyPtr     key address
+   * @param keySize key size
+   * @param hit     if true - its a hit
+   * @param buffer  byte buffer for item
+   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
+   *     adjusted buffer
+   * @throws IOException
+   */
+  public void getAsync(long keyPtr, int keySize, boolean hit, FutureResultByteBuffer future)
+      throws IOException {
+    if (this.cacheDisabled) {
+      future.setResult(IOEngine.NOT_FOUND);
+      future.setDone(true);
+      return;
+    }
+    CompletionHandler handler = future.getCompletionHandler();
+    if (handler == null) {
+      handler = new ValueExtractor(future);
+      future.setCompletionHandler(handler);
+    } else {
+      handler.reset();
+    }
+    getKeyValueAsync(keyPtr, keySize, hit, future);
+  }
+  
   /**
    * Get cached value range (if any)
    * @param keyPtr     key address
@@ -2365,8 +2999,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param key key
    * @return true or false
    */
-  public boolean exists(byte[] key) {
-    return exists(key, 0, key.length);
+  public boolean maybeExists(byte[] key) {
+    return maybeExists(key, 0, key.length);
   }
 
   /**
@@ -2376,18 +3010,45 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param size key size
    * @return true or false
    */
-  public boolean exists(byte[] key, int off, int size) {
+  public boolean maybeExists(byte[] key, int off, int size) {
     if (this.cacheDisabled) {
       return false;
     }
     try {
       activeRequests.incrementAndGet();
-      return this.engine.getMemoryIndex().exists(key, off, size);
+      boolean result = this.engine.maybeExists(key, off, size);
+      if (!result && this.victimCache != null) {
+        result = this.victimCache.maybeExists(key, off, size);
+      }
+      return result;
     } finally {
       activeRequests.decrementAndGet();
     }
   }
 
+  /**
+   * Does key exist (false positive are possible, but not false negatives)
+   * @param key  key buffer
+   * @param off  key offset
+   * @param size key size
+   * @return true or false
+   */
+  public boolean maybeExists(long keyPtr, int size) {
+    if (this.cacheDisabled) {
+      return false;
+    }
+    try {
+      activeRequests.incrementAndGet();
+      boolean result = this.engine.maybeExists(keyPtr, size);
+      if (!result && this.victimCache != null) {
+        result = this.victimCache.maybeExists(keyPtr, size);
+      }
+      return result;
+    } finally {
+      activeRequests.decrementAndGet();
+    }
+  }
+  
   /**
    * Does key exist (exact)
    * @param key  key buffer
@@ -2455,6 +3116,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param c victim cache
    */
   public void setVictimCache(Cache c) {
+    //TODO: fix it
     if (getCacheType() == Type.DISK) {
       throw new IllegalArgumentException("Victim cache is not supported for DISK type cache");
     }
@@ -2463,6 +3125,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.victimCachePromoteThreshold = this.conf.getVictimPromotionThreshold(c.getName());
     this.hybridCacheInverseMode = this.conf.getCacheHybridInverseMode(cacheName);
     this.victimCache.setParentCache(this);
+    if (!this.asyncPreferred && c.isAsyncPreferred()) {
+      initAsyncThreadPool();
+    }
   }
 
   /**
@@ -3197,7 +3862,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     long size = getStorageUsedActual();
     size += this.engine.getMemoryIndex().getAllocatedMemory();
     long start = System.currentTimeMillis();
+    
     stopScavengers();
+    
+    shutdownAsyncIOPool();
+    
     // Disable cache
     this.cacheDisabled = true;
     waitForActiveRequestsFinished();
@@ -3225,6 +3894,22 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return size;
   }
 
+  private void shutdownAsyncIOPool() {
+    if (this.asyncService == null) {
+      return;
+    }
+    this.asyncService.shutdownNow();
+    boolean terminated = false;
+    while (!terminated) {
+      try {
+        terminated = this.asyncService.awaitTermination(10, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        //
+      }
+    }
+    LOG.info("Async IO Service terminated for cache[{}]", cacheName);
+  }
+  
   private void waitForActiveRequestsFinished() {
     long timeout = 1000;
     long start = System.currentTimeMillis();

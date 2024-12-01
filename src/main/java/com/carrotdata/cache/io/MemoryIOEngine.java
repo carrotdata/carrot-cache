@@ -147,4 +147,13 @@ public class MemoryIOEngine extends IOEngine {
   protected boolean isMemory() {
     return true;
   }
+  
+  @Override
+  /**
+   * Tells engine that async operations are preferred or not 
+   * @param preferred
+   */
+  public void setAsyncPreferred(boolean preferred) {
+    // Ignore
+  }
 }

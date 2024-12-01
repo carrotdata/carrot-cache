@@ -925,13 +925,13 @@ public final class MemoryIndex implements Persistent {
   }
 
   /**
-   * Does key exist
+   * Does key exist (false positives are possible)
    * @param key key buffer
    * @param off key offset
    * @param size key size
    * @return true or false
    */
-  public boolean exists(byte[] key, int off, int size) {
+  public boolean maybeExists(byte[] key, int off, int size) {
     // TODO: does it work for variable sizes?
     int bufSize = this.indexFormat.indexEntrySize();
     long buf = getMemoryBuffer(bufSize);
@@ -946,6 +946,27 @@ public final class MemoryIndex implements Persistent {
     }
   }
 
+  /**
+   * Does key exist (false positives are possible)
+   * @param keyPtr key address
+   * @param size key size
+   * @return true or false
+   */
+  public boolean maybeExists(long keyPtr, int size) {
+    // TODO: does it work for variable sizes?
+    int bufSize = this.indexFormat.indexEntrySize();
+    long buf = getMemoryBuffer(bufSize);
+    try {
+      long result = find(keyPtr, size, false, buf, bufSize);
+      if (result != bufSize) {
+        return false;
+      }
+      return true;
+    } finally {
+      freeMemoryBuffer(buf);
+    }
+  }
+  
   /**
    * Touch the key (activates eviction policy)
    * @param key key buffer

@@ -43,6 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.carrotdata.cache.util.CacheConfig;
+
 import com.carrotdata.cache.util.UnsafeAccess;
 
 public class FileIOEngine extends IOEngine {
@@ -144,6 +145,7 @@ public class FileIOEngine extends IOEngine {
     //submitTask(r);
   }
 
+  @SuppressWarnings("unused")
   private void submitTask(Runnable r) {
     activeSaveTasks.incrementAndGet();
     unboundedThreadPool.submit(r);
@@ -153,22 +155,22 @@ public class FileIOEngine extends IOEngine {
   protected int getInternal(int sid, long offset, int size, byte[] key, int keyOffset, int keySize,
       byte[] buffer, int bufOffset) throws IOException {
 
-    Segment s = getSegmentById(sid);
-    if (s == null) {
-      return NOT_FOUND;
-    }
-
-    if (s.isMemory()) {
-      return this.memoryDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer,
-        bufOffset);
-    } else {
+//    Segment s = getSegmentById(sid);
+//    if (s == null) {
+//      return NOT_FOUND;
+//    }
+//
+//    if (s.isMemory()) {
+//      return this.memoryDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer,
+//        bufOffset);
+//    } else {
       long start = System.nanoTime();
       int result = this.fileDataReader.read(this, key, keyOffset, keySize, sid, offset, size,
         buffer, bufOffset);
       long end = System.nanoTime();
       this.totalIOReadDuration.addAndGet(end - start);
       return result;
-    }
+//    }
   }
 
   @Override
@@ -196,21 +198,21 @@ public class FileIOEngine extends IOEngine {
   @Override
   protected int getInternal(int sid, long offset, int size, byte[] key, int keyOffset, int keySize,
       ByteBuffer buffer) throws IOException {
-    Segment s = getSegmentById(sid);
-    if (s == null) {
-      return NOT_FOUND;
-    }
-
-    if (s.isMemory()) {
-      return this.memoryDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
-    } else {
+//    Segment s = getSegmentById(sid);
+//    if (s == null) {
+//      return NOT_FOUND;
+//    }
+//
+//    if (s.isMemory()) {
+//      return this.memoryDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
+//    } else {
       long start = System.nanoTime();
       int result =
           this.fileDataReader.read(this, key, keyOffset, keySize, sid, offset, size, buffer);
       long end = System.nanoTime();
       this.totalIOReadDuration.addAndGet(end - start);
       return result;
-    }
+//    }
   }
 
   @Override
@@ -237,22 +239,22 @@ public class FileIOEngine extends IOEngine {
   @Override
   protected int getInternal(int sid, long offset, int size, long keyPtr, int keySize, byte[] buffer,
       int bufOffset) throws IOException {
-    Segment s = getSegmentById(sid);
-    if (s == null) {
-      return NOT_FOUND;
-    }
-
-    if (s.isMemory()) {
-      return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer,
-        bufOffset);
-    } else {
+//    Segment s = getSegmentById(sid);
+//    if (s == null) {
+//      return NOT_FOUND;
+//    }
+//
+//    if (s.isMemory()) {
+//      return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer,
+//        bufOffset);
+//    } else {
       long start = System.nanoTime();
       int result =
           this.fileDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer, bufOffset);
       long end = System.nanoTime();
       this.totalIOReadDuration.addAndGet(end - start);
       return result;
-    }
+//    }
   }
 
   @Override
@@ -279,20 +281,20 @@ public class FileIOEngine extends IOEngine {
   @Override
   protected int getInternal(int sid, long offset, int size, long keyPtr, int keySize,
       ByteBuffer buffer) throws IOException {
-    Segment s = getSegmentById(sid);
-    if (s == null) {
-      return NOT_FOUND;
-    }
-
-    if (s.isMemory()) {
-      return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer);
-    } else {
+//    Segment s = getSegmentById(sid);
+//    if (s == null) {
+//      return NOT_FOUND;
+//    }
+//
+//    if (s.isMemory()) {
+//      return this.memoryDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer);
+//    } else {
       long start = System.nanoTime();
       int result = this.fileDataReader.read(this, keyPtr, keySize, sid, offset, size, buffer);
       long end = System.nanoTime();
       this.totalIOReadDuration.addAndGet(end - start);
       return result;
-    }
+//    }
   }
 
   @Override

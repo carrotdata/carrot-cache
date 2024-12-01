@@ -344,7 +344,7 @@ public class ObjectCache {
       // TODO: cryptographic hashing of a key
       byte[] keyBuffer = outKey.getBuffer();
       int keyLength = outKey.position();
-      boolean result = cache.exists(keyBuffer, 0, keyLength);
+      boolean result = cache.maybeExists(keyBuffer, 0, keyLength);
       return result;
     } finally {
       release(outKey);

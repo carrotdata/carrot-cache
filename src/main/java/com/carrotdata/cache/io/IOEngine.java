@@ -27,6 +27,10 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -53,8 +57,7 @@ import com.carrotdata.cache.util.Utils;
  * is configurable Total number of segments is defined by a maximum cache size and segment size.
  * Data can be stored in RAM (off-heap) and on disk (SSD)
  */
-public abstract class IOEngine implements Persistent {
-
+public abstract class IOEngine implements Persistent {  
   /** Logger */
   private static final Logger LOG = LoggerFactory.getLogger(IOEngine.class);
 
@@ -157,6 +160,17 @@ public abstract class IOEngine implements Persistent {
    * batch writer)
    */
   WriteBatches writeBatches;
+  
+  /**
+   * Asynchronous operations are preferred
+   */
+  protected boolean asyncPreferred = false;
+  
+  /**
+   *  Executor service for asynchronous operations
+   *  fixed size thread pool
+   */
+  protected ExecutorService asyncService;
 
   /**
    * Initialize engine for a given cache
@@ -236,6 +250,32 @@ public abstract class IOEngine implements Persistent {
     this("default");
   }
 
+  /**
+   * Tells engine that asynchronous operations are preferred or not 
+   * @param preferred
+   */
+  public void setAsyncPreferred(boolean preferred) {
+    this.asyncPreferred = preferred;
+    if (this.asyncPreferred && this.asyncService == null) {
+      int nThreads = config.getAsyncIOPoolSize(cacheName);
+      this.asyncService = new ThreadPoolExecutor(nThreads, nThreads,
+        0L, TimeUnit.MILLISECONDS,
+        new LinkedBlockingQueue<Runnable>(nThreads * 2));
+    }
+  }
+  
+  /**
+   * Are async operations preferred 
+   * @return true or false
+   */
+  public boolean isAsyncPreferred() {
+    return this.asyncPreferred;
+  }
+  
+  /**
+   * Adds scavenger listener
+   * @param l scavenger listener
+   */
   public void addScavengerListener(Scavenger.Listener l) {
     this.scavengerListeners.add(l);
   }
@@ -470,6 +510,28 @@ public abstract class IOEngine implements Persistent {
   }
 
   /**
+   * Does key exist (false positive are possible, but not false negatives)
+   * @param key  key buffer
+   * @param off  key offset
+   * @param size key size
+   * @return true or false
+   */
+  public boolean maybeExists(byte[] key, int off, int size) {
+    return getMemoryIndex().maybeExists(key, off, size);
+  }
+
+  /**
+   * Does key exist (false positive are possible, but not false negatives)
+   * @param key  key buffer
+   * @param off  key offset
+   * @param size key size
+   * @return true or false
+   */
+  public boolean maybeExists(long keyPtr, int size) {
+    return getMemoryIndex().maybeExists(keyPtr, size);
+  }
+  
+  /**
    * Get key-value into a given byte buffer
    * @param keyPtr key address
    * @param keySize size of a key
@@ -482,117 +544,71 @@ public abstract class IOEngine implements Persistent {
       throws IOException {
 
     IndexFormat format = this.index.getIndexFormat();
-    // TODO: embedded entry case
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     try {
-
       long offset = 0;
-      do {
-        // We can stuck in the endless loop if memory index contains
-        // 'orphan' index for some write buffer
-        // FIXME ?
-        long result = index.find(keyPtr, keySize, hit, buf, entrySize);
-        if (result < 0) {
+      long result = index.find(keyPtr, keySize, hit, buf, entrySize);
+      if (result < 0) {
+        return NOT_FOUND;
+      }
+      // Cached item offset in a data segment
+      offset = format.getOffset(buf);
+      // Check if it is i a write buffer
+      if (offset < -1) {
+        // Check write buffers
+        if (this.writeBatches == null) {
+          throw new RuntimeException(
+              "Corrupted index, returns negative offset, but write batches are disabled: off="
+                  + offset);
+        }
+        WriteBatch wb = this.writeBatches.getWriteBatch((int) offset);
+        if (wb == null) {
+          throw new RuntimeException(
+              "Corrupted index, returns negative offset, but write batch was not found: off="
+                  + offset);
+        }
+        int size = wb.get(keyPtr, keySize, buffer, bufOffset);
+        if (size >= 0) {
+          return size;
+        } else {
+          // Collision: key was overridden by another key from some write buffer
           return NOT_FOUND;
-        } else if (result > entrySize) {
-          UnsafeAccess.free(buf);
-          entrySize = (int) result;
-          buf = UnsafeAccess.mallocZeroed(entrySize);
-          result = index.find(keyPtr, keySize, hit, buf, entrySize);
-          if (result < 0) {
-            return NOT_FOUND;
-          }
         }
-        // Cached item offset in a data segment
-        offset = format.getOffset(buf);
-        // Check if it is i a write buffer
-        if (offset < -1) {
-          // Check write buffers
-          if (this.writeBatches == null) {
-            throw new RuntimeException(
-                "Corrupted index, returns negative offset, but write batches are disbled: off="
-                    + offset);
-          }
-          WriteBatch wb = this.writeBatches.getWriteBatch((int) offset);
-          if (wb == null) {
-            throw new RuntimeException(
-                "Corrupted index, returns negative offset, but write batch was not found: off="
-                    + offset);
-          }
-          int size = wb.get(keyPtr, keySize, buffer, bufOffset);
-          if (size >= 0) {
-            return size;
-          } else {
-            // Collision: key was overriden by another key from some write buffer
-            return NOT_FOUND;
-          }
-        }
-      } while (offset < -1);
+      }
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
       // TODO: actually, not correct IT CAN RETURN -1
       if (keyValueSize > buffer.length - bufOffset) {
         return keyValueSize;
       }
-      boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
-      if (dataEmbedded) {
-        // Return embedded data
-        int off = format.getEmbeddedOffset();
-        int kSize = Utils.readUVInt(buf + off);
-        if (kSize != keySize) {
+      // Segment id
+      int sid = (int) format.getSegmentId(buf);
+      // Read the data
+      Segment s = this.dataSegments[sid];
+      if (s == null || !s.isValid()) {
+        return NOT_FOUND;
+      }
+      int res = NOT_FOUND;
+      try {
+        s.readLock();
+        int id = this.index.getSegmentId(keyPtr, keySize);
+        if (id < 0) {
           return NOT_FOUND;
         }
-        int kSizeSize = Utils.sizeUVInt(kSize);
-        off += kSizeSize;
-        int vSize = Utils.readUVInt(buf + off);
-        int vSizeSize = Utils.sizeUVInt(vSize);
-        off += vSizeSize;
-        if (!Utils.equals(keyPtr, keySize, buf + off, kSize)) {
-          return NOT_FOUND;
+        if (id != sid) {
+          s.readUnlock();
+          return get(keyPtr, keySize, hit, buffer, bufOffset);
         }
-        off -= kSizeSize + vSizeSize;
-        // Copy data to buffer
-        UnsafeAccess.copy(buf + off, buffer, bufOffset, keyValueSize);
-        return keyValueSize;
-      } else {
-        // Segment id
-        int sid = (int) format.getSegmentId(buf);
         // Read the data
-        Segment s = this.dataSegments[sid];
-        if (s == null || !s.isValid()) {
-          return NOT_FOUND;
-        }
-        // Make up to 3 attempts
-        int maxAttempts = 3;
-        int attempt = 0;
-        int res = NOT_FOUND;
-        while (attempt++ < maxAttempts) {
-          try {
-            s.readLock();
-            int id = this.index.getSegmentId(keyPtr, keySize);
-            if (id < 0) {
-              return NOT_FOUND;
-            }
-            if (id != sid) {
-              s.readUnlock();
-              return get(keyPtr, keySize, hit, buffer, bufOffset);
-            }
-            // Read the data
-            res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer, bufOffset);
-            if (res == READ_ERROR) {
-              continue;
-            }
-            return res;
-          } finally {
-            s.readUnlock();
-          }
-        }
+        res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer, bufOffset);
         if (res == READ_ERROR) {
           this.totalFailedReads.incrementAndGet();
         }
+        return res;
+      } finally {
+        s.readUnlock();
       }
-      return NOT_FOUND;
     } finally {
       UnsafeAccess.free(buf);
     }
@@ -632,55 +648,32 @@ public abstract class IOEngine implements Persistent {
       }
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
+      // Cached item offset in a data segment
+      long offset = format.getOffset(buf);
+      // Segment id
+      int sid = (int) format.getSegmentId(buf);
+      // Read the data
+      Segment s = this.dataSegments[sid];
+      if (s == null || !s.isValid()) {
+        return NOT_FOUND;
+      }
 
-      boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
-      if (dataEmbedded) {
-        // Return embedded data
-        int off = format.getEmbeddedOffset();
-        int kSize = Utils.readUVInt(buf + off);
-        if (kSize != keySize) {
+      try {
+        s.readLock();
+        int id = this.index.getSegmentId(keyPtr, keySize);
+        if (id < 0) {
           return NOT_FOUND;
         }
-        int kSizeSize = Utils.sizeUVInt(kSize);
-        off += kSizeSize;
-        int vSize = Utils.readUVInt(buf + off);
-        int vSizeSize = Utils.sizeUVInt(vSize);
-        off += vSizeSize;
-        if (!Utils.equals(keyPtr, keySize, buf + off, kSize)) {
-          return NOT_FOUND;
-        }
-        off -= kSizeSize + vSizeSize;
-        // Copy data to buffer
-        UnsafeAccess.copy(buf + off, buffer, bufOffset, keyValueSize);
-        return keyValueSize;
-      } else {
-        // Cached item offset in a data segment
-        long offset = format.getOffset(buf);
-        // Segment id
-        int sid = (int) format.getSegmentId(buf);
-        // Read the data
-        Segment s = this.dataSegments[sid];
-        if (s == null || !s.isValid()) {
-          return NOT_FOUND;
-        }
-
-        try {
-          s.readLock();
-          int id = this.index.getSegmentId(keyPtr, keySize);
-          if (id < 0) {
-            return NOT_FOUND;
-          }
-          if (id != sid) {
-            s.readUnlock();
-            return getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
-          }
-          // Read the data
-          int res = getRange(sid, offset, keyValueSize, keyPtr, keySize, rangeStart, rangeSize,
-            buffer, bufOffset);
-          return res;
-        } finally {
+        if (id != sid) {
           s.readUnlock();
+          return getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
         }
+        // Read the data
+        int res = getRange(sid, offset, keyValueSize, keyPtr, keySize, rangeStart, rangeSize,
+          buffer, bufOffset);
+        return res;
+      } finally {
+        s.readUnlock();
       }
     } finally {
       UnsafeAccess.free(buf);
@@ -701,124 +694,77 @@ public abstract class IOEngine implements Persistent {
       throws IOException {
 
     IndexFormat format = this.index.getIndexFormat();
-    // TODO: embedded entry case
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     int bufferAvail = buffer.length - bufOffset;
     try {
       long offset = 0;
-      do {
-        // We can stuck in the endless loop if memory index contains
-        // 'orphan' index for some write buffer
-        // FIXME ?
-        long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
-        if (result < 0) {
+      long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
+      if (result < 0) {
+        return NOT_FOUND;
+      }
+      // Cached item offset in a data segment
+      offset = format.getOffset(buf);
+      // Check if it is a write buffer
+      if (offset < -1) {
+        // Check write buffers
+        if (this.writeBatches == null) {
+          throw new RuntimeException(
+              "Corrupted index, returns negative offset, but write batches are disabled: off="
+                  + offset);
+        }
+        WriteBatch wb = this.writeBatches.getWriteBatch((int) offset);
+        if (wb == null) {
+          throw new RuntimeException(
+              "Corrupted index, returns negative offset, but write batch was not found: off="
+                  + offset);
+        }
+        int size = wb.get(key, keyOffset, keySize, buffer, bufOffset);
+        if (size >= 0) {
+          return size;
+        } else {
+          // Collision: key was overridden by another key from some write buffer
           return NOT_FOUND;
-        } else if (result > entrySize) {
-          UnsafeAccess.free(buf);
-          entrySize = (int) result;
-          buf = UnsafeAccess.mallocZeroed(entrySize);
-          result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
-          if (result < 0) {
-            return NOT_FOUND;
-          }
         }
-        // Cached item offset in a data segment
-        offset = format.getOffset(buf);
-        // Check if it is i a write buffer
-        if (offset < -1) {
-          // Check write buffers
-          if (this.writeBatches == null) {
-            throw new RuntimeException(
-                "Corrupted index, returns negative offset, but write batches are disbled: off="
-                    + offset);
-          }
-          WriteBatch wb = this.writeBatches.getWriteBatch((int) offset);
-          if (wb == null) {
-            throw new RuntimeException(
-                "Corrupted index, returns negative offset, but write batch was not found: off="
-                    + offset);
-          }
-          int size = wb.get(key, keyOffset, keySize, buffer, bufOffset);
-          if (size >= 0) {
-            return size;
-          } else {
-            // Collision: key was overriden by another key from some write buffer
-            return NOT_FOUND;
-          }
-        }
-      } while (offset < -1); // offset -1 means NOT_FOUND, offset < -1 means item is in write batch
+      }
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
       // can be negative
       if (keyValueSize > bufferAvail) {
         return keyValueSize;
       }
-      boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
-      if (dataEmbedded) {
-        // For index formats which supports embedding
-        // Return embedded data
-        int off = format.getEmbeddedOffset();
-        int kSize = Utils.readUVInt(buf + off);
-        if (kSize != keySize) {
+      // segment id
+      int sid = (int) format.getSegmentId(buf);
+      Segment s = this.dataSegments[sid];
+      if (s == null || !s.isValid()) {
+        return NOT_FOUND;
+      }
+      int res = NOT_FOUND;
+      try {
+        s.readLock();
+        // Check if scavenger removed this object or moved it to another segment
+        int id = this.index.getSegmentId(key, keyOffset, keySize);
+        if (id < 0) {
           return NOT_FOUND;
         }
-        int kSizeSize = Utils.sizeUVInt(kSize);
-        off += kSizeSize;
-        int vSize = Utils.readUVInt(buf + off);
-        int vSizeSize = Utils.sizeUVInt(vSize);
-        off += vSizeSize;
-        if (!Utils.equals(key, keyOffset, keySize, buf + off, kSize)) {
-          return NOT_FOUND;
+        if (id != sid) {
+          s.readUnlock();
+          return get(key, keyOffset, keySize, hit, buffer, bufOffset);
         }
-        off -= kSizeSize + vSizeSize;
-        // Copy data to buffer
-        UnsafeAccess.copy(buf + off, buffer, bufOffset, keyValueSize);
-        return keyValueSize;
-      } else {
-        // segment id
-        int sid = (int) format.getSegmentId(buf);
-        Segment s = this.dataSegments[sid];
-        if (s == null || !s.isValid()) {
-          return NOT_FOUND;
-        }
-
-        // Make up to 3 attempts
-        int maxAttempts = 3;
-        int attempt = 0;
-        int res = NOT_FOUND;
-        while (attempt++ < maxAttempts) {
-          try {
-            s.readLock();
-            // Check if scavenger removed this object or moved it to another segment
-            int id = this.index.getSegmentId(key, keyOffset, keySize);
-            if (id < 0) {
-              return NOT_FOUND;
-            }
-            if (id != sid) {
-              s.readUnlock();
-              return get(key, keyOffset, keySize, hit, buffer, bufOffset);
-            }
-            // Read the data
-            res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer, bufOffset);
-            if (res == IOEngine.READ_ERROR) {
-              // next attempt
-              continue;
-            }
-            return res;
-          } finally {
-            s.readUnlock();
-          }
-        }
-        if (res == READ_ERROR) {
+        // Read the data
+        res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer, bufOffset);
+        if (res == IOEngine.READ_ERROR) {
           this.totalFailedReads.incrementAndGet();
         }
+        return res;
+      } finally {
+        s.readUnlock();
       }
-      return NOT_FOUND;
     } finally {
       UnsafeAccess.free(buf);
     }
   }
+
 
   /**
    * Get value range into a given byte buffer
@@ -855,56 +801,31 @@ public abstract class IOEngine implements Persistent {
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
 
-      // TODO: getRange does not make sense for embedded data
-      boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
-      if (dataEmbedded) {
-        // For index formats which supports embedding
-        // Return embedded data
-        int off = format.getEmbeddedOffset();
-        int kSize = Utils.readUVInt(buf + off);
-        if (kSize != keySize) {
+      // Cached item offset in a data segment
+      long offset = format.getOffset(buf);
+      // segment id
+      int sid = (int) format.getSegmentId(buf);
+      Segment s = this.dataSegments[sid];
+      if (s == null || !s.isValid()) {
+        return NOT_FOUND;
+      }
+      try {
+        s.readLock();
+        // Check if scavenger removed this object or moved it to another segment
+        int id = this.index.getSegmentId(key, keyOffset, keySize);
+        if (id < 0) {
           return NOT_FOUND;
         }
-        int kSizeSize = Utils.sizeUVInt(kSize);
-        off += kSizeSize;
-        int vSize = Utils.readUVInt(buf + off);
-        int vSizeSize = Utils.sizeUVInt(vSize);
-        off += vSizeSize;
-        if (!Utils.equals(key, keyOffset, keySize, buf + off, kSize)) {
-          return NOT_FOUND;
-        }
-        off -= kSizeSize + vSizeSize;
-        // Copy data to buffer
-        UnsafeAccess.copy(buf + off, buffer, bufOffset, keyValueSize);
-        return keyValueSize;
-      } else {
-        // Cached item offset in a data segment
-        long offset = format.getOffset(buf);
-        // segment id
-        int sid = (int) format.getSegmentId(buf);
-        Segment s = this.dataSegments[sid];
-        if (s == null || !s.isValid()) {
-          return NOT_FOUND;
-        }
-
-        try {
-          s.readLock();
-          // Check if scavenger removed this object or moved it to another segment
-          int id = this.index.getSegmentId(key, keyOffset, keySize);
-          if (id < 0) {
-            return NOT_FOUND;
-          }
-          if (id != sid) {
-            s.readUnlock();
-            return getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
-          }
-          // Read the data
-          int res = getRange(sid, offset, keyValueSize, key, keyOffset, keySize, rangeStart,
-            rangeSize, buffer, bufOffset);
-          return res;
-        } finally {
+        if (id != sid) {
           s.readUnlock();
+          return getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer, bufOffset);
         }
+        // Read the data
+        int res = getRange(sid, offset, keyValueSize, key, keyOffset, keySize, rangeStart,
+          rangeSize, buffer, bufOffset);
+        return res;
+      } finally {
+        s.readUnlock();
       }
     } finally {
       UnsafeAccess.free(buf);
@@ -924,50 +845,36 @@ public abstract class IOEngine implements Persistent {
     IndexFormat format = this.index.getIndexFormat();
     int entrySize = format.indexEntrySize();
     long buf = UnsafeAccess.mallocZeroed(entrySize);
-    // int slot = 0;
     try {
       long offset = 0;
-      do {
-        // We can stuck in the endless loop if memory index contains
-        // 'orphan' index for some write buffer
-        // FIXME ?
-        long result = index.find(keyPtr, keySize, hit, buf, entrySize);
-        if (result < 0) {
+      long result = index.find(keyPtr, keySize, hit, buf, entrySize);
+      if (result < 0) {
+        return NOT_FOUND;
+      }
+      // Cached item offset in a data segment
+      offset = format.getOffset(buf);
+      // Check if it is i a write buffer
+      if (offset < -1) {
+        // Check write buffers
+        if (this.writeBatches == null) {
+          throw new RuntimeException(
+              "Corrupted index, returns negative offset, but write batches are disabled: off="
+                  + offset);
+        }
+        WriteBatch wb = this.writeBatches.getWriteBatch((int) offset);
+        if (wb == null) {
+          throw new RuntimeException(
+              "Corrupted index, returns negative offset, but write batch was not found: off="
+                  + offset);
+        }
+        int size = wb.get(keyPtr, keySize, buffer);
+        if (size >= 0) {
+          return size;
+        } else {
+          // Collision: key was overridden by another key from some write buffer
           return NOT_FOUND;
-        } else if (result > entrySize) {
-          UnsafeAccess.free(buf);
-          entrySize = (int) result;
-          buf = UnsafeAccess.mallocZeroed(entrySize);
-          result = index.find(keyPtr, keySize, hit, buf, entrySize);
-          if (result < 0) {
-            return NOT_FOUND;
-          }
         }
-        // Cached item offset in a data segment
-        offset = format.getOffset(buf);
-        // Check if it is i a write buffer
-        if (offset < -1) {
-          // Check write buffers
-          if (this.writeBatches == null) {
-            throw new RuntimeException(
-                "Corrupted index, returns negative offset, but write batches are disbled: off="
-                    + offset);
-          }
-          WriteBatch wb = this.writeBatches.getWriteBatch((int) offset);
-          if (wb == null) {
-            throw new RuntimeException(
-                "Corrupted index, returns negative offset, but write batch was not found: off="
-                    + offset);
-          }
-          int size = wb.get(keyPtr, keySize, buffer);
-          if (size >= 0) {
-            return size;
-          } else {
-            // Collision: key was overriden by another key from some write buffer
-            return NOT_FOUND;
-          }
-        }
-      } while (offset < -1);
+      }
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
       // TODO: actually, not correct
@@ -975,68 +882,37 @@ public abstract class IOEngine implements Persistent {
         return keyValueSize;
       }
 
-      boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
-      if (dataEmbedded) {
-        // Return embedded data
-        int off = format.getEmbeddedOffset();
-        int kSize = Utils.readUVInt(buf + off);
-        if (kSize != keySize) {
+      // Segment id
+      int sid = (int) format.getSegmentId(buf);
+      // Finally, read the cached item
+      Segment s = this.dataSegments[sid];
+      if (s == null || !s.isValid()) {
+        return NOT_FOUND;
+      }
+      // Make up to 3 attempts
+      int res = NOT_FOUND;
+      try {
+        s.readLock();
+        // Check if scavenger removed this object or moved it to another segment
+        int id = this.index.getSegmentId(keyPtr, keySize);
+        if (id < 0) {
           return NOT_FOUND;
         }
-        int kSizeSize = Utils.sizeUVInt(kSize);
-        off += kSizeSize;
-        int vSize = Utils.readUVInt(buf + off);
-        int vSizeSize = Utils.sizeUVInt(vSize);
-        off += vSizeSize;
-        if (!Utils.equals(keyPtr, keySize, buf + off, kSize)) {
-          return NOT_FOUND;
+        if (id != sid) {
+          s.readUnlock();
+          return get(keyPtr, keySize, hit, buffer);
         }
-        off -= kSizeSize + vSizeSize;
-        // Copy data to buffer
-        UnsafeAccess.copy(buf + off, buffer, keyValueSize);
-        return keyValueSize;
-      } else {
-        // Segment id
-        int sid = (int) format.getSegmentId(buf);
-        // Finally, read the cached item
-        Segment s = this.dataSegments[sid];
-        if (s == null || !s.isValid()) {
-          return NOT_FOUND;
-        }
-        // Make up to 3 attempts
-        int maxAttempts = 3;
-        int attempt = 0;
-        int res = NOT_FOUND;
-        while (attempt++ < maxAttempts) {
-          try {
-            s.readLock();
-            // Check if scavenger removed this object or moved it to another segment
-            int id = this.index.getSegmentId(keyPtr, keySize);
-            if (id < 0) {
-              return NOT_FOUND;
-            }
-            if (id != sid) {
-              s.readUnlock();
-              return get(keyPtr, keySize, hit, buffer);
-            }
-            // Read the data
-            res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer);
-            if (res == READ_ERROR) {
-              this.totalFailedReads.incrementAndGet();
-            }
-            return res;
-          } finally {
-            s.readUnlock();
-          }
-        }
+        // Read the data
+        res = get(sid, offset, keyValueSize, keyPtr, keySize, buffer);
         if (res == READ_ERROR) {
           this.totalFailedReads.incrementAndGet();
         }
+        return res;
+      } finally {
+        s.readUnlock();
       }
-      return NOT_FOUND;
     } finally {
       UnsafeAccess.free(buf);
-      // this.index.unlock(slot);
     }
   }
 
@@ -1061,7 +937,6 @@ public abstract class IOEngine implements Persistent {
       // Index locking that segment will not be recycled
       //
       long result = index.find(keyPtr, keySize, true, buf, entrySize);
-
       if (result < 0) {
         return NOT_FOUND;
       } else if (result > entrySize) {
@@ -1075,56 +950,33 @@ public abstract class IOEngine implements Persistent {
       }
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
+      // Cached item offset in a data segment
+      long offset = format.getOffset(buf);
+      // Segment id
+      int sid = (int) format.getSegmentId(buf);
+      // Finally, read the cached item
+      Segment s = this.dataSegments[sid];
+      if (s == null || !s.isValid()) {
+        return NOT_FOUND;
+      }
 
-      boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
-      if (dataEmbedded) {
-        // Return embedded data
-        int off = format.getEmbeddedOffset();
-        int kSize = Utils.readUVInt(buf + off);
-        if (kSize != keySize) {
+      try {
+        s.readLock();
+        // Check if scavenger removed this object or moved it to another segment
+        int id = this.index.getSegmentId(keyPtr, keySize);
+        if (id < 0) {
           return NOT_FOUND;
         }
-        int kSizeSize = Utils.sizeUVInt(kSize);
-        off += kSizeSize;
-        int vSize = Utils.readUVInt(buf + off);
-        int vSizeSize = Utils.sizeUVInt(vSize);
-        off += vSizeSize;
-        if (!Utils.equals(keyPtr, keySize, buf + off, kSize)) {
-          return NOT_FOUND;
-        }
-        off -= kSizeSize + vSizeSize;
-        // Copy data to buffer
-        UnsafeAccess.copy(buf + off, buffer, keyValueSize);
-        return keyValueSize;
-      } else {
-        // Cached item offset in a data segment
-        long offset = format.getOffset(buf);
-        // Segment id
-        int sid = (int) format.getSegmentId(buf);
-        // Finally, read the cached item
-        Segment s = this.dataSegments[sid];
-        if (s == null || !s.isValid()) {
-          return NOT_FOUND;
-        }
-
-        try {
-          s.readLock();
-          // Check if scavenger removed this object or moved it to another segment
-          int id = this.index.getSegmentId(keyPtr, keySize);
-          if (id < 0) {
-            return NOT_FOUND;
-          }
-          if (id != sid) {
-            s.readUnlock();
-            return getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer);
-          }
-          // Read the data
-          int res =
-              getRange(sid, offset, keyValueSize, keyPtr, keySize, rangeStart, rangeSize, buffer);
-          return res;
-        } finally {
+        if (id != sid) {
           s.readUnlock();
+          return getRange(keyPtr, keySize, rangeStart, rangeSize, hit, buffer);
         }
+        // Read the data
+        int res =
+            getRange(sid, offset, keyValueSize, keyPtr, keySize, rangeStart, rangeSize, buffer);
+        return res;
+      } finally {
+        s.readUnlock();
       }
     } finally {
       UnsafeAccess.free(buf);
@@ -1149,118 +1001,73 @@ public abstract class IOEngine implements Persistent {
     long buf = UnsafeAccess.mallocZeroed(entrySize);
     try {
       long offset = 0;
-      do {
-        // We can stuck in the endless loop if memory index contains
-        // 'orphan' index for some write buffer
-        // FIXME ?
-        long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
-        if (result < 0) {
+      long result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
+      if (result < 0) {
+        return NOT_FOUND;
+      }
+      // Cached item offset in a data segment
+      offset = format.getOffset(buf);
+      // Check if it is i a write buffer
+      if (offset < -1) {
+        // Check write buffers
+        if (this.writeBatches == null) {
+          throw new RuntimeException(
+              "Corrupted index, returns negative offset, but write batches are diasbled: off="
+                  + offset);
+        }
+        WriteBatch wb = this.writeBatches.getWriteBatch((int) offset);
+        if (wb == null) {
+          throw new RuntimeException(
+              "Corrupted index, returns negative offset, but write batch was not found: off="
+                  + offset);
+        }
+        int size = wb.get(key, keyOffset, keySize, buffer);
+        if (size >= 0) {
+          return size;
+        } else {
+          // Collision: key was overriden by another key from some write buffer
           return NOT_FOUND;
-        } else if (result > entrySize) {
-          UnsafeAccess.free(buf);
-          entrySize = (int) result;
-          buf = UnsafeAccess.mallocZeroed(entrySize);
-          result = index.find(key, keyOffset, keySize, hit, buf, entrySize);
-          if (result < 0) {
-            return NOT_FOUND;
-          }
         }
-        // Cached item offset in a data segment
-        offset = format.getOffset(buf);
-        // Check if it is i a write buffer
-        if (offset < -1) {
-          // Check write buffers
-          if (this.writeBatches == null) {
-            throw new RuntimeException(
-                "Corrupted index, returns negative offset, but write batches are disbled: off="
-                    + offset);
-          }
-          WriteBatch wb = this.writeBatches.getWriteBatch((int) offset);
-          if (wb == null) {
-            throw new RuntimeException(
-                "Corrupted index, returns negative offset, but write batch was not found: off="
-                    + offset);
-          }
-          int size = wb.get(key, keyOffset, keySize, buffer);
-          if (size >= 0) {
-            return size;
-          } else {
-            // Collision: key was overriden by another key from some write buffer
-            return NOT_FOUND;
-          }
-        }
-      } while (offset < -1);
+      }
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
       // TODO: actually, not correct
       if (keyValueSize > buffer.remaining()) {
         return keyValueSize;
       }
-      boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
-      if (dataEmbedded) {
-        // Return embedded data
-        int off = format.getEmbeddedOffset();
-        int kSize = Utils.readUVInt(buf + off);
-        if (kSize != keySize) {
+      // segment id
+      int sid = (int) format.getSegmentId(buf);
+      // Read the data
+      Segment s = this.dataSegments[sid];
+      if (s == null || !s.isValid()) {
+        return NOT_FOUND;
+      }
+      int res = NOT_FOUND;
+      try {
+        s.readLock();
+        // Check if scavenger removed this object or moved it to another segment
+        int id = this.index.getSegmentId(key, keyOffset, keySize);
+        if (id < 0) {
           return NOT_FOUND;
         }
-        int kSizeSize = Utils.sizeUVInt(kSize);
-        off += kSizeSize;
-        int vSize = Utils.readUVInt(buf + off);
-        int vSizeSize = Utils.sizeUVInt(vSize);
-        off += vSizeSize;
-        if (!Utils.equals(key, keyOffset, keySize, buf + off, kSize)) {
-          return NOT_FOUND;
+        if (id != sid) {
+          s.readUnlock();
+          return get(key, keyOffset, keySize, hit, buffer);
         }
-        off -= kSizeSize + vSizeSize;
-        // Copy data to buffer
-        UnsafeAccess.copy(buf + off, buffer, keyValueSize);
-        return keyValueSize;
-      } else {
-        // Cached item offset in a data segment
-        // long offset = format.getOffset(buf);
-        // segment id
-        int sid = (int) format.getSegmentId(buf);
         // Read the data
-        Segment s = this.dataSegments[sid];
-        if (s == null || !s.isValid()) {
-          return NOT_FOUND;
-        }
-        // Make up to 3 attempts
-        int maxAttempts = 3;
-        int attempt = 0;
-        int res = NOT_FOUND;
-        while (attempt++ < maxAttempts) {
-          try {
-            s.readLock();
-            // Check if scavenger removed this object or moved it to another segment
-            int id = this.index.getSegmentId(key, keyOffset, keySize);
-            if (id < 0) {
-              return NOT_FOUND;
-            }
-            if (id != sid) {
-              s.readUnlock();
-              return get(key, keyOffset, keySize, hit, buffer);
-            }
-            // Read the data
-            res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer);
-            if (res == READ_ERROR) {
-              continue;
-            }
-            return res;
-          } finally {
-            s.readUnlock();
-          }
-        }
+        res = get(sid, offset, keyValueSize, key, keyOffset, keySize, buffer);
         if (res == READ_ERROR) {
           this.totalFailedReads.incrementAndGet();
         }
+        return res;
+      } finally {
+        s.readUnlock();
       }
-      return NOT_FOUND;
     } finally {
       UnsafeAccess.free(buf);
     }
   }
+
 
   /**
    * Get item into a given byte buffer
@@ -1295,56 +1102,33 @@ public abstract class IOEngine implements Persistent {
       }
       // This call returns TOTAL size: key + value + kSize + vSize
       int keyValueSize = format.getKeyValueSize(buf);
+      // Cached item offset in a data segment
+      long offset = format.getOffset(buf);
+      // segment id
+      int sid = (int) format.getSegmentId(buf);
+      // Read the data
+      Segment s = this.dataSegments[sid];
+      if (s == null || !s.isValid()) {
+        return NOT_FOUND;
+      }
 
-      boolean dataEmbedded = this.dataEmbedded && (keyValueSize < this.maxEmbeddedSize);
-      if (dataEmbedded) {
-        // Return embedded data
-        int off = format.getEmbeddedOffset();
-        int kSize = Utils.readUVInt(buf + off);
-        if (kSize != keySize) {
+      try {
+        s.readLock();
+        // Check if scavenger removed this object or moved it to another segment
+        int id = this.index.getSegmentId(key, keyOffset, keySize);
+        if (id < 0) {
           return NOT_FOUND;
         }
-        int kSizeSize = Utils.sizeUVInt(kSize);
-        off += kSizeSize;
-        int vSize = Utils.readUVInt(buf + off);
-        int vSizeSize = Utils.sizeUVInt(vSize);
-        off += vSizeSize;
-        if (!Utils.equals(key, keyOffset, keySize, buf + off, kSize)) {
-          return NOT_FOUND;
-        }
-        off -= kSizeSize + vSizeSize;
-        // Copy data to buffer
-        UnsafeAccess.copy(buf + off, buffer, keyValueSize);
-        return keyValueSize;
-      } else {
-        // Cached item offset in a data segment
-        long offset = format.getOffset(buf);
-        // segment id
-        int sid = (int) format.getSegmentId(buf);
-        // Read the data
-        Segment s = this.dataSegments[sid];
-        if (s == null || !s.isValid()) {
-          return NOT_FOUND;
-        }
-
-        try {
-          s.readLock();
-          // Check if scavenger removed this object or moved it to another segment
-          int id = this.index.getSegmentId(key, keyOffset, keySize);
-          if (id < 0) {
-            return NOT_FOUND;
-          }
-          if (id != sid) {
-            s.readUnlock();
-            return getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer);
-          }
-          // Read the data
-          int res = getRange(sid, offset, keyValueSize, key, keyOffset, keySize, rangeStart,
-            rangeSize, buffer);
-          return res;
-        } finally {
+        if (id != sid) {
           s.readUnlock();
+          return getRange(key, keyOffset, keySize, rangeStart, rangeSize, hit, buffer);
         }
+        // Read the data
+        int res = getRange(sid, offset, keyValueSize, key, keyOffset, keySize, rangeStart,
+          rangeSize, buffer);
+        return res;
+      } finally {
+        s.readUnlock();
       }
     } finally {
       UnsafeAccess.free(buf);
@@ -1374,7 +1158,6 @@ public abstract class IOEngine implements Persistent {
       return result;
     }
     if (result == READ_ERROR) {
-      // this.totalFailedReads.incrementAndGet();
       return result;
     }
     if (!isMemory()) {
@@ -1383,7 +1166,7 @@ public abstract class IOEngine implements Persistent {
       return NOT_FOUND;
     }
   }
-
+  
   /**
    * Get cached item range
    * @param id data segment id to read from
@@ -1451,7 +1234,7 @@ public abstract class IOEngine implements Persistent {
     }
     return NOT_FOUND;
   }
-
+  
   /**
    * Get cached item range
    * @param id data segment id to read from
@@ -1808,6 +1591,7 @@ public abstract class IOEngine implements Persistent {
   protected abstract int getInternal(int id, long offset, int size, byte[] key, int keyOffset,
       int keySize, byte[] buffer, int bufOffset) throws IOException;
 
+ 
   /**
    * Get cached item from underlying IOEngine implementation
    * @param id segment id
@@ -1823,6 +1607,7 @@ public abstract class IOEngine implements Persistent {
   protected abstract int getInternal(int id, long offset, int size, long keyPtr, int keySize,
       byte[] buffer, int bufOffset) throws IOException;
 
+  
   /**
    * Get cached item from underlying IOEngine implementation
    * @param id segment id
@@ -1838,6 +1623,7 @@ public abstract class IOEngine implements Persistent {
   protected abstract int getInternal(int id, long offset, int size, byte[] key, int keyOffset,
       int keySize, ByteBuffer buffer) throws IOException;
 
+  
   /**
    * Get cached item from underlying IOEngine implementation
    * @param id segment id
@@ -1951,7 +1737,7 @@ public abstract class IOEngine implements Persistent {
     }
     return NOT_FOUND;
   }
-
+  
   /**
    * Get cached item range
    * @param id data segment id to read from
@@ -1992,6 +1778,8 @@ public abstract class IOEngine implements Persistent {
    * @param id data segment id to read from
    * @param offset data segment offset
    * @param size size of an item in bytes
+   * @param keyPtr key address
+   * @param keySize key size
    * @param buffer byte buffer to load data to
    * @return true - on success, false - otherwise
    */
@@ -2016,7 +1804,7 @@ public abstract class IOEngine implements Persistent {
     }
     return NOT_FOUND;
   }
-
+  
   /**
    * Get cached item range
    * @param id data segment id to read from

@@ -835,6 +835,17 @@ public class Builder {
     conf.setVictimEvictAll(cacheName, b);
     return this;
   }
+  
+  /**
+   * With cache asynchronous I/O pool size
+   * @param size pool size
+   * @return builder instance
+   */
+  public Builder withAsyncIOPoolSize(int size) {
+    conf.setAsyncIOPoolSize(cacheName, size);
+    return this;
+  }
+  
   /**
    * Build cache
    * @return

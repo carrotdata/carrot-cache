@@ -68,7 +68,7 @@ public abstract class TestCacheMultithreadedZipfBase {
 
   protected int maxKeySize = 32;
 
-  protected int maxValueSize = 5000;
+  protected int maxValueSize = 10000;
 
   protected int numRecords = 10;
 
