@@ -42,6 +42,9 @@ public abstract class FutureResult<T> {
 
   protected CompletionHandler handler;
   
+  protected Object attachment;
+  
+  
   public FutureResult(T buffer, int offset) {
     this.buffer = buffer;
     this.offset = offset;
@@ -55,9 +58,18 @@ public abstract class FutureResult<T> {
     this.result = 0;
     this.t = null;
     this.submitted = false;
+    this.attachment = null;
  
   }
 
+  public Object getAttachment() {
+    return this.attachment;
+  }
+  
+  public void setAttachment(Object o) {
+    this.attachment = o;
+  }
+  
   public void setCompletionHandler(CompletionHandler handler) {
     this.handler = handler;
   }
@@ -85,15 +97,15 @@ public abstract class FutureResult<T> {
     return submitted;
   }
 
-  public T buffer() {
+  public T getBuffer() {
     return this.buffer;
   }
 
-  public int offset() {
+  public int getOffset() {
     return this.offset;
   }
 
-  public int result() {
+  public int getResult() {
     return this.result;
   }
 
@@ -101,7 +113,7 @@ public abstract class FutureResult<T> {
     this.result = total;
   }
 
-  public boolean failed() {
+  public boolean isFailed() {
     return this.t != null;
   }
 

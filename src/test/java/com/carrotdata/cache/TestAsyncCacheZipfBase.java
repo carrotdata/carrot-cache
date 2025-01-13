@@ -428,9 +428,9 @@ public abstract class TestAsyncCacheZipfBase {
         }
         queue.remove(found);
         buffer = (FutureResultByteArray) found.buffer;
-        byte[] buf = buffer.buffer();
+        byte[] buf = buffer.getBuffer();
         int index = found.index;
-        int valueSize = buffer.result();
+        int valueSize = buffer.getResult();
         Result res = verifyBytes(index, buf, valueSize);
         buffer.reset();
 
@@ -443,8 +443,8 @@ public abstract class TestAsyncCacheZipfBase {
     this.cache.getAsync(key, 0, key.length, true, buffer);
     
     if (buffer.isDone()) {
-      byte[] buf = buffer.buffer();
-      int valueSize = buffer.result();
+      byte[] buf = buffer.getBuffer();
+      int valueSize = buffer.getResult();
       Result res = verifyBytes(buf, n, valueSize);
       buffer.reset();
       ((Queue<FutureResultByteArray>)buffers.get()).offer(buffer);
@@ -501,9 +501,9 @@ public abstract class TestAsyncCacheZipfBase {
         }
         queue.remove(found);
         buffer = (FutureResultByteArray) found.buffer;
-        byte[] buf = buffer.buffer();
+        byte[] buf = buffer.getBuffer();
         int index = found.index;
-        int valueSize = buffer.result();
+        int valueSize = buffer.getResult();
         Result res = verifyBytesNative(index, buf, valueSize);
         buffer.reset();
         if (found.ptr != 0) {
@@ -519,8 +519,8 @@ public abstract class TestAsyncCacheZipfBase {
     long keyPtr = UnsafeAccess.allocAndCopy(key, 0, key.length);
     this.cache.getAsync(keyPtr, keySize, true, buffer);
     if (buffer.isDone()) {
-      byte[] buf = buffer.buffer();
-      int valueSize = buffer.result();
+      byte[] buf = buffer.getBuffer();
+      int valueSize = buffer.getResult();
       Result res = verifyBytesNative(buf, n, valueSize); 
       buffer.reset();
       ((Queue<FutureResultByteArray>)buffers.get()).offer(buffer);
@@ -647,9 +647,9 @@ public abstract class TestAsyncCacheZipfBase {
         if (found == null) continue;
         queue.remove(found);
         buffer = (FutureResultByteBuffer) found.buffer;
-        ByteBuffer buf = buffer.buffer();
+        ByteBuffer buf = buffer.getBuffer();
         int index = found.index;
-        int valueSize = buffer.result();
+        int valueSize = buffer.getResult();
         Result res = verifyMemory(buf, index, valueSize);
         buffer.reset();
         retValue.add(new ResultPair(index, res));
@@ -661,8 +661,8 @@ public abstract class TestAsyncCacheZipfBase {
     int keySize = key.length;
     this.cache.getAsync(key, 0, keySize, true, buffer);
     if (buffer.isDone()) {
-      ByteBuffer buf = buffer.buffer();
-      int valueSize = buffer.result();
+      ByteBuffer buf = buffer.getBuffer();
+      int valueSize = buffer.getResult();
       Result res = verifyMemory(buf, n, valueSize);
       buffer.reset();
       ((Queue<FutureResultByteBuffer>)buffers.get()).offer(buffer);
@@ -761,9 +761,9 @@ public abstract class TestAsyncCacheZipfBase {
         if (found == null) continue;
         queue.remove(found);
         buffer = (FutureResultByteBuffer) found.buffer;
-        ByteBuffer buf = buffer.buffer();
+        ByteBuffer buf = buffer.getBuffer();
         int index = found.index;
-        int valueSize = buffer.result();
+        int valueSize = buffer.getResult();
         Result res = verifyMemoryNative(buf, index, valueSize);
         buffer.reset();
         if (found.ptr != 0) {
@@ -779,8 +779,8 @@ public abstract class TestAsyncCacheZipfBase {
     long keyPtr = UnsafeAccess.allocAndCopy(key, 0, keySize);
     this.cache.getAsync(key, 0, keySize, true, buffer);
     if (buffer.isDone()) {
-      ByteBuffer buf = buffer.buffer();
-      int valueSize = buffer.result();
+      ByteBuffer buf = buffer.getBuffer();
+      int valueSize = buffer.getResult();
       Result res = verifyMemoryNative(buf, n, valueSize);
       buffer.reset();
       ((Queue<FutureResultByteBuffer>)buffers.get()).offer(buffer);

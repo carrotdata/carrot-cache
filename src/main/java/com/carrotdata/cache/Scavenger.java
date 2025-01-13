@@ -779,7 +779,7 @@ public class Scavenger implements Runnable {
           }
         }
         // Update storage usage (uncompressed)
-        int kvSize = Utils.kvSize(keySize, valSize);
+        //int kvSize = Utils.kvSize(keySize, valSize);
         sc.next();
       }
     } finally {

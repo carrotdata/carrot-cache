@@ -422,9 +422,9 @@ public abstract class TestAsyncCacheMultithreadedZipfBase {
         }
         queue.remove(found);
         buffer = (FutureResultByteArray) found.buffer;
-        byte[] buf = buffer.buffer();
+        byte[] buf = buffer.getBuffer();
         int index = found.index;
-        int kvSize = buffer.result();
+        int kvSize = buffer.getResult();
         Result res = verifyBytes(index, buf, kvSize);
         buffer.reset();
 
@@ -438,8 +438,8 @@ public abstract class TestAsyncCacheMultithreadedZipfBase {
 
     this.cache.getKeyValueAsync(key, 0, key.length, true, buffer);
     if (buffer.isDone()) {
-      byte[] buf = buffer.buffer();
-      int kvSize = buffer.result();
+      byte[] buf = buffer.getBuffer();
+      int kvSize = buffer.getResult();
       Result res = verifyBytes(key, buf, valueSize, kvSize);
       buffer.reset();
       ((Queue<FutureResultByteArray>)buffers.get()).offer(buffer);
@@ -507,9 +507,9 @@ public abstract class TestAsyncCacheMultithreadedZipfBase {
         }
         queue.remove(found);
         buffer = (FutureResultByteArray) found.buffer;
-        byte[] buf = buffer.buffer();
+        byte[] buf = buffer.getBuffer();
         int index = found.index;
-        int kvSize = buffer.result();
+        int kvSize = buffer.getResult();
         Result res = verifyBytesNative(index, buf, kvSize);
         buffer.reset();
         if (found.ptr != 0) {
@@ -526,8 +526,8 @@ public abstract class TestAsyncCacheMultithreadedZipfBase {
     long keyPtr = UnsafeAccess.allocAndCopy(key, 0, key.length);
     this.cache.getKeyValueAsync(keyPtr, keySize, true, buffer);
     if (buffer.isDone()) {
-      byte[] buf = buffer.buffer();
-      int kvSize = buffer.result();
+      byte[] buf = buffer.getBuffer();
+      int kvSize = buffer.getResult();
       Result res = verifyBytesNative(keyPtr, keySize, buf, valueSize, kvSize); 
       buffer.reset();
       ((Queue<FutureResultByteArray>)buffers.get()).offer(buffer);
@@ -668,9 +668,9 @@ public abstract class TestAsyncCacheMultithreadedZipfBase {
         if (found == null) continue;
         queue.remove(found);
         buffer = (FutureResultByteBuffer) found.buffer;
-        ByteBuffer buf = buffer.buffer();
+        ByteBuffer buf = buffer.getBuffer();
         int index = found.index;
-        int kvSize = buffer.result();
+        int kvSize = buffer.getResult();
         Result res = verifyMemory(index, buf, kvSize);
         buffer.reset();
         retValue.add(new ResultPair(index, res));
@@ -683,8 +683,8 @@ public abstract class TestAsyncCacheMultithreadedZipfBase {
     int keySize = key.length;
     this.cache.getKeyValueAsync(key, 0, keySize, true, buffer);
     if (buffer.isDone()) {
-      ByteBuffer buf = buffer.buffer();
-      int kvSize = buffer.result();
+      ByteBuffer buf = buffer.getBuffer();
+      int kvSize = buffer.getResult();
       Result res = verifyMemory(key, buf, valueSize, kvSize);
       buffer.reset();
       ((Queue<FutureResultByteBuffer>)buffers.get()).offer(buffer);
@@ -803,9 +803,9 @@ public abstract class TestAsyncCacheMultithreadedZipfBase {
         if (found == null) continue;
         queue.remove(found);
         buffer = (FutureResultByteBuffer) found.buffer;
-        ByteBuffer buf = buffer.buffer();
+        ByteBuffer buf = buffer.getBuffer();
         int index = found.index;
-        int kvSize = buffer.result();
+        int kvSize = buffer.getResult();
         Result res = verifyMemoryNative(index, buf, kvSize);
         buffer.reset();
         if (found.ptr != 0) {
@@ -822,8 +822,8 @@ public abstract class TestAsyncCacheMultithreadedZipfBase {
     long keyPtr = UnsafeAccess.allocAndCopy(key, 0, keySize);
     this.cache.getKeyValueAsync(key, 0, keySize, true, buffer);
     if (buffer.isDone()) {
-      ByteBuffer buf = buffer.buffer();
-      int kvSize = buffer.result();
+      ByteBuffer buf = buffer.getBuffer();
+      int kvSize = buffer.getResult();
       Result res = verifyMemoryNative(keyPtr, keySize, buf, valueSize, kvSize);
       buffer.reset();
       ((Queue<FutureResultByteBuffer>)buffers.get()).offer(buffer);

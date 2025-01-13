@@ -77,6 +77,8 @@ public final class CompressedBlockMemorySegmentScanner implements SegmentScanner
    * Compression codec
    */
   private CompressionCodec codec;
+  
+  private long segmentSize ;
 
   /*
    * Private constructor
@@ -87,6 +89,7 @@ public final class CompressedBlockMemorySegmentScanner implements SegmentScanner
       throw new RuntimeException("segment is not sealed");
     }
     this.segment = s;
+    this.segmentSize = s.getSegmentDataSize();
     s.readLock();
     // Allocate internal buffer
     this.bufferSize = 1 << 16;
@@ -105,39 +108,51 @@ public final class CompressedBlockMemorySegmentScanner implements SegmentScanner
     this.bufPtr = UnsafeAccess.malloc(this.bufferSize);
   }
 
-  @SuppressWarnings("unused")
-  private void nextBlock() {
-    if (this.currentIndex >= segment.getTotalItems()) {
-      return;
+  private boolean nextBlock() {
+    //if (this.currentIndex >= segment.getTotalItems()) {
+    //  return;
+    //}
+    if (this.offset >= this.segmentSize) {
+      return false;
     }
     long ptr = segment.getAddress();
-    // next blockSize
-    this.blockSize = UnsafeAccess.toInt(ptr + this.offset + SIZE_OFFSET);
-    int dictId = UnsafeAccess.toInt(ptr + this.offset + DICT_VER_OFFSET);
-    int compSize = UnsafeAccess.toInt(ptr + this.offset + COMP_SIZE_OFFSET);
-    checkBuffer(this.blockSize);
-    if (dictId >= 0) {
-      int decompSize = this.codec.decompress(ptr + this.offset + COMP_META_SIZE, compSize,
-        this.bufPtr, this.bufferSize, dictId);
-    } else if (dictId == -1) {
-      UnsafeAccess.copy(ptr + this.offset + COMP_META_SIZE, this.bufPtr, this.blockSize);
-    } else {
-      LOG.error(
-        "Segment size={} offset={} uncompressed={} compressed={} dictId={} index={} total items={}",
-        segment.getSegmentDataSize(), offset, this.blockSize, compSize, dictId, currentIndex,
-        segment.getTotalItems());
-      Thread.dumpStack();
-      throw new RuntimeException();
-      //System.exit(-1);
+    while(this.offset < this.segmentSize) {
+      // next blockSize
+      this.blockSize = UnsafeAccess.toInt(ptr + this.offset + SIZE_OFFSET);
+      int dictId = UnsafeAccess.toInt(ptr + this.offset + DICT_VER_OFFSET);
+      int compSize = UnsafeAccess.toInt(ptr + this.offset + COMP_SIZE_OFFSET);
+      checkBuffer(this.blockSize);
+      if (dictId >= 0) {
+        int decompSize = this.codec.decompress(ptr + this.offset + COMP_META_SIZE, compSize,
+          this.bufPtr, this.bufferSize, dictId);
+        if (decompSize == 0) {
+          // Failed to find dictionary - skip the block
+          this.offset += compSize + COMP_META_SIZE;
+          this.blockOffset = 0;
+          continue;
+        }
+      } else if (dictId == -1) {
+        UnsafeAccess.copy(ptr + this.offset + COMP_META_SIZE, this.bufPtr, this.blockSize);
+        compSize = this.blockSize;
+      } else {
+        LOG.error(
+          "Segment size={} offset={} uncompressed={} compressed={} dictId={} index={} total items={}",
+          segment.getSegmentDataSize(), offset, this.blockSize, compSize, dictId, currentIndex,
+          segment.getTotalItems());
+        Thread.dumpStack();
+        throw new RuntimeException();
+      }
+      // Advance segment offset
+      this.offset += compSize + COMP_META_SIZE;
+      this.blockOffset = 0;
+      return true;
     }
-    // Advance segment offset
-    this.offset += compSize + COMP_META_SIZE;
-    this.blockOffset = 0;
-
+    return false;
   }
 
   public boolean hasNext() {
-    return currentIndex < segment.getTotalItems();
+    //return currentIndex < segment.getTotalItems();
+    return this.offset < this.segmentSize || (this.blockOffset < this.blockSize);
   }
 
   public boolean next() {
@@ -153,7 +168,7 @@ public final class CompressedBlockMemorySegmentScanner implements SegmentScanner
     this.blockOffset += keySize + valueSize;
     this.currentIndex++;
     if (this.blockOffset >= this.blockSize) {
-      nextBlock();
+      return nextBlock();
     }
     return true;
   }

@@ -80,23 +80,23 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
     @Override
     public void complete() {
-      if (future.failed()) {
+      if (future.isFailed()) {
         return;
       }
-      int result = future.result();
+      int result = future.getResult();
       if (result < 0) {
         return;
       }
       int valueSize = 0;
       if (future instanceof FutureResultByteBuffer) {
         if (result >= 0 && result <= available) {
-          ByteBuffer buf = (ByteBuffer) future.buffer();
+          ByteBuffer buf = (ByteBuffer) future.getBuffer();
           valueSize = Utils.extractValue(buf);
         }
       } else {
         if (result >= 0 && result <= available) {
-          byte[] buf = (byte[]) future.buffer();
-          int offset = future.offset();
+          byte[] buf = (byte[]) future.getBuffer();
+          int offset = future.getOffset();
           valueSize = Utils.extractValue(buf, offset);
         }
       }
@@ -1432,8 +1432,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     try {
       activeRequests.incrementAndGet();
-      byte[] buffer = future.buffer();
-      int bufOffset = future.offset();
+      byte[] buffer = future.getBuffer();
+      int bufOffset = future.getOffset();
       boolean submitted = future.isSubmitted();
       boolean asyncInChain = isAsyncPreferredSome();
       if (submitted || !asyncInChain) {
@@ -1737,8 +1737,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     try {
       activeRequests.incrementAndGet();
-      byte[] buffer = future.buffer();
-      int bufOffset = future.offset();
+      byte[] buffer = future.getBuffer();
+      int bufOffset = future.getOffset();
       boolean submitted = future.isSubmitted();
       boolean asyncInChain = isAsyncPreferredSome();
       if (submitted || !asyncInChain) {
@@ -2341,7 +2341,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     try {
       activeRequests.incrementAndGet();
-      ByteBuffer buffer = future.buffer();
+      ByteBuffer buffer = future.getBuffer();
       int avail = buffer.remaining();
       boolean submitted = future.isSubmitted();
       boolean asyncInChain = isAsyncPreferredSome();
@@ -2633,7 +2633,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     try {
       activeRequests.incrementAndGet();
-      ByteBuffer buffer = future.buffer();
+      ByteBuffer buffer = future.getBuffer();
       int avail = buffer.remaining();
       boolean submitted = future.isSubmitted();
       boolean asyncInChain = isAsyncPreferredSome();

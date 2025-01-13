@@ -27,12 +27,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.Set;
 
 import org.apache.commons.math3.distribution.ZipfDistribution;
 import org.junit.Ignore;
@@ -41,6 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.carrotdata.cache.expire.ExpireSupport;
+
 
 public class TestProjectUtils {
   private static final Logger LOG = LoggerFactory.getLogger(TestProjectUtils.class);
@@ -431,6 +433,182 @@ public class TestProjectUtils {
     UnsafeAccess.theUnsafe.putInt(ptr, 100);
     int v = UnsafeAccess.theUnsafe.getInt(ptr);
     assertEquals(100, v);
+  }
+
+  @Ignore
+  @Test
+  public void subarraySum() {
+    int[] nums = {-1, -1, 1};
+    int k = 0;
+    int total = 0;
+    for (int i = 1; i < nums.length; i++){
+        nums[i] += nums[i-1];
+    }
+
+    HashMap<Integer, ArrayList<Integer>> map = new HashMap<Integer, ArrayList<Integer>>();
+    for(int i = 0; i < nums.length; i++){
+        int s = nums[i];
+        ArrayList<Integer> loc = map.get(s);
+        if (loc == null){
+            loc = new ArrayList<Integer>();
+            map.put(s, loc);
+        }
+        loc.add(i);
+    }
+    Set<Integer> keySet = map.keySet();
+    for(Integer v: keySet){
+        ArrayList<Integer> left = map.get(v);
+        ArrayList<Integer> right = map.get(v + k);
+        if (v == k) total += left.size();
+        if (right != null){
+            final int lsize = left.size();
+            final int rsize = right.size();
+            for(int i1 = 0; i1 < lsize; i1++){
+                final int lv = left.get(i1);
+                if (lv >= right.get(rsize - 1)) {
+                    continue;
+                }
+                for (int i2 = 0; i2 < rsize; i2++){
+                    if (right.get(i2) > lv){
+                        total++;
+                    }
+                }
+            }
+        }
+    }
+    System.out.println(total);
+}
+  @Ignore
+  @Test
+  public void subarraySum1() {
+    int[] nums = {-1, -1, 1}; 
+    int k = 0;
+    int total = 0;
+    for (int i = 1; i < nums.length; i++){
+        nums[i] += nums[i-1];
+    }
+
+    HashMap<Integer, int[]> map = new HashMap<Integer, int[]>();
+    for(int i = 0; i < nums.length; i++){
+        int s = nums[i];
+        int[] loc = map.get(s);
+        if (loc == null){
+            loc = new int[1];
+            map.put(s, loc);
+        } else {
+            int[] nloc = new int[loc.length + 1];
+            System.arraycopy(loc, 0, nloc, 0, loc.length);
+            loc = nloc;
+        }
+        loc[loc.length - 1] = i;
+    }
+    Set<Integer> keySet = map.keySet();
+    for(Integer v: keySet){
+        int[] left = map.get(v);
+        int[] right = map.get(v + k);
+        if (v == k) total += left.length;
+        if (right != null){
+            final int lsize = left.length;
+            final int rsize = right.length;
+            for(int i1 = 0; i1 < lsize; i1++){
+                final int lv = left[i1];
+                if (lv >= right[rsize - 1]) {
+                    continue;
+                }
+                for (int i2 = 0; i2 < rsize; i2++){
+                    if (right[i2] > lv){
+                        total++;
+                    }
+                }
+            }
+        }
+    }
+    System.out.println(total);
+}
+  @Ignore
+  @Test
+  public void subarraySum2() {
+    int[] nums = {1,-1, 0};
+    int k = 0;
+    int total = 0;
+    for (int i = 1; i < nums.length; i++){
+        nums[i] += nums[i-1];
+    }
+    HashMap<Integer, Integer> map = new HashMap<Integer, Integer>();
+    for(int i = 0; i < nums.length; i++){
+        int s = nums[i];
+        Integer loc = map.get(s);
+        if (loc == null){
+            loc = 1;
+        } else {
+            if (k == 0) total += loc;
+            loc++;            
+        }
+        map.put(s, loc);
+
+        if (k != 0) {
+          Integer kloc = map.get(s - k);
+          if (kloc != null) total += kloc;
+        }
+    }
+    total += map.get(k) != null? map.get(k):0;
+    System.out.println(total);
+}
+  
+  
+  byte[][] data;
+  byte[][] copyData;
+  
+  @Ignore
+  @Test
+  public void testJDKCompare() {
+    
+    initData();
+    
+    long sum = 0;
+    long t1 = System.nanoTime();
+    for (int k = 0; k < 100_000; k++) {
+      for (int i = 1; i < data.length; i++) {
+        sum += Arrays.compareUnsigned(data[i], copyData[i]);
+      }
+    }
+    long t2 = System.nanoTime();
+    System.out.println(sum + " in "+(t2 - t1));
+  }
+  
+  @Ignore
+  @Test
+  public void testUtilCompare() {
+    
+    initData();
+    
+    long sum = 0;
+    long t1 = System.nanoTime();
+    for (int k = 0; k < 100_000; k++) {
+      for (int i = 1; i < data.length; i++) {
+        sum += Utils.compareTo(data[i], 0, data[i].length, copyData[i], 0, copyData[i].length);
+      }
+    }
+    long t2 = System.nanoTime();
+    System.out.println(sum + " in "+(t2 - t1));
+  }
+  
+  private void initData() {
+    data = new byte[1000][];
+    Random r = new Random(1);
+    
+    for (int i = 0; i < data.length; i++) {
+      int size = r.nextInt(32) + 32;
+      data[i] = new byte[size];
+      r.nextBytes(data[i]);
+    }
+    copyData = new byte[1000][];
+    for (int i = 0; i < copyData.length; i++) {
+      int size = data[i].length;
+      copyData[i] = new byte[size];
+      System.arraycopy(data[i], 0, copyData[i], 0, size);
+      copyData[i][size -1] = (byte) 0;
+    }
   }
 
   /**

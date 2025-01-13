@@ -17,6 +17,8 @@
  */
 package com.carrotdata.cache.compression.zstd;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -30,6 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -161,6 +164,28 @@ public class ZstdCompressionCodec implements CompressionCodec {
   /** Are dictionaries persistent */
   private boolean persistentDicts;
   
+  /** Training check interval in milliseconds */
+  private long retrainCheckInterval;
+  
+  /** Retraining trigger value */
+  private double retrainTriggerValue;
+  
+  /** Last training finish time */
+  private long lastTrainFinishedTime;
+  
+  private boolean adaptiveMode;
+  
+  /** Maximum compression ratio (moving)*/
+  private volatile double maxCompressionRatio = 1.0d;
+  
+  /** Raw data size */
+  private AtomicLong rawDataSize = new AtomicLong();
+  
+  /** Compressed data size */
+  private AtomicLong compDataSize = new AtomicLong();
+  
+  private int maxDictionaries;
+  
   /**
    * Codec statistics
    */
@@ -175,6 +200,9 @@ public class ZstdCompressionCodec implements CompressionCodec {
     int compressedSize = currentCtx.compressNativeByteArray(buf, 0, buf.length, ptr, len);
     long endTime = System.nanoTime();
 
+    rawDataSize.addAndGet(len);
+    compDataSize.addAndGet(compressedSize);
+    updateMaxCompression();
     if (compressedSize >= len) {
       // do not copy
       return compressedSize;
@@ -194,7 +222,9 @@ public class ZstdCompressionCodec implements CompressionCodec {
     long startTime = System.nanoTime();
     int compressedSize = currentCtx.compressNativeNative(buffer, bufferSize, ptr, len);
     long endTime = System.nanoTime();
-
+    rawDataSize.addAndGet(len);
+    compDataSize.addAndGet(compressedSize);
+    updateMaxCompression();
     this.stats.getCompressedRaw().addAndGet(len);
     this.stats.getCompressed().addAndGet(compressedSize);
     this.stats.getCompressionTime().addAndGet(endTime - startTime);
@@ -202,9 +232,29 @@ public class ZstdCompressionCodec implements CompressionCodec {
     return compressedSize;
   }
 
+  
+  private void updateMaxCompression() {
+    double raw = rawDataSize.get();
+    if (raw < 1_000_000) return;
+    double compressed = compDataSize.get();
+    double r = raw / compressed;
+    if (r > maxCompressionRatio) {
+      maxCompressionRatio = r;
+    }
+  }
+  
+  private double getCompRatio() {
+    double raw = rawDataSize.get();
+    if (raw < 1_000_000) return 1.d;
+    double compressed = compDataSize.get();
+    double r = raw / compressed;
+    return r;
+  }
+  
   private ZstdCompressCtx getCompressContext(int dictId) {
     // compression context using current dictionary id
     HashMap<Integer, ZstdCompressCtx> ctxMap = compContextMap.get().get(this.cacheName);
+    checkCleanupCompContexts(ctxMap);
     // This is thread local reference
     if (ctxMap == null) {
       ctxMap = new HashMap<Integer, ZstdCompressCtx>();
@@ -239,6 +289,40 @@ public class ZstdCompressionCodec implements CompressionCodec {
     return currentCtxt;
   }
 
+  private void checkCleanupCompContexts(HashMap<Integer, ZstdCompressCtx> ctxMap) {
+    if (ctxMap == null || ctxMap.size() < this.maxDictionaries) {
+      return;
+    }
+    int startId = this.currentDictVersion - this.maxDictionaries;
+    for(int id = startId; id >= 0; id--) {
+      ZstdCompressCtx ctx = ctxMap.get(id);
+      if (ctx != null) {
+        ctx.close();
+        ctxMap.remove(id);
+        LOG.trace("Deleted compression context object for {}", id);
+      } else {
+        break;
+      }
+    }
+  }
+  
+  private void checkCleanupDecompContexts(HashMap<Integer, ZstdDecompressCtx> ctxMap) {
+    if (ctxMap == null || ctxMap.size() < this.maxDictionaries) {
+      return;
+    }
+    int startId = this.currentDictVersion - this.maxDictionaries;
+    for(int id = startId; id >= 0; id--) {
+      ZstdDecompressCtx ctx = ctxMap.get(id);
+      if (ctx != null) {
+        ctx.close();
+        ctxMap.remove(id);
+        LOG.trace("Deleted decompression context object for {}", id);
+      } else {
+        break;
+      }
+    }
+  }
+  
   @Override
   public int getCurrentDictionaryVersion() {
     return this.currentDictVersion;
@@ -247,6 +331,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
   private ZstdDecompressCtx getDecompressContext(int dictId) {
     // compression context using current dictionary id
     HashMap<Integer, ZstdDecompressCtx> ctxMap = decompContextMap.get().get(this.cacheName);
+    checkCleanupDecompContexts(ctxMap);
     // This is thread local reference
     if (ctxMap == null) {
       ctxMap = new HashMap<Integer, ZstdDecompressCtx>();
@@ -354,6 +439,10 @@ public class ZstdCompressionCodec implements CompressionCodec {
     this.dictionaryEnabled = config.isCacheCompressionDictionaryEnabled(cacheName);
     this.trainingAsync = config.isCacheCompressionDictionaryTrainingAsync(cacheName);
     this.persistentDicts = config.isSaveOnShutdown(cacheName);
+    this.retrainCheckInterval = config.getCompressionRetrainInterval(cacheName) * 1000L;
+    this.retrainTriggerValue = config.getCompressionRetrainTriggerValue(cacheName);
+    this.adaptiveMode = config.isAdaptiveCompressionEnabled(cacheName);
+    this.maxDictionaries = config.getCompressionMaxDictionaries(cacheName);
     String dictDir = config.getCacheDictionaryDir(cacheName);
     File dir = new File(dictDir);
     this.stats = new Stats(compLevel, dictSize, Type.ZSTD);
@@ -417,7 +506,28 @@ public class ZstdCompressionCodec implements CompressionCodec {
     fos.write(data);
     fos.close();
   }
-
+  
+  private void checkMaxDictionaries() throws IOException {
+    CacheConfig config = CacheConfig.getInstance();
+    String dictDir = config.getCacheDictionaryDir(cacheName);
+    File dir = new File(dictDir);
+    File[] files = dir.listFiles();
+    Map<Integer, byte[]> dictMap = dictCacheMap.get(this.cacheName);
+    if (files.length > this.maxDictionaries) {
+      int startId = this.currentDictVersion - this.maxDictionaries;
+      for (int id = startId; id >=0; id--) {
+        String name = makeDictFileName(id);
+        File dictFile = new File(dir, name);
+        if (dictFile.delete()) {
+          dictMap.remove(id);
+          LOG.debug("Deleted dictionary file {}", name);
+        } else {
+          break;
+        }
+      }
+    }
+  }
+  
   private String makeDictFileName(int id) {
     return "dict." + id;
   }
@@ -458,11 +568,17 @@ public class ZstdCompressionCodec implements CompressionCodec {
   @Override
   public void save(OutputStream os) throws IOException {
     stats.save(os);
+    DataOutputStream dos = Utils.toDataOutputStream(os);
+    dos.writeLong(lastTrainFinishedTime);
+    dos.writeDouble(maxCompressionRatio);
   }
 
   @Override
   public void load(InputStream is) throws IOException {
     stats.load(is);
+    DataInputStream dis = Utils.toDataInputStream(is);
+    this.lastTrainFinishedTime = dis.readLong();
+    this.maxCompressionRatio = dis.readDouble();
   }
 
   private synchronized void startTraining() {
@@ -522,6 +638,11 @@ public class ZstdCompressionCodec implements CompressionCodec {
       return false;
     }
     boolean required = this.currentDictVersion == 0;
+    if (this.adaptiveMode && !required && (System.currentTimeMillis() - this.lastTrainFinishedTime) > this.retrainCheckInterval) {
+      // check again
+      double r = getCompRatio();
+      required = r * this.retrainTriggerValue < this.maxCompressionRatio;
+    }
     if (required && !this.trainingInProgress.get()) {
       startTraining();
     }
@@ -571,10 +692,15 @@ public class ZstdCompressionCodec implements CompressionCodec {
       this.finalizingTraining.set(false);
       try {
         saveDictionary(this.currentDictVersion, dict);
+        checkMaxDictionaries();
       } catch (IOException e) {
         // TODO Auto-generated catch block
         e.printStackTrace();
       }
+      this.lastTrainFinishedTime = System.currentTimeMillis();
+      this.maxCompressionRatio = 1.0;
+      this.rawDataSize.set(0);
+      this.compDataSize.set(0);
       LOG.debug("Finished training in {} ms", System.currentTimeMillis() - start);
     };
     if (this.trainingAsync) {

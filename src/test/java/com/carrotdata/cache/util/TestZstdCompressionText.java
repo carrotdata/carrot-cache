@@ -43,7 +43,7 @@ public class TestZstdCompressionText {
 
   @SuppressWarnings("unused")
   public static void main(String[] args) throws IOException {
-    String file = "/Users/vrodionov/Downloads/silesia/dickens";
+    String file = "/Users/vrodionov/Development/carrotdata/data/dickens";
 
     // Load all files
     int totalSize = 0;
@@ -70,7 +70,7 @@ public class TestZstdCompressionText {
     compContext.loadDict(dictCompress);
     compContext.setLevel(COMP_LEVEL);
 
-    int n = 80;
+    int n = 1000;
     LOG.info("Group of:{}", n);
     List<byte[]> group = groupOf(trainingList, n);
 
@@ -95,7 +95,7 @@ public class TestZstdCompressionText {
 
     decompressByteArrayNative(decompContext, compresed, sizes);
 
-    byte[] buf = new byte[1 << 16];
+    byte[] buf = new byte[1 << 20];
     decompress(decompContext, compresed, sizes, buf);
 
     compContext.close();
@@ -178,7 +178,7 @@ public class TestZstdCompressionText {
     long totalSize = 0;
     long compSize = 0;
     long src = UnsafeAccess.malloc(100000);
-    byte[] dst = new byte[100000];
+    byte[] dst = new byte[1000000];
     long start = System.nanoTime();
 
     for (byte[] b : source) {
@@ -259,15 +259,15 @@ public class TestZstdCompressionText {
       List<byte[]> compressed, List<Integer> sizes) {
     ArrayList<byte[]> result = new ArrayList<byte[]>(compressed.size());
     long decompSize = 0;
-    long src = UnsafeAccess.malloc(100000);
-    long dst = UnsafeAccess.malloc(100000);
+    long src = UnsafeAccess.malloc(1000000);
+    long dst = UnsafeAccess.malloc(1000000);
 
     long start = System.nanoTime();
     long total = 0;
     for (byte[] b : compressed) {
       UnsafeAccess.copy(b, 0, src, b.length);
       long t1 = System.nanoTime();
-      int size = context.decompressNativeNative(dst, 100000, src, b.length);
+      int size = context.decompressNativeNative(dst, 1000000, src, b.length);
       long t2 = System.nanoTime();
       total += t2 - t1;
       byte[] db = new byte[size];
@@ -289,15 +289,15 @@ public class TestZstdCompressionText {
       List<byte[]> compressed, List<Integer> sizes) {
     ArrayList<byte[]> result = new ArrayList<byte[]>(compressed.size());
     long decompSize = 0;
-    long src = UnsafeAccess.malloc(100000);
-    byte[] dst = new byte[100000];
+    long src = UnsafeAccess.malloc(1000000);
+    byte[] dst = new byte[1000000];
 
     long start = System.nanoTime();
 
     for (byte[] b : compressed) {
       UnsafeAccess.copy(b, 0, src, b.length);
 
-      int size = context.decompressNativeByteArray(dst, 0, 100000, src, b.length);
+      int size = context.decompressNativeByteArray(dst, 0, 1000000, src, b.length);
       byte[] db = new byte[size];
       System.arraycopy(dst, 0, db, 0, size);
       decompSize += db.length;
@@ -315,15 +315,15 @@ public class TestZstdCompressionText {
       List<byte[]> compressed, List<Integer> sizes) {
     ArrayList<byte[]> result = new ArrayList<byte[]>(compressed.size());
     long decompSize = 0;
-    long src = UnsafeAccess.malloc(100000);
-    long dst = UnsafeAccess.malloc(100000);
+    long src = UnsafeAccess.malloc(1000000);
+    long dst = UnsafeAccess.malloc(1000000);
 
     long start = System.nanoTime();
 
     for (byte[] b : compressed) {
       UnsafeAccess.copy(b, 0, src, b.length);
 
-      int size = context.decompressByteArrayNative(dst, 100000, b, 0, b.length);
+      int size = context.decompressByteArrayNative(dst, 1000000, b, 0, b.length);
       byte[] db = new byte[size];
       UnsafeAccess.copy(dst, db, 0, size);
       decompSize += db.length;

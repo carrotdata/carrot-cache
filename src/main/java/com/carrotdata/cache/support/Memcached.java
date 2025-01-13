@@ -310,6 +310,10 @@ public class Memcached {
     return mainCache;
   }
 
+  public boolean isAsyncPreferred() {
+    return this.cache.isAsyncPreferredSome();
+  }
+  
   /************** Storage commands ******************/
 
   /**

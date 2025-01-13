@@ -847,6 +847,46 @@ public class Builder {
   }
   
   /**
+   * With compression retrain  interval
+   * @param interval retraining interval in seconds
+   * @return builder instance
+   */
+  public Builder withCompressionRetrainInterval(int interval) {
+    conf.setCompressionRetrainInterval(cacheName, interval);
+    return this;
+  }
+  
+  /**
+   * With compression retrain  trigger value
+   * @param interval retraining interval in seconds
+   * @return builder instance
+   */
+  public Builder withCompressionRetrainTriggerValue(double value) {
+    conf.setCompressionRetrainTriggerValue(cacheName, value);
+    return this;
+  }
+  
+  /**
+   * With compression dictionary retraining  enabled (adaptive)
+   * @param value true or false
+   * @return builder instance
+   */
+  public Builder withAdaptiveCompressionEnabled(boolean value) {
+    conf.setAdaptiveCompressionEnabled(cacheName, value);
+    return this;
+  }
+  
+  /**
+   * With compression max active dictionaries (adaptive) 
+   * @param max maximum number of active dictionaries
+   * @return builder instance
+   */
+  public Builder withCompressionMaxDictionaries(int max) {
+    conf.setCompressionMaxDictionaries(cacheName, max);
+    return this;
+  }
+  
+  /**
    * Build cache
    * @return
    * @throws IOException

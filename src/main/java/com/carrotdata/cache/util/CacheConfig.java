@@ -374,6 +374,14 @@ public class CacheConfig {
       "compression.dictionary.training.async";
 
   public final static String CACHE_SAVE_ON_SHUTDOWN_KEY = "save.on.shutdown";
+  
+  public final static String CACHE_COMPRESSION_RETRAIN_INTERVAL_KEY = "compression.retrain.interval";
+  
+  public final static String CACHE_COMPRESSION_RETRAIN_TRIGGER_VALUE_KEY = "compression.retrain.trigger.value";
+  
+  public final static String CACHE_COMPRESSION_RETRAIN_ENABLED_KEY = "compression.retrain.enabled";
+  
+  public final static String CACHE_COMPRESSION_MAX_DICTIONARIES_KEY = "compression.max.dictionaries";
 
   public final static String CACHE_ESTIMATED_AVG_KV_SIZE_KEY = "estimated.avg.kv.size";
 
@@ -607,6 +615,18 @@ public class CacheConfig {
 
   /** Compression codec type */
   public final static String DEFAULT_CACHE_COMPRESSION_CODEC = "ZSTD";
+  
+  public final static int DEFAULT_CACHE_COMPRESSION_RETRAIN_INTERVAL = 3600;// seconds
+  
+  /* Start retraining if current compression ratio falls below of this ratio x maximum compression recorded*/
+  public final static double DEFAULT_CACHE_COMPRESSION_RETRAIN_TRIGGER_VALUE = 0.85;
+  
+  /* Is adaptive compression (dictionary retraining enabled )*/
+  public final static boolean DEFAULT_CACHE_COMPRESSION_RETRAIN_ENABLED = false;
+  
+  /* Maximum number of dictionaries to keep per cache */
+  public final static int DEFAULT_CACHE_COMPRESSION_MAX_DICTIONARIES = 50;
+
 
   /** Compression dictionary training async */
   public final static boolean DEFAULT_CACHE_COMPRESSION_DICTIONARY_TRAINING_ASYNC = true;
@@ -2731,6 +2751,93 @@ public class CacheConfig {
       Boolean.toString(v));
   }
 
+  /**
+   * Gets dictionary retraining interval
+   * @param cacheName cache name
+   * @return interval in seconds
+   */
+  public int getCompressionRetrainInterval(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_RETRAIN_INTERVAL_KEY);
+    if (value != null) {
+      return (int) getLongProperty(value, DEFAULT_CACHE_COMPRESSION_RETRAIN_INTERVAL);
+    }
+    return (int) getLongProperty(CACHE_COMPRESSION_RETRAIN_INTERVAL_KEY, DEFAULT_CACHE_COMPRESSION_RETRAIN_INTERVAL);
+  }
+
+  /**
+   * Sets dictionary retraining interval in seconds
+   * @param cacheName cache name
+   * @param interval interval in seconds
+   */
+  public void setCompressionRetrainInterval(String cacheName, int interval) {
+    props.setProperty(cacheName + "." + CACHE_COMPRESSION_RETRAIN_INTERVAL_KEY, Integer.toString(interval));
+  }
+  
+  /**
+   * Gets dictionary retraining trigger value
+   * @param cacheName cache name
+   * @return value
+   */
+  public double getCompressionRetrainTriggerValue(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_RETRAIN_TRIGGER_VALUE_KEY);
+    if (value != null) {
+      return getDoubleProperty(value, DEFAULT_CACHE_COMPRESSION_RETRAIN_TRIGGER_VALUE);
+    }
+    return getDoubleProperty(CACHE_COMPRESSION_RETRAIN_TRIGGER_VALUE_KEY, DEFAULT_CACHE_COMPRESSION_RETRAIN_TRIGGER_VALUE);
+  }
+
+  /**
+   * Sets dictionary retraining trigger value (threshold)
+   * @param cacheName cache name
+   * @param value trigger value
+   */
+  public void setCompressionRetrainTriggerValue(String cacheName, double value) {
+    props.setProperty(cacheName + "." + CACHE_COMPRESSION_RETRAIN_TRIGGER_VALUE_KEY, Double.toString(value));
+  }
+  
+  
+  /**
+   * Is adaptive compression enabled
+   * @param cacheName cache name
+   * @return true or false
+   */
+  public boolean isAdaptiveCompressionEnabled(String cacheName) {
+    return getBooleanProperty(cacheName + "." + CACHE_COMPRESSION_RETRAIN_ENABLED_KEY,
+      DEFAULT_CACHE_COMPRESSION_RETRAIN_ENABLED);
+  }
+
+  /**
+   * Set adaptive compression enabled
+   * @param cacheName cache name
+   * @param v true or false
+   */
+  public void setAdaptiveCompressionEnabled(String cacheName, boolean v) {
+    props.setProperty(cacheName + "." + CACHE_COMPRESSION_RETRAIN_ENABLED_KEY, Boolean.toString(v));
+  }
+  
+  /**
+   * Gets maximum number of dictionaries to keep (adaptive compression) 
+   * @param cacheName cache name
+   * @return number of dictionaries
+   */
+  public int getCompressionMaxDictionaries(String cacheName) {
+    String value = props.getProperty(cacheName + "." + CACHE_COMPRESSION_MAX_DICTIONARIES_KEY);
+    if (value != null) {
+      return (int) getLongProperty(value, DEFAULT_CACHE_COMPRESSION_MAX_DICTIONARIES);
+    }
+    return (int) getLongProperty(CACHE_COMPRESSION_MAX_DICTIONARIES_KEY, DEFAULT_CACHE_COMPRESSION_MAX_DICTIONARIES);
+  }
+
+  /**
+   * Sets maximum number of dictionaries (adaptive compression)
+   * @param cacheName cache name
+   * @param n max dictionaries
+   */
+  public void setCompressionMaxDictionaries(String cacheName, int n) {
+    props.setProperty(cacheName + "." + CACHE_COMPRESSION_RETRAIN_INTERVAL_KEY, Integer.toString(n));
+  }
+  
+  
   /**
    * Get cache save on shutdown
    * @param cacheName cache name
