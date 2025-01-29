@@ -2931,6 +2931,10 @@ public class CacheConfig {
       Double.toString(factor));
   }
 
+  public boolean exists(String propName, String cacheName) {
+    return props.getProperty(cacheName + "." + propName) != null;
+  }
+  
   public void sanityCheck(String cacheName) {
     long maxSize = getCacheMaximumSize(cacheName);
     if (maxSize > 0 && maxSize < 200 * 1024 * 1024) {

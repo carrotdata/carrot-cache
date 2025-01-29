@@ -289,9 +289,15 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   private void preprocessConf() throws IOException {
     boolean compEnabled = this.conf.isCacheCompressionEnabled(cacheName);
     if (compEnabled) {
-      this.conf.setDataWriter(cacheName, CompressedBlockBatchDataWriter.class.getName());
-      this.conf.setMemoryDataReader(cacheName, CompressedBlockMemoryDataReader.class.getName());
-      this.conf.setFileDataReader(cacheName, CompressedBlockFileDataReader.class.getName());
+      if (!this.conf.exists(CacheConfig.CACHE_DATA_WRITER_IMPL_KEY, cacheName)) {
+        this.conf.setDataWriter(cacheName, CompressedBlockBatchDataWriter.class.getName());
+      }
+      if (!this.conf.exists(CacheConfig.CACHE_MEMORY_DATA_READER_IMPL_KEY, cacheName)) {
+        this.conf.setMemoryDataReader(cacheName, CompressedBlockMemoryDataReader.class.getName());
+      }
+      if (!this.conf.exists(CacheConfig.CACHE_FILE_DATA_READER_IMPL_KEY, cacheName)) {
+        this.conf.setFileDataReader(cacheName, CompressedBlockFileDataReader.class.getName());
+      }
       this.conf.setCacheTLSSupported(cacheName, true);
       initCodec();
     }
@@ -347,11 +353,6 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     this.engine.setListener(this);
     this.type = engine instanceof MemoryIOEngine ? Type.MEMORY : Type.DISK;
     initAll();
-  }
-
-  Cache(CacheConfig conf, String cacheName) {
-    this.cacheName = cacheName;
-    this.conf = conf;
   }
 
   /**

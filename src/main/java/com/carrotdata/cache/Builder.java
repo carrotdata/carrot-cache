@@ -51,8 +51,6 @@ public class Builder {
    * @throws IOException
    */
   public Cache buildMemoryCache() throws IOException {
-    this.conf.sanityCheck(cacheName);
-    this.engine = new MemoryIOEngine(this.cacheName);
     this.conf.addCacheNameType(cacheName, "memory");
     return build();
   }
@@ -63,8 +61,6 @@ public class Builder {
    * @throws IOException
    */
   public Cache buildDiskCache() throws IOException {
-    this.conf.sanityCheck(cacheName);
-    this.engine = new FileIOEngine(this.cacheName);
     this.conf.addCacheNameType(cacheName, "file");
     return build();
   }
@@ -75,8 +71,6 @@ public class Builder {
    * @throws IOException
    */
   public ObjectCache buildObjectMemoryCache() throws IOException {
-    this.conf.sanityCheck(cacheName);
-    this.engine = new MemoryIOEngine(this.cacheName);
     this.conf.addCacheNameType(cacheName, "memory");
     Cache c = build();
     return new ObjectCache(c);
@@ -88,8 +82,6 @@ public class Builder {
    * @throws IOException
    */
   public ObjectCache buildObjectDiskCache() throws IOException {
-    this.conf.sanityCheck(cacheName);
-    this.engine = new FileIOEngine(this.cacheName);
     this.conf.addCacheNameType(cacheName, "file");
     Cache c = build();
     return new ObjectCache(c);
@@ -892,9 +884,7 @@ public class Builder {
    * @throws IOException
    */
   private Cache build() throws IOException {
-    Cache cache = new Cache(conf, cacheName);
-    cache.setIOEngine(this.engine);
-    cache.initAll();
+    Cache cache = new Cache(cacheName, conf);
     return cache;
   }
 
