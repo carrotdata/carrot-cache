@@ -219,7 +219,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   volatile boolean shutdownInProgress = false;
 
   /** Thread - local buffer */
-  ThreadLocal<byte[]> tlsBuffer;
+  ThreadLocal<byte[]> tlsBuffer = new ThreadLocal<byte[]>();
 
   /** Thread-local storage enabled */
   boolean tlsEnabled;
@@ -428,9 +428,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       int size = this.conf.getCacheTLSInitialBufferSize(cacheName);
       this.tlsBufferMaxSize = this.conf.getCacheTLSMaxBufferSize(cacheName);
       byte[] buf = new byte[size];
-      this.tlsBuffer = new ThreadLocal<byte[]>();
       this.tlsBuffer.set(buf);
-    }
+    } 
   }
 
   private byte[] ensureTLSBufferSize(int size) {
@@ -438,7 +437,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
       return null;
     }
     byte[] buf = this.tlsBuffer.get();
-    if (buf.length < size) {
+    if (buf == null || buf.length < size) {
       buf = new byte[size];
       this.tlsBuffer.set(buf);
     }
@@ -1884,6 +1883,14 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return get(key, keyOffset, keySize, true);
   }
 
+  private byte[] getTLSBuffer() {
+    byte[] buf = this.tlsBuffer.get();
+    if (buf == null) {
+      initTLS();
+      buf = this.tlsBuffer.get();
+    }
+    return buf;
+  }
   /**
    * Get cached value only (if any)
    * @param key       key buffer
@@ -1898,7 +1905,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return null;
     }
-    byte[] buffer = this.tlsEnabled ? this.tlsBuffer.get() : new byte[0];
+    byte[] buffer = this.tlsEnabled ? getTLSBuffer() : new byte[0];
     long result = getKeyValue(key, keyOffset, keySize, hit, buffer, 0);
     if (result < 0) {
       return null;
@@ -1968,7 +1975,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     try {
       activeRequests.incrementAndGet();
-      byte[] buffer = this.tlsEnabled ? this.tlsBuffer.get() : new byte[0];
+      byte[] buffer = this.tlsEnabled ? getTLSBuffer() : new byte[0];
       long result = getKeyValue(key, keyOffset, keySize, hit, buffer, 0);
       if (result < 0) {
         return null;
@@ -2029,7 +2036,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return null;
     }
-    byte[] buffer = this.tlsEnabled ? this.tlsBuffer.get() : new byte[0];
+    byte[] buffer = this.tlsEnabled ? getTLSBuffer() : new byte[0];
     long result = getKeyValue(keyPtr, keySize, hit, buffer, 0);
     if (result < 0) {
       return null;
@@ -2083,7 +2090,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     if (this.cacheDisabled) {
       return null;
     }
-    byte[] buffer = this.tlsEnabled ? this.tlsBuffer.get() : new byte[0];
+    byte[] buffer = this.tlsEnabled ? getTLSBuffer() : new byte[0];
     long result = getKeyValue(keyPtr, keySize, hit, buffer, 0);
     if (result < 0) {
       return null;
@@ -3864,6 +3871,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     size += this.engine.getMemoryIndex().getAllocatedMemory();
     long start = System.currentTimeMillis();
     
+    if (this.timer != null) {
+      timer.cancel();
+    }
     stopScavengers();
     
     shutdownAsyncIOPool();
