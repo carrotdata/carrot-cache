@@ -2967,7 +2967,7 @@ public class CacheConfig {
     }
   }
   
-  public boolean isCarrotPropertyName(String name) {
+  public static boolean isCarrotPropertyName(String name) {
     //FIXME
     return true;
   }
