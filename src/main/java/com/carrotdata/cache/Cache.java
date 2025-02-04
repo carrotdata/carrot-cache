@@ -3363,6 +3363,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    */
   private void saveCache() throws IOException {
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
+    LOG.debug("Saving cache to snapshot dir:{}", snapshotDir);
     String file = CacheConfig.CACHE_SNAPSHOT_NAME;
     Path p = Paths.get(snapshotDir, file);
     FileOutputStream fos = new FileOutputStream(p.toFile());
@@ -3830,22 +3831,24 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
   }
 
-  public void registerJMXMetricsSink(String domainName, String type) {
+  public void unregisterJMXMetricsSink() {
+    String domainName = this.conf.getJMXMetricsDomainName();
+    unregisterJMXMetricsSink(domainName);
+  }
+  
+  public void unregisterJMXMetricsSink(String domainName) {
     MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-    ObjectName name;
     try {
-      name = new ObjectName(
-          String.format("%s:name=L1,type=%s,attribute=%s", domainName, type, getName()));
-      CacheJMXSink mbean = new CacheJMXSink(this);
-      mbs.registerMBean(mbean, name);
+      ObjectName name = new ObjectName(String.format("%s:name=%s", domainName, getName()));
+      mbs.unregisterMBean(name);
     } catch (Exception e) {
       LOG.error("Error:", e);
     }
     if (this.victimCache != null) {
-      victimCache.registerJMXMetricsSink(domainName, type);
+      victimCache.unregisterJMXMetricsSink(domainName);
     }
   }
-
+  
   String shutdownStatusMsg;
 
   public String shutdownStatusMsg() {
@@ -3953,6 +3956,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   public static Cache loadCache(String cacheName) throws IOException {
     CacheConfig conf = CacheConfig.getInstance();
     String snapshotDir = conf.getSnapshotDir(cacheName);
+    LOG.debug("Load from snapshot dir:{}", snapshotDir);
     Path p = Paths.get(snapshotDir);
 
     if (Files.notExists(p)) {
