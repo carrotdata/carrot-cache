@@ -26,6 +26,7 @@ import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
+
 import sun.misc.Unsafe;
 
 public class Utils {
@@ -388,29 +389,6 @@ public class Utils {
     return compareTo(address1, length1, address2, length2) == 0;
   }
 
-  /**
-   * TODO: THIS METHOD IS UNSAFE??? CHECK IT Read unsigned VarInt
-   * @param ptr address to read from
-   * @return int value
-   */
-  public static int readUVInt(long ptr) {
-    int v1 = UnsafeAccess.toByte(ptr) & 0xff;
-
-    int cont = v1 >>> 7; // either 0 or 1
-    ptr += cont;
-    v1 &= 0x7f; // set 8th bit 0
-    int v2 = (byte) (UnsafeAccess.toByte(ptr) * cont) & 0xff;
-    cont = v2 >>> 7;
-    ptr += cont;
-    v2 &= 0x7f;
-    int v3 = (byte) (UnsafeAccess.toByte(ptr) * cont) & 0xff;
-    cont = v3 >>> 7;
-    ptr += cont;
-    v3 &= 0x7f;
-    int v4 = (byte) (UnsafeAccess.toByte(ptr) * cont) & 0xff;
-    v4 &= 0x7f;
-    return v1 + (v2 << 7) + (v3 << 14) + (v4 << 21);
-  }
 
   /**
    * Read unsigned VarInt from a byte buffer
@@ -419,21 +397,30 @@ public class Utils {
    * @return value
    */
   public static int readUVInt(byte[] buf, int off) {
+    
     int v1 = buf[off] & 0xff;
-    int cont = v1 >>> 7; // either 0 or 1
-    off += cont;
-    v1 &= 0x7f; // set 8th bit 0
-    int v2 = (byte) (buf[off] * cont) & 0xff;
-    cont = v2 >>> 7;
-    off += cont;
-    v2 &= 0x7f;
-    int v3 = (byte) (buf[off] * cont) & 0xff;
-    cont = v3 >>> 7;
-    off += cont;
-    v3 &= 0x7f;
-    int v4 = (byte) (buf[off] * cont) & 0xff;
-    v4 &= 0x7f;
-    return v1 + (v2 << 7) + (v3 << 14) + (v4 << 21);
+ 
+    switch (v1 >>> 6) {
+      case 0:
+        return v1;
+      case 1:
+        v1 = v1 & 0x3f;
+        int v2 = (buf[off + 1] & 0xff);
+        return (v2 << 6) + v1;
+      case 2:
+        v1 = v1 & 0x3f;
+        v2 = (buf[off + 1] & 0xff);
+        int v3 = (buf[off + 2] & 0xff);
+        return  (v3 << 14) + (v2 << 6) + v1;
+      case 3:
+        v1 = v1 & 0x3f;
+        v2 = (buf[off + 1] & 0xff);
+        v3 = (buf[off + 2] & 0xff);
+        int v4 = (buf[off + 3] & 0xff);
+        return (v4 << 22) + (v3 << 14) + (v2 << 6) + v1;
+      default:
+        return 0;
+    }
   }
 
   /**
@@ -444,45 +431,81 @@ public class Utils {
   public static int readUVInt(ByteBuffer buf) {
     int off = buf.position();
     int v1 = buf.get(off) & 0xff;
-    int cont = v1 >>> 7; // either 0 or 1
-    off += cont;
-    v1 &= 0x7f; // set 8th bit 0
-    int v2 = (byte) (buf.get(off) * cont) & 0xff;
-    cont = v2 >>> 7;
-    off += cont;
-    v2 &= 0x7f;
-    int v3 = (byte) (buf.get(off) * cont) & 0xff;
-    cont = v3 >>> 7;
-    off += cont;
-    v3 &= 0x7f;
-    int v4 = (byte) (buf.get(off) * cont) & 0xff;
-    v4 &= 0x7f;
-    return v1 + (v2 << 7) + (v3 << 14) + (v4 << 21);
+    switch (v1 >>> 6) {
+      case 0:
+        return v1;
+      case 1:
+        v1 = v1 & 0x3f;
+        int v2 = (buf.get(off + 1) & 0xff);
+        return (v2 << 6) + v1;
+      case 2:
+        v1 = v1 & 0x3f;
+        v2 = (buf.get(off + 1) & 0xff);
+        int v3 = (buf.get(off + 2) & 0xff);
+        return  (v3 << 14) + (v2 << 6) + v1;
+      case 3:
+        v1 = v1 & 0x3f;
+        v2 = (buf.get(off + 1) & 0xff);
+        v3 = (buf.get(off + 2) & 0xff);
+        int v4 = (buf.get(off + 3) & 0xff);
+        return (v4 << 22) + (v3 << 14) + (v2 << 6) + v1;
+      default:
+        return 0;
+    }
   }
 
+  static final int v1 = 0x3f;
+  static final int v2 = 0x3fff;
+  static final int v3 = 0x3fffff;
+  static final int v4 = 0x3fffffff;
+  
   /**
-   * Returns size of unsigned variable integer in bytes The maximum positive value is 256M To
-   * support large values we need to change read/write code
+   * TODO: THIS METHOD IS UNSAFE??? CHECK IT Read unsigned VarInt
+   * @param ptr address to read from
+   * @return int value
+   */
+  public static int readUVInt(long ptr) {
+    int v1 = UnsafeAccess.toByte(ptr) & 0xff;
+    switch (v1 >>> 6) {
+      case 0:
+        return v1;
+      case 1:
+        v1 = v1 & 0x3f;
+        int v2 = (UnsafeAccess.toByte(ptr + 1) & 0xff);
+        return (v2 << 6) + v1;
+      case 2:
+        v1 = v1 & 0x3f;
+        v2 = (UnsafeAccess.toByte(ptr + 1) & 0xff);
+        int v3 = (UnsafeAccess.toByte(ptr + 2) & 0xff);
+        return  (v3 << 14) + (v2 << 6) + v1;
+      case 3:
+        v1 = v1 & 0x3f;
+        v2 = (UnsafeAccess.toByte(ptr + 1) & 0xff);
+        v3 = (UnsafeAccess.toByte(ptr + 2) & 0xff);
+        int v4 = (UnsafeAccess.toByte(ptr + 3) & 0xff);
+        return (v4 << 22) + (v3 << 14) + (v2 << 6) + v1;
+      default:
+        return 0;
+    }
+  }
+  
+  /**
+   * Returns size of unsigned variable integer in bytes
    * @param value
    * @return size in bytes
    */
   public static int sizeUVInt(int value) {
-    if (value < v1) {
-      return 1;
-    } else if (value < v2) {
-      return 2;
-    } else if (value < v3) {
-      return 3;
-    } else if (value < v4) {
-      return 4;
-    }
-    return 0;
+     if ( value <= v1) {
+       return 1;
+     } else if (value <= v2) {
+       return 2;
+     } else if (value <= v3) {
+       return 3;
+     } else if (value <= v4) {
+       return 4;
+     }
+     return 0;
   }
-
-  static final int v1 = 1 << 7;
-  static final int v2 = 1 << 14;
-  static final int v3 = 1 << 21;
-  static final int v4 = 1 << 28;
 
   /**
    * Writes unsigned variable integer
@@ -492,28 +515,28 @@ public class Utils {
    */
   public static int writeUVInt(long ptr, int value) {
 
-    if (value < v1) {
+    if (value <= v1) {
       UnsafeAccess.putByte(ptr, (byte) value);
       return 1;
-    } else if (value < v2) {
-      UnsafeAccess.putByte(ptr, (byte) ((value & 0xff) | 0x80));
-      UnsafeAccess.putByte(ptr + 1, (byte) (value >>> 7));
+    } else if (value <= v2) {
+      UnsafeAccess.putByte(ptr, (byte) ((value & 0x3f) | 0x40));
+      UnsafeAccess.putByte(ptr + 1, (byte) (value >>> 6));
       return 2;
-    } else if (value < v3) {
-      UnsafeAccess.putByte(ptr, (byte) ((value & 0xff) | 0x80));
-      UnsafeAccess.putByte(ptr + 1, (byte) ((value >>> 7) | 0x80));
+    } else if (value <= v3) {
+      UnsafeAccess.putByte(ptr, (byte) ((value & 0x3f) | 0x80));
+      UnsafeAccess.putByte(ptr + 1, (byte) ((value >>> 6)));
       UnsafeAccess.putByte(ptr + 2, (byte) (value >>> 14));
       return 3;
-    } else if (value < v4) {
-      UnsafeAccess.putByte(ptr, (byte) ((value & 0xff) | 0x80));
-      UnsafeAccess.putByte(ptr + 1, (byte) ((value >>> 7) | 0x80));
-      UnsafeAccess.putByte(ptr + 2, (byte) ((value >>> 14) | 0x80));
-      UnsafeAccess.putByte(ptr + 3, (byte) (value >>> 21));
+    } else if (value <= v4) {
+      UnsafeAccess.putByte(ptr, (byte) ((value & 0x3f) | 0xC0));
+      UnsafeAccess.putByte(ptr + 1, (byte) ((value >>> 6)));
+      UnsafeAccess.putByte(ptr + 2, (byte) ((value >>> 14)));
+      UnsafeAccess.putByte(ptr + 3, (byte) (value >>> 22));
       return 4;
     }
     return 0;
   }
-
+  
   /**
    * Murmur3hash implementation with native pointer.
    * @param ptr the address of memory
