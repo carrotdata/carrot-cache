@@ -343,6 +343,9 @@ public class CacheConfig {
   /* Object Cache maximum output buffer size - not relevant for server */
   public final static String OBJECT_CACHE_MAX_BUFFER_SIZE_KEY = "objectcache.buffer.size.max";
 
+  /* Object Cache maximum on heap size in number of entries */
+  public final static String OBJECT_CACHE_MAX_ONHEAP_SIZE_KEY = "objectcache.onheap.size.max";
+  
   /* Is Thread-Local-Storage supported */
   public final static String CACHE_TLS_SUPPORTED_KEY = "tls.supported";
 
@@ -585,7 +588,8 @@ public class CacheConfig {
   /** Default maximum size for object cache output buffer */
   public final static int DEFAULT_OBJECT_CACHE_MAX_BUFFER_SIZE = -1; // Unlimited; TODO change to
                                                                      // 2GB?
-
+  public final static int DEFAULT_OBJECT_CACHE_MAX_ONHEAP_SIZE = 0; //On heap is disabled
+  
   /** Default Thread-Local-Storage supported */
   public final static boolean DEFAULT_CACHE_TLS_SUPPORTED = true;
 
@@ -1555,6 +1559,7 @@ public class CacheConfig {
    */
   public String[] getCacheNames() {
     String s = props.getProperty(CACHES_NAME_LIST_KEY, DEFAULT_CACHES_NAME_LIST);
+    if (s == null || s.length() == 0) return new String[0];
     return s.split(",");
   }
 
@@ -1579,6 +1584,7 @@ public class CacheConfig {
    */
   public String[] getCacheTypes() {
     String s = props.getProperty(CACHES_TYPES_LIST_KEY, DEFAULT_CACHES_TYPES_LIST);
+    if (s == null || s.length() == 0) return new String[0];
     return s.split(",");
   }
 
@@ -2921,6 +2927,30 @@ public class CacheConfig {
       DEFAULT_CACHE_PROACTIVE_EXPIRATION_FACTOR);
   }
 
+  /**
+   * Get on heap cache size in number of entries (only for ObjectCache)
+   * @param cacheName cache name
+   * @return maximum cache size (in number of entries)
+   */
+  public long getOnHeapMaxCacheSize(String cacheName) {
+    String value = props.getProperty(cacheName + "." + OBJECT_CACHE_MAX_ONHEAP_SIZE_KEY);
+    if (value == null) {
+      return getLongProperty(OBJECT_CACHE_MAX_ONHEAP_SIZE_KEY, DEFAULT_OBJECT_CACHE_MAX_ONHEAP_SIZE);
+    } else {
+      return Long.parseLong(value);
+    }
+  }
+
+  /**
+   * Set on heap cache size in number of entries (only for ObjectCache)
+   * @param cacheName cache name
+   * @param num maximum on heap cache size
+   */
+  public void setOnHeapMaxCacheSize(String cacheName, long num) {
+    this.props.setProperty(cacheName + "." + OBJECT_CACHE_MAX_ONHEAP_SIZE_KEY,
+      Long.toString(num));
+  }
+  
   /**
    * Sets cache pro-active expiration factor
    * @param cacheName cache name

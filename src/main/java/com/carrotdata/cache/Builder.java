@@ -20,9 +20,7 @@ package com.carrotdata.cache;
 import java.io.IOException;
 
 import com.carrotdata.cache.compression.CompressionCodec;
-import com.carrotdata.cache.io.FileIOEngine;
 import com.carrotdata.cache.io.IOEngine;
-import com.carrotdata.cache.io.MemoryIOEngine;
 import com.carrotdata.cache.util.CacheConfig;
 
 public class Builder {
@@ -73,7 +71,12 @@ public class Builder {
   public ObjectCache buildObjectMemoryCache() throws IOException {
     this.conf.addCacheNameType(cacheName, "memory");
     Cache c = build();
-    return new ObjectCache(c);
+    ObjectCache cache = new ObjectCache(c);
+    long max = this.conf.getOnHeapMaxCacheSize(cacheName);
+    if (max > 0) {
+      cache.setHeapCacheMaxSize(max);
+    }
+    return cache;
   }
 
   /**
@@ -84,7 +87,12 @@ public class Builder {
   public ObjectCache buildObjectDiskCache() throws IOException {
     this.conf.addCacheNameType(cacheName, "file");
     Cache c = build();
-    return new ObjectCache(c);
+    ObjectCache cache = new ObjectCache(c);
+    long max = this.conf.getOnHeapMaxCacheSize(cacheName);
+    if (max > 0) {
+      cache.setHeapCacheMaxSize(max);
+    }
+    return cache;
   }
 
   /**
@@ -875,6 +883,16 @@ public class Builder {
    */
   public Builder withCompressionMaxDictionaries(int max) {
     conf.setCompressionMaxDictionaries(cacheName, max);
+    return this;
+  }
+  
+  /**
+   * With On Heap maximum cache size
+   * @param max maximum size
+   * @return builder instance
+   */
+  public Builder withOnHeapMaxCacheSize(long max) {
+    conf.setOnHeapMaxCacheSize(cacheName, max);
     return this;
   }
   

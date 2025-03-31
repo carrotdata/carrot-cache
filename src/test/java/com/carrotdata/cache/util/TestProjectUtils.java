@@ -525,6 +525,37 @@ public class TestProjectUtils {
     }
     System.out.println(total);
 }
+  
+  @Test
+  public void minSubArrayLen() {
+    int target = 11;
+    int[] nums = {1,2,3,4,5};
+    // prefix sum
+    for (int i = 1; i < nums.length; i++){
+        nums[i] += nums[i-1];
+    }
+    final int len = nums.length;
+    int high = Arrays.binarySearch(nums, 0, len -1, target);
+    if (high == -len && nums[len - 1] < target) {
+      System.out.println(0);
+      return;
+    }
+    if (high == -1) {
+      System.out.println(1);
+    }
+    if (high < 0) high = -high - 1;
+    int low = 0;
+    int min = high - low + 1;
+    while (low <= high && high < len) {
+        low = Arrays.binarySearch(nums, low, high, nums[high] - target);
+        if (low < 0) low = -low -1;
+        int range = high - low + 1;
+        if (range < min) min = range;
+        high++;
+    }
+    System.out.println(min);
+}
+  
   @Ignore
   @Test
   public void subarraySum2() {

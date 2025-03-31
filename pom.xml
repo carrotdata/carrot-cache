@@ -162,7 +162,12 @@
         <artifactId>zstd-jni</artifactId>
         <version>1.5.6-4</version>
         </dependency>
-    </dependencies>
+    <dependency>
+    	<groupId>com.github.ben-manes.caffeine</groupId>
+  	<artifactId>caffeine</artifactId>
+  	<version>3.2.0</version>
+    </dependency>
+</dependencies>
     <!--/dependencyManagement-->
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

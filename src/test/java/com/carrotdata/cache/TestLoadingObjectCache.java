@@ -58,7 +58,7 @@ public class TestLoadingObjectCache {
   @Before
   public void setUp() throws IOException {
     cache = createCache("test-cache");
-    cache.addKeyValueClasses(Integer.class, Integer.class);
+    cache.registerClasses(Integer.class);
   }
 
   protected ObjectCache createCache(String cacheName) throws IOException {
@@ -111,7 +111,7 @@ public class TestLoadingObjectCache {
           }
         };
         try {
-          Integer v = (Integer) cache.get(Integer.valueOf(i), call);
+          Integer v = (Integer) cache.get(Integer.valueOf(i), call, 0);
           assertEquals(i, v.intValue());
         } catch (Throwable e) {
           // TODO Auto-generated catch block

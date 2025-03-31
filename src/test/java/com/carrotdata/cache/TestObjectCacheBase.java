@@ -135,7 +135,7 @@ public abstract class TestObjectCacheBase {
         assertEquals(new Integer(count + i), value.get(i));
       }
       count++;
-      if (count % 10000 == 0) {
+      if (count % 100000 == 0) {
         LOG.info("{}:verified {} objects get={} micro", tn, count, (tt2 - tt1) / 1000);
       }
     }
@@ -174,6 +174,7 @@ public abstract class TestObjectCacheBase {
     int count = 0;
     long tn = Thread.currentThread().getId();
     long t1 = System.currentTimeMillis();
+    long total = 0;
     Random r = new Random(1);
     while (count < n) {
       Person exp = Person.nextPerson(r);
@@ -182,6 +183,7 @@ public abstract class TestObjectCacheBase {
       Person v = (Person) cache.get(key);
       assertTrue(v != null);
       long tt2 = System.nanoTime();
+      total += tt2 - tt1;
       assertEquals(exp.fio, v.fio);
       assertEquals(exp.address.street, v.address.street);
       assertEquals(exp.address.city, v.address.city);
@@ -194,7 +196,7 @@ public abstract class TestObjectCacheBase {
       }
     }
     long t2 = System.currentTimeMillis();
-    LOG.info("{}:verified {} in {} ms", tn, count, (t2 - t1));
+    LOG.info("{}:verified {} in {} ms total={}", tn, count, (t2 - t1), total / 1_000_000);
   }
 
   @Test
@@ -202,7 +204,8 @@ public abstract class TestObjectCacheBase {
     LOG.info("Test load and verify");
     Scavenger.clear();
     this.cache = createCache("test");
-    this.cache.addKeyValueClasses(String.class, ArrayList.class);
+    //this.cache.setHeapCacheMaxSize(200_000);
+    this.cache.registerClasses(String.class, ArrayList.class);
     int loaded = loadData(1000000);
     verifyData(cache, loaded);
   }
@@ -212,7 +215,7 @@ public abstract class TestObjectCacheBase {
     LOG.info("Test load and verify person");
     Scavenger.clear();
     this.cache = createCache("testPerson");
-    this.cache.addKeyValueClasses(String.class, Person.class);
+    this.cache.registerClasses(String.class, Person.class);
 
     ObjectCache.SerdeInitializationListener listener = (x) -> {
       x.register(Address.class);
@@ -231,7 +234,7 @@ public abstract class TestObjectCacheBase {
     this.maxCacheSize = 1000L * this.segmentSize;
     this.numThreads = 4;
     this.cache = createCache("test");
-    this.cache.addKeyValueClasses(String.class, ArrayList.class);
+    this.cache.registerClasses(String.class, ArrayList.class);
 
     Runnable r = () -> {
       int loaded;
@@ -254,7 +257,7 @@ public abstract class TestObjectCacheBase {
     this.maxCacheSize = 1000L * this.segmentSize;
     this.numThreads = 4;
     this.cache = createCache("testPerson");
-    this.cache.addKeyValueClasses(String.class, Person.class);
+    this.cache.registerClasses(String.class, Person.class);
 
     ObjectCache.SerdeInitializationListener listener = (x) -> {
       x.register(Address.class);
@@ -297,8 +300,8 @@ public abstract class TestObjectCacheBase {
     Scavenger.clear();
 
     this.cache = createCache("test");
-    this.cache.addKeyValueClasses(String.class, ArrayList.class);
-
+    this.cache.registerClasses(String.class, ArrayList.class);
+    
     int loaded = loadData(1000000);
 
     LOG.info("loaded=" + loaded);
@@ -313,7 +316,7 @@ public abstract class TestObjectCacheBase {
     t1 = System.currentTimeMillis();
     String[] rootDirs = cache.getCacheConfig().getCacheRootDirs(cacheName);
     ObjectCache newCache = ObjectCache.loadCache(rootDirs, cacheName);
-    newCache.addKeyValueClasses(String.class, ArrayList.class);
+    newCache.registerClasses(String.class, ArrayList.class);
 
     t2 = System.currentTimeMillis();
     LOG.info("Loaded {} in {} ms", cache.getStorageAllocated(), t2 - t1);
@@ -333,10 +336,54 @@ public abstract class TestObjectCacheBase {
     verifyData(newCache, loaded);
 
     newCache.getNativeCache().dispose();
-    ;
     TestUtils.deleteCacheFiles(newCache.getNativeCache());
   }
 
+  @Test
+  public void testSaveLoadOnHeap() throws IOException {
+    LOG.info("Test save load on-heap");
+    Scavenger.clear();
+
+    this.cache = createCache("test");
+    //this.cache.registerClasses(String.class, ArrayList.class);
+    this.cache.setHeapCacheMaxSize(1000000);
+    int loaded = loadPersonData(1000000);
+
+    LOG.info("loaded=" + loaded);
+    verifyPersonData(cache, loaded);
+
+    String cacheName = cache.getName();
+    long t1 = System.currentTimeMillis();
+    cache.shutdown();
+    long t2 = System.currentTimeMillis();
+    LOG.info("Saved {} in {} ms", cache.getStorageAllocated(), t2 - t1);
+
+    t1 = System.currentTimeMillis();
+    String[] rootDirs = cache.getCacheConfig().getCacheRootDirs(cacheName);
+    ObjectCache newCache = ObjectCache.loadCache(rootDirs, cacheName);
+    //newCache.registerClasses(String.class, ArrayList.class);
+
+    t2 = System.currentTimeMillis();
+    LOG.info("Loaded {} in {} ms", cache.getStorageAllocated(), t2 - t1);
+
+    assertEquals(cache.getCacheType(), newCache.getCacheType());
+    assertEquals(cache.activeSize(), newCache.activeSize());
+    assertEquals(cache.getMaximumCacheSize(), newCache.getMaximumCacheSize());
+    //TDOD: check why it fails
+    //assertEquals(cache.getStorageAllocated(), newCache.getStorageAllocated());
+    assertEquals(cache.getStorageUsed(), newCache.getStorageUsed());
+    assertEquals(cache.getTotalGets(), newCache.getTotalGets());
+    assertEquals(cache.getTotalGetsSize(), newCache.getTotalGetsSize());
+    assertEquals(cache.getTotalHits(), newCache.getTotalHits());
+    assertEquals(cache.getTotalWrites(), newCache.getTotalWrites());
+    assertEquals(cache.getTotalWritesSize(), newCache.getTotalWritesSize());
+
+    verifyPersonData(newCache, loaded);
+
+    newCache.getNativeCache().dispose();
+    TestUtils.deleteCacheFiles(newCache.getNativeCache());
+  }
+  
   static class Person {
     String fio;
     Address address;

@@ -18,6 +18,7 @@
 package com.carrotdata.cache;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -25,24 +26,45 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.esotericsoftware.kryo.kryo5.Kryo;
-import com.esotericsoftware.kryo.kryo5.io.Input;
-import com.esotericsoftware.kryo.kryo5.io.Output;
 import com.carrotdata.cache.Cache.Type;
 import com.carrotdata.cache.util.CacheConfig;
 import com.carrotdata.cache.util.ObjectPool;
+import com.esotericsoftware.kryo.kryo5.Kryo;
+import com.esotericsoftware.kryo.kryo5.io.Input;
+import com.esotericsoftware.kryo.kryo5.io.Output;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.Expiry;
+import com.github.benmanes.caffeine.cache.RemovalCause;
+import com.github.benmanes.caffeine.cache.Scheduler;
+
 
 public class ObjectCache {
 
   public static interface SerdeInitializationListener {
-
     public void initSerde(Kryo kryo);
   }
 
+  public static class ValueExpire {
+    // Value
+    private Object value;
+    // Absolute expiration time in ms since 1970, 01/01 00:00
+    private long expireAt;
+    
+    public ValueExpire() {
+    }
+    
+    public ValueExpire(Object value, long expire) {
+      this.value = value;
+      this.expireAt = expire;
+    }
+  }
+  
   /** Logger */
   @SuppressWarnings("unused")
   private static final Logger LOG = LoggerFactory.getLogger(ObjectCache.class);
@@ -55,10 +77,9 @@ public class ObjectCache {
 
   /** Kryo object serialization pool */
   private ObjectPool<Kryo> kryos;
-
-  /** Key - Value class map */
-  private Map<Class<?>, Class<?>> keyValueClassMap = new ConcurrentHashMap<Class<?>, Class<?>>();
-
+  
+  private List<Class<?>> classList = Collections.synchronizedList(new ArrayList<>());
+  
   /** Kryo initialization listeners */
   private List<SerdeInitializationListener> listeners =
       Collections.synchronizedList(new ArrayList<>());
@@ -72,15 +93,18 @@ public class ObjectCache {
   /** To support loading cache **/
   private Map<Object, Object> waitingKeys = new ConcurrentHashMap<>();
 
-  /* Each key class can have associated expiration time in milliseconds */
-  private Map<Class<?>, Long> keyExpireMap = new ConcurrentHashMap<Class<?>, Long>();
-
   /* Initial output buffer size */
   private int initialOutBufferSize;
 
   /* Maximum output buffer size */
   private int maxOutBufferSize;
 
+  /* On heap cache */
+  private com.github.benmanes.caffeine.cache.Cache<Object, ValueExpire> heapCache;
+  
+  /* On heap cache maximum size in number of entries*/
+  private long heapCacheMaxSize;
+  
   /**
    * Default constructor
    * @param c native cache instance
@@ -91,6 +115,69 @@ public class ObjectCache {
     initIOPools();
   }
 
+  public void setHeapCacheMaxSize(long maxSize) {
+    if (this.heapCacheMaxSize > 0 || maxSize == 0) {
+      return; // already set or 0
+    }
+    if (maxSize <= 0) {
+      throw new IllegalArgumentException("Maximum heap cache size must be positive number");
+    }
+    
+    this.heapCache = Caffeine.newBuilder()
+        .scheduler(Scheduler.systemScheduler())
+        .expireAfter(new Expiry<Object , ValueExpire>() {
+          public long expireAfterCreate(Object key, ValueExpire value, long currentTime) {
+            // Its in milliseconds
+            long expireAt = value.expireAt;
+            return expireAt == 0? TimeUnit.SECONDS.toNanos(Long.MAX_VALUE): (expireAt - System.currentTimeMillis()) * 1_000_000;
+          }
+
+          public long expireAfterUpdate(Object key, ValueExpire value,
+              long currentTime, long currentDuration) {
+              return currentDuration;
+          }
+  
+          public long expireAfterRead(Object key, ValueExpire value,
+              long currentTime, long currentDuration) {
+              return currentDuration;
+          }
+      })
+      .evictionListener((Object k, ValueExpire v, RemovalCause cause) -> {
+  
+        if (cause == RemovalCause.SIZE) {
+            long expireAt = v.expireAt;
+            long current = System.currentTimeMillis();
+            if (expireAt == 0 || expireAt > current) {
+              try {
+                putInternal(k, v.value, expireAt);
+                //LOG.info(k.toString());
+              } catch (IOException e) {
+                LOG.error("Put operation during eviction failed", e);
+              }
+            }
+          }
+        }
+      )
+      .maximumSize(maxSize)
+      .build();
+  }
+  
+  /**
+   * Get on heap cache maximum size 
+   * @return size, 0 - no on heap cache
+   */
+  public long getOnHeapCacheMaxSize() {
+    return this.heapCacheMaxSize;
+  }
+  
+  /**
+   * Get on heap cache
+   * @return on heap cache
+   */
+  public com.github.benmanes.caffeine.cache.Cache<Object, ValueExpire> getOnHeapCache() {
+    return this.heapCache;
+  }
+  
   /**
    * Adds Kryo's serialization listener.
    * @param l listener
@@ -100,23 +187,15 @@ public class ObjectCache {
   }
 
   /**
-   * Adds key-value classes pair
-   * @param key key's class
-   * @param value value's class
+   * Pre-register classes for Kryo serialization
+   * @param values
    */
-  public void addKeyValueClasses(Class<?> key, Class<?> value) {
-    this.keyValueClassMap.put(key, value);
+  public synchronized void registerClasses(Class<?>... values) {
+    for (Class<?> cls: values) {
+      classList.add(cls);
+    }
   }
-
-  /**
-   * Sets default expiration time for key's class
-   * @param keyClass key's class
-   * @param expire expiration time in milliseconds (relative)
-   */
-  public void setKeyClassExpire(Class<?> keyClass, long expire) {
-    keyExpireMap.put(keyClass, expire);
-  }
-
+  
   private void initIOPools() {
     CacheConfig config = cache.getCacheConfig();
     int poolSize = config.getIOStoragePoolSize(cache.getName());
@@ -146,16 +225,26 @@ public class ObjectCache {
   }
 
   /**
-   * Put key - value pair into the cache with expiration (absolute time in ms) This is operation to
-   * bypass admission controller
+   * Put key - value pair into the cache with expiration (absolute time in ms)
    * @param key key object
    * @param value value object
-   * @param expire expiration time (absolute in ms since 01/01/1970)
+   * @param expire expiration time (absolute)
+   * @param force if true - bypass admission controller
    * @return true on success, false - otherwise
    * @throws IOException
    */
   public boolean put(Object key, Object value, long expire) throws IOException {
-    return put(key, value, expire, true);
+    if (this.heapCache != null) {
+      // Access Variable Expiration Policy
+      var varExpiration = heapCache.policy().expireVariably().orElseThrow();
+      ValueExpire ve = new ValueExpire(value, expire);
+      Duration d = expire == 0? Duration.ofHours(Integer.MAX_VALUE): Duration.ofMillis(expire - System.currentTimeMillis());
+      varExpiration.put(key, ve, d);
+      // always success
+      return true;
+    } else {
+      return putInternal(key, value, expire);
+    }
   }
 
   /**
@@ -167,22 +256,23 @@ public class ObjectCache {
    * @return true on success, false - otherwise
    * @throws IOException
    */
-  public boolean put(Object key, Object value, long expire, boolean force) throws IOException {
+  public boolean putInternal(Object key, Object value, long expire) throws IOException {
     Objects.requireNonNull(key, "key is null");
     Objects.requireNonNull(value, "value is null");
     Output outKey = getOutput();
     Output outValue = getOutput();
     Kryo kryo = getKryo();
+    ValueExpire ve = new ValueExpire(value, expire);
     try {
       kryo.writeObject(outKey, key);
-      kryo.writeObject(outValue, value);
+      kryo.writeObject(outValue, ve);
       // TODO: cryptographic hashing of a key
       byte[] keyBuffer = outKey.getBuffer();
       int keyLength = outKey.position();
       byte[] valueBuffer = outValue.getBuffer();
       int valueLength = outValue.position();
       boolean result =
-          cache.put(keyBuffer, 0, keyLength, valueBuffer, 0, valueLength, expire, force);
+          cache.put(keyBuffer, 0, keyLength, valueBuffer, 0, valueLength, expire, true);
       return result;
     } finally {
       release(outKey);
@@ -192,23 +282,94 @@ public class ObjectCache {
   }
 
   /**
+   * Put if absent key - value pair into the cache with expiration (absolute time in ms)
+   * @param key key object
+   * @param value value object
+   * @param expire expiration time (absolute)
+   * @param force if true - bypass admission controller
+   * @return true on success, false - otherwise
+   * @throws IOException
+   */
+  public boolean putIfAbsent(Object key, Object value, long expire) throws IOException {
+    if (this.heapCache != null) {
+      // Access Variable Expiration Policy
+      var varExpiration = heapCache.policy().expireVariably().orElseThrow();
+      ValueExpire ve = new ValueExpire(value, expire);
+      Duration d = expire == 0? Duration.ofHours(Integer.MAX_VALUE): Duration.ofMillis(expire - System.currentTimeMillis());
+      ValueExpire old = varExpiration.putIfAbsent(key, ve, d);
+      // always success
+      return old == null;
+    } else {
+      return putIfAbsentInternal(key, value, expire);
+    }
+  }
+  
+  /**
+   * Put key - value pair into the cache with expiration (absolute time in ms)
+   * @param key key object
+   * @param value value object
+   * @param expire expiration time (absolute)
+   * @param force if true - bypass admission controller
+   * @return true on success, false - otherwise
+   * @throws IOException
+   */
+  public boolean putIfAbsentInternal(Object key, Object value, long expire) throws IOException {
+    Objects.requireNonNull(key, "key is null");
+    Objects.requireNonNull(value, "value is null");
+    Output outKey = getOutput();
+    Output outValue = getOutput();
+    Kryo kryo = getKryo();
+    ValueExpire ve = new ValueExpire(value, expire);
+
+    try {
+      kryo.writeObject(outKey, key);
+      kryo.writeObject(outValue, ve);
+      // TODO: cryptographic hashing of a key
+      byte[] keyBuffer = outKey.getBuffer();
+      int keyLength = outKey.position();
+      byte[] valueBuffer = outValue.getBuffer();
+      int valueLength = outValue.position();
+      boolean result =
+          cache.putIfAbsent(keyBuffer, 0, keyLength, valueBuffer, 0, valueLength, expire);
+      return result;
+    } finally {
+      release(outKey);
+      release(outValue);
+      release(kryo);
+    }
+  }
+  
+  /**
+   * Get value by key
+   * @param key object key
+   * @return value
+   * @throws IOException
+   */
+  public Object get(Object key) throws IOException {
+    if (this.heapCache != null) {
+      ValueExpire ve = heapCache.getIfPresent(key);
+      if (ve != null) {
+        return ve.value;
+      }
+    }
+    ValueExpire ve = (ValueExpire) getInternal(key);
+    if (ve != null) {
+      return ve.value;
+    }
+    return null;
+  }
+  
+  /**
    * Get cached value
    * @param key object key
    * @return value or null
    * @throws IOException
    */
-  public Object get(Object key) throws IOException {
+  public Object getInternal(Object key) throws IOException {
     Objects.requireNonNull(key, "key is null");
     Output outKey = getOutput();
     Input in = getInput();
     Kryo kryo = getKryo();
-    Class<?> valueClass = this.keyValueClassMap.get(key.getClass());
-
-    if (valueClass == null) {
-      throw new IOException(
-          String.format("Value class is not registered for the key class %s", key.getClass()));
-    }
-
     try {
       kryo.writeObject(outKey, key);
       byte[] keyBuffer = outKey.getBuffer();
@@ -228,7 +389,18 @@ public class ObjectCache {
           break;
         }
       }
-      Object value = kryo.readObject(in, valueClass);
+      ValueExpire value = kryo.readObject(in, ValueExpire.class);
+      if (this.heapCache != null) {
+        long expireAt = value.expireAt;
+        if (expireAt > System.currentTimeMillis()) {
+          Duration d = expireAt == 0? Duration.ofHours(Long.MAX_VALUE): Duration.ofMillis(expireAt = System.currentTimeMillis());
+          // Access Variable Expiration Policy
+          var varExpiration = heapCache.policy().expireVariably().orElseThrow();
+          varExpiration.put(key, value, d);
+          //FIXME: optimize
+          deleteInternal(key);
+        }
+      }
       return value;
     } finally {
       release(outKey);
@@ -244,7 +416,7 @@ public class ObjectCache {
    * @return value
    * @throws IOException
    */
-  public Object get(Object key, Callable<?> valueLoader) throws IOException {
+  public Object get(Object key, Callable<?> valueLoader, long expire) throws IOException {
     Object value = get(key);
     if (value != null) {
       return value;
@@ -260,10 +432,9 @@ public class ObjectCache {
         try {
           value = valueLoader.call();
           if (value != null) {
-            long expire = getExpireForKey(key);
-            // This time is relative
+            // This time is absolute
             if (expire > 0) {
-              put(key, value, System.currentTimeMillis() + expire);
+              put(key, value, expire);
             } else {
               put(key, value, 0L);
             }
@@ -278,13 +449,6 @@ public class ObjectCache {
     return value;
   }
 
-  private long getExpireForKey(Object key) {
-    Long expire = keyExpireMap.get(key.getClass());
-    if (expire == null) {
-      return 0;
-    }
-    return expire;
-  }
 
   private Object waitAndGet(Object key) throws IOException {
     // Loading in progress
@@ -303,13 +467,23 @@ public class ObjectCache {
     return value;
   }
 
+  public boolean delete(Object key) throws IOException {
+    if (this.heapCache != null) {
+      if (this.heapCache.getIfPresent(key) != null) {
+        this.heapCache.invalidate(key);
+        return true;
+      }
+    }
+    return deleteInternal(key);
+  }
+  
   /**
    * Delete object by key
    * @param key object key
    * @return true on success, false - otherwise
    * @throws IOException
    */
-  public boolean delete(Object key) throws IOException {
+  public boolean deleteInternal(Object key) throws IOException {
     Objects.requireNonNull(key, "key is null");
     Output outKey = getOutput();
     Kryo kryo = getKryo();
@@ -330,12 +504,27 @@ public class ObjectCache {
   }
 
   /**
+   * Exists object
+   * @param key object's key
+   * @return true or false
+   * @throws IOException
+   */
+  public boolean exists(Object key) throws IOException {
+    if (this.heapCache != null) {
+      if (this.heapCache.getIfPresent(key) != null) {
+        return true;
+      }
+    }
+    return existsInternal(key);
+  }
+  
+  /**
    * Does key exist
    * @param key object key
    * @return true on success, false - otherwise
    * @throws IOException
    */
-  public boolean exists(Object key) throws IOException {
+  public boolean existsInternal(Object key) throws IOException {
     Objects.requireNonNull(key, "key is null");
     Output outKey = getOutput();
     Kryo kryo = getKryo();
@@ -344,7 +533,7 @@ public class ObjectCache {
       // TODO: cryptographic hashing of a key
       byte[] keyBuffer = outKey.getBuffer();
       int keyLength = outKey.position();
-      boolean result = cache.maybeExists(keyBuffer, 0, keyLength);
+      boolean result = cache.existsExact(keyBuffer, 0, keyLength);
       return result;
     } finally {
       release(outKey);
@@ -353,12 +542,27 @@ public class ObjectCache {
   }
 
   /**
+   * Touches the object
+   * @param key object's key
+   * @return true if success, false otherwise
+   * @throws IOException
+   */
+  public boolean touch(Object key) throws IOException {
+    if (this.heapCache != null) {
+      if (this.heapCache.getIfPresent(key) != null) {
+        return true;
+      }
+    }
+    return touchInternal(key);
+  }
+  
+  /**
    * Touch the key
    * @param key object key
    * @return true on success, false - otherwise (key does not exists)
    * @throws IOException
    */
-  public boolean touch(Object key) throws IOException {
+  public boolean touchInternal(Object key) throws IOException {
     Objects.requireNonNull(key, "key is null");
     Output outKey = getOutput();
     Kryo kryo = getKryo();
@@ -381,11 +585,25 @@ public class ObjectCache {
    */
   public void shutdown() throws IOException {
     // Shutdown main cache
+    CacheConfig conf = this.cache.getCacheConfig();
+    boolean persists = conf.isSaveOnShutdown(getName());
+    if (persists && this.heapCache != null) {
+      long start = System.currentTimeMillis();
+      ConcurrentMap<Object, ValueExpire> map = this.heapCache.asMap();
+      for(Map.Entry<Object, ValueExpire> e: map.entrySet()) {
+        long expireAt = e.getValue().expireAt;
+        if (expireAt == 0 || expireAt > System.currentTimeMillis()) {
+          putInternal(e.getKey(), e.getValue().value, expireAt);
+        }
+      }
+      long end = System.currentTimeMillis();
+      LOG.info("Saved on-heap cache {} entries in {}ms", map.size(), (end - start));
+    }
     this.cache.shutdown();
   }
 
   /**
-   * Loads saved object cache. Make sure that CarrotConfig was already set for the cache
+   * Loads saved object cache. Make sure that CacheConfig was already set for the cache
    * @param cacheRootDir cache root directory
    * @param cacheName cache name
    * @return object cache or null
@@ -439,9 +657,8 @@ public class ObjectCache {
     if (kryo == null) {
       kryo = new Kryo();
       kryo.setRegistrationRequired(false);
-      for (Map.Entry<Class<?>, Class<?>> entry : keyValueClassMap.entrySet()) {
-        kryo.register(entry.getKey());
-        kryo.register(entry.getValue());
+      for (Class<?> cls : classList) {
+        kryo.register(cls);
       }
       for (SerdeInitializationListener l : listeners) {
         l.initSerde(kryo);

@@ -165,7 +165,8 @@ public abstract class TestScavengerBase extends IOTestBase {
       used, actualUsed, size, activeSize);
     // After Scavenger run we still have active segment, which is not sealed yet
     assertTrue(actualUsed <= allocated);
-    assertEquals(0, activeSize);
+    //FIXME: active size can be negative if batch writer is used
+    assertTrue(activeSize == 0);
   }
 
   @Test

@@ -40,20 +40,22 @@ public class TestZstdCompressionCSV {
   private static final Logger LOG = LoggerFactory.getLogger(TestZstdCompressionCSV.class);
 
   private static int DICT_SIZE = 1 << 20; // 16KB
-  private static int COMP_LEVEL = 10;
+  private static int COMP_LEVEL = 19;
 
   @SuppressWarnings("unused")
   public static void main(String[] args) throws IOException {
     // String file = "/Users/vrodionov/Development/datasets/spotify/spotify.csv";
-    // String file ="/Users/vrodionov/Development/carrotdata/membench/data/twitter_sentiments/twitter_sentiments.csv";
+    String file ="/Users/vrodionov/Development/carrotdata/membench/data/twitter_sentiments/twitter_sentiments.csv";
     // "/Users/vrodionov/Development/datasets/twitter_sentiments/training.1600000.processed.noemoticon.csv";
     // String file = "/Users/vrodionov/Development/datasets/amazon_product_review/Reviews.csv";
     // String file = "/Users/vrodionov/Development/datasets/airbnb/Airbnb_Data.csv";
     // String file = "/Users/vrodionov/Development/datasets/arxiv/arxiv-metadata-oai-snapshot.json";
-     String file = "/Users/vrodionov/Development/carrotdata/membench/data/dblp/dblp.json";
+    // String file = "/Users/vrodionov/Development/carrotdata/membench/data/dblp/dblp.json";
     // String file = "/Users/vrodionov/Development/datasets/ohio/higher_ed_employee_salaries.csv";
     //String file = "/Users/vrodionov/Development/datasets/twitter/twitter.twitter2.json";
 
+    String tweet = "I want to go to promote GEAR AND GROOVE but unfortunately no ride there I may b going to the one in Anaheim in May though.";
+    
     File f = new File(file);
     long fileSize = f.length();
     BufferedInputStream bis = new BufferedInputStream(new FileInputStream(f), 1 << 16);
@@ -83,7 +85,11 @@ public class TestZstdCompressionCSV {
     compContext.loadDict(dictCompress);
     compContext.setLevel(COMP_LEVEL);
 
-    int n = 20;
+    byte[] tweetCompresssed = compContext.compress(tweet.getBytes());
+    LOG.info("Tweet raw ={}  compressed={} ratio={}", tweet.length(), tweetCompresssed.length, (double)tweet.length() / tweetCompresssed.length);
+
+    
+    int n = 50;
     LOG.info("Group of:{}", n);
     LOG.info("Compression starts");
     List<Integer> sizes = new ArrayList<Integer>();
@@ -111,8 +117,12 @@ public class TestZstdCompressionCSV {
     ThreadLocalRandom tlr = ThreadLocalRandom.current();
     int size = 0;
     String line = null;
+    final String search = "NO_QUERY";
     while ((line = dis.readLine()) != null) {
-
+      line = line.trim();
+      int i = line.indexOf(search);
+      int idx = line.indexOf(',', i + 10);
+      line = line.substring(idx + 1);
       // LOG.info(s);
       double d = tlr.nextDouble();
       if (d <= ratio) {
@@ -138,12 +148,24 @@ public class TestZstdCompressionCSV {
     int prevCounter = 0;
     long prevTime = System.currentTimeMillis();
     String line = null;
+    final String search = "NO_QUERY";
+
     while ((line = source.readLine()) != null) {
       totalLines++;
+      line = line.trim();
+      int i = line.indexOf(search);
+      int idx = line.indexOf(',', i + 10);
+      line = line.substring(idx + 2, line.length() - 1);
+      
       byte[] b = line.getBytes();
       if (++gc <= group) {
         current = append(current, b);
         continue;
+      }
+      ThreadLocalRandom t = ThreadLocalRandom.current();
+      if (t.nextDouble() < 0.0001) {
+        String s = new String(current);
+        System.out.println(s.length() + ":" + s);
       }
       byte[] cb = context.compress(current);
       result.add(cb);

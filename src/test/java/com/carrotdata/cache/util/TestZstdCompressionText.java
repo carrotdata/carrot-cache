@@ -39,7 +39,7 @@ public class TestZstdCompressionText {
   private static final Logger LOG = LoggerFactory.getLogger(TestZstdCompressionText.class);
 
   private static int DICT_SIZE = 1 << 20; // 16KB
-  private static int COMP_LEVEL = 3;
+  private static int COMP_LEVEL = 20;
 
   @SuppressWarnings("unused")
   public static void main(String[] args) throws IOException {
@@ -67,7 +67,7 @@ public class TestZstdCompressionText {
     ZstdDictCompress dictCompress = new ZstdDictCompress(dictData, COMP_LEVEL);
 
     ZstdCompressCtx compContext = new ZstdCompressCtx();
-    compContext.loadDict(dictCompress);
+    //compContext.loadDict(dictCompress);
     compContext.setLevel(COMP_LEVEL);
 
     int n = 1000;
@@ -86,7 +86,7 @@ public class TestZstdCompressionText {
 
     ZstdDictDecompress dictDecompress = new ZstdDictDecompress(dictData);
     ZstdDecompressCtx decompContext = new ZstdDecompressCtx();
-    decompContext.loadDict(dictDecompress);
+    //decompContext.loadDict(dictDecompress);
     List<byte[]> decompressed = decompress(decompContext, compresed, sizes);
 
     decompressNativeNative(decompContext, compresed, sizes);

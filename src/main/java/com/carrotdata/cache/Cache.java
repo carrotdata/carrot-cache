@@ -61,6 +61,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.LockSupport;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Main entry for off-heap/on-disk cache
@@ -236,8 +237,10 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /* Save operation is in progress */
   volatile boolean saveInProgress = false;
 
+  /** Is cache disabled */
   volatile boolean cacheDisabled = false;
 
+  /** Number of scavenger threads */
   int scavengerNoThreads;
 
   /** For testing only */
@@ -253,6 +256,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    *  fixed size thread pool
    */
   protected ExecutorService asyncService;
+  
+  /* Global locks */
+  private ReentrantLock[] locks = new ReentrantLock[10007];
   
   /**
    * Constructor to use when loading cache from a storage set cache name after that
@@ -925,6 +931,18 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /* Put API */
 
+  public boolean putIfAbsent(long keyPtr, int keySize, long valuePtr, int valSize, long expire) throws IOException {
+    int index = (int) (Math.abs(Utils.hash64(keyPtr, keySize)) % locks.length);
+    try {
+      locks[index].lock();
+      if (existsExact(keyPtr, keySize)) {
+        return false;
+      }
+      return put(keyPtr, keySize, valuePtr, valSize, expire);
+    } finally {
+      locks[index].unlock();
+    }
+  }
   /**
    * Put item into the cache
    * @param keyPtr  key address
@@ -1114,6 +1132,20 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return expire;
   }
 
+  public boolean putIfAbsent(byte[] key, int keyOffset, int keySize, byte[] value, int valOffset,
+      int valSize, long expire) throws IOException {
+    int index = (int) (Math.abs(Utils.hash64(key, keyOffset, keySize)) % locks.length);
+    try {
+      locks[index].lock();
+      if (existsExact(key, keyOffset, keySize)) {
+        return false;
+      }
+      return put(key, keyOffset, keySize, value, valOffset, valSize, expire);
+    } finally {
+      locks[index].unlock();
+    }
+  }
+  
   public boolean put(byte[] key, int keyOffset, int keySize, byte[] value, int valOffset,
       int valSize, long expire) throws IOException {
     int rank = getDefaultRankToInsert();
@@ -1206,7 +1238,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     long size = Utils.kvSizeL(keySize, valueSize);
     boolean res = size > this.maximumKeyValueSize;
     if (res) {
-      LOG.warn("Unable to cache. Serialized size {} of key-value exceeds the limit of {}.", size,
+      LOG.trace("Unable to cache. Serialized size {} of key-value exceeds the limit of {}.", size,
           maximumKeyValueSize);
     }
     return res;
@@ -3802,7 +3834,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     double compRatio = (double) getRawDataSize() / getTotalAllocated();
     double compRatioReal = (double) getRawDataSize() / getStorageUsedActual();
     LOG.info(
-        "Cache[{}]: storage size={} data size={} index size={} comp ratio={} comp real={} items={} active items={}" + " hit rate={}, gets={}, failed gets={}, puts={}, rejected puts={} bytes written={}",
+        "Cache[{}]: storage size={} data size={} index size={} comp ratio={} comp real={} items={} active items={}" + 
+            " hit rate={}, gets={}, failed gets={}, puts={}, rejected puts={} bytes written={}",
         this.cacheName, getTotalAllocated(), getRawDataSize(),
         this.engine.getMemoryIndex().getAllocatedMemory(), compRatio, compRatioReal, size(),
         activeSize(), getHitRate(), getTotalGets(), getTotalFailedGets(), getTotalWrites(),

@@ -516,6 +516,18 @@ public class Segment implements Persistent {
    */
   WriteBatches writeBatches;
 
+  /** Key Hashes for optimized FIFO */
+  private long keyHashesPtr;
+  
+  /** Size of Key Hashes */
+  private int keyHashesSize;
+  
+  /** Do record key hashes*/
+  private boolean recordKeys = false;
+  
+  /** Total recorded so far */
+  private volatile int totalKeys = 0;
+  
   /**
    * Default constructor
    * @param info
@@ -549,9 +561,65 @@ public class Segment implements Persistent {
     this.dataWriter = da;
     // can be null in tests
     this.engine = engine;
+    if (engine instanceof FileIOEngine) {
+      initKeyHashes();
+    }
     if (this.dataWriter.isWriteBatchSupported()) {
       this.writeBatchSupported = true;
       this.writeBatches = engine.getWriteBatches();
+    }
+  }
+
+  private void initKeyHashes() {
+    if (isSealed()) return;
+    this.recordKeys = true;
+    this.keyHashesPtr = UnsafeAccess.malloc(1 << 16);
+    this.keyHashesSize = 1 << 16;
+  }
+
+  void addKeyHash(byte[] key, int off, int size) {
+    checkKeyHashSize();
+    int offset = this.totalKeys * Utils.SIZEOF_LONG;
+    long hash = Utils.hash64(key, off, size);
+    UnsafeAccess.putLong(this.keyHashesPtr + offset, hash);
+    this.totalKeys++;
+  }
+  
+  void addKeyHash(long keyPtr, int keySize) {
+    checkKeyHashSize();
+    int offset = this.totalKeys * Utils.SIZEOF_LONG;
+    long hash = Utils.hash64(keyPtr, keySize);
+    UnsafeAccess.putLong(this.keyHashesPtr + offset, hash);
+    this.totalKeys++;
+  }
+  
+  void addKeyHashBatch(WriteBatch wb) {
+    if (!this.recordKeys) {
+      return;
+    }
+    // This is called inside write lock
+    long src = wb.memory();
+    int len = wb.capacity();
+    int off = 0;
+    while(off < len) {
+      int kSize = Utils.readUVInt(src + off);
+      off += Utils.sizeUVInt(kSize);
+      int vSize = Utils.readUVInt(src + off);
+      off += Utils.sizeUVInt(vSize);
+      addKeyHash(src + off, kSize);
+      off += kSize + vSize;
+    }
+    
+  }
+  
+  private void checkKeyHashSize() {
+    int num = this.totalKeys;
+    if ((num + 1) * Utils.SIZEOF_LONG > this.keyHashesSize) {
+      long ptr = UnsafeAccess.malloc(2 * this.keyHashesSize);
+      UnsafeAccess.copy(this.keyHashesPtr, ptr, this.keyHashesSize);
+      this.keyHashesSize *= 2;
+      UnsafeAccess.free(this.keyHashesPtr);
+      this.keyHashesPtr = ptr;
     }
   }
 
@@ -571,13 +639,17 @@ public class Segment implements Persistent {
       LOG.error("FATAL in dispose");
       Thread.dumpStack();
       throw new RuntimeException();
-      //System.exit(-1);
     }
     if (!this.valid) return;
     if (isMemory()) {
       if (this.address != 0) {
         UnsafeAccess.free(this.address);
         this.address = 0;
+        if (this.recordKeys) {
+          this.recordKeys = false;
+          this.keyHashesSize = 0;
+          UnsafeAccess.free(this.keyHashesPtr);
+        }
       } else {
         throw new RuntimeException ("Segment memory address is 0");
       }
@@ -946,6 +1018,7 @@ public class Segment implements Persistent {
       // TODO: check return value
       return -1;
     }
+    
     int kvSize = Utils.kvSize(keySize, valueSize);
     // Write batch is thread local object
     // Only one thread can write, but many can read
@@ -964,7 +1037,12 @@ public class Segment implements Persistent {
           }
         }
         // Add to write buffer
+        //int oldPos = wb.position();
         wb.addOrUpdate(key, keyOffset, keySize, value, valueOffset, valueSize);
+        //if (oldPos == pos) {
+        //  incrNumEntries(1);
+        //}
+        // oldPos == pos - add, oldPos > pos - update
         offset = wb.getId();
       } else {
         // Add single as a batch
@@ -982,6 +1060,9 @@ public class Segment implements Persistent {
         if (offset == -1) {
           setFull(true);
           return -1;
+        }
+        if (this.recordKeys) {
+          addKeyHash(key, keyOffset, keySize);
         }
         incrNumEntries(1);
       } finally {
@@ -1060,7 +1141,12 @@ public class Segment implements Persistent {
           }
         } 
         // Append to write batch
+        //int oldPos = wb.position();
         wb.addOrUpdate(keyPtr, keySize, valuePtr, valueSize);
+        // means we added new object to cache
+        //if (oldPos == pos) {
+        //  incrNumEntries(1);
+        //}
         offset = wb.getId();
       } else {
         // Append to the segment as single element batch
@@ -1076,6 +1162,9 @@ public class Segment implements Persistent {
         if (offset == -1) {
           setFull(true);
           return -1;
+        }
+        if (this.recordKeys) {
+          addKeyHash(keyPtr, keySize);
         }
         incrNumEntries(1);
       } finally {
