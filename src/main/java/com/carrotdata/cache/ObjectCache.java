@@ -398,7 +398,7 @@ public class ObjectCache {
           var varExpiration = heapCache.policy().expireVariably().orElseThrow();
           varExpiration.put(key, value, d);
           //FIXME: optimize
-          deleteInternal(key);
+          //deleteInternal(key);
         }
       }
       return value;
