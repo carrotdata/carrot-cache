@@ -1,7 +1,8 @@
 
 # Carrot Cache (CC)
 
-[Documentation](https://github.com/carrotdata/carrot-cache/wiki/Overview) 🥕🥕 [Forum & Discussions](https://github.com/carrotdata/carrot-cache/discussions)
+[Documentation](https://github.com/carrotdata/carrot-cache/wiki/Overview) 🥕🥕 [Forum & Discussions](https://github.com/carrotdata/carrot-cache/discussions) 🥕🥕 [![Maven Central](https://img.shields.io/maven-central/v/io.carrotdata/carrot-cache.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/io.carrotdata/carrot-cache) [![javadoc](https://javadoc.io/badge2/io.carrotdata/carrot-cache/javadoc.svg)](https://javadoc.io/doc/io.carrotdata/carrot-cache)
+ [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 The Carrot Cache (CC) project aims to modernize data caching and enable users to build custom caching solutions through pluggable components within the CC framework. CC is a 100% Java solution that extensively utilizes off-heap memory, minimizing the impact on Java garbage collection (GC).
 
