@@ -29,7 +29,7 @@ public interface IndexFormat extends Persistent {
 
   /**
    * Cache name for this index format
-   * @param cacheName
+   * @param cacheName cache name
    */
   public void setCacheName(String cacheName);
 
@@ -115,6 +115,7 @@ public interface IndexFormat extends Persistent {
    * Get current expiration time and set new one
    * @param ibPtr index block address
    * @param expPtr pointer to expiration field
+   * @param expire new expiration time
    * @return old expiration time in ms
    */
   public long getAndSetExpire(long ibPtr, long expPtr, long expire);

@@ -39,7 +39,7 @@ public class UltraCompactBaseNoSizeIndexFormat extends AbstractIndexFormat {
 
   /**
    * Cache name for this index format
-   * @param cacheName
+   * @param cacheName cache name
    */
   public void setCacheName(String cacheName) {
     super.setCacheName(cacheName);

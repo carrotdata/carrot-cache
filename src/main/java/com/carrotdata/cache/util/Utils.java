@@ -491,7 +491,7 @@ public class Utils {
   
   /**
    * Returns size of unsigned variable integer in bytes
-   * @param value
+   * @param value value
    * @return size in bytes
    */
   public static int sizeUVInt(int value) {
@@ -510,7 +510,7 @@ public class Utils {
   /**
    * Writes unsigned variable integer
    * @param ptr address to write to
-   * @param value
+   * @param value value
    * @return number of bytes written
    */
   public static int writeUVInt(long ptr, int value) {
@@ -838,7 +838,13 @@ public class Utils {
   private static final char[] HEX_CHARS =
       { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
 
-  /** Convert a byte range into a hex string */
+  /** 
+   * Convert a byte range into a hex string
+   * @param b byte array
+   * @param offset offset
+   * @param length length
+   * @return hex string 
+   */
   public static String toHex(byte[] b, int offset, int length) {
     int numChars = length * 2;
     char[] ch = new char[numChars];
@@ -850,11 +856,21 @@ public class Utils {
     return new String(ch);
   }
 
-  /** Convert a byte array into a hex string */
+  /** 
+   * Convert a byte array into a hex string 
+   * @param b byte array
+   * @return hex string
+   */
   public static String toHex(byte[] b) {
     return toHex(b, 0, b.length);
   }
 
+  /**
+   * Convert a memory area into a hex string
+   * @param ptr memory address
+   * @param size size of a memory area
+   * @return hex string
+   */
   public static String toHex(long ptr, int size) {
     byte[] bytes = new byte[size];
     UnsafeAccess.copy(ptr, bytes, 0, size);
@@ -890,6 +906,12 @@ public class Utils {
     UnsafeAccess.copy(arr, size, ptr, size);
   }
 
+  /**
+   * Converts double to string with specified number of digits after decimal point
+   * @param d double value
+   * @param afterDecimalPoint number of digits after decimal point
+   * @return string representation
+   */
   public static String toString(double d, int afterDecimalPoint) {
     String s = Double.toString(d);
     int index = s.indexOf('.');
@@ -898,6 +920,12 @@ public class Utils {
     return s.substring(0, index + afterDecimalPoint + 1);
   }
 
+  /**
+   * Formats string by adding leading zeros
+   * @param s string
+   * @param wide desired width
+   * @return formatted string
+   */
   public static String format(String s, int wide) {
     if (s.length() >= wide) return s;
     int slen = s.length();
@@ -909,7 +937,11 @@ public class Utils {
 
   /**
    * The total size of a K-V pair in the storage
-   **/
+   * @param keySize key size
+   * @param valSize value size
+   * @return serialized size of k-v
+   * 
+   */
   public static int kvSize(int keySize, int valSize) {
     return keySize + valSize + Utils.sizeUVInt(valSize) + Utils.sizeUVInt(keySize);
   }
@@ -917,6 +949,7 @@ public class Utils {
   /**
    * The total size of a K-V pair by address
    * @param ptr address of serialized k-v
+   * @return serialized size of k-v
    **/
   public final static int kvSize(long ptr) {
     int kSize = readUVInt(ptr);
@@ -930,6 +963,7 @@ public class Utils {
   /**
    * The total size of a K-V pair by address
    * @param ptr address of serialized k-v
+   * @return value size
    **/
   public final static int valueSize(long ptr) {
     int kSize = readUVInt(ptr);
@@ -941,8 +975,8 @@ public class Utils {
 
   /**
    * Safe version (no overflow)
-   * @param keySize
-   * @param valSize
+   * @param keySize key size 
+   * @param valSize value size
    * @return serialized size of k-v
    */
   public static long kvSizeL(int keySize, int valSize) {
@@ -961,7 +995,7 @@ public class Utils {
 
   /**
    * Get value size from raw value size (value size + value length representation)
-   * @param rawSize
+   * @param rawSize raw size
    * @return value size
    */
   public static int getValueSizeFromRawSize(int rawSize) {
@@ -1001,7 +1035,7 @@ public class Utils {
    * Required size for K-V pair
    * @param keyLength key length
    * @param valueLength value length
-   * @return size
+   * @return required size in bytes
    */
   public static int requiredSize(int keyLength, int valueLength) {
     return sizeUVInt(keyLength) + sizeUVInt(valueLength) + keyLength + valueLength;
@@ -1010,7 +1044,7 @@ public class Utils {
   /**
    * Reads item size from a memory address
    * @param ptr memory address
-   * @return size
+   * @return item size
    */
   public static int getItemSize(long ptr) {
     int kSize = Utils.readUVInt(ptr);
@@ -1024,7 +1058,7 @@ public class Utils {
    * Reads item size from a data page
    * @param page data page
    * @param off offset
-   * @return size
+   * @return item size
    */
   public static int getItemSize(byte[] page, int off) {
     int kSize = Utils.readUVInt(page, off);

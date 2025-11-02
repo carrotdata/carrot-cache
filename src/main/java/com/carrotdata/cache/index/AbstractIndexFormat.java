@@ -96,7 +96,7 @@ public abstract class AbstractIndexFormat implements IndexFormat {
 
   /**
    * Cache name for this index format
-   * @param cacheName
+   * @param cacheName cache name
    */
   public void setCacheName(String cacheName) {
     if (this.isExpirationSupported) {
@@ -123,6 +123,7 @@ public abstract class AbstractIndexFormat implements IndexFormat {
 
   /**
    * For testing
+   * @param support expire support
    */
   public void setExpireSupport(ExpireSupport support) {
     if (this.isExpirationSupported) {

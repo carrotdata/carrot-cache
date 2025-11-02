@@ -8,7 +8,7 @@
 
   <groupId>io.carrotdata</groupId>
   <artifactId>carrot-cache</artifactId>
-  <version>0.18</version>
+  <version>0.18.1</version>
   <packaging>jar</packaging>
 
   <name>Carrot Cache</name>

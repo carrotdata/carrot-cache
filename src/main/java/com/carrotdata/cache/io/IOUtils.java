@@ -29,7 +29,7 @@ public class IOUtils {
    * Drain byte buffer to a file channel
    * @param buf byte buffer
    * @param fc file channel
-   * @throws IOException
+   * @throws IOException on I/O error
    */
   public static void drainBuffer(ByteBuffer buf, FileChannel fc) throws IOException {
     buf.flip();
@@ -45,7 +45,7 @@ public class IOUtils {
    * @param buf byte buffer
    * @param required required number of bytes
    * @return available number of bytes
-   * @throws IOException
+   * @throws IOException on I/O error
    */
   public static long ensureAvailable(FileChannel fc, ByteBuffer buf, int required)
       throws IOException {
@@ -106,7 +106,7 @@ public class IOUtils {
    * @param fileOffset offset at a file
    * @param buffer buffer to read into
    * @param len how many bytes to read
-   * @throws IOException
+   * @throws IOException if file is closed or deleted
    */
   public static void readFully(RandomAccessFile file, long fileOffset, ByteBuffer buffer, int len)
       throws IOException {

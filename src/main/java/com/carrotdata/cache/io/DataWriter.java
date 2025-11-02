@@ -47,7 +47,7 @@ public interface DataWriter {
 
   /**
    * This method must be called after init()
-   * @return
+   * @return new write batch
    */
   public default WriteBatch newWriteBatch() {
     if (!isWriteBatchSupported()) {
@@ -79,7 +79,7 @@ public interface DataWriter {
 
   /**
    * Initialize after creation
-   * @param cacheName
+   * @param cacheName cache name
    */
   public void init(String cacheName);
 

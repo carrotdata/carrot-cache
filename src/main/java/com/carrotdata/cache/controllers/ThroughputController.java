@@ -37,7 +37,7 @@ public interface ThroughputController extends Persistent {
 
   /**
    * Record number of bytes written
-   * @param bytes
+   * @param bytes number of bytes written
    */
   public void record(long bytes);
 

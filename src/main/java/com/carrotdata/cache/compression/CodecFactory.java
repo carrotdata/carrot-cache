@@ -63,7 +63,8 @@ public class CodecFactory {
    * Initializes codec for cache (called by Cache instance)
    * @param cacheName cache name
    * @param is input stream to read codec data from
-   * @throws IOException
+   * @return true if codec is initialized
+   * @throws IOException if an I/O error occurs
    */
   public boolean initCompressionCodecForCache(String cacheName, InputStream is) throws IOException {
     // This method is called during cache instance initialization

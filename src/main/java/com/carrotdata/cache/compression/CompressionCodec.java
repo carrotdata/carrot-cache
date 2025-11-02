@@ -362,6 +362,7 @@ public interface CompressionCodec extends Persistent {
   /**
    * Initialize manager for a given cache
    * @param cacheName cache name
+   * @throws IOException if an I/O error occurs
    */
   public void init(String cacheName) throws IOException;
 
@@ -375,7 +376,7 @@ public interface CompressionCodec extends Persistent {
 
   /**
    * Get codec type
-   * @return
+   * @return codec type
    */
   public default Type getCodecType() {
     return Type.ZSTD;
@@ -383,7 +384,7 @@ public interface CompressionCodec extends Persistent {
 
   /**
    * Get dictionary size
-   * @return
+   * @return dictionary size
    */
 
   public default int getDictionarySize() {
@@ -414,7 +415,7 @@ public interface CompressionCodec extends Persistent {
 
   /**
    * Add data to training session
-   * @param data
+   * @param data training data
    */
   public void addTrainingData(byte[]... data);
 

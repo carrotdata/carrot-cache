@@ -43,6 +43,9 @@ import com.github.benmanes.caffeine.cache.Expiry;
 import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.Scheduler;
 
+/**
+ * Object cache implementation
+ */
 
 public class ObjectCache {
 
@@ -188,7 +191,7 @@ public class ObjectCache {
 
   /**
    * Pre-register classes for Kryo serialization
-   * @param values
+   * @param values classes
    */
   public synchronized void registerClasses(Class<?>... values) {
     for (Class<?> cls: values) {
@@ -229,9 +232,8 @@ public class ObjectCache {
    * @param key key object
    * @param value value object
    * @param expire expiration time (absolute)
-   * @param force if true - bypass admission controller
    * @return true on success, false - otherwise
-   * @throws IOException
+   * @throws IOException on serialization error
    */
   public boolean put(Object key, Object value, long expire) throws IOException {
     if (this.heapCache != null) {
@@ -252,9 +254,8 @@ public class ObjectCache {
    * @param key key object
    * @param value value object
    * @param expire expiration time (absolute)
-   * @param force if true - bypass admission controller
    * @return true on success, false - otherwise
-   * @throws IOException
+   * @throws IOException on serialization error
    */
   public boolean putInternal(Object key, Object value, long expire) throws IOException {
     Objects.requireNonNull(key, "key is null");
@@ -286,9 +287,8 @@ public class ObjectCache {
    * @param key key object
    * @param value value object
    * @param expire expiration time (absolute)
-   * @param force if true - bypass admission controller
    * @return true on success, false - otherwise
-   * @throws IOException
+   * @throws IOException  on serialization error
    */
   public boolean putIfAbsent(Object key, Object value, long expire) throws IOException {
     if (this.heapCache != null) {
@@ -309,9 +309,8 @@ public class ObjectCache {
    * @param key key object
    * @param value value object
    * @param expire expiration time (absolute)
-   * @param force if true - bypass admission controller
    * @return true on success, false - otherwise
-   * @throws IOException
+   * @throws IOException on serialization error
    */
   public boolean putIfAbsentInternal(Object key, Object value, long expire) throws IOException {
     Objects.requireNonNull(key, "key is null");
@@ -342,8 +341,8 @@ public class ObjectCache {
   /**
    * Get value by key
    * @param key object key
-   * @return value
-   * @throws IOException
+   * @return value or null
+   * @throws IOException on serialization error
    */
   public Object get(Object key) throws IOException {
     if (this.heapCache != null) {
@@ -363,7 +362,7 @@ public class ObjectCache {
    * Get cached value
    * @param key object key
    * @return value or null
-   * @throws IOException
+   * @throws IOException on serialization error
    */
   public Object getInternal(Object key) throws IOException {
     Objects.requireNonNull(key, "key is null");
@@ -413,8 +412,9 @@ public class ObjectCache {
    * Get cache value with value loader
    * @param key key
    * @param valueLoader value loader
-   * @return value
-   * @throws IOException
+   * @param expire expiration time (absolute)
+   * @return value or null 
+   * @throws IOException on serialization error
    */
   public Object get(Object key, Callable<?> valueLoader, long expire) throws IOException {
     Object value = get(key);
@@ -467,6 +467,12 @@ public class ObjectCache {
     return value;
   }
 
+  /**
+   * Delete object by key
+   * @param key object's key
+   * @return true on success, false - otherwise
+   * @throws IOException on serialization error
+   */
   public boolean delete(Object key) throws IOException {
     if (this.heapCache != null) {
       if (this.heapCache.getIfPresent(key) != null) {
@@ -481,7 +487,7 @@ public class ObjectCache {
    * Delete object by key
    * @param key object key
    * @return true on success, false - otherwise
-   * @throws IOException
+   * @throws IOException on serialization error
    */
   public boolean deleteInternal(Object key) throws IOException {
     Objects.requireNonNull(key, "key is null");
@@ -507,7 +513,7 @@ public class ObjectCache {
    * Exists object
    * @param key object's key
    * @return true or false
-   * @throws IOException
+   * @throws IOException on serialization error
    */
   public boolean exists(Object key) throws IOException {
     if (this.heapCache != null) {
@@ -522,7 +528,7 @@ public class ObjectCache {
    * Does key exist
    * @param key object key
    * @return true on success, false - otherwise
-   * @throws IOException
+   * @throws IOException on serialization error
    */
   public boolean existsInternal(Object key) throws IOException {
     Objects.requireNonNull(key, "key is null");
@@ -545,7 +551,7 @@ public class ObjectCache {
    * Touches the object
    * @param key object's key
    * @return true if success, false otherwise
-   * @throws IOException
+   * @throws IOException on serialization error
    */
   public boolean touch(Object key) throws IOException {
     if (this.heapCache != null) {
@@ -560,7 +566,7 @@ public class ObjectCache {
    * Touch the key
    * @param key object key
    * @return true on success, false - otherwise (key does not exists)
-   * @throws IOException
+   * @throws IOException on serialization error
    */
   public boolean touchInternal(Object key) throws IOException {
     Objects.requireNonNull(key, "key is null");
@@ -581,7 +587,7 @@ public class ObjectCache {
 
   /**
    * Shutdown and save cache
-   * @throws IOException
+   * @throws IOException on serialization error
    */
   public void shutdown() throws IOException {
     // Shutdown main cache
@@ -604,10 +610,10 @@ public class ObjectCache {
 
   /**
    * Loads saved object cache. Make sure that CacheConfig was already set for the cache
-   * @param cacheRootDir cache root directory
+   * @param cacheRootDirs cache root directories
    * @param cacheName cache name
    * @return object cache or null
-   * @throws IOException
+   * @throws IOException on serialization error
    */
   public static ObjectCache loadCache(String[] cacheRootDirs, String cacheName) throws IOException {
 
@@ -716,7 +722,7 @@ public class ObjectCache {
 
   /**
    * Register JMX metrics with a custom domain name
-   * @param domainName
+   * @param domainName domain name
    */
   public void registerJMXMetricsSink(String domainName) {
     this.cache.registerJMXMetricsSink(domainName);

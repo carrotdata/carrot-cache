@@ -306,8 +306,9 @@ public class BaseFileDataReader implements DataReader {
   }
 
   /**
-   * Requires 2 reads always. We can optimize: if `size` > `blockSize` and rangeSize relative to `size` is
-   * greater than some threshold. Try to use given buffer directly. 
+   * Requires two reads in all cases.
+   * Optimization idea: if {@code size} {@literal >} {@code blockSize} and {@code rangeSize}
+   * is large relative to {@code size}, we can read the first block fully and then stream the rest.
    */
   @Override
   public int readValueRange(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid,

@@ -335,6 +335,7 @@ public class Segment implements Persistent {
 
     /**
      * Get number of expired items
+     * @return number of expired items
      */
     public int getNumberExpiredItems() {
       return this.totalExpiredItems.get();
@@ -342,6 +343,7 @@ public class Segment implements Persistent {
 
     /**
      * Get number of expected to expire items
+     * @return number of expected to expire items
      */
     public int getNumberExpectedToExpireItems() {
       return this.totalExpectedToExpireItems.get();
@@ -556,6 +558,7 @@ public class Segment implements Persistent {
   /**
    * Sets data appender implementation
    * @param da data appender
+   * @param engine IO engine
    */
   public void setDataWriterAndEngine(DataWriter da, IOEngine engine) {
     this.dataWriter = da;
@@ -659,9 +662,9 @@ public class Segment implements Persistent {
 
   /**
    * Reuse segment - for off-heap only
-   * @param id
-   * @param rank
-   * @param creationTime
+   * @param id segment id
+   * @param rank segment's rank
+   * @param creationTime segment creation time
    */
   public void reuse(int id, int rank, long creationTime) {
     this.info = new Info(id, rank, creationTime);
@@ -768,7 +771,7 @@ public class Segment implements Persistent {
 
   /**
    * Set info
-   * @param info
+   * @param info segment info
    */
   public void setInfo(Info info) {
     this.info = info;
@@ -906,7 +909,7 @@ public class Segment implements Persistent {
 
   /**
    * Get total number of alive items in the segment
-   * @return
+   * @return number of alive items
    */
   public int getAliveItems() {
     return getTotalItems() - getNumberEvictedDeletedItems() - getNumberExpiredItems();
@@ -914,7 +917,7 @@ public class Segment implements Persistent {
 
   /**
    * Get number of evicted or explicitly deleted items
-   * @return number
+   * @return number of   
    */
   public int getNumberEvictedDeletedItems() {
     return this.info.getNumberEvictedDeletedItems();
@@ -922,7 +925,7 @@ public class Segment implements Persistent {
 
   /**
    * Get number of expired (reported) items
-   * @return number
+   * @return number of expired items
    */
   public int getNumberExpiredItems() {
     return this.info.getNumberExpiredItems();
@@ -930,7 +933,7 @@ public class Segment implements Persistent {
 
   /**
    * Get expected to expire numbers
-   * @return number
+   * @return number of expected to expire items
    */
   public int getNumberExpectedExpireItems() {
     return this.getNumberExpectedExpireItems();

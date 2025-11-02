@@ -170,7 +170,9 @@ public interface CacheJMXSinkMBean {
   double getoverall_hit_ratio();
 
   /**
+   * 
    * Get total bytes written (including GC)
+   * @return total bytes written
    */
   long gettotal_written_bytes();
 
@@ -218,6 +220,7 @@ public interface CacheJMXSinkMBean {
 
   /**
    * Get total bytes written (including GC)
+   * @return total bytes written by GC
    */
   long getgc_total_written_bytes();
 

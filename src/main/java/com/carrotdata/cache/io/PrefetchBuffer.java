@@ -62,7 +62,7 @@ public class PrefetchBuffer {
    * Constructor
    * @param file file
    * @param bufferSize buffer size
-   * @throws IOException
+   * @throws IOException on IO error
    */
   public PrefetchBuffer(RandomAccessFile file, int bufferSize) throws IOException {
     this.file = file;
@@ -77,9 +77,9 @@ public class PrefetchBuffer {
 
   /**
    * Skip bytes
-   * @param nBytes
+   * @param nBytes bytes to skip
    * @return true or false (can't skip)
-   * @throws IOException
+   * @throws IOException on IO error
    */
   public boolean skip(int nBytes) throws IOException {
     if (nBytes < 0 && this.bufferOffset + nBytes < 0) {
@@ -97,7 +97,11 @@ public class PrefetchBuffer {
     return true;
   }
 
-  /** advance to the next K-V */
+  /** 
+   * Advance to the next K-V 
+   * @return true or false
+   * @throws IOException on IO error
+   */
   public boolean next() throws IOException {
     int kLength = keyLength();
     int vLength = valueLength();
@@ -111,9 +115,10 @@ public class PrefetchBuffer {
   }
 
   /**
-   * Advance - skip
-   * @param nBytes
+   * Advance - skip bytes
+   * @param nBytes bytes to advance
    * @return true or false
+   * @throws IOException on IO error
    */
   public boolean advance(int nBytes) throws IOException {
     return skip(nBytes);
@@ -121,9 +126,9 @@ public class PrefetchBuffer {
 
   /**
    * Ensure remaining capacity
-   * @param nBytes
+   * @param nBytes number of bytes
    * @return true or false
-   * @throws IOException
+   * @throws IOException on IO error
    */
   public boolean ensure(int nBytes) throws IOException {
     if (nBytes + this.fileOffset > this.fileLength) {
@@ -160,7 +165,7 @@ public class PrefetchBuffer {
   /**
    * Key length
    * @return key length
-   * @throws IOException
+   * @throws IOException on IO error
    */
   public int keyLength() throws IOException {
     if (this.keyLength > 0) return keyLength;
@@ -173,8 +178,8 @@ public class PrefetchBuffer {
 
   /**
    * value length
-   * @return
-   * @throws IOException
+   * @return value length 
+   * @throws IOException on IO error
    */
   public int valueLength() throws IOException {
     if (this.valueLength > 0) return this.valueLength;
@@ -193,7 +198,7 @@ public class PrefetchBuffer {
    * @param buf byte array
    * @param bufOffset offset
    * @return key size
-   * @throws IOException
+   * @throws IOException on IO error
    */
   public int getKey(byte[] buf, int bufOffset) throws IOException {
     int kSize = keyLength();
@@ -216,7 +221,7 @@ public class PrefetchBuffer {
    * Get key from this prefetch buffer to another byte buffer
    * @param buf byte buffer
    * @return number of bytes copied or -1
-   * @throws IOException
+   * @throws IOException on IO error
    */
   public int getKey(ByteBuffer buf) throws IOException {
     int kSize = keyLength();
@@ -240,7 +245,7 @@ public class PrefetchBuffer {
    * @param buf byte array
    * @param bufOffset offset
    * @return bytes copied or -1
-   * @throws IOException
+   * @throws IOException on IO error
    */
   public int getValue(byte[] buf, int bufOffset) throws IOException {
     int kSize = keyLength();
@@ -264,7 +269,7 @@ public class PrefetchBuffer {
    * Get value from this prefetch buffer to another byte buffer
    * @param buf byte buffer
    * @return number of bytes copied or -1
-   * @throws IOException
+   * @throws IOException on IO error
    */
   public int getValue(ByteBuffer buf) throws IOException {
     int kSize = keyLength();

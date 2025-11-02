@@ -52,13 +52,14 @@ public interface ExpireSupport {
   /**
    * Get meta section size Format meta section: 8 bytes - current start access time 2 bytes - epoch
    * seconds counter 2 bytes - epoch minutes counter 2 bytes - epoch hours counter (optional)
+   * @return meta section size in bytes
    **/
   public int getExpireMetaSectionSize();
 
   /**
    * Get expiration time in ms
-   * @param ibesPtr
-   * @param expireFieldPtr
+   * @param ibesPtr index block expire section pointer
+   * @param expireFieldPtr address of an expiration field of an index
    * @return expiration time in ms (0 - does not expire, -1 - expired)
    */
   public long getExpire(long ibesPtr, long expireFieldPtr);
@@ -109,7 +110,7 @@ public interface ExpireSupport {
   /**
    * Sets scan time start
    * @param ibesPtr index block expire section address
-   * @param time
+   * @param time  time
    */
   public void setAccessStartTime(long ibesPtr, long time);
 

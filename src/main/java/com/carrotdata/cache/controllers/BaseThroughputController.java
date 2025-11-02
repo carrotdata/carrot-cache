@@ -60,6 +60,7 @@ public abstract class BaseThroughputController implements ThroughputController {
 
   /**
    * Constructor
+   * @param parent parent cache
    */
   public BaseThroughputController(Cache parent) {
     setCache(cache);

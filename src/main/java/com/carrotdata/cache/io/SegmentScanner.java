@@ -26,24 +26,28 @@ public interface SegmentScanner extends Closeable {
   /**
    * Has next element
    * @return true/false
+   * @throws IOException on IO error
    */
   public boolean hasNext() throws IOException;
 
   /**
    * Advance to next
    * @return true if succeeded, false - otherwise
+   * @throws IOException on IO error
    */
   public boolean next() throws IOException;
 
   /**
    * Current key length
    * @return key length
+   * @throws IOException on IO error
    */
   public int keyLength() throws IOException;
 
   /**
    * Current value length
-   * @return
+   * @return value length
+   * @throws IOException on IO error
    */
   public int valueLength() throws IOException;
 
@@ -55,14 +59,14 @@ public interface SegmentScanner extends Closeable {
 
   /**
    * Current value address
-   * @return
+   * @return value address
    */
   public long valueAddress();
 
   /**
    * Expiration time
    * @return expiration time
-   * @deprecated
+   * @deprecated Use getSegment().getExpire(getOffset()) instead
    */
   public long getExpire();
 
@@ -70,6 +74,7 @@ public interface SegmentScanner extends Closeable {
    * Read key into a buffer
    * @param b byte buffer
    * @return total bytes read
+   * @throws IOException on IO error
    */
   public int getKey(ByteBuffer b) throws IOException;
 
@@ -77,6 +82,7 @@ public interface SegmentScanner extends Closeable {
    * Read value into a buffer
    * @param b byte buffer
    * @return total bytes read
+   * @throws IOException on IO error
    */
   public int getValue(ByteBuffer b) throws IOException;
 
@@ -85,7 +91,7 @@ public interface SegmentScanner extends Closeable {
    * @param buffer memory buffer
    * @param offset buffer offset
    * @return total byte read
-   * @throws IOException
+   * @throws IOException IO error
    */
   public int getKey(byte[] buffer, int offset) throws IOException;
 
@@ -94,7 +100,7 @@ public interface SegmentScanner extends Closeable {
    * @param buffer memory buffer
    * @param offset buffer offset
    * @return total bytes read
-   * @throws IOException
+   * @throws IOException IO error
    */
   public int getValue(byte[] buffer, int offset) throws IOException;
 

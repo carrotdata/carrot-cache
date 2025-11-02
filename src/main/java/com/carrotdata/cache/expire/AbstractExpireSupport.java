@@ -71,7 +71,7 @@ public abstract class AbstractExpireSupport implements ExpireSupport {
   /**
    * Sets scan time start
    * @param ibesPtr index block expire section address
-   * @param time
+   * @param time time
    */
   public void setAccessStartTime(long ibesPtr, long time) {
     UnsafeAccess.putLong(ibesPtr, time);

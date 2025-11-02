@@ -135,7 +135,7 @@ public final class UnsafeAccess {
 
     /**
      * Set STR enabled
-     * @param b
+     * @param b true or false
      */
     public void setStackTraceRecordingEnabled(boolean b) {
       this.stackTraceRecordingEnabled = b;
@@ -411,7 +411,7 @@ public final class UnsafeAccess {
 
   /**
    * Set debug mode enabled/disabled Set MALLOC_DEBUG system property before using this class
-   * @param b
+   * @param b true or false
    */
   public static void setMallocDebugEnabled(boolean b) {
     UnsafeAccess.debug = b;
@@ -459,7 +459,7 @@ public final class UnsafeAccess {
 
   /**
    * Set STR limit
-   * @param limit
+   * @param limit maximum number of records to keep
    */
   public static void setStackTraceRecordingLimit(int limit) {
     mallocStats.setStackTraceRecordingLimit(limit);
@@ -467,7 +467,7 @@ public final class UnsafeAccess {
 
   /**
    * Get STR limit
-   * @return limit
+   * @return maximum number of records to keep
    */
   public static int getStackTraceRecordingLimit() {
     return mallocStats.getStackTraceRecordingLimit();
@@ -730,8 +730,8 @@ public final class UnsafeAccess {
   /**
    * Reads a short value at the given Object's offset considering it was written in big-endian
    * format.
-   * @param ref
-   * @param offset
+   * @param ref object reference
+   * @param offset offset
    * @return short value at offset
    */
   public static short toShort(Object ref, long offset) {
@@ -743,8 +743,8 @@ public final class UnsafeAccess {
 
   /**
    * Reads a int value at the given Object's offset considering it was written in big-endian format.
-   * @param ref
-   * @param offset
+   * @param ref object reference
+   * @param offset offset
    * @return int value at offset
    */
   public static int toInt(Object ref, long offset) {
@@ -766,8 +766,8 @@ public final class UnsafeAccess {
   /**
    * Reads a long value at the given Object's offset considering it was written in big-endian
    * format.
-   * @param ref
-   * @param offset
+   * @param ref object reference
+   * @param offset offset
    * @return long value at offset
    */
   public static long toLong(Object ref, long offset) {
@@ -1073,7 +1073,7 @@ public final class UnsafeAccess {
 
   /**
    * Returns the byte at the given offset of the object
-   * @param addr
+   * @param addr memory address
    * @return the byte at the given offset
    */
   public static byte toByte(long addr) {
@@ -1125,7 +1125,14 @@ public final class UnsafeAccess {
     return pptr;
   }
 
-  /** Reallocate memory zeroed */
+  /** 
+   * Reallocate memory zeroed 
+   * @param ptr memory address
+   * @param oldSize old size
+   * @param newSize new size
+   * @return memory address
+   * 
+   */
   public static long reallocZeroed(long ptr, long oldSize, long newSize) {
     long addr = theUnsafe.reallocateMemory(ptr, newSize);
     theUnsafe.setMemory(addr + oldSize, newSize - oldSize, (byte) 0);
@@ -1139,6 +1146,12 @@ public final class UnsafeAccess {
     return addr;
   }
 
+  /**
+   * Set memory to a value
+   * @param ptr memory pointer
+   * @param size memory size
+   * @param v value
+   */
   public static void setMemory(long ptr, long size, byte v) {
     theUnsafe.setMemory(ptr, size, v);
   }

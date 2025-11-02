@@ -24,7 +24,7 @@ public interface DataReader {
 
   /**
    * Initialize after creation
-   * @param cacheName
+   * @param cacheName cache name
    */
   public void init(String cacheName);
 
@@ -40,6 +40,7 @@ public interface DataReader {
    * @param buffer buffer
    * @param bufferOffset buffer offset
    * @return full size of K-V pair including
+   * @throws IOException I/O exception
    */
   public int read(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid, long offset,
       int size, byte[] buffer, int bufferOffset) throws IOException;
@@ -55,6 +56,7 @@ public interface DataReader {
    * @param size size of K-V pair (can be -1)
    * @param buffer buffer
    * @return full size of a K-V pair
+   * @throws IOException I/O exception
    */
   public int read(IOEngine engine, byte[] key, int keyOffset, int keySize, int sid, long offset,
       int size, ByteBuffer buffer) throws IOException;
@@ -70,6 +72,7 @@ public interface DataReader {
    * @param buffer buffer
    * @param bufferOffset buffer offset
    * @return full size of K-V pair including
+   * @throws IOException I/O exception
    */
   public int read(IOEngine engine, long keyPtr, int keySize, int sid, long offset, int size,
       byte[] buffer, int bufferOffset) throws IOException;
@@ -84,6 +87,7 @@ public interface DataReader {
    * @param size size of K-V pair (can be -1)
    * @param buffer buffer
    * @return full size of a K-V pair
+   * @throws IOException I/O exception
    */
   public int read(IOEngine engine, long keyPtr, int keySize, int sid, long offset, int size,
       ByteBuffer buffer) throws IOException;
@@ -102,6 +106,7 @@ public interface DataReader {
    * @param rangeStart range start
    * @param rangeSize range size
    * @return full size of K-V pair including
+   * @throws IOException I/O exception
    */
   public default int readValueRange(IOEngine engine, byte[] key, int keyOffset, int keySize,
       int sid, long offset, int size, byte[] buffer, int bufferOffset, int rangeStart,
@@ -122,6 +127,7 @@ public interface DataReader {
    * @param rangeStart range start
    * @param rangeSize range size
    * @return full size of a K-V pair
+   * @throws IOException I/O exception
    */
   public default int readValueRange(IOEngine engine, byte[] key, int keyOffset, int keySize,
       int sid, long offset, int size, ByteBuffer buffer, int rangeStart, int rangeSize)
@@ -142,6 +148,7 @@ public interface DataReader {
    * @param rangeStart range start
    * @param rangeSize range size
    * @return full size of K-V pair including
+   * @throws IOException I/O exception
    */
   public default int readValueRange(IOEngine engine, long keyPtr, int keySize, int sid, long offset,
       int size, byte[] buffer, int bufferOffset, int rangeStart, int rangeSize) throws IOException {
@@ -161,6 +168,7 @@ public interface DataReader {
    * @param rangeStart offset to read from
    * @param rangeSize size of a value range
    * @return full size of a K-V pair
+   * @throws IOException I/O exception
    */
   public default int readValueRange(IOEngine engine, long keyPtr, int keySize, int sid, long offset,
       int size, ByteBuffer buffer, int rangeStart, int rangeSize) throws IOException {
@@ -172,6 +180,7 @@ public interface DataReader {
    * @param engine I/O engine
    * @param s segment
    * @return segment scanner
+   * @throws IOException I/O exception
    */
   public SegmentScanner getSegmentScanner(IOEngine engine, Segment s) throws IOException;
 

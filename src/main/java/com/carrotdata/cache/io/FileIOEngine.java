@@ -102,7 +102,7 @@ public class FileIOEngine extends IOEngine {
   /**
    * IOEngine subclass can override this method
    * @param data data segment
-   * @throws FileNotFoundException
+   * @throws IOException on I/O error
    */
   protected void saveInternal(Segment data) throws IOException {
     //FIXME: async write

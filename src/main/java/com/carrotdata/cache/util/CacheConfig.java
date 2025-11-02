@@ -207,7 +207,7 @@ public class CacheConfig {
   /** Promotion on hit from victim to main cache */
   public static final String CACHE_VICTIM_PROMOTION_ON_HIT_KEY = "victim.promotion.on.hit";
 
-  /** Evict all to victim cache. Default: false - only objects with hits > 0 */
+  /** Evict all to victim cache. Default: false - only objects with {@code hits} {@literal >} {@code 0} */
   public static final String VICTIM_EVICT_ALL_KEY = "victim.evict.all";
 
   /*
@@ -681,6 +681,7 @@ public class CacheConfig {
 
   /**
    * Used for testing only
+   * @param config cache configuration
    */
   public static void setInstance(CacheConfig config) {
     instance = config;
@@ -703,7 +704,7 @@ public class CacheConfig {
    * Load configuration from an input stream
    * @param file input stream
    * @return cache configuration object
-   * @throws IOException
+   * @throws IOException in case of I/O errors
    */
   public static CacheConfig load(String file) throws IOException {
     FileInputStream is = new FileInputStream(file);
@@ -756,7 +757,7 @@ public class CacheConfig {
   /**
    * Save configuration
    * @param os output stream
-   * @throws IOException
+   * @throws IOException in case of I/O errors
    */
   public void save(OutputStream os) throws IOException {
     this.props.store(os, "Cache configuration properties");
@@ -1238,7 +1239,7 @@ public class CacheConfig {
   /**
    * Set root directory location for a cache
    * @param cacheName cache name
-   * @param dir data directory names for a given cache name
+   * @param dirs list of data directory names for a given cache name
    */
   public void setCacheRootDirs(String cacheName, String[] dirs) {
     
@@ -1432,7 +1433,7 @@ public class CacheConfig {
   /**
    * Set promotion probability for a given key
    * @param cacheName cache name
-   * @param probability
+   * @param probability probability of a promotion
    */
   public void setRandomPromotionProbability(String cacheName, double probability) {
     props.setProperty(cacheName + "." + PROMOTION_QUEUE_MAX_SIZE_RATIO_KEY,
@@ -1667,9 +1668,9 @@ public class CacheConfig {
    * Get admission queue index format implementation
    * @param cacheName cache name
    * @return index format
-   * @throws ClassNotFoundException
-   * @throws IllegalAccessException
-   * @throws InstantiationException
+   * @throws ClassNotFoundException if class not found
+   * @throws IllegalAccessException if access error
+   * @throws InstantiationException if instantiation error
    */
   public IndexFormat getAdmissionQueueIndexFormat(String cacheName)
       throws ClassNotFoundException, InstantiationException, IllegalAccessException {
@@ -1701,9 +1702,9 @@ public class CacheConfig {
    * Get main queue index format implementation
    * @param cacheName cache name
    * @return index format
-   * @throws ClassNotFoundException
-   * @throws IllegalAccessException
-   * @throws InstantiationException
+   * @throws ClassNotFoundException if class not found
+   * @throws IllegalAccessException if access error
+   * @throws InstantiationException if instantiation error
    */
   public IndexFormat getMainQueueIndexFormat(String cacheName)
       throws ClassNotFoundException, InstantiationException, IllegalAccessException {
@@ -1735,9 +1736,9 @@ public class CacheConfig {
    * Get cache eviction policy implementation by cache name
    * @param cacheName cache name
    * @return eviction policy
-   * @throws ClassNotFoundException
-   * @throws IllegalAccessException
-   * @throws InstantiationException
+   * @throws ClassNotFoundException if class not found
+   * @throws IllegalAccessException if access error
+   * @throws InstantiationException if instantiation error
    */
   public EvictionPolicy getCacheEvictionPolicy(String cacheName)
       throws ClassNotFoundException, InstantiationException, IllegalAccessException {
@@ -1771,9 +1772,9 @@ public class CacheConfig {
    * Get cache admission controller implementation by cache name
    * @param cacheName cache name
    * @return admission controller
-   * @throws ClassNotFoundException
-   * @throws IllegalAccessException
-   * @throws InstantiationException
+   * @throws ClassNotFoundException if class not found
+   * @throws IllegalAccessException if access error
+   * @throws InstantiationException if instantiation error
    */
   public AdmissionController getAdmissionController(String cacheName)
       throws ClassNotFoundException, InstantiationException, IllegalAccessException {
@@ -1804,9 +1805,9 @@ public class CacheConfig {
    * Get cache promotion controller implementation by cache name
    * @param cacheName cache name
    * @return promotion controller instance
-   * @throws ClassNotFoundException
-   * @throws IllegalAccessException
-   * @throws InstantiationException
+   * @throws ClassNotFoundException if class not found
+   * @throws IllegalAccessException if access error
+   * @throws InstantiationException if instantiation error
    */
   public PromotionController getPromotionController(String cacheName)
       throws ClassNotFoundException, InstantiationException, IllegalAccessException {
@@ -1837,9 +1838,9 @@ public class CacheConfig {
    * Get cache throughput controller implementation by cache name
    * @param cacheName cache name
    * @return throughput controller
-   * @throws ClassNotFoundException
-   * @throws IllegalAccessException
-   * @throws InstantiationException
+   * @throws ClassNotFoundException if class not found
+   * @throws IllegalAccessException if access error
+   * @throws InstantiationException if instantiation error
    */
   public ThroughputController getThroughputController(String cacheName)
       throws ClassNotFoundException, InstantiationException, IllegalAccessException {
@@ -1870,9 +1871,9 @@ public class CacheConfig {
    * Get Scavenger recycling selector implementation by cache name
    * @param cacheName cache name
    * @return recycling selector
-   * @throws ClassNotFoundException
-   * @throws IllegalAccessException
-   * @throws InstantiationException
+   * @throws ClassNotFoundException if class not found
+   * @throws IllegalAccessException if access error
+   * @throws InstantiationException if instantiation error
    */
   public RecyclingSelector getRecyclingSelector(String cacheName)
       throws ClassNotFoundException, InstantiationException, IllegalAccessException {
@@ -1901,9 +1902,9 @@ public class CacheConfig {
    * Get segment data writer (appender) implementation by cache name
    * @param cacheName cache name
    * @return data writer
-   * @throws ClassNotFoundException
-   * @throws IllegalAccessException
-   * @throws InstantiationException
+   * @throws ClassNotFoundException if class not found
+   * @throws IllegalAccessException if access error
+   * @throws InstantiationException if instantiation error
    */
   public DataWriter getDataWriter(String cacheName)
       throws ClassNotFoundException, InstantiationException, IllegalAccessException {
@@ -1931,9 +1932,9 @@ public class CacheConfig {
    * Get segment data reader implementation (Memory) by cache name
    * @param cacheName cache name
    * @return data reader
-   * @throws ClassNotFoundException
-   * @throws IllegalAccessException
-   * @throws InstantiationException
+   * @throws ClassNotFoundException if class not found
+   * @throws IllegalAccessException if access error
+   * @throws InstantiationException if instantiation error
    */
   public DataReader getMemoryDataReader(String cacheName)
       throws ClassNotFoundException, InstantiationException, IllegalAccessException {
@@ -1961,9 +1962,10 @@ public class CacheConfig {
   /**
    * Get segment data reader implementation (File) by cache name
    * @param cacheName cache name
-   * @throws ClassNotFoundException
-   * @throws IllegalAccessException
-   * @throws InstantiationException
+   * @return data reader
+   * @throws ClassNotFoundException if class not found
+   * @throws IllegalAccessException if access error
+   * @throws InstantiationException if instantiation error
    */
   public DataReader getFileDataReader(String cacheName)
       throws ClassNotFoundException, InstantiationException, IllegalAccessException {
@@ -1982,6 +1984,7 @@ public class CacheConfig {
   /**
    * Set segment data reader implementation (File) by cache name
    * @param cacheName cache name
+   * @param className data reader class name
    */
   public void setFileDataReader(String cacheName, String className) {
     props.setProperty(cacheName + "." + CACHE_FILE_DATA_READER_IMPL_KEY, className);
@@ -2039,6 +2042,9 @@ public class CacheConfig {
    * Get expiration support implementation by cache name
    * @param cacheName cache name
    * @return expire support implementation
+   * @throws ClassNotFoundException if class not found
+   * @throws IllegalAccessException if access error
+   * @throws InstantiationException if instantiation error
    */
   public ExpireSupport getExpireSupport(String cacheName)
       throws ClassNotFoundException, InstantiationException, IllegalAccessException {
@@ -2335,7 +2341,7 @@ public class CacheConfig {
 
   /**
    * Cache streaming support buffer size
-   * @param size
+   * @param size buffer size
    */
   public void setCacheStreamingSupportBufferSize(int size) {
     this.props.setProperty(CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY, Integer.toString(size));
@@ -2343,8 +2349,8 @@ public class CacheConfig {
 
   /**
    * Cache streaming support number threads
-   * @param cacheName
-   * @param size
+   * @param cacheName cache name
+   * @param size buffer size
    */
   public void setCacheStreamingSupportBufferSize(String cacheName, int size) {
     this.props.setProperty(cacheName + "." + CACHE_STREAMING_SUPPORT_BUFFER_SIZE_KEY,

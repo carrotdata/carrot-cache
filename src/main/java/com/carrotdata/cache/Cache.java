@@ -278,7 +278,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /**
    * Constructor with cache name
    * @param name cache name
-   * @throws IOException
+   * @throws IOException on error
    */
   public Cache(String name) throws IOException {
     this.cacheName = name;
@@ -927,9 +927,18 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /***********************************************************
    * Cache API
-   */
+   ***********************************************************/
 
-  /* Put API */
+  /**
+   * 
+   * @param keyPtr key pointer
+   * @param keySize key size
+   * @param valuePtr value pointer
+   * @param valSize value size
+   * @param expire expiration time
+   * @return  true if put was successful
+   * @throws IOException on error
+   */
 
   public boolean putIfAbsent(long keyPtr, int keySize, long valuePtr, int valSize, long expire) throws IOException {
     int index = (int) (Math.abs(Utils.hash64(keyPtr, keySize)) % locks.length);
@@ -951,6 +960,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param valSize value size
    * @param expire  - expiration (0 - no expire)
    * @return true on success, false - otherwise
+   * @throws IOException on error
    */
   public boolean put(long keyPtr, int keySize, long valPtr, int valSize, long expire)
       throws IOException {
@@ -976,8 +986,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param rank      popularity rank
    * @param groupRank grouping rank
    * @param force,    if true - bypass admission controller
-   * @return
-   * @throws IOException
+   * @return true on success, false - otherwise
+   * @throws IOException on error
    */
   public boolean put(long keyPtr, int keySize, long valPtr, int valSize, long expire, int rank,
       int groupRank, boolean force) throws IOException {
@@ -993,6 +1003,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param expire    expiration (0 - no expire)
    * @param groupRank grouping rank
    * @return true on success, false - otherwise
+   * @throws IOException on error
    */
   public boolean putWithGroupRank(long keyPtr, int keySize, long valPtr, int valSize, long expire,
       int groupRank) throws IOException {
@@ -1025,7 +1036,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param rank      popularity rank of the item
    * @param groupRank grouping rank
    * @param force     if true - bypass admission controller
+   * @param scavenger true - called from scavenger thread
    * @return true on success, false - otherwise
+   * @throws IOException on error
    */
   public boolean put(long keyPtr, int keySize, long valPtr, int valSize, long expire, int rank,
       int groupRank, boolean force, boolean scavenger) throws IOException {
@@ -1132,6 +1145,18 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     return expire;
   }
 
+  /**
+   * 
+   * @param key key
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @param value value
+   * @param valOffset value offset
+   * @param valSize value size 
+   * @param expire expiration time
+   * @return true if put was successful
+   * @throws IOException on error
+   */
   public boolean putIfAbsent(byte[] key, int keyOffset, int keySize, byte[] value, int valOffset,
       int valSize, long expire) throws IOException {
     int index = (int) (Math.abs(Utils.hash64(key, keyOffset, keySize)) % locks.length);
@@ -1146,6 +1171,18 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
   }
   
+  /**
+   *  Put item into the cache - API for new items
+   * @param key key
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @param value value
+   * @param valOffset value offset
+   * @param valSize value size
+   * @param expire expiration (0 - no expire)
+   * @return true on success, false - otherwise
+   * @throws IOException on error
+   */
   public boolean put(byte[] key, int keyOffset, int keySize, byte[] value, int valOffset,
       int valSize, long expire) throws IOException {
     int rank = getDefaultRankToInsert();
@@ -1154,6 +1191,19 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         false);
   }
 
+  /**
+   * Put item into the cache - API for new items
+   * @param key key
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @param value value 
+   * @param valOffset value offset
+   * @param valSize value size
+   * @param expire expiration (0 - no expire)
+   * @param force force put
+   * @return true on success, false - otherwise
+   * @throws IOException on error
+   */
   public boolean put(byte[] key, int keyOffset, int keySize, byte[] value, int valOffset,
       int valSize, long expire, boolean force) throws IOException {
     int rank = getDefaultRankToInsert();
@@ -1162,6 +1212,20 @@ public class Cache implements IOEngine.Listener, EvictionListener {
         false);
   }
 
+  /**
+   * Put item into the cache - API for new items
+   * @param key key
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @param value value 
+   * @param valOffset value offset
+   * @param valSize value size
+   * @param expire expiration (0 - no expire)
+   * @param rank item's popularity rank
+   * @param force force put
+   * @return true on success, false - otherwise
+   * @throws IOException on error
+   */
   public boolean put(byte[] key, int keyOffset, int keySize, byte[] value, int valOffset,
       int valSize, long expire, int rank, boolean force) throws IOException {
     int groupRank = rank;
@@ -1171,16 +1235,16 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Put with group rank (group rank - aware AC)
-   * @param key
-   * @param keyOffset
-   * @param keySize
-   * @param value
-   * @param valOffset
-   * @param valSize
-   * @param expire
-   * @param groupRank
-   * @return
-   * @throws IOException
+   * @param key key
+   * @param keyOffset key offset
+   * @param keySize key size
+   * @param value value
+   * @param valOffset value offset
+   * @param valSize value size
+   * @param expire expiration (0 - no expire)
+   * @param groupRank grouping rank
+   * @return true on success, false - otherwise
+   * @throws IOException on error
    */
   public boolean putWithGroupRank(byte[] key, int keyOffset, int keySize, byte[] value,
       int valOffset, int valSize, long expire, int groupRank) throws IOException {
@@ -1202,7 +1266,9 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param rank      item's popularity rank
    * @param groupRank - group rank
    * @param force     if true - bypass admission controller
+   * @param scavenger true - called from scavenger thread
    * @return true on success, false - otherwise
+   * @throws IOException on error
    */
   public boolean put(byte[] key, int keyOffset, int keySize, byte[] value, int valOffset,
       int valSize, long expire, int rank, int groupRank, boolean force, boolean scavenger)
@@ -1356,6 +1422,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param key    key
    * @param value  value
    * @param expire - expiration (0 - no expire)
+   * @return true on success, false - otherwise
+   * @throws IOException on error
    */
   public boolean put(byte[] key, byte[] value, long expire) throws IOException {
     int rank = getDefaultRankToInsert();
@@ -1372,7 +1440,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param bufOffset buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
-   * @throws IOException
+   * @throws IOException on error
    */
   public long getKeyValue(long keyPtr, int keySize, byte[] buffer, int bufOffset)
       throws IOException {
@@ -1388,7 +1456,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param bufOffset buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
-   * @throws IOException
+   * @throws IOException on error
    */
   public long getKeyValue(long keyPtr, int keySize, boolean hit, byte[] buffer, int bufOffset)
       throws IOException {
@@ -1453,8 +1521,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyPtr       key buffer address
    * @param keySize   key size
    * @param hit       if true - its a hit
-   * @param buffer    future result buffer
-   * @throws IOException
+   * @param future    future result buffer
    */
   public void getKeyValueAsync(long keyPtr, int keySize, boolean hit, FutureResultByteArray future) {
     if (this.cacheDisabled) {
@@ -1566,7 +1633,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param bufOffset buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
-   * @throws IOException
+   * @throws IOException  on error
    */
   public long get(long keyPtr, int keySize, boolean hit, byte[] buffer, int bufOffset)
       throws IOException {
@@ -1587,10 +1654,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyPtr     key address
    * @param keySize key size
    * @param hit     if true - its a hit
-   * @param buffer  byte buffer for item
-   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *     adjusted buffer
-   * @throws IOException
+   * @param future  future byte buffer for item
+   * @throws IOException on error
    */
   public void getAsync(long keyPtr, int keySize, boolean hit, FutureResultByteArray future)
       throws IOException {
@@ -1620,7 +1685,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param bufOffset  buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
-   * @throws IOException
+   * @throws IOException on error
    */
   public long getRange(long keyPtr, int keySize, int rangeStart, int rangeSize, boolean hit,
       byte[] buffer, int bufOffset) throws IOException {
@@ -1668,7 +1733,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param bufOffset buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
-   * @throws IOException
+   * @throws IOException on error
    */
   public long getKeyValue(byte[] key, int keyOffset, int keySize, byte[] buffer, int bufOffset)
       throws IOException {
@@ -1685,7 +1750,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param bufOffset buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
-   * @throws IOException
+   * @throws IOException on error
    */
   public long getKeyValue(byte[] key, int keyOffset, int keySize, boolean hit, byte[] buffer,
       int bufOffset) throws IOException {
@@ -1758,8 +1823,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyOffset key offset
    * @param keySize   key size
    * @param hit       if true - its a hit
-   * @param buffer    future result buffer
-   * @throws IOException
+   * @param future    future result buffer
    */
   public void getKeyValueAsync(byte[] key, int keyOffset, int keySize, boolean hit, FutureResultByteArray future) {
     if (this.cacheDisabled) {
@@ -1887,7 +1951,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param off key offset
    * @param len key length
    * @return input stream to read data from
-   * @throws IOException
+   * @throws IOException on error
    */
   public InputStream getInputStream(byte[] key, int off, int len) throws IOException {
     return CacheInputStream.openStream(this, key, off, len);
@@ -1897,7 +1961,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * Get cached value only (if any)
    * @param key key buffer
    * @return value or null
-   * @throws IOException
+   * @throws IOException  on error
    */
   public byte[] get(byte[] key) throws IOException {
     return get(key, 0, key.length, true);
@@ -1909,7 +1973,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyOffset key offset
    * @param keySize   key size
    * @return value or null
-   * @throws IOException
+   * @throws IOException on error
    */
   public byte[] get(byte[] key, int keyOffset, int keySize) throws IOException {
     return get(key, keyOffset, keySize, true);
@@ -1930,7 +1994,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keySize   key size
    * @param hit       if true - its a hit
    * @return value or null
-   * @throws IOException
+   * @throws IOException on error
    */
   public byte[] get(byte[] key, int keyOffset, int keySize, boolean hit) throws IOException {
 
@@ -1972,7 +2036,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * Get cached key-value pair (if any) returned value must be processed in the same thread
    * @param key key buffer
    * @return key - value pair
-   * @throws IOException
+   * @throws IOException on error
    */
   public byte[] getKeyValue(byte[] key) throws IOException {
     return getKeyValue(key, 0, key.length, true);
@@ -1984,7 +2048,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyOffset key offset
    * @param keySize   key size
    * @return key - value pair
-   * @throws IOException
+   * @throws IOException on error
    */
   public byte[] getKeyValue(byte[] key, int keyOffset, int keySize) throws IOException {
     return getKeyValue(key, keyOffset, keySize, true);
@@ -1997,7 +2061,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keySize   key size
    * @param hit       if true - its a hit
    * @return key - value pair
-   * @throws IOException
+   * @throws IOException on error
    */
   public byte[] getKeyValue(byte[] key, int keyOffset, int keySize, boolean hit)
       throws IOException {
@@ -2049,7 +2113,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyPtr  key buffer address
    * @param keySize key size
    * @return value or null
-   * @throws IOException
+   * @throws IOException  on error
    */
   public byte[] get(long keyPtr, int keySize) throws IOException {
     return get(keyPtr, keySize, true);
@@ -2061,7 +2125,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keySize key size
    * @param hit     if true - its a hit
    * @return value or null
-   * @throws IOException
+   * @throws IOException on error
    */
   public byte[] get(long keyPtr, int keySize, boolean hit) throws IOException {
 
@@ -2103,7 +2167,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyPtr  key buffer address
    * @param keySize key size
    * @return key - value pair
-   * @throws IOException
+   * @throws IOException on error
    */
   public byte[] getKeyValue(long keyPtr, int keySize) throws IOException {
     return getKeyValue(keyPtr, keySize, true);
@@ -2115,7 +2179,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keySize key size
    * @param hit     if true - its a hit
    * @return key - value pair
-   * @throws IOException
+   * @throws IOException on error
    */
   public byte[] getKeyValue(long keyPtr, int keySize, boolean hit) throws IOException {
 
@@ -2164,7 +2228,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param buffer    buffer
    * @param bufOffset buffer offset
    * @return size of a value
-   * @throws IOException
+   * @throws IOException on error
    */
   public long get(byte[] key, int keyOffset, int keySize, byte[] buffer, int bufOffset)
       throws IOException {
@@ -2181,7 +2245,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param bufOffset buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
-   * @throws IOException
+   * @throws IOException on error
    */
   public long get(byte[] key, int keyOffset, int keySize, boolean hit, byte[] buffer, int bufOffset)
       throws IOException {
@@ -2205,7 +2269,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keySize   key size
    * @param hit       if true - its a hit
    * @param future    buffer with future
-   * @throws IOException
+   * @throws IOException on error
    */
   public void getAsync(byte[] key, int keyOffset, int keySize, boolean hit, FutureResultByteArray future)
       throws IOException {
@@ -2236,7 +2300,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param bufOffset  buffer offset
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
-   * @throws IOException
+   * @throws IOException on error
    */
   public long getRange(byte[] key, int keyOffset, int keySize, int rangeStart, int rangeSize,
       boolean hit, byte[] buffer, int bufOffset) throws IOException {
@@ -2287,7 +2351,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param buffer  byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
-   * @throws IOException
+   * @throws IOException on error
    */
   public long getKeyValue(byte[] key, int keyOff, int keySize, ByteBuffer buffer)
       throws IOException {
@@ -2303,7 +2367,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param buffer  byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
-   * @throws IOException
+   * @throws IOException on error
    */
   public long getKeyValue(byte[] key, int keyOff, int keySize, boolean hit, ByteBuffer buffer)
       throws IOException {
@@ -2370,8 +2434,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyOffset key offset
    * @param keySize   key size
    * @param hit       if true - its a hit
-   * @param buffer    future result buffer
-   * @throws IOException
+   * @param future    future result buffer
    */
   public void getKeyValueAsync(byte[] key, int keyOffset, int keySize, boolean hit, FutureResultByteBuffer future) {
     if (this.cacheDisabled) {
@@ -2481,7 +2544,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param buffer  byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
-   * @throws IOException
+   * @throws IOException on error
    */
   public long get(byte[] key, int keyOff, int keySize, boolean hit, ByteBuffer buffer)
       throws IOException {
@@ -2500,13 +2563,11 @@ public class Cache implements IOEngine.Listener, EvictionListener {
   /**
    * Get cached item value only (if any)
    * @param key     key buffer
-   * @param keyOff  key offset
+   * @param keyOffset  key offset
    * @param keySize key size
    * @param hit     if true - its a hit
-   * @param buffer  byte buffer for item
-   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *     adjusted buffer
-   * @throws IOException
+   * @param future  future result buffer for item
+   * @throws IOException on error
    */
   public void getAsync(byte[] key, int keyOffset, int keySize, boolean hit, FutureResultByteBuffer future)
       throws IOException {
@@ -2536,7 +2597,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param buffer     byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
-   * @throws IOException
+   * @throws IOException on error
    */
   public long getRange(byte[] key, int keyOffset, int keySize, int rangeStart, int rangeSize,
       boolean hit, ByteBuffer buffer) throws IOException {
@@ -2583,7 +2644,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param buffer  byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
-   * @throws IOException
+   * @throws IOException on error
    */
   public long getKeyValue(long keyPtr, int keySize, ByteBuffer buffer) throws IOException {
     return getKeyValue(keyPtr, keySize, true, buffer);
@@ -2597,7 +2658,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param buffer  byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
-   * @throws IOException
+   * @throws IOException on error
    */
   public long getKeyValue(long keyPtr, int keySize, boolean hit, ByteBuffer buffer)
       throws IOException {
@@ -2662,8 +2723,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyPtr       key buffer
    * @param keySize   key size
    * @param hit       if true - its a hit
-   * @param buffer    future result buffer
-   * @throws IOException
+   * @param future    future result buffer
    */
   public void getKeyValueAsync(long keyPtr, int keySize, boolean hit, FutureResultByteBuffer future) {
     if (this.cacheDisabled) {
@@ -2774,7 +2834,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param buffer  byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
-   * @throws IOException
+   * @throws IOException on error
    */
   public long get(long keyPtr, int keySize, boolean hit, ByteBuffer buffer) throws IOException {
     if (this.cacheDisabled) {
@@ -2794,10 +2854,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyPtr     key address
    * @param keySize key size
    * @param hit     if true - its a hit
-   * @param buffer  byte buffer for item
-   * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
-   *     adjusted buffer
-   * @throws IOException
+   * @param future  future result buffer for item
+   * @throws IOException on error
    */
   public void getAsync(long keyPtr, int keySize, boolean hit, FutureResultByteBuffer future)
       throws IOException {
@@ -2826,7 +2884,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param buffer     byte buffer for item
    * @return size of an item (-1 - not found), if is greater than bufSize - retry with a properly
    *     adjusted buffer
-   * @throws IOException
+   * @throws IOException on error  
    */
   public long getRange(long keyPtr, int keySize, int rangeStart, int rangeSize, boolean hit,
       ByteBuffer buffer) throws IOException {
@@ -2874,7 +2932,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyPtr  key address
    * @param keySize key size
    * @return true - success, false - does not exist
-   * @throws IOException
+   * @throws IOException on error
    */
   public boolean delete(long keyPtr, int keySize) throws IOException {
     if (this.cacheDisabled) {
@@ -2898,7 +2956,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyOffset key offset
    * @param keySize   key size
    * @return true - success, false - does not exist
-   * @throws IOException
+   * @throws IOException on error
    */
   public boolean delete(byte[] key, int keyOffset, int keySize) throws IOException {
     if (this.cacheDisabled) {
@@ -2920,7 +2978,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * Delete cached item
    * @param key key buffer
    * @return true - success, false - does not exist
-   * @throws IOException
+   * @throws IOException on error
    */
   public boolean delete(byte[] key) throws IOException {
     return delete(key, 0, key.length);
@@ -2931,7 +2989,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyPtr  key address
    * @param keySize key size
    * @return true - success, false - does not exist
-   * @throws IOException
+   * @throws IOException on error
    */
   public boolean expire(long keyPtr, int keySize) throws IOException {
     return delete(keyPtr, keySize);
@@ -2943,7 +3001,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyOffset key offset
    * @param keySize   key size
    * @return true - success, false - does not exist
-   * @throws IOException
+   * @throws IOException on error
    */
   public boolean expire(byte[] key, int keyOffset, int keySize) throws IOException {
     return delete(key, keyOffset, keySize);
@@ -2953,7 +3011,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * Expire cached item
    * @param key key
    * @return true - success, false - does not exist
-   * @throws IOException
+   * @throws IOException on error
    */
   public boolean expire(byte[] key) throws IOException {
     return delete(key, 0, key.length);
@@ -3002,6 +3060,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param key  key buffer
    * @param off  offset
    * @param size key size
+   * @param expire new expiration time
    * @return time, 0 - no expire, -1 - does not exists or not supported
    */
   public long getAndSetExpire(byte[] key, int off, int size, long expire) {
@@ -3020,6 +3079,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * Get and set expiration time
    * @param keyPtr  key address
    * @param keySize key size
+   * @param expire new expiration time
    * @return time in ms since you know when, -1 not supported or does not exists
    */
   public long getAndSetExpire(long keyPtr, int keySize, long expire) {
@@ -3068,9 +3128,8 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Does key exist (false positive are possible, but not false negatives)
-   * @param key  key buffer
-   * @param off  key offset
-   * @param size key size
+   * @param keyPtr  key pointer
+   * @param size  key size
    * @return true or false
    */
   public boolean maybeExists(long keyPtr, int size) {
@@ -3095,7 +3154,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param off  key offset
    * @param size key size
    * @return true or false
-   * @throws IOException
+   * @throws IOException on error
    */
   public boolean existsExact(byte[] key, int off, int size) throws IOException {
     if (this.cacheDisabled) {
@@ -3116,7 +3175,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * @param keyPtr key buffer
    * @param size   key size
    * @return true or false
-   * @throws IOException
+   * @throws IOException on error  
    */
   public boolean existsExact(long keyPtr, int size) throws IOException {
     if (this.cacheDisabled) {
@@ -3247,7 +3306,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * Transfer cached item to a victim cache
    * @param ibPtr    index block pointer
    * @param indexPtr item pointer
-   * @throws IOException
+   * @throws IOException on error
    */
   private void transferToCache(Cache c, long ibPtr, long indexPtr) throws IOException {
     if (getCacheType() == Type.DISK) {
@@ -3298,7 +3357,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
    * Transfer cached item to a victim cache
    * @param ibPtr    index block pointer
    * @param indexPtr item pointer
-   * @throws IOException
+   * @throws IOException on error
    */
   private void transferEmbeddedToCache(Cache c, long ibPtr, long indexPtr) throws IOException {
     if (getCacheType() == Type.DISK) {
@@ -3356,7 +3415,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Loads cache meta data
-   * @throws IOException
+   * @throws IOException on error
    */
   private void loadCache() throws IOException {
     CacheConfig conf = CacheConfig.getInstance();
@@ -3391,7 +3450,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Saves cache meta data
-   * @throws IOException
+   * @throws IOException on error
    */
   private void saveCache() throws IOException {
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
@@ -3417,7 +3476,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Loads admission controller data
-   * @throws IOException
+   * @throws IOException on error
    */
   private void loadAdmissionControlller() throws IOException {
     if (this.admissionController == null) {
@@ -3436,7 +3495,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Saves admission controller data
-   * @throws IOException
+   * @throws IOException on error
    */
   private void saveAdmissionController() throws IOException {
     if (this.admissionController == null) {
@@ -3453,7 +3512,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Loads throughput controller data
-   * @throws IOException
+   * @throws IOException on error
    */
   private void loadThroughputControlller() throws IOException {
     if (this.throughputController == null) {
@@ -3472,7 +3531,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Saves throughput controller data
-   * @throws IOException
+   * @throws IOException on error
    */
   private void saveThroughputController() throws IOException {
     if (this.throughputController == null) {
@@ -3489,7 +3548,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Loads scavenger statistics data
-   * @throws IOException
+   * @throws IOException on error
    */
   private void loadScavengerStats() throws IOException {
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
@@ -3507,7 +3566,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Saves scavenger statistics data
-   * @throws IOException
+   * @throws IOException on error
    */
   private void saveScavengerStats() throws IOException {
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
@@ -3522,7 +3581,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Loads engine data
-   * @throws IOException
+   * @throws IOException on error
    */
   private void loadEngine() throws IOException {
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
@@ -3538,7 +3597,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Saves engine data
-   * @throws IOException
+   * @throws IOException on error
    */
   private void saveEngine() throws IOException {
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
@@ -3552,7 +3611,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Loads engine data
-   * @throws IOException
+   * @throws IOException on error
    */
   private void loadIndex() throws IOException {
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
@@ -3571,7 +3630,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Saves engine data
-   * @throws IOException
+   * @throws IOException on error
    */
   private void saveIndex() throws IOException {
     String snapshotDir = this.conf.getSnapshotDir(this.cacheName);
@@ -3589,7 +3648,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Save cache data and meta-data
-   * @throws IOException
+   * @throws IOException on error
    */
   public void save() throws IOException {
     LOG.info("Started saving cache ...");
@@ -3612,7 +3671,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Saves in parallel engine and index data
-   * @throws IOException
+   * @throws IOException on error
    */
   private void saveEngineAndIndex() throws IOException {
     // Can do this in parallel
@@ -3667,7 +3726,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Loads in parallel engine data and data index
-   * @throws IOException
+   * @throws IOException on error
    */
   private void loadEngineAndIndex() throws IOException {
     // Can do this in parallel
@@ -3725,7 +3784,7 @@ public class Cache implements IOEngine.Listener, EvictionListener {
 
   /**
    * Load cache data and meta-data from a file system
-   * @throws IOException
+   * @throws IOException on error
    */
   public void load() throws IOException {
     onEngineSaveLoad = null;
@@ -3985,7 +4044,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
 
   }
-
+  /**
+   * Loads cache from the file system
+   * @param cacheName cache name
+   * @return cache or null if not exists
+   * @throws IOException on error
+   */
   public static Cache loadCache(String cacheName) throws IOException {
     CacheConfig conf = CacheConfig.getInstance();
     String snapshotDir = conf.getSnapshotDir(cacheName);
@@ -4039,13 +4103,12 @@ public class Cache implements IOEngine.Listener, EvictionListener {
     }
     return cache;
   }
-
-//  public static Cache loadCache(String rootDir, String cacheName) throws IOException {
-//    CacheConfig conf = CacheConfig.getInstance();
-//    conf.setGlobalCacheRootDir(rootDir);
-//    return loadCache(cacheName);
-//  }
-
+  /**
+   * Flushes all cache data asynchronously
+   * @param c cache to flush
+   * @return new empty cache
+   * @throws IOException on error
+   */
   public static Cache flushAll(Cache c) throws IOException {
     // Create empty cache with the same configuration
     Cache main = new Cache(c.getName());

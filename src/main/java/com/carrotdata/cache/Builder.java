@@ -23,6 +23,19 @@ import com.carrotdata.cache.compression.CompressionCodec;
 import com.carrotdata.cache.io.IOEngine;
 import com.carrotdata.cache.util.CacheConfig;
 
+/**
+ * Builder for Cache and ObjectCache instances.
+ *
+ * <p>This class provides a fluent API to configure cache-related settings in
+ * the shared CacheConfig and then construct either an off-heap/on-disk
+ * Cache or an ObjectCache wrapper around it.</p>
+ *
+ * <p>Usage example:
+ * Builder b = new Builder("mycache");
+ * b.withCacheMaximumSize(1_000_000).withCacheCompressionEnabled(true);
+ * Cache cache = b.buildMemoryCache();
+ * </p>
+ */
 public class Builder {
 
   /** Cache name */
@@ -36,7 +49,8 @@ public class Builder {
 
   /**
    * Public constructor
-   * @param cacheName
+   *
+   * @param cacheName name of the cache to configure and build
    */
   public Builder(String cacheName) {
     this.cacheName = cacheName;
@@ -46,7 +60,7 @@ public class Builder {
   /**
    * Build memory cache
    * @return memory cache
-   * @throws IOException
+   * @throws IOException if there is an I/O error during Cache initialization
    */
   public Cache buildMemoryCache() throws IOException {
     this.conf.addCacheNameType(cacheName, "memory");
@@ -55,8 +69,8 @@ public class Builder {
 
   /**
    * Build disk cache
-   * @return builder instance
-   * @throws IOException
+   * @return disk (file-backed) cache
+   * @throws IOException if there is an I/O error during Cache initialization
    */
   public Cache buildDiskCache() throws IOException {
     this.conf.addCacheNameType(cacheName, "file");
@@ -64,9 +78,10 @@ public class Builder {
   }
 
   /**
-   * Build memory cache
-   * @return memory cache
-   * @throws IOException
+   * Build object memory cache
+   *
+   * @return an ObjectCache wrapping an in-memory Cache
+   * @throws IOException if construction of the underlying Cache fails
    */
   public ObjectCache buildObjectMemoryCache() throws IOException {
     this.conf.addCacheNameType(cacheName, "memory");
@@ -81,8 +96,9 @@ public class Builder {
 
   /**
    * Build object disk cache
-   * @return builder instance
-   * @throws IOException
+   *
+   * @return an ObjectCache wrapping a disk-backed Cache
+   * @throws IOException if construction of the underlying Cache fails
    */
   public ObjectCache buildObjectDiskCache() throws IOException {
     this.conf.addCacheNameType(cacheName, "file");
@@ -99,7 +115,6 @@ public class Builder {
    * With cache maximum size
    * @param size maximum size
    * @return builder instance
-   * @throws IOException
    */
   public Builder withCacheMaximumSize(long size) {
     conf.setCacheMaximumSize(this.cacheName, size);
@@ -238,7 +253,7 @@ public class Builder {
 
   /**
    * With cache root directory
-   * @param dir directory
+   * @param dirs directory list
    * @return builder instance
    */
   public Builder withCacheRootDirs(String[] dirs) {
@@ -308,7 +323,7 @@ public class Builder {
 
   /**
    * With throughput controller check interval
-   * @param interval
+   * @param interval check interval
    * @return builder instance
    */
   public Builder withThroughputCheckInterval(int interval) {
@@ -538,7 +553,7 @@ public class Builder {
 
   /**
    * With eviction disabled mode
-   * @param mode
+   * @param mode true or false
    * @return builder instance
    */
   public Builder withEvictionDisabledMode(boolean mode) {
@@ -798,7 +813,7 @@ public class Builder {
 
   /**
    * With save data on shutdown
-   * @param save
+   * @param save true or false
    * @return builder instance
    */
   public Builder withCacheSaveOnShutdown(boolean save) {
@@ -808,7 +823,7 @@ public class Builder {
 
   /**
    * With cache pro-active expiration factor
-   * @param factor
+   * @param factor expiration factor
    * @return builder instance
    */
   public Builder withCacheProactiveExpirationFactor(double factor) {
@@ -858,7 +873,7 @@ public class Builder {
   
   /**
    * With compression retrain  trigger value
-   * @param interval retraining interval in seconds
+   * @param value retraining trigger value
    * @return builder instance
    */
   public Builder withCompressionRetrainTriggerValue(double value) {
@@ -898,8 +913,13 @@ public class Builder {
   
   /**
    * Build cache
-   * @return
-   * @throws IOException
+   *
+   * <p>Creates and initializes a Cache instance using the current
+   * configuration held in CacheConfig for the cache name provided to this
+   * Builder.</p>
+   *
+   * @return initialized Cache instance
+   * @throws IOException if there is an I/O error during Cache initialization
    */
   private Cache build() throws IOException {
     Cache cache = new Cache(cacheName, conf);

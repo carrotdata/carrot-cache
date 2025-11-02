@@ -62,8 +62,8 @@ public interface EvictionPolicy {
   /**
    * TODO: move this code out Get rank for a given index (0 - based). 0 - maximum
    * @param numRanks total number of ranks
-   * @param cacheItemIndex
-   * @param totalItems
+   * @param cacheItemIndex index of cache item (0 - based)
+   * @param totalItems total items in Index-Data-Block
    * @return segment number
    */
   public default int getRankForIndex(int numRanks, int cacheItemIndex, int totalItems) {

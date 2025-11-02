@@ -287,6 +287,7 @@ public class Scavenger implements Runnable {
 
   /**
    * Get scavenger statistics
+   * @param cacheName cache name
    * @return scavenger statistics;
    */
   public static Stats getStatisticsForCache(String cacheName) {

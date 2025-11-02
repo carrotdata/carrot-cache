@@ -53,6 +53,7 @@ public class Memcached {
      * @param keySize key size
      * @param bufferPtr buffer address
      * @param bufferSize buffer size
+     * @param withCAS whether to include CAS
      * @return serialized size (can be larger that bufferSize)
      */
     public int write(long keyPtr, int keySize, long bufferPtr, int bufferSize, boolean withCAS) {
@@ -400,7 +401,8 @@ public class Memcached {
    * Set operation
    * @param keyPtr key address
    * @param keySize key size
-   * @param valuePtr value address
+   * @param value value buffer
+   * @param valueOffset value offset
    * @param valueSize value size
    * @param flags flags
    * @param expTime expiration time
@@ -984,7 +986,8 @@ public class Memcached {
    * Get and touch value by key
    * @param keyPtr key address
    * @param keySize key size
-   * @return
+   * @param newExpire new expire
+   * @return result record
    */
   public Record gat(long keyPtr, int keySize, long newExpire) {
     try {
@@ -1095,7 +1098,8 @@ public class Memcached {
    * Get and touch value by key with CAS
    * @param keyPtr key address
    * @param keySize key size
-   * @return
+   * @param newExpire new expire
+   * @return result record
    */
   public Record gats(long keyPtr, int keySize, long newExpire) {
     try {
@@ -1139,8 +1143,7 @@ public class Memcached {
 
   /**
    * Touch (sets new expiration time)
-   * @param key key buffer
-   * @param keyOffset key offset
+   * @param keyPtr key address
    * @param keySize key size
    * @param expTime new expiration time
    * @return previous expiration time or -1 (if key did exist)
@@ -1185,7 +1188,7 @@ public class Memcached {
    * @param keySize key size
    * @param v - positive
    * @return -1 - error or new value after increment
-   * @throws NumberFormatException
+   * @throws NumberFormatException number format exception
    */
   public long incr(byte[] key, int keyOffset, int keySize, long v) throws NumberFormatException {
     if (v < 0) {
@@ -1213,12 +1216,11 @@ public class Memcached {
 
   /**
    * Increment (MUST BE OPTIMIZED)
-   * @param key
-   * @param keyOffset
-   * @param keySize
+   * @param keyPtr key address
+   * @param keySize key size
    * @param v - positive
    * @return -1 - error or new value after increment
-   * @throws NumberFormatException
+   * @throws NumberFormatException number format exception
    */
   public long incr(long keyPtr, int keySize, long v) throws NumberFormatException {
     if (v < 0) {
@@ -1250,7 +1252,7 @@ public class Memcached {
    * @param keySize key size
    * @param v - positive
    * @return -1 - error or new value after increment
-   * @throws NumberFormatException
+   * @throws NumberFormatException number format exception
    */
   public long decr(byte[] key, int keyOffset, int keySize, long v) throws NumberFormatException {
     if (v < 0) {
@@ -1281,12 +1283,11 @@ public class Memcached {
 
   /**
    * Increment (MUST BE OPTIMIZED)
-   * @param key
-   * @param keyOffset
-   * @param keySize
+   * @param keyPtr key address
+   * @param keySize key size
    * @param v - positive
    * @return -1 - error or new value after increment
-   * @throws NumberFormatException
+   * @throws NumberFormatException number format exception
    */
   public long decr(long keyPtr, int keySize, long v) throws NumberFormatException {
     if (v < 0) {
@@ -1317,8 +1318,7 @@ public class Memcached {
 
   /**
    * Delete by key
-   * @param key key buffer
-   * @param keyOffset key offset
+   * @param keyPtr key address
    * @param keySize key size
    * @return operation result
    */
@@ -1335,7 +1335,7 @@ public class Memcached {
   /**
    * General cache statistics
    * TODO: works only for single and two-cache configurations 
-   * @return list of key-value (key1, value1, key2, value2, ...)
+   * @return list of key-value pairs (key1, value1, key2, value2, ...)
    */
   public List<String> stats() {
     CacheJMXSink sink = new CacheJMXSink(cache);
@@ -1350,7 +1350,7 @@ public class Memcached {
   
   /**
    * Expire operation
-   * @param keyPtr key buffer
+   * @param key key buffer
    * @param keyOffset key offset
    * @param keySize key size
    * @return operation result
@@ -1381,6 +1381,10 @@ public class Memcached {
     }
   }
 
+  /**
+   * Flush all cache entries
+   * @param timeout timeout in seconds
+   */
   public void flushAll(int timeout) {
     if (timeout == 0) {
       try {

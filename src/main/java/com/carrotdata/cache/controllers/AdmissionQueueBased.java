@@ -30,7 +30,7 @@ public interface AdmissionQueueBased {
 
   /**
    * For testing Sets admission queue
-   * @param queue
+   * @param queue admission queue
    */
   public void setAdmissionQueue(AdmissionQueue queue);
 }

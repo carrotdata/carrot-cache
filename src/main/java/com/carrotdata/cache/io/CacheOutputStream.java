@@ -60,7 +60,9 @@ public class CacheOutputStream extends OutputStream {
    * Constructor
    * @param parent cache
    * @param key stream key
-   * @param expire
+   * @param off key offset
+   * @param len key length
+   * @param expire expiration time
    */
   public CacheOutputStream(Cache parent, byte[] key, int off, int len, long expire) {
     this.parent = parent;
@@ -85,7 +87,7 @@ public class CacheOutputStream extends OutputStream {
 
   /**
    * Set ignore regular flush and close
-   * @param b
+   * @param b ignore flag
    */
   public void setIgnoreFlushAndClose(boolean b) {
     this.ignoreFC = b;
@@ -165,6 +167,10 @@ public class CacheOutputStream extends OutputStream {
     forcedClose();
   }
 
+  /**
+   * Force close the stream
+   * @throws IOException on IO error
+   */
   public void forcedClose() throws IOException {
     checkClosed();
     keyBase = getKey(bufferPos);

@@ -41,12 +41,32 @@ import com.carrotdata.cache.util.UnsafeAccess;
 import com.carrotdata.cache.util.Utils;
 
 /**
- * Memory Index is a dynamic hash table, which implements smart incremental rehashing technique to
- * avoid large pauses during operation. It supports blocked rehashing as well
- * <p>
- * [SHORT] - block size [SHORT] - number of entries [SHORT] - data size [entry]+ This is fixed
- * header size. Implementation of IndexFormat can increase header size, but first 6 bytes are always
- * fixed.
+ * MemoryIndex — a dynamic on-heap index for the cache.
+ *
+ * <p>This class implements a dynamic hash table used by the cache to store
+ * compact index entries that reference keys/values kept in storage segments.
+ * It employs blocked incremental rehashing to avoid long pauses during
+ * resizing, supports both an Admission Queue (AQ) and Main Queue (MQ) index
+ * formats, and integrates a pluggable EvictionPolicy and IndexFormat.
+ *
+ * <p>Important characteristics:
+ * <ul>
+ *   <li>Variable-sized index blocks with configurable block sizes.</li>
+ *   <li>Incremental rehashing that moves individual slots to a larger table
+ *       to reduce stop-the-world resizing pauses.</li>
+ *   <li>Support for expiration and hit-count promotion for items in the
+ *       index; the behavior depends on the configured IndexFormat.</li>
+ *   <li>Thread-safety: operations acquire slot-level locks to serialize
+ *       updates per slot while allowing concurrency across different slots.</li>
+ * </ul>
+ *
+ * <p>Usage notes:
+ * <ul>
+ *   <li>Call init() to initialize an index created without an IOEngine when
+ *       persistence/save-on-shutdown is not required.</li>
+ *   <li>Set index format and eviction policy via setIndexFormat and
+ *       setEvictionPolicy before heavy use if you need non-default behavior.</li>
+ * </ul>
  */
 public final class MemoryIndex implements Persistent {
   /** Logger */
@@ -238,6 +258,13 @@ public final class MemoryIndex implements Persistent {
   /* Expiration check probability */
   private double expCheckProb;
 
+  /**
+   * Default constructor.
+   *
+   * <p>Creates an uninitialized MemoryIndex instance (used primarily for
+   * deserialization/loading). Call init() explicitly if the index is used
+   * without persistence enabled.
+   */
   public MemoryIndex() {
     this.cacheConfig = CacheConfig.getInstance();
     initLocks();
@@ -282,8 +309,10 @@ public final class MemoryIndex implements Persistent {
   }
 
   /**
-   * Constructor
-   * @param type index type
+   * Constructor used when the index is associated with an IOEngine.
+   *
+   * @param engine IOEngine instance that owns this index (may be null for tests)
+   * @param type index type (AQ or MQ)
    */
   public MemoryIndex(IOEngine engine, Type type) {
     this.engine = engine;
@@ -297,9 +326,10 @@ public final class MemoryIndex implements Persistent {
   }
 
   /**
-   * For testing
-   * @param cacheName
-   * @param type
+   * Testing constructor: create an index for the given cache name and type.
+   *
+   * @param cacheName name of the cache this index belongs to
+   * @param type index type (AQ or MQ)
    */
   public MemoryIndex(String cacheName, Type type) {
     this.cacheConfig = CacheConfig.getInstance();
@@ -312,7 +342,10 @@ public final class MemoryIndex implements Persistent {
   }
 
   /**
-   * For testing Call setEvictionPolicy and setIndexFormat
+   * Testing constructor: create an index for the given cache name. Callers
+   * should configure eviction policy and index format before use.
+   *
+   * @param cacheName name of the cache this index belongs to
    */
   public MemoryIndex(String cacheName) {
     this.cacheConfig = CacheConfig.getInstance();
@@ -517,7 +550,7 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Get memory allocated for this index
-   * @return
+   * @return allocated memory in bytes
    */
   public long getAllocatedMemory() {
     long size = this.allocatedMemory.get() + Utils.SIZEOF_LONG * ref_index_base.get().length;
@@ -530,7 +563,7 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Set type of an index - either AdmissionQueue index or Main Queue
-   * @param type
+   * @param type index type
    */
   public void setType(Type type) {
     this.indexType = type;
@@ -560,7 +593,10 @@ public final class MemoryIndex implements Persistent {
     return this.indexType;
   }
 
-  /** Index initializer */
+  /**
+   * Initialize index (for non-persistent indexes)
+   */
+  
   public void init() {
     if (ref_index_base.get() != null) {
       return;
@@ -593,6 +629,8 @@ public final class MemoryIndex implements Persistent {
   /**
    * Expand index block
    * @param indexBlockPtr current pointer
+   * @param requiredSize required size
+   * @param force force expansion even if max entries per block is reached
    * @return new pointer - can be -1 (check return value)
    */
   long expand(long indexBlockPtr, int requiredSize, boolean force) {
@@ -617,6 +655,12 @@ public final class MemoryIndex implements Persistent {
     return ptr;
   }
 
+  /**
+   * Expand index block
+   * @param indexBlockPtr current pointer
+   * @param requiredSize required size
+   * @return new pointer - can be -1 (check return value)
+   */
   long expand(long indexBlockPtr, int requiredSize) {
     return expand(indexBlockPtr, requiredSize, false);
   }
@@ -675,7 +719,7 @@ public final class MemoryIndex implements Persistent {
   /**
    * Get index block size in bytes
    * @param indexBlockPtr index block pointer
-   * @return size
+   * @return size in bytes
    */
   final int blockSize(long indexBlockPtr) {
     return UnsafeAccess.toShort(indexBlockPtr + BLOCK_SIZE_OFFSET);
@@ -711,8 +755,8 @@ public final class MemoryIndex implements Persistent {
   /**
    * Get number of entries
    * @param indexBlockPtr
-   * @param incr
-   * @return
+   * @param incr increment value
+   * @return number of entries after increment
    */
   final int incrNumEntries(long indexBlockPtr, int incr) {
     int num = numEntries(indexBlockPtr);
@@ -724,7 +768,7 @@ public final class MemoryIndex implements Persistent {
 
   /**
    * Is rehashing in progress
-   * @return true or false
+   * @return  true/false
    */
   public final boolean isRehashingInProgress() {
     return this.rehashInProgress;
@@ -733,7 +777,7 @@ public final class MemoryIndex implements Persistent {
   /**
    * Write lock on a key (slot)
    * @param keyPtr key address
-   * @param keySize key address
+   * @param keySize key size
    * @return slot number
    */
   public int lock(long keyPtr, int keySize) {
@@ -773,6 +817,7 @@ public final class MemoryIndex implements Persistent {
    * @param key key buffer
    * @param off offset
    * @param keySize key size
+   * @return slot number
    */
   public int lock(byte[] key, int off, int keySize) {
     long hash = Utils.hash64(key, off, keySize);
@@ -801,11 +846,8 @@ public final class MemoryIndex implements Persistent {
     return slot;
   }
 
-  /**
-   * Write lock on a random slot
-   * @return slot number
-   */
-  public PtrSlotPair lockRandom() {
+
+  private PtrSlotPair lockRandom() {
     long[] index = ref_index_base.get();
     ThreadLocalRandom tlr = ThreadLocalRandom.current();
     int slot = tlr.nextInt(index.length);
@@ -869,6 +911,9 @@ public final class MemoryIndex implements Persistent {
    * @param key key array
    * @param off key offset
    * @param size key size
+   * @param hit true - update hit count
+   * @param buf buffer to copy index entry
+   * @param bufSize buffer size
    * @return index size, -1 - not found
    */
   public int find(byte[] key, int off, int size, boolean hit, long buf, int bufSize) {
@@ -886,7 +931,7 @@ public final class MemoryIndex implements Persistent {
    * Get eviction candidate
    * @param buf buffer
    * @param bufSize buffer size
-   * @return required size for a index slot
+   * @return required size for an index slot
    */
   public int evictionCandidate(long buf, int bufSize) {
     int slot = -1;
@@ -994,7 +1039,7 @@ public final class MemoryIndex implements Persistent {
    * @param key key buffer
    * @param off offset
    * @param size key size
-   * @return size of an item, both key and value (-1 - not found)
+   * @return size of an item, both key and value (-1 - not found, not supported)
    */
   public int getItemSize(byte[] key, int off, int size) {
     // TODO: does it work for variable sizes?
@@ -1017,7 +1062,7 @@ public final class MemoryIndex implements Persistent {
    * Get item size (only for MQ)
    * @param keyPtr key address
    * @param keySize key size
-   * @return size of an item, both key and value (-1 - not found)
+   * @return size of an item, both key and value (-1 - not found, not supported)
    */
   public int getItemSize(long keyPtr, int keySize) {
     // TODO: embedded item case, and format w/o size ?
@@ -1038,7 +1083,7 @@ public final class MemoryIndex implements Persistent {
   /**
    * Get hit count for a key with a given hash value
    * @param hash key's hash
-   * @return hit count
+   * @return hit count (currently either 0 or 1)
    */
   public int getHitCount(long hash) {
     // TODO: OPTIMIZE, no memory allocation
@@ -1111,6 +1156,7 @@ public final class MemoryIndex implements Persistent {
    * @param key key buffer
    * @param off offset
    * @param size key size
+   * @param expire new expiration time
    * @return old expiration time
    */
   public long getAndSetExpire(byte[] key, int off, int size, long expire) {
@@ -1131,6 +1177,7 @@ public final class MemoryIndex implements Persistent {
    * Get old and set new expiration time for a key
    * @param keyPtr key address
    * @param size key size
+   * @param expire new expiration time
    * @return old expiration time
    */
   public long getAndSetExpire(long keyPtr, int size, long expire) {
@@ -1488,6 +1535,8 @@ public final class MemoryIndex implements Persistent {
    * @param ptr key address
    * @param size key size
    * @param hit - perform promotion if true
+   * @param buf buffer to copy index entry
+   * @param bufSize buffer size
    * @return index size; -1 - not found
    */
   public int find(long ptr, int size, boolean hit, long buf, int bufSize) {
@@ -1508,7 +1557,7 @@ public final class MemoryIndex implements Persistent {
    * @param keyOffset key offset
    * @param keySize key size
    * @param result result
-   * @param dumpBelowRatio
+   * @param dumpBelowRatio dump below ratio
    * @return operation result (OK, NOT_FOUND, EXPIRED, DELETED)
    */
   public ResultWithRankAndExpire checkDeleteKeyForScavenger(int sid, byte[] key, int keyOffset,
@@ -1530,7 +1579,7 @@ public final class MemoryIndex implements Persistent {
    * @param keyPtr key address
    * @param keySize key size
    * @param result result
-   * @param dumpBelowRatio
+   * @param dumpBelowRatio dump below ratio
    * @return operation result (OK, NOT_FOUND, EXPIRED, DELETED)
    */
   public ResultWithRankAndExpire checkDeleteKeyForScavenger(int sid, long keyPtr, int keySize,
@@ -1985,9 +2034,9 @@ public final class MemoryIndex implements Persistent {
    * @param keyLength item key size
    * @param expectedSid expected segment id
    * @param expectedOffset expected offset
-   * @param sid data segment id
-   * @param offset offset in the data segment
-   * @return UPDATED or FAILED
+   * @param newSid data segment id
+   * @param newOffset offset in the data segment
+   * @return mutation result UPDATED or FAILED
    */
 
   public MutationResult compareAndUpdate(byte[] key, int keyOffset, int keyLength,
