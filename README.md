@@ -161,14 +161,14 @@ At a minimum, you need to provide the maximum cache size, the data segment size 
 ```java
 Cache cache = createInMemoryCache("ram1");
 
-byte[] key1 = "key1".getBytes();
-byte[] value1 = "value1".getBytes();
+byte[] key1 = "key1".getBytes(StandardCharsets.UTF_8);
+byte[] value1 = "value1".getBytes(StandardCharsets.UTF_8);
 
 // Put key-value without expiration time
 cache.put(key1, value1, 0);
 
-byte[] key2 = "key2".getBytes();
-byte[] value2 = "value2".getBytes();
+byte[] key2 = "key2".getBytes(StandardCharsets.UTF_8);
+byte[] value2 = "value2".getBytes(StandardCharsets.UTF_8);
 
 // Put key-value with expiration time of 1 minute
 cache.put(key2, value2, System.currentTimeMillis() + 60 * 1000);
@@ -176,9 +176,7 @@ cache.put(key2, value2, System.currentTimeMillis() + 60 * 1000);
 byte[] buffer = new byte[value2.length];
 
 int size = cache.get(key2, 0, key2.length, buffer, 0);
-String result = new String(buffer, 0, size);
-
-
+String result = new String(buffer, 0, size, StandardCharsets.UTF_8);
 
 System.out.printf("Value for key %s is %s", key2, result);
 ```
