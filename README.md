@@ -1,7 +1,8 @@
 
 # Carrot Cache (CC)
 
-[Documentation](https://github.com/carrotdata/carrot-cache/wiki/Overview) 🥕🥕 [Forum & Discussions](https://github.com/carrotdata/carrot-cache/discussions)
+[Documentation](https://github.com/carrotdata/carrot-cache/wiki/Overview) 🥕🥕 [Forum & Discussions](https://github.com/carrotdata/carrot-cache/discussions) 🥕🥕 [![Maven Central](https://img.shields.io/maven-central/v/io.carrotdata/carrot-cache.svg?label=Maven%20Central)](https://central.sonatype.com/artifact/io.carrotdata/carrot-cache) [![javadoc](https://javadoc.io/badge2/io.carrotdata/carrot-cache/javadoc.svg)](https://javadoc.io/doc/io.carrotdata/carrot-cache)
+ [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 The Carrot Cache (CC) project aims to modernize data caching and enable users to build custom caching solutions through pluggable components within the CC framework. CC is a 100% Java solution that extensively utilizes off-heap memory, minimizing the impact on Java garbage collection (GC).
 
@@ -160,14 +161,14 @@ At a minimum, you need to provide the maximum cache size, the data segment size 
 ```java
 Cache cache = createInMemoryCache("ram1");
 
-byte[] key1 = "key1".getBytes();
-byte[] value1 = "value1".getBytes();
+byte[] key1 = "key1".getBytes(StandardCharsets.UTF_8);
+byte[] value1 = "value1".getBytes(StandardCharsets.UTF_8);
 
 // Put key-value without expiration time
 cache.put(key1, value1, 0);
 
-byte[] key2 = "key2".getBytes();
-byte[] value2 = "value2".getBytes();
+byte[] key2 = "key2".getBytes(StandardCharsets.UTF_8);
+byte[] value2 = "value2".getBytes(StandardCharsets.UTF_8);
 
 // Put key-value with expiration time of 1 minute
 cache.put(key2, value2, System.currentTimeMillis() + 60 * 1000);
@@ -175,9 +176,7 @@ cache.put(key2, value2, System.currentTimeMillis() + 60 * 1000);
 byte[] buffer = new byte[value2.length];
 
 int size = cache.get(key2, 0, key2.length, buffer, 0);
-String result = new String(buffer, 0, size);
-
-
+String result = new String(buffer, 0, size, StandardCharsets.UTF_8);
 
 System.out.printf("Value for key %s is %s", key2, result);
 ```
