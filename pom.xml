@@ -245,13 +245,12 @@
       <artifactId>kryo5</artifactId>
       <version>5.5.0</version>
     </dependency>
-
+    <!-- https://mvnrepository.com/artifact/com.github.luben/zstd-jni -->
     <dependency>
-      <groupId>com.carrotdata</groupId>
+      <groupId>com.github.luben</groupId>
       <artifactId>zstd-jni</artifactId>
-      <version>1.5.6-4</version>
+      <version>1.5.7-6</version>
     </dependency>
-
     <dependency>
       <groupId>com.github.ben-manes.caffeine</groupId>
       <artifactId>caffeine</artifactId>

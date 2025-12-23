@@ -37,6 +37,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.luben.zstd.Zstd;
 import com.github.luben.zstd.ZstdCompressCtx;
 import com.github.luben.zstd.ZstdDecompressCtx;
 import com.github.luben.zstd.ZstdDictCompress;
@@ -63,7 +64,14 @@ public class ZstdCompressionCodec implements CompressionCodec {
 
   }
 
-  private static ThreadLocal<byte[]> buffers = new ThreadLocal<byte[]>() {
+  private static ThreadLocal<byte[]> buffer1 = new ThreadLocal<byte[]>() {
+    @Override
+    protected byte[] initialValue() {
+      return new byte[INIT_BUFFER_SIZE];
+    }
+  };
+  
+  private static ThreadLocal<byte[]> buffer2 = new ThreadLocal<byte[]>() {
     @Override
     protected byte[] initialValue() {
       return new byte[INIT_BUFFER_SIZE];
@@ -136,7 +144,7 @@ public class ZstdCompressionCodec implements CompressionCodec {
   private int dictSize;
 
   /* Compression level */
-  private int compLevel;
+  private int compLevel = 3;
 
   /* Dictionary enabled */
   private boolean dictionaryEnabled;
@@ -193,11 +201,15 @@ public class ZstdCompressionCodec implements CompressionCodec {
 
   @Override
   public int compress(long ptr, int len, int dictId) {
-    byte[] buf = getBuffer(len);
+    int bound = (int) Zstd.compressBound(len);
+    byte[] dst = getBuffer(buffer1, bound);
+    byte[] src = getBuffer(buffer2, len);
+    UnsafeAccess.copy(ptr, src, 0, len);
+    
     ZstdCompressCtx currentCtx = getCompressContext(dictId);
 
     long startTime = System.nanoTime();
-    int compressedSize = currentCtx.compressNativeByteArray(buf, 0, buf.length, ptr, len);
+    int compressedSize = currentCtx.compressByteArray(dst, 0, dst.length, src, 0, len);
     long endTime = System.nanoTime();
 
     rawDataSize.addAndGet(len);
@@ -207,27 +219,37 @@ public class ZstdCompressionCodec implements CompressionCodec {
       // do not copy
       return compressedSize;
     }
-    UnsafeAccess.copy(buf, 0, ptr, compressedSize);
-    this.stats.getCompressedRaw().addAndGet(len);
-    this.stats.getCompressed().addAndGet(compressedSize);
-    this.stats.getCompressionTime().addAndGet(endTime - startTime);
+    UnsafeAccess.copy(dst, 0, ptr, compressedSize);
+    if (stats != null) {
+      this.stats.getCompressedRaw().addAndGet(len);
+      this.stats.getCompressed().addAndGet(compressedSize);
+      this.stats.getCompressionTime().addAndGet(endTime - startTime);
+    }
     // update statistics
     return compressedSize;
   }
 
   @Override
   public int compress(long ptr, int len, int dictId, long buffer, int bufferSize) {
+    int bound = (int) Zstd.compressBound(len);
+    byte[] dst = getBuffer(buffer1, bound);
+    byte[] src = getBuffer(buffer2, len);
+    UnsafeAccess.copy(ptr, src, 0, len);
     // sanity check?
     ZstdCompressCtx currentCtx = getCompressContext(dictId);
     long startTime = System.nanoTime();
-    int compressedSize = currentCtx.compressNativeNative(buffer, bufferSize, ptr, len);
+    int compressedSize = currentCtx.compressByteArray(dst, 0, dst.length, src, 0, len);
+    UnsafeAccess.copy(dst, 0, buffer, compressedSize);
+
     long endTime = System.nanoTime();
     rawDataSize.addAndGet(len);
     compDataSize.addAndGet(compressedSize);
     updateMaxCompression();
-    this.stats.getCompressedRaw().addAndGet(len);
-    this.stats.getCompressed().addAndGet(compressedSize);
-    this.stats.getCompressionTime().addAndGet(endTime - startTime);
+    if (stats != null) {
+      this.stats.getCompressedRaw().addAndGet(len);
+      this.stats.getCompressed().addAndGet(compressedSize);
+      this.stats.getCompressionTime().addAndGet(endTime - startTime);
+    }
     // update statistics
     return compressedSize;
   }
@@ -375,16 +397,20 @@ public class ZstdCompressionCodec implements CompressionCodec {
     if (currentCtxt == null) {
       return 0;
     }
+    byte[] src = getBuffer(buffer1, size);
+    UnsafeAccess.copy(ptr, src, 0, size);
     int decompressedSize = 0;
     try {
-      decompressedSize = currentCtxt.decompressNativeByteArray(buffer, 0, buffer.length, ptr, size);
+      decompressedSize = currentCtxt.decompressByteArray(buffer,0, buffer.length, src, 0, size);
     } catch (Throwable t) {
       return 0; // failed
     }
     long endTime = System.nanoTime();
-    this.stats.getDecompressedRaw().addAndGet(decompressedSize);
-    this.stats.getDecompressed().addAndGet(size);
-    this.stats.getDecompressionTime().addAndGet(endTime - startTime);
+    if (stats != null) {
+      this.stats.getDecompressedRaw().addAndGet(decompressedSize);
+      this.stats.getDecompressed().addAndGet(size);
+      this.stats.getDecompressionTime().addAndGet(endTime - startTime);
+    }
     return decompressedSize;
   }
 
@@ -404,9 +430,11 @@ public class ZstdCompressionCodec implements CompressionCodec {
       return 0;
     }
     long endTime = System.nanoTime();
-    this.stats.getDecompressedRaw().addAndGet(decompressedSize);
-    this.stats.getDecompressed().addAndGet(srcSize);
-    this.stats.getDecompressionTime().addAndGet(endTime - startTime);
+    if (stats != null) {
+      this.stats.getDecompressedRaw().addAndGet(decompressedSize);
+      this.stats.getDecompressed().addAndGet(srcSize);
+      this.stats.getDecompressionTime().addAndGet(endTime - startTime);
+    }
     return decompressedSize;
   }
 
@@ -417,16 +445,23 @@ public class ZstdCompressionCodec implements CompressionCodec {
     if (currentCtxt == null) {
       return 0;
     }
+    byte[] src = getBuffer(buffer1, size);
+    UnsafeAccess.copy(ptr, src, 0, size);
+    byte[] dst = getBuffer(buffer2, bufSize);
+    
     int decompressedSize = 0;
     try {
-      decompressedSize = currentCtxt.decompressNativeNative(buffer, bufSize, ptr, size);
+      decompressedSize = currentCtxt.decompressByteArray(dst, 0, dst.length, src, 0, size);
     } catch (Throwable t) {
       return 0;
     }
+    UnsafeAccess.copy(dst, 0, buffer, decompressedSize);
     long endTime = System.nanoTime();
-    this.stats.getDecompressedRaw().addAndGet(decompressedSize);
-    this.stats.getDecompressed().addAndGet(size);
-    this.stats.getDecompressionTime().addAndGet(endTime - startTime);
+    if (stats != null) {
+      this.stats.getDecompressedRaw().addAndGet(decompressedSize);
+      this.stats.getDecompressed().addAndGet(size);
+      this.stats.getDecompressionTime().addAndGet(endTime - startTime);
+    }
     return decompressedSize;
   }
 
@@ -457,12 +492,11 @@ public class ZstdCompressionCodec implements CompressionCodec {
     loadDictionaries(dir);
   }
 
-  private byte[] getBuffer(int required) {
-    byte[] buf = buffers.get();
-    // FIXME: this is not safe
-    if (buf == null || buf.length < 2 * required) {
-      buf = new byte[2 * required];
-      buffers.set(buf);
+  private byte[] getBuffer(ThreadLocal<byte[]> buffer, int bound) {
+    byte[] buf = buffer.get();
+    if (buf == null || buf.length < 2 * bound) {
+      buf = new byte[bound];
+      buffer.set(buf);
     }
     return buf;
   }
@@ -715,5 +749,8 @@ public class ZstdCompressionCodec implements CompressionCodec {
   public Stats getStats() {
     return this.stats;
   }
-
+  
+  void setCacheName(String name) {
+    this.cacheName = name;
+  }
 }
