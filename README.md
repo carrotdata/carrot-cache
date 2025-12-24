@@ -23,43 +23,30 @@ The Carrot Cache (CC) project aims to modernize data caching and enable users to
 - **Compression**: CC can compress and decompress both keys and values in real-time using pluggable compression codecs, significantly reducing memory usage. Currently supports Zstd with dictionary.
 - **Memcached API Compatible**: Supports all store, retrieval, and miscellaneous commands (text protocol only).
 
-## Download
+## Maven, Gradle, Download
 
-You can download ```Carrot Cache``` Jar - file with dependencies from the latest [Releases](https://github.com/carrotdata/carrot-cache/releases) page. Supported platforms:
-- MacOS Sonoma (x86_64, aarch64)
-- Linux (amd64, aarch64, glibc 2.31+)
+You can download ```Carrot Cache``` Jar - file with dependencies from the Maven Repo [Releases](https://repo1.maven.org/maven2/io/carrotdata/carrot-cache/0.18.2/) page.
 
-If your platform is not supported you can build binaries from the source code.
+Alternatively you can use Maven or Gradle to add `carrot-cache` to your project.
 
-## Building Prerequisites
-
-- Java 11+
-- Maven 3.x
-- Git client
-
-## How to Build
-
-Carrot Cache binaries already support the following platforms: macOS (x86_64, aarch64) and Linux (x86_64, aarch64). If your platform is not supported, you can build the binary package locally.
-
-### Build and Install Locally `zstd-jni` Package
-
-You will find instructions here: [zstd-jni package](https://github.com/carrotdata/zstd-jni)
-
-### Build Carrot Cache
-
-```bash
-git clone https://github.com/carrotdata/carrot-cache.git
-cd carrot-cache
-mvn install -DskipTests
+Maven
+```
+    <dependency>
+        <groupId>io.carrotdata</groupId>
+        <artifactId>carrot-cache</artifactId>
+        <version>${carrot-cache.version}</version>
+      </dependency>
+```
+Gradle
+```
+dependencies {
+    implementation "io.carrotdata:carrot-cache:${carrotCacheVersion}"
+}
 ```
 
-After the build is complete, the binaries (JAR file) will be in the `target` directory.
+## Supported platforms
 
-To run unit tests:
-
-```bash
-mvn surefire:test
-```
+Carrot Cache binaries already support many platforms (you can find the list on [zstd-jni](https://github.com/luben/zstd-jni#binary-releases) page).
 
 ## How to Use
 
